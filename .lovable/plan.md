@@ -1,105 +1,95 @@
 
 
-# Auth, Rollen & Dashboard-Seiten fuer Vic Automation 2.0
+# Redesign: Helles, professionelles Fintech-Theme
 
-## Uebersicht
+## Problem
 
-Komplette Authentifizierung mit Registrierung/Anmeldung, zwei Benutzerrollen (admin/user), rollenbasierte Weiterleitung und zwei Platzhalter-Dashboards. Branding wird von Gruen auf modernes Blau umgestellt.
+Das gesamte Design verwendet aktuell ein dunkles Theme mit nahezu schwarzem Hintergrund -- das passt nicht zu einem serioesen deutschen Fintech-Unternehmen. Die Auth-Seite und die Dashboards wirken zu einfach und unausgereift.
 
----
+## Was sich aendert
 
-## 1. Branding-Update: Blau statt Gruen
+### 1. Globales Light-Theme (src/index.css)
 
-Die primaere Farbe in `src/index.css` wird von `160 80% 55%` (Gruen) auf ein modernes Blau umgestellt (ca. `217 91% 60%` -- ein kraeftiges, modernes Blau).
+Alle CSS-Variablen werden auf ein helles, professionelles Farbschema umgestellt:
 
----
+- **Hintergrund**: Reines Weiss / sehr helles Grau statt Fast-Schwarz
+- **Vordergrund**: Dunkles Anthrazit fuer Text statt Hellgrau
+- **Cards**: Weiss mit dezenten Schatten
+- **Borders**: Zartes Grau statt Dunkelgrau
+- **Primary**: Blau bleibt, wird aber auf hellem Hintergrund kraeftiger wirken
+- **Muted-Toene**: Helle Grau-Abstufungen
+- **Font**: Wechsel auf "Inter" -- die Standard-Schrift fuer professionelle SaaS/Fintech-Produkte
 
-## 2. Datenbank-Setup (SQL-Migrationen)
+### 2. Auth-Seite komplett neu (src/pages/Auth.tsx)
 
-**a) Profiles-Tabelle** -- speichert Benutzerdaten wie Anzeigename:
+Statt einer einfachen zentrierten Card wird ein **Split-Screen-Layout** gebaut:
 
-- `id` (UUID, Referenz auf `auth.users`)
-- `full_name` (Text)
-- `created_at` (Timestamp)
-- RLS: Benutzer koennen nur ihr eigenes Profil lesen/aktualisieren
-- Trigger: Automatische Profil-Erstellung bei Registrierung
+```text
++---------------------------+----------------------------+
+|                           |                            |
+|   LINKE SEITE             |    RECHTE SEITE            |
+|   (Blauer Gradient)       |    (Weisses Formular)      |
+|                           |                            |
+|   - Logo "Vic Automation" |    - Tabs: Anmelden /      |
+|   - Claim-Text            |      Registrieren          |
+|   - 3 Trust-Punkte:       |    - E-Mail Input          |
+|     * Enterprise Security |    - Passwort Input        |
+|     * DSGVO-konform       |    - Senden-Button         |
+|     * Seit 2026           |    - Trenner "oder"        |
+|                           |    - Sekundaerer Link      |
+|   - Dezentes Muster       |                            |
+|     (geometrisch)         |                            |
+|                           |                            |
++---------------------------+----------------------------+
+```
 
-**b) Rollen-System** (separate Tabelle, wie vorgeschrieben):
+Design-Details:
+- Linke Seite: Blau-Gradient von Dunkelblau nach Mittelblau mit dezenten geometrischen Kreisen
+- Rechte Seite: Reinweisser Hintergrund, grosszuegige Abstande, klare Typografie
+- Inputs: Groesser (h-12), abgerundeter (rounded-lg), mit sanftem Grau-Rand
+- Button: Volle Breite, groesser (h-12), mit Hover-Effekt
+- Trust-Indikatoren auf der linken Seite (Shield-Icon, CheckCircle, Building)
+- Responsiv: Auf Mobile wird die linke Seite ausgeblendet, nur das Formular bleibt
 
-- Enum `app_role` mit Werten `admin` und `user`
-- Tabelle `user_roles` mit `user_id` und `role`
-- Security-Definer-Funktion `has_role()` zur sicheren Rollenpruefung
-- RLS auf `user_roles`: Benutzer koennen nur ihre eigene Rolle lesen
-- Trigger: Neue Benutzer erhalten automatisch die Rolle `user`
+### 3. Admin-Dashboard aufgewertet (src/pages/Admin.tsx)
 
----
+- Weisser Hintergrund statt Fast-Schwarz
+- Header: Weiss mit dezenter unterer Border und klarem Shadow
+- Statistik-Cards: Weiss, dezenter Ring-Border, sanfter Shadow, farbiger Icon-Hintergrund (blaue Kreise hinter den Icons)
+- Professionellere Begruessung ohne Emojis
+- Bessere visuelle Hierarchie und Abstande
 
-## 3. Neue Seiten & Komponenten
+### 4. Mitarbeiter-Dashboard aufgewertet (src/pages/Mitarbeiter.tsx)
 
-### `/auth` -- Authentifizierungsseite
-- Tabs fuer "Anmelden" und "Registrieren"
-- Anmeldung: E-Mail + Passwort
-- Registrierung: Name, E-Mail, Passwort
-- Premium-Design: Dunkler Hintergrund, blaue Akzente, Glasmorphism-Card, dezenter Glow
-- Nach Login: Automatische Weiterleitung basierend auf Rolle
+- Gleiche Verbesserungen wie Admin
+- Weisser Hintergrund, professionelle Cards
+- Kein Emoji in der Begruessung
+- Farbige Icon-Hintergruende fuer die Statistik-Karten
 
-### `/admin` -- Admin-Dashboard (Platzhalter)
-- Begruessung, Statistik-Karten (z.B. "Aktive Tester", "Laufende Tests", "Abgeschlossene Tests")
-- Sidebar oder Top-Navigation mit Logout
-- Geschuetzt: Nur fuer Admins zugaenglich
-- App-Tester Branding
+### 5. Landing Page anpassen (src/pages/Index.tsx)
 
-### `/mitarbeiter` -- Mitarbeiter-Dashboard (Platzhalter)
-- Begruessung, eigene Statistik-Karten (z.B. "Meine Tests", "Verdienst", "Offene Aufgaben")
-- Sidebar oder Top-Navigation mit Logout
-- Geschuetzt: Nur fuer User-Rolle zugaenglich
-- App-Tester Branding
-
----
-
-## 4. Auth-Logik & Routing
-
-### AuthProvider (Context)
-- Verwaltet Session-State mit `onAuthStateChange`
-- Stellt `user`, `session`, `loading`, `signOut` bereit
-
-### Rollenpruefung
-- Custom Hook `useUserRole` -- laedt die Rolle des eingeloggten Benutzers aus `user_roles`
-- Wird verwendet fuer Weiterleitung und Seitenschutz
-
-### Geschuetzte Routen
-- `ProtectedRoute`-Komponente: Prueft ob eingeloggt und korrekte Rolle
-- Leitet nicht-eingeloggte Benutzer zu `/auth`
-- Leitet Admins automatisch zu `/admin`, User zu `/mitarbeiter`
-
-### Routing in App.tsx
-- `/` -- Landing Page (bleibt)
-- `/auth` -- Login/Register
-- `/admin` -- Admin-Dashboard (geschuetzt, nur admin)
-- `/mitarbeiter` -- Mitarbeiter-Dashboard (geschuetzt, nur user)
+- Heller Hintergrund statt Schwarz
+- Dezenter blauer Glow-Effekt auf Weiss
+- Dunkler Text, blaues "2.0"
 
 ---
 
 ## Technische Details
 
-### Neue Dateien
-| Datei | Zweck |
-|---|---|
-| `src/contexts/AuthContext.tsx` | Auth-State-Management |
-| `src/hooks/useUserRole.ts` | Rolle des Benutzers laden |
-| `src/components/ProtectedRoute.tsx` | Routenschutz mit Rollenpruefung |
-| `src/pages/Auth.tsx` | Login/Register-Seite |
-| `src/pages/Admin.tsx` | Admin-Dashboard Platzhalter |
-| `src/pages/Mitarbeiter.tsx` | Mitarbeiter-Dashboard Platzhalter |
-
 ### Geaenderte Dateien
+
 | Datei | Aenderung |
 |---|---|
-| `src/index.css` | Primaerfarbe auf Blau |
-| `src/App.tsx` | Neue Routen, AuthProvider wrappen |
-| `src/pages/Index.tsx` | Primaerfarbe-Referenz aktualisieren |
+| `src/index.css` | Alle CSS-Variablen auf Light-Theme, Font auf Inter |
+| `src/pages/Auth.tsx` | Komplett neues Split-Screen-Layout mit professionellem Fintech-Design |
+| `src/pages/Admin.tsx` | Helles Theme, bessere Cards, professionellere Gestaltung |
+| `src/pages/Mitarbeiter.tsx` | Helles Theme, bessere Cards, professionellere Gestaltung |
+| `src/pages/Index.tsx` | Anpassung an helles Theme |
 
-### SQL-Migrationen
-1. Profiles-Tabelle + Trigger
-2. `app_role` Enum + `user_roles` Tabelle + `has_role()` Funktion + Trigger fuer Default-Rolle
+### Keine neuen Abhaengigkeiten
 
+Alles wird mit den bestehenden Libraries (Tailwind, Framer Motion, Lucide Icons, Shadcn/UI) umgesetzt.
+
+### Keine Datenbankzaenderungen
+
+Rein visuelles Update -- Auth-Logik, Rollen und Routing bleiben identisch.
