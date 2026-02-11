@@ -12,8 +12,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { CalendarCheck, Clock, Phone, AlertCircle, CheckCircle2 } from "lucide-react";
-import { format, isWeekend, isBefore, startOfDay } from "date-fns";
+import { CalendarCheck, Clock, Phone, AlertCircle, CheckCircle2, User } from "lucide-react";
+import { format, isWeekend, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -67,6 +67,21 @@ export default function Bewerbungsgespraech() {
 
   // Check if already booked
   const existingAppointment = application?.interview_appointments?.[0];
+
+  const applicantName = application ? `${application.first_name} ${application.last_name}` : "";
+  const applicantPhone = application?.phone;
+
+  // Filter time slots: hide past slots if today is selected
+  const availableTimeSlots = useMemo(() => {
+    if (!selectedDate) return TIME_SLOTS;
+    if (!isToday(selectedDate)) return TIME_SLOTS;
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    return TIME_SLOTS.filter((time) => {
+      const [h, m] = time.split(":").map(Number);
+      return h * 60 + m > currentMinutes;
+    });
+  }, [selectedDate]);
 
   const bookedTimesForDate = useMemo(() => {
     if (!selectedDate || !bookedSlots) return new Set<string>();
@@ -167,7 +182,7 @@ export default function Bewerbungsgespraech() {
               <div>
                 <h2 className="text-2xl font-bold mb-2">Termin bestätigt!</h2>
                 <p className="text-muted-foreground">
-                  Ihr Bewerbungsgespräch wurde erfolgreich gebucht.
+                  {applicantName}, Ihr Bewerbungsgespräch wurde erfolgreich gebucht.
                 </p>
               </div>
               <div
@@ -221,6 +236,33 @@ export default function Bewerbungsgespraech() {
           </div>
         </motion.div>
 
+        {/* Applicant Info */}
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card className="shadow-md border-0">
+            <CardContent className="py-5 px-6 flex items-center gap-4">
+              <div
+                className="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: `${brandColor}15` }}
+              >
+                <User className="h-5 w-5" style={{ color: brandColor }} />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-lg">Hallo {applicantName}</p>
+                {applicantPhone && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5" />
+                    {applicantPhone}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Calendar + Time slots */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -264,7 +306,11 @@ export default function Bewerbungsgespraech() {
                   ) : (
                     <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-1">
                       <AnimatePresence mode="popLayout">
-                        {TIME_SLOTS.map((time) => {
+                        {availableTimeSlots.length === 0 ? (
+                          <p className="text-sm text-muted-foreground col-span-2 py-4 text-center">
+                            Keine verfügbaren Termine mehr für heute.
+                          </p>
+                        ) : availableTimeSlots.map((time) => {
                           const isBooked = bookedTimesForDate.has(time);
                           const isSelected = selectedTime === time;
                           return (
