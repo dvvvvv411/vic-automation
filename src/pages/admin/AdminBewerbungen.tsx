@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, FileText, Trash2 } from "lucide-react";
+import { Plus, FileText, Trash2, Check, Copy, CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { z } from "zod";
@@ -66,6 +66,12 @@ const employmentLabels: Record<string, string> = {
   vollzeit: "Vollzeit",
 };
 
+const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
+  neu: { label: "Neu", variant: "secondary" },
+  bewerbungsgespraech: { label: "Bewerbungsgespräch", variant: "outline", className: "border-yellow-500 text-yellow-700 bg-yellow-50" },
+  termin_gebucht: { label: "Termin gebucht", variant: "outline", className: "border-green-500 text-green-700 bg-green-50" },
+};
+
 export default function AdminBewerbungen() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<ApplicationForm>(initialForm);
@@ -77,7 +83,7 @@ export default function AdminBewerbungen() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, brandings(company_name)")
+        .select("*, brandings(company_name), interview_appointments(appointment_date, appointment_time)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -106,6 +112,21 @@ export default function AdminBewerbungen() {
       toast.success("Bewerbung gelöscht");
     },
     onError: () => toast.error("Fehler beim Löschen"),
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("applications")
+        .update({ status: "bewerbungsgespraech" })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      toast.success("Bewerbung akzeptiert");
+    },
+    onError: () => toast.error("Fehler beim Akzeptieren"),
   });
 
   const createMutation = useMutation({
@@ -146,6 +167,50 @@ export default function AdminBewerbungen() {
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
   };
 
+  const copyLink = (id: string) => {
+    const link = `${window.location.origin}/bewerbungsgespraech/${id}`;
+    navigator.clipboard.writeText(link);
+    toast.success("Link kopiert!");
+  };
+
+  const renderActions = (app: any) => {
+    const status = app.status || "neu";
+
+    return (
+      <div className="flex items-center gap-1">
+        {status === "neu" && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => acceptMutation.mutate(app.id)}
+            disabled={acceptMutation.isPending}
+            className="text-xs"
+          >
+            <Check className="h-4 w-4 mr-1" />
+            Akzeptieren
+          </Button>
+        )}
+        {status === "bewerbungsgespraech" && (
+          <Button variant="ghost" size="sm" onClick={() => copyLink(app.id)} className="text-xs">
+            <Copy className="h-4 w-4 mr-1" />
+            Link kopieren
+          </Button>
+        )}
+        {status === "termin_gebucht" && app.interview_appointments?.[0] && (
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <CalendarCheck className="h-3.5 w-3.5" />
+            {new Date(app.interview_appointments[0].appointment_date).toLocaleDateString("de-DE")}
+            {" "}
+            {app.interview_appointments[0].appointment_time?.slice(0, 5)} Uhr
+          </span>
+        )}
+        <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(app.id)}>
+          <Trash2 className="h-4 w-4 text-muted-foreground" />
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <>
       <motion.div
@@ -170,7 +235,6 @@ export default function AdminBewerbungen() {
               <DialogTitle>Neue Bewerbung hinzufügen</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              {/* Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Vorname *</Label>
@@ -183,8 +247,6 @@ export default function AdminBewerbungen() {
                   {errors.last_name && <p className="text-xs text-destructive">{errors.last_name}</p>}
                 </div>
               </div>
-
-              {/* Email & Phone */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>E-Mail *</Label>
@@ -196,8 +258,6 @@ export default function AdminBewerbungen() {
                   <Input value={form.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="+49 123 456789" />
                 </div>
               </div>
-
-              {/* Address */}
               <div className="space-y-2">
                 <Label>Straße & Hausnummer</Label>
                 <Input value={form.street} onChange={(e) => updateField("street", e.target.value)} placeholder="Musterstr. 1" />
@@ -212,8 +272,6 @@ export default function AdminBewerbungen() {
                   <Input value={form.city} onChange={(e) => updateField("city", e.target.value)} placeholder="Regensburg" />
                 </div>
               </div>
-
-              {/* Employment Type */}
               <div className="space-y-2">
                 <Label>Anstellungsart *</Label>
                 <Select value={form.employment_type} onValueChange={(v) => updateField("employment_type", v)}>
@@ -228,8 +286,6 @@ export default function AdminBewerbungen() {
                 </Select>
                 {errors.employment_type && <p className="text-xs text-destructive">{errors.employment_type}</p>}
               </div>
-
-              {/* Branding */}
               <div className="space-y-2">
                 <Label>Branding</Label>
                 <Select value={form.branding_id} onValueChange={(v) => updateField("branding_id", v)}>
@@ -243,7 +299,6 @@ export default function AdminBewerbungen() {
                   </SelectContent>
                 </Select>
               </div>
-
               <Button onClick={handleSubmit} disabled={createMutation.isPending} className="w-full mt-2">
                 {createMutation.isPending ? "Wird hinzugefügt..." : "Bewerbung hinzufügen"}
               </Button>
@@ -252,7 +307,6 @@ export default function AdminBewerbungen() {
         </Dialog>
       </motion.div>
 
-      {/* Table */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Laden...</div>
@@ -276,35 +330,41 @@ export default function AdminBewerbungen() {
                   <TableHead>Ort</TableHead>
                   <TableHead>Anstellungsart</TableHead>
                   <TableHead>Branding</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Eingegangen</TableHead>
-                  <TableHead className="w-16"></TableHead>
+                  <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {applications.map((a: any) => (
-                  <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
-                    <TableCell className="text-muted-foreground">{a.email}</TableCell>
-                    <TableCell className="text-muted-foreground">{a.phone || "–"}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {a.zip_code || a.city ? `${a.zip_code || ""} ${a.city || ""}`.trim() : "–"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{employmentLabels[a.employment_type] || a.employment_type}</Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {a.brandings?.company_name || "–"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {new Date(a.created_at).toLocaleDateString("de-DE")}
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(a.id)}>
-                        <Trash2 className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {applications.map((a: any) => {
+                  const status = a.status || "neu";
+                  const cfg = statusConfig[status] || statusConfig.neu;
+                  return (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
+                      <TableCell className="text-muted-foreground">{a.email}</TableCell>
+                      <TableCell className="text-muted-foreground">{a.phone || "–"}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {a.zip_code || a.city ? `${a.zip_code || ""} ${a.city || ""}`.trim() : "–"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{employmentLabels[a.employment_type] || a.employment_type}</Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {a.brandings?.company_name || "–"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={cfg.variant} className={cfg.className}>{cfg.label}</Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {new Date(a.created_at).toLocaleDateString("de-DE")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {renderActions(a)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
