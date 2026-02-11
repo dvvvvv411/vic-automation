@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Palette, Trash2 } from "lucide-react";
+import { Plus, Palette, Trash2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { z } from "zod";
@@ -292,6 +292,7 @@ export default function AdminBrandings() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>ID</TableHead>
                   <TableHead>Logo</TableHead>
                   <TableHead>Unternehmen</TableHead>
                   <TableHead>Domain</TableHead>
@@ -303,6 +304,22 @@ export default function AdminBrandings() {
               <TableBody>
                 {brandings.map((b) => (
                   <TableRow key={b.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <code className="text-xs text-muted-foreground">{b.id.slice(0, 8)}</code>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            navigator.clipboard.writeText(b.id);
+                            toast.success("ID kopiert");
+                          }}
+                        >
+                          <Copy className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       {b.logo_url ? (
                         <img src={b.logo_url} alt="Logo" className="h-8 w-8 rounded object-contain" />

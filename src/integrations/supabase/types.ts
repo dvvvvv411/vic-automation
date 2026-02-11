@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      applications: {
+        Row: {
+          branding_id: string | null
+          city: string | null
+          created_at: string
+          email: string
+          employment_type: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          street: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          branding_id?: string | null
+          city?: string | null
+          created_at?: string
+          email: string
+          employment_type: string
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string | null
+          street?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          branding_id?: string | null
+          city?: string | null
+          created_at?: string
+          email?: string
+          employment_type?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          street?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brandings: {
         Row: {
           brand_color: string | null

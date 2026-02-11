@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBrandings from "./pages/admin/AdminBrandings";
+import AdminBewerbungen from "./pages/admin/AdminBewerbungen";
 import Mitarbeiter from "./pages/Mitarbeiter";
 import NotFound from "./pages/NotFound";
 
@@ -35,6 +36,7 @@ const App = () => (
             >
               <Route index element={<AdminDashboard />} />
               <Route path="brandings" element={<AdminBrandings />} />
+              <Route path="bewerbungen" element={<AdminBewerbungen />} />
             </Route>
             <Route
               path="/mitarbeiter"
