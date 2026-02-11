@@ -25,6 +25,7 @@ export type Database = {
           id: string
           last_name: string
           phone: string | null
+          status: string
           street: string | null
           zip_code: string | null
         }
@@ -38,6 +39,7 @@ export type Database = {
           id?: string
           last_name: string
           phone?: string | null
+          status?: string
           street?: string | null
           zip_code?: string | null
         }
@@ -51,6 +53,7 @@ export type Database = {
           id?: string
           last_name?: string
           phone?: string | null
+          status?: string
           street?: string | null
           zip_code?: string | null
         }
@@ -115,6 +118,38 @@ export type Database = {
         }
         Relationships: []
       }
+      interview_appointments: {
+        Row: {
+          application_id: string
+          appointment_date: string
+          appointment_time: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          application_id: string
+          appointment_date: string
+          appointment_time: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          application_id?: string
+          appointment_date?: string
+          appointment_time?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_appointments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -162,6 +197,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      update_application_status: {
+        Args: { _application_id: string; _status: string }
+        Returns: undefined
       }
     }
     Enums: {
