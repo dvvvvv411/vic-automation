@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, LogOut } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { title: "Übersicht", url: "/admin", icon: LayoutDashboard },
   { title: "Brandings", url: "/admin/brandings", icon: Palette },
+  { title: "Bewerbungen", url: "/admin/bewerbungen", icon: FileText },
 ];
 
 export function AdminSidebar() {
