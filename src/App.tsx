@@ -7,7 +7,9 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Admin from "./pages/Admin";
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminBrandings from "./pages/admin/AdminBrandings";
 import Mitarbeiter from "./pages/Mitarbeiter";
 import NotFound from "./pages/NotFound";
 
@@ -27,10 +29,13 @@ const App = () => (
               path="/admin"
               element={
                 <ProtectedRoute allowedRole="admin">
-                  <Admin />
+                  <AdminLayout />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="brandings" element={<AdminBrandings />} />
+            </Route>
             <Route
               path="/mitarbeiter"
               element={
