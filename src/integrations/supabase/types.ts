@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      brandings: {
+        Row: {
+          brand_color: string | null
+          city: string | null
+          company_name: string
+          created_at: string
+          domain: string | null
+          email: string | null
+          id: string
+          logo_url: string | null
+          managing_director: string | null
+          register_court: string | null
+          street: string | null
+          trade_register: string | null
+          vat_id: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          brand_color?: string | null
+          city?: string | null
+          company_name: string
+          created_at?: string
+          domain?: string | null
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          managing_director?: string | null
+          register_court?: string | null
+          street?: string | null
+          trade_register?: string | null
+          vat_id?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          brand_color?: string | null
+          city?: string | null
+          company_name?: string
+          created_at?: string
+          domain?: string | null
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          managing_director?: string | null
+          register_court?: string | null
+          street?: string | null
+          trade_register?: string | null
+          vat_id?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
