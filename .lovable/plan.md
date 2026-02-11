@@ -1,95 +1,119 @@
 
+# Admin Panel mit Sidebar und Brandings-Verwaltung
 
-# Redesign: Helles, professionelles Fintech-Theme
+## Uebersicht
 
-## Problem
+Das Admin Panel wird zu einem vollwertigen Layout mit Sidebar-Navigation und Sub-Routen umgebaut. Der erste Reiter "Brandings" erhaelt eine Tabellenansicht aller Brandings sowie ein Dialog-Formular zum Hinzufuegen neuer Brandings. Daten werden in einer neuen Supabase-Tabelle `brandings` gespeichert.
 
-Das gesamte Design verwendet aktuell ein dunkles Theme mit nahezu schwarzem Hintergrund -- das passt nicht zu einem serioesen deutschen Fintech-Unternehmen. Die Auth-Seite und die Dashboards wirken zu einfach und unausgereift.
+---
 
-## Was sich aendert
+## 1. Datenbank: Neue Tabelle `brandings`
 
-### 1. Globales Light-Theme (src/index.css)
+SQL-Migration erstellt die Tabelle mit folgenden Spalten:
 
-Alle CSS-Variablen werden auf ein helles, professionelles Farbschema umgestellt:
+| Spalte | Typ | Beschreibung |
+|---|---|---|
+| id | uuid (PK) | Automatisch generiert |
+| logo_url | text | URL zum Logo (Supabase Storage) |
+| company_name | text | Unternehmensname |
+| street | text | Strasse und Hausnummer |
+| zip_code | text | PLZ |
+| city | text | Stadt |
+| trade_register | text | z.B. "HRB 16675" |
+| register_court | text | z.B. "Amtsgericht Regensburg" |
+| managing_director | text | Geschaeftsfuehrer |
+| vat_id | text | Umsatzsteuer-ID |
+| domain | text | Domain |
+| email | text | E-Mail |
+| brand_color | text | Hex-Code der Brandingfarbe |
+| created_at | timestamptz | Erstellungszeitpunkt |
 
-- **Hintergrund**: Reines Weiss / sehr helles Grau statt Fast-Schwarz
-- **Vordergrund**: Dunkles Anthrazit fuer Text statt Hellgrau
-- **Cards**: Weiss mit dezenten Schatten
-- **Borders**: Zartes Grau statt Dunkelgrau
-- **Primary**: Blau bleibt, wird aber auf hellem Hintergrund kraeftiger wirken
-- **Muted-Toene**: Helle Grau-Abstufungen
-- **Font**: Wechsel auf "Inter" -- die Standard-Schrift fuer professionelle SaaS/Fintech-Produkte
+RLS-Policies: Nur Admins (via `has_role()`) duerfen lesen, erstellen, bearbeiten und loeschen.
 
-### 2. Auth-Seite komplett neu (src/pages/Auth.tsx)
+Ein **Storage Bucket** `branding-logos` wird fuer Logo-Uploads erstellt.
 
-Statt einer einfachen zentrierten Card wird ein **Split-Screen-Layout** gebaut:
+---
+
+## 2. Admin Layout mit Sidebar
+
+Das bisherige `Admin.tsx` wird zu einem **Layout-Wrapper** `AdminLayout.tsx` umgebaut:
 
 ```text
-+---------------------------+----------------------------+
-|                           |                            |
-|   LINKE SEITE             |    RECHTE SEITE            |
-|   (Blauer Gradient)       |    (Weisses Formular)      |
-|                           |                            |
-|   - Logo "Vic Automation" |    - Tabs: Anmelden /      |
-|   - Claim-Text            |      Registrieren          |
-|   - 3 Trust-Punkte:       |    - E-Mail Input          |
-|     * Enterprise Security |    - Passwort Input        |
-|     * DSGVO-konform       |    - Senden-Button         |
-|     * Seit 2026           |    - Trenner "oder"        |
-|                           |    - Sekundaerer Link      |
-|   - Dezentes Muster       |                            |
-|     (geometrisch)         |                            |
-|                           |                            |
-+---------------------------+----------------------------+
++--------+------------------------------------------+
+| SIDEBAR|  HEADER (Vic Admin + User + Logout)       |
+|        +------------------------------------------+
+| Logo   |                                          |
+|        |  CONTENT (Outlet fuer Sub-Routen)         |
+| ----   |                                          |
+| Ueber- |                                          |
+| sicht  |                                          |
+| Brand- |                                          |
+| ings   |                                          |
+|        |                                          |
+| ----   |                                          |
+| User   |                                          |
+| Logout |                                          |
++--------+------------------------------------------+
 ```
 
-Design-Details:
-- Linke Seite: Blau-Gradient von Dunkelblau nach Mittelblau mit dezenten geometrischen Kreisen
-- Rechte Seite: Reinweisser Hintergrund, grosszuegige Abstande, klare Typografie
-- Inputs: Groesser (h-12), abgerundeter (rounded-lg), mit sanftem Grau-Rand
-- Button: Volle Breite, groesser (h-12), mit Hover-Effekt
-- Trust-Indikatoren auf der linken Seite (Shield-Icon, CheckCircle, Building)
-- Responsiv: Auf Mobile wird die linke Seite ausgeblendet, nur das Formular bleibt
+- Verwendet die bestehende Shadcn Sidebar-Komponente
+- Sidebar-Items: "Uebersicht" (`/admin`), "Brandings" (`/admin/brandings`)
+- Aktiver Link wird hervorgehoben via NavLink
+- Header bleibt oben mit User-Info und Logout
 
-### 3. Admin-Dashboard aufgewertet (src/pages/Admin.tsx)
+---
 
-- Weisser Hintergrund statt Fast-Schwarz
-- Header: Weiss mit dezenter unterer Border und klarem Shadow
-- Statistik-Cards: Weiss, dezenter Ring-Border, sanfter Shadow, farbiger Icon-Hintergrund (blaue Kreise hinter den Icons)
-- Professionellere Begruessung ohne Emojis
-- Bessere visuelle Hierarchie und Abstande
+## 3. Routing-Aenderungen (App.tsx)
 
-### 4. Mitarbeiter-Dashboard aufgewertet (src/pages/Mitarbeiter.tsx)
+Nested Routes unter `/admin`:
 
-- Gleiche Verbesserungen wie Admin
-- Weisser Hintergrund, professionelle Cards
-- Kein Emoji in der Begruessung
-- Farbige Icon-Hintergruende fuer die Statistik-Karten
+- `/admin` -- Dashboard-Uebersicht (bisheriger Inhalt)
+- `/admin/brandings` -- Brandings-Tabellenansicht
 
-### 5. Landing Page anpassen (src/pages/Index.tsx)
+Alle Admin-Sub-Routen sind weiterhin durch `ProtectedRoute` mit `allowedRole="admin"` geschuetzt.
 
-- Heller Hintergrund statt Schwarz
-- Dezenter blauer Glow-Effekt auf Weiss
-- Dunkler Text, blaues "2.0"
+---
+
+## 4. Brandings-Seite (`/admin/brandings`)
+
+### Tabellenansicht
+- Tabelle mit Spalten: Logo (Vorschau), Unternehmensname, Domain, Brandingfarbe (als farbiger Punkt), Erstellt am, Aktionen
+- Laedt Daten via `@tanstack/react-query` aus der `brandings`-Tabelle
+- Leerer Zustand mit Hinweis und Button zum Hinzufuegen
+
+### Dialog "Branding hinzufuegen"
+- Oeffnet sich ueber einen Button oben rechts
+- Formular mit allen Feldern (siehe Tabelle oben)
+- **Logo-Upload**: Datei-Input, Upload in Supabase Storage Bucket `branding-logos`, URL wird in der DB gespeichert
+- **Farbauswahl**: Hex-Input-Feld kombiniert mit einem nativen `<input type="color" />` als visueller Picker
+- Validierung mit Zod (Pflichtfelder, E-Mail-Format, Hex-Farbe)
+- Nach Speichern: Query wird invalidiert, Tabelle aktualisiert sich
 
 ---
 
 ## Technische Details
 
+### Neue Dateien
+
+| Datei | Zweck |
+|---|---|
+| `src/components/admin/AdminLayout.tsx` | Layout mit Sidebar, Header, Outlet |
+| `src/components/admin/AdminSidebar.tsx` | Sidebar-Komponente mit Navigation |
+| `src/pages/admin/AdminDashboard.tsx` | Bisheriger Dashboard-Inhalt (Statistik-Cards) |
+| `src/pages/admin/AdminBrandings.tsx` | Brandings-Tabellenansicht + Hinzufuegen-Dialog |
+
 ### Geaenderte Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `src/index.css` | Alle CSS-Variablen auf Light-Theme, Font auf Inter |
-| `src/pages/Auth.tsx` | Komplett neues Split-Screen-Layout mit professionellem Fintech-Design |
-| `src/pages/Admin.tsx` | Helles Theme, bessere Cards, professionellere Gestaltung |
-| `src/pages/Mitarbeiter.tsx` | Helles Theme, bessere Cards, professionellere Gestaltung |
-| `src/pages/Index.tsx` | Anpassung an helles Theme |
+| `src/App.tsx` | Nested Routes fuer `/admin/*` mit Layout |
+| `src/integrations/supabase/types.ts` | Neue Tabelle `brandings` in den Typen |
+
+### SQL-Migration
+
+1. Tabelle `brandings` erstellen mit RLS (nur Admins)
+2. Storage Bucket `branding-logos` erstellen
 
 ### Keine neuen Abhaengigkeiten
 
-Alles wird mit den bestehenden Libraries (Tailwind, Framer Motion, Lucide Icons, Shadcn/UI) umgesetzt.
-
-### Keine Datenbankzaenderungen
-
-Rein visuelles Update -- Auth-Logik, Rollen und Routing bleiben identisch.
+Alles wird mit vorhandenen Libraries umgesetzt (Shadcn Sidebar, Table, Dialog, Form, React Query, Zod, Lucide Icons).
