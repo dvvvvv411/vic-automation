@@ -4,7 +4,7 @@ const Index = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background relative overflow-hidden">
       {/* Subtle radial glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(160_80%_55%/0.06),transparent_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(217_91%_60%/0.08),transparent_70%)]" />
       
       <motion.div
         initial={{ opacity: 0, y: 30 }}
