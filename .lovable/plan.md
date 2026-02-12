@@ -1,79 +1,28 @@
 
 
-# Komplettes Redesign: /bewerbungsgespraech -- Professionelles Fintech-Design
+# Bewerbungsgespraech-Seite: Logo, Bewerber-Info und Footer ueberarbeiten
 
-## Problem
+## 1. Logo zentriert UEBER dem Container
 
-Die Seite wirkt zusammengewuerfelt: Separate schwebende Cards ohne visuelle Verbindung, inkonsistente Abstands- und Schattensysteme, generischer Kalender der nicht zum Branding passt, und eine "Baukasten"-Aesthetik ohne Designsystem.
+Das Logo wird aus der weissen Card herausgenommen und mittig oberhalb platziert. Es steht als eigenstaendiges Element ueber dem Hauptcontainer.
 
-## Loesung: Einheitliches, reduziertes Fintech-Design
+## 2. Bewerber-Informationen professionell gestalten
 
-Eine einzelne, zusammenhaengende Seite statt separater, schwebender Karten. Alles fliesst in einem durchgaengigen Layout zusammen.
+Statt einer einfachen Textzeile mit Name und Telefonnummer wird ein strukturierter Info-Bereich mit klaren Labels erstellt:
 
-### Designprinzipien
-- **Ein Container, nicht drei**: Header, Bewerber-Info und Buchungstool werden in EINE zusammenhaengende Card integriert statt drei separate schwebende Elemente
-- **Subtiler Hintergrund**: Kein bunter Gradient, sondern ein sauberer, heller Hintergrund (leichtes Grau)
-- **Branding als Akzent, nicht als Hauptfarbe**: Die Brandingfarbe wird nur fuer ausgewaehlte Elemente genutzt (Buttons, ausgewaehlter Tag, Akzentlinien), nicht grossflaechig
-- **Typografie-Hierarchie**: Klare Abstufung -- grosser Titel, mittlere Untertitel, kleine Labels
-- **Kalender-Integration**: Der Kalender bekommt Custom-Styling das zur Seite passt (selected day in Brandingfarbe)
+- **Name**: Vor- und Nachname mit einem User-Icon
+- **Telefon**: Telefonnummer mit einem Phone-Icon
+- **Anstellungsart**: Minijob/Teilzeit/Vollzeit mit einem Briefcase-Icon (aus `application.employment_type`)
 
-### Aufbau (von oben nach unten, EINE Card)
+Die drei Informationen werden in einer dezenten, horizontal angeordneten Zeile mit Icons und Labels dargestellt -- kompakt, uebersichtlich, professionell.
 
-```text
-+--------------------------------------------------+
-|  [Logo]                                          |
-|                                                  |
-|  Bewerbungsgespraech                             |
-|  Hallo Max Mustermann                            |
-|  +49 123 456789                                  |
-|                                                  |
-|  Waehlen Sie Ihren Wunschtermin                  |
-|                                                  |
-|  +-----------------------+---------------------+ |
-|  |                       |                     | |
-|  |     Kalender          |   Zeitslots         | |
-|  |                       |                     | |
-|  +-----------------------+---------------------+ |
-|                                                  |
-|  [ Termin buchen: 12.02.2026 um 14:00 Uhr ]     |
-|                                                  |
-+--------------------------------------------------+
-```
+## 3. Footer: "Powered by UNTERNEHMENSNAME"
 
-### Konkrete Aenderungen
+Unterhalb des Hauptcontainers wird ein dezenter Footer-Text angezeigt: "Powered by {companyName}" in kleiner, grauer Schrift, zentriert.
 
-**1. Aeusserer Container:**
-- Hintergrund: `bg-slate-50` statt dynamischem Gradient
-- Zentrierter Inhalt mit `max-w-2xl` (schmaler, fokussierter)
+## 4. Gleiche Anpassungen auf der Bestaetigungsseite
 
-**2. Einzelne Card statt drei:**
-- Eine grosse Card mit `shadow-sm border border-slate-200` (subtil, nicht `shadow-xl border-0`)
-- Innen: Logo, Titel, Bewerber-Info, Trennlinie, Kalender+Slots, Button -- alles fliessend
-
-**3. Bewerber-Info inline:**
-- Kein separates Card-Element -- Name und Telefon werden als Teil des Headers dargestellt
-- Subtiler Text, kein eigener Container mit Schatten
-
-**4. Kalender:**
-- Custom classNames: selected day bekommt Brandingfarbe statt Standard-Blau
-- Saubere Integration ohne eigene Ueberschriften mit Icons (die wirken "baukasten-maessig")
-
-**5. Zeitslots:**
-- Einheitliche, flache Buttons mit `border-slate-200` statt `border-border`
-- Hover: Dezenter Brandingfarben-Hintergrund
-- Selected: Brandingfarbe mit weissem Text, KEIN shadow-md
-
-**6. Buchen-Button:**
-- Volle Breite innerhalb der Card, nicht zentriert schwebend ausserhalb
-- Clean, ohne extra Motion-Animation
-
-**7. Bestaetigungsseite:**
-- Gleiches Designsystem: eine saubere Card, Logo oben, Hakenzeichen dezent
-- Kein `shadow-xl`, kein Gradient-Hintergrund
-- Hinweis-Box: Dezentes Grau statt Amber/Gelb
-
-**8. Bestaetigungsdialog:**
-- Gleicher dezenter Stil, keine bunten Hintergruende in der Terminzusammenfassung
+Auch die Bestaetigungsansicht (nach erfolgreicher Buchung) bekommt das Logo zentriert darueber und den "Powered by"-Footer darunter.
 
 ## Technische Details
 
@@ -81,7 +30,17 @@ Eine einzelne, zusammenhaengende Seite statt separater, schwebender Karten. Alle
 
 | Datei | Aenderung |
 |---|---|
-| `src/pages/Bewerbungsgespraech.tsx` | Komplettes Layout-Refactoring: Zusammenfuehrung in eine Card, Entfernung von ueberfluessigen Wrappern/Schatten/Gradienten, Kalender-Styling mit Brandingfarbe, konsistente Typografie |
+| `src/pages/Bewerbungsgespraech.tsx` | Logo aus Card herausnehmen und zentriert darueber setzen. Bewerber-Info als strukturierte Zeile mit Icons (User, Phone, Briefcase) fuer Name, Telefon, Anstellungsart. Employment-Type-Labels (Minijob/Teilzeit/Vollzeit) mappen. "Powered by"-Footer unter dem Container. Aenderungen auch auf der Bestaetigungsansicht. |
+
+### Mapping fuer Anstellungsart-Labels
+
+```text
+minijob   -> Minijob
+teilzeit  -> Teilzeit
+vollzeit  -> Vollzeit
+```
 
 ### Keine neuen Dateien oder Abhaengigkeiten
+
+Lucide-Icons `User` und `Briefcase` werden zusaetzlich importiert (sind bereits im Projekt verfuegbar).
 
