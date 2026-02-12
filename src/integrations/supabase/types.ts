@@ -125,6 +125,7 @@ export type Database = {
           appointment_time: string
           created_at: string
           id: string
+          status: string
         }
         Insert: {
           application_id: string
@@ -132,6 +133,7 @@ export type Database = {
           appointment_time: string
           created_at?: string
           id?: string
+          status?: string
         }
         Update: {
           application_id?: string
@@ -139,6 +141,7 @@ export type Database = {
           appointment_time?: string
           created_at?: string
           id?: string
+          status?: string
         }
         Relationships: [
           {
@@ -204,6 +207,10 @@ export type Database = {
       }
       update_application_status: {
         Args: { _application_id: string; _status: string }
+        Returns: undefined
+      }
+      update_interview_status: {
+        Args: { _appointment_id: string; _status: string }
         Returns: undefined
       }
     }

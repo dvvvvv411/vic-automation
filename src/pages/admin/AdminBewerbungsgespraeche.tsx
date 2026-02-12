@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,29 +11,110 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { format, addDays, subHours } from "date-fns";
+import { toast } from "sonner";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
+
+type ViewMode = "default" | "past" | "future";
 
 export default function AdminBewerbungsgespraeche() {
   const [page, setPage] = useState(0);
+  const [viewMode, setViewMode] = useState<ViewMode>("default");
+  const queryClient = useQueryClient();
+
+  const now = new Date();
+  const today = format(now, "yyyy-MM-dd");
+  const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
+  const cutoffTime = format(subHours(now, 1), "HH:mm:ss");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["interview-appointments", page],
+    queryKey: ["interview-appointments", page, viewMode],
     queryFn: async () => {
-      const { data, error, count } = await supabase
+      let query = supabase
         .from("interview_appointments")
-        .select("*, applications(first_name, last_name, email, phone, brandings(company_name))", { count: "exact" })
-        .order("appointment_date", { ascending: true })
-        .order("appointment_time", { ascending: true })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+        .select("*, applications(first_name, last_name, email, phone, brandings(company_name))", { count: "exact" });
+
+      if (viewMode === "past") {
+        // All before today, plus today's that are past cutoff
+        query = query
+          .lte("appointment_date", today)
+          .order("appointment_date", { ascending: false })
+          .order("appointment_time", { ascending: false });
+      } else if (viewMode === "future") {
+        // All after tomorrow
+        query = query
+          .gt("appointment_date", tomorrow)
+          .order("appointment_date", { ascending: true })
+          .order("appointment_time", { ascending: true });
+      } else {
+        // Default: today and tomorrow
+        query = query
+          .gte("appointment_date", today)
+          .lte("appointment_date", tomorrow)
+          .order("appointment_date", { ascending: true })
+          .order("appointment_time", { ascending: true });
+      }
+
+      const { data, error, count } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (error) throw error;
-      return { items: data || [], total: count || 0 };
+
+      let items = data || [];
+
+      // Client-side filtering for time-based cutoff
+      if (viewMode === "default") {
+        items = items.filter((item: any) => {
+          if (item.appointment_date === today) {
+            return item.appointment_time >= cutoffTime;
+          }
+          return true;
+        });
+      } else if (viewMode === "past") {
+        // Keep only truly past items (before today OR today + past cutoff)
+        items = items.filter((item: any) => {
+          if (item.appointment_date === today) {
+            return item.appointment_time < cutoffTime;
+          }
+          return item.appointment_date < today;
+        });
+      }
+
+      return { items, total: count || 0 };
     },
   });
 
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
+
+  const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
+    const { error } = await supabase.rpc("update_interview_status", {
+      _appointment_id: appointmentId,
+      _status: newStatus,
+    });
+    if (error) {
+      toast.error("Status konnte nicht aktualisiert werden.");
+      return;
+    }
+    toast.success(`Status auf "${newStatus}" gesetzt.`);
+    queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
+  };
+
+  const toggleView = (mode: ViewMode) => {
+    setViewMode((prev) => (prev === mode ? "default" : mode));
+    setPage(0);
+  };
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case "erfolgreich":
+        return <Badge className="bg-green-600 text-white border-green-600">Erfolgreich</Badge>;
+      case "fehlgeschlagen":
+        return <Badge variant="destructive">Fehlgeschlagen</Badge>;
+      default:
+        return <Badge variant="outline">Neu</Badge>;
+    }
+  };
 
   return (
     <>
@@ -44,8 +125,31 @@ export default function AdminBewerbungsgespraeche() {
         className="mb-8"
       >
         <h2 className="text-3xl font-bold tracking-tight text-foreground">Bewerbungsgespräche</h2>
-        <p className="text-muted-foreground mt-1">Alle gebuchten Termine im Überblick.</p>
+        <p className="text-muted-foreground mt-1">
+          {viewMode === "default" && "Termine von heute und morgen."}
+          {viewMode === "past" && "Vergangene Termine."}
+          {viewMode === "future" && "Zukünftige Termine."}
+        </p>
       </motion.div>
+
+      <div className="flex gap-2 mb-4">
+        <Button
+          variant={viewMode === "past" ? "default" : "outline"}
+          size="sm"
+          onClick={() => toggleView("past")}
+        >
+          <History className="h-4 w-4 mr-1" />
+          Vergangene Termine
+        </Button>
+        <Button
+          variant={viewMode === "future" ? "default" : "outline"}
+          size="sm"
+          onClick={() => toggleView("future")}
+        >
+          <ArrowRight className="h-4 w-4 mr-1" />
+          Zukünftige Termine
+        </Button>
+      </div>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
         {isLoading ? (
@@ -53,7 +157,7 @@ export default function AdminBewerbungsgespraeche() {
         ) : !data?.items.length ? (
           <div className="text-center py-16 border border-dashed border-border rounded-lg">
             <Calendar className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">Noch keine Termine gebucht.</p>
+            <p className="text-muted-foreground">Keine Termine in dieser Ansicht.</p>
           </div>
         ) : (
           <>
@@ -64,9 +168,11 @@ export default function AdminBewerbungsgespraeche() {
                     <TableHead>Datum</TableHead>
                     <TableHead>Uhrzeit</TableHead>
                     <TableHead>Name</TableHead>
-                    <TableHead>E-Mail</TableHead>
                     <TableHead>Telefon</TableHead>
+                    <TableHead>E-Mail</TableHead>
                     <TableHead>Branding</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -87,13 +193,36 @@ export default function AdminBewerbungsgespraeche() {
                         {item.applications?.first_name} {item.applications?.last_name}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {item.applications?.email}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
                         {item.applications?.phone || "–"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
+                        {item.applications?.email}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {item.applications?.brandings?.company_name || "–"}
+                      </TableCell>
+                      <TableCell>{statusBadge(item.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            onClick={() => handleStatusUpdate(item.id, "erfolgreich")}
+                            title="Als erfolgreich markieren"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50"
+                            onClick={() => handleStatusUpdate(item.id, "fehlgeschlagen")}
+                            title="Als fehlgeschlagen markieren"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
