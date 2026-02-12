@@ -1,31 +1,18 @@
 
-# Bewerbungsgespraech-Seite: Vergangene Termine ausblenden und personalisieren
 
-## 1. Vergangene Zeitslots ausblenden
+# Bewerber-Info-Element kompakter und zentriert gestalten
 
-Wenn der Nutzer den heutigen Tag auswaehlt, werden nur Zeitslots angezeigt, die in der Zukunft liegen. Beispiel: Um 11:56 Uhr werden nur Slots ab 12:00 Uhr angezeigt. An zukuenftigen Tagen werden weiterhin alle Slots (08:00-17:30) angezeigt.
+## Aenderung
 
-**Umsetzung in `Bewerbungsgespraech.tsx`:**
-- `isToday()` aus date-fns importieren
-- Die angezeigte Slot-Liste filtern: Wenn `selectedDate` heute ist, nur Slots anzeigen deren Stunde/Minute nach der aktuellen Uhrzeit liegen
-- Die Filterung geschieht vor dem Rendering, sodass vergangene Slots komplett unsichtbar sind (nicht nur ausgegraut)
+In `src/pages/Bewerbungsgespraech.tsx` wird die Applicant-Info-Card angepasst:
 
-## 2. Bewerber-Daten anzeigen (Name und Telefonnummer)
+1. **Kompakter**: Statt voller Breite (`w-full` im aeusseren Container) bekommt die Card ein `w-fit` (nur so breit wie der Inhalt) und `mx-auto` (horizontal zentriert)
+2. **Inhalt zentriert**: Der Flex-Container im CardContent wird auf `justify-center` und `text-center` gesetzt
+3. **Weniger Padding**: Das Padding wird reduziert, damit kein ueberfluessiger Freiraum entsteht
 
-Unterhalb des Headers wird eine personalisierte Begruessung mit dem Namen des Bewerbers und seiner Telefonnummer angezeigt. Die Daten kommen bereits aus der bestehenden Query (`application.first_name`, `application.last_name`, `application.phone`).
-
-**Umsetzung:**
-- Neue Info-Card zwischen Header und Kalender mit:
-  - Begruessungstext: "Hallo {Vorname} {Nachname}"
-  - Telefonnummer-Anzeige mit Phone-Icon
-- Auch auf der Confirmation Page den Namen des Bewerbers anzeigen
-
-## Technische Details
-
-### Geaenderte Dateien
+### Geaenderte Datei
 
 | Datei | Aenderung |
 |---|---|
-| `src/pages/Bewerbungsgespraech.tsx` | Zeitslot-Filter fuer heutigen Tag, Bewerber-Info-Card mit Name und Telefon |
+| `src/pages/Bewerbungsgespraech.tsx` | Card bekommt `w-fit mx-auto`, CardContent bekommt zentriertes Layout mit reduziertem Padding |
 
-### Keine neuen Dateien oder Abhaengigkeiten
