@@ -1,1 +1,4 @@
 project_id = "luorlnagxpsibarcygjm"
+
+[functions.create-employee-account]
+verify_jwt = false

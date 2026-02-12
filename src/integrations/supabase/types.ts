@@ -143,6 +143,8 @@ export type Database = {
           street: string | null
           submitted_at: string | null
           tax_id: string | null
+          temp_password: string | null
+          user_id: string | null
           zip_code: string | null
         }
         Insert: {
@@ -169,6 +171,8 @@ export type Database = {
           street?: string | null
           submitted_at?: string | null
           tax_id?: string | null
+          temp_password?: string | null
+          user_id?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -195,6 +199,8 @@ export type Database = {
           street?: string | null
           submitted_at?: string | null
           tax_id?: string | null
+          temp_password?: string | null
+          user_id?: string | null
           zip_code?: string | null
         }
         Relationships: [
