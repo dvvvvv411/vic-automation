@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { AlertCircle, CheckCircle2, Phone } from "lucide-react";
+import { AlertCircle, Briefcase, CheckCircle2, Phone, User } from "lucide-react";
 import { format, isWeekend, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
 import { AnimatePresence } from "framer-motion";
@@ -64,6 +64,13 @@ export default function Bewerbungsgespraech() {
   const existingAppointment = application?.interview_appointments?.[0];
   const applicantName = application ? `${application.first_name} ${application.last_name}` : "";
   const applicantPhone = application?.phone;
+  const employmentType = application?.employment_type;
+
+  const employmentLabels: Record<string, string> = {
+    minijob: "Minijob",
+    teilzeit: "Teilzeit",
+    vollzeit: "Vollzeit",
+  };
 
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate) return TIME_SLOTS;
@@ -145,27 +152,32 @@ export default function Bewerbungsgespraech() {
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="max-w-lg w-full bg-white rounded-xl border border-slate-200 shadow-sm p-8 space-y-6">
+        <div className="max-w-lg w-full">
           {logoUrl && (
-            <img src={logoUrl} alt={companyName || "Logo"} className="h-10 mx-auto object-contain" />
+            <img src={logoUrl} alt={companyName || "Logo"} className="h-10 mx-auto object-contain mb-6" />
           )}
-          <div className="text-center space-y-2">
-            <CheckCircle2 className="h-10 w-10 mx-auto" style={{ color: brandColor }} />
-            <h2 className="text-xl font-semibold">Termin bestätigt</h2>
-            <p className="text-sm text-muted-foreground">
-              {applicantName}, Ihr Bewerbungsgespräch wurde erfolgreich gebucht.
-            </p>
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 space-y-6">
+            <div className="text-center space-y-2">
+              <CheckCircle2 className="h-10 w-10 mx-auto" style={{ color: brandColor }} />
+              <h2 className="text-xl font-semibold">Termin bestätigt</h2>
+              <p className="text-sm text-muted-foreground">
+                {applicantName}, Ihr Bewerbungsgespräch wurde erfolgreich gebucht.
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-200 p-4 space-y-1 text-center">
+              <p className="font-medium">{appDate}</p>
+              <p className="font-medium">{appTime} Uhr</p>
+            </div>
+            <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                Bitte seien Sie zu diesem Zeitpunkt telefonisch erreichbar. Wir rufen Sie an.
+              </p>
+            </div>
           </div>
-          <div className="rounded-lg border border-slate-200 p-4 space-y-1 text-center">
-            <p className="font-medium">{appDate}</p>
-            <p className="font-medium">{appTime} Uhr</p>
-          </div>
-          <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
-            <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              Bitte seien Sie zu diesem Zeitpunkt telefonisch erreichbar. Wir rufen Sie an.
-            </p>
-          </div>
+          {companyName && (
+            <p className="text-xs text-muted-foreground text-center mt-4">Powered by {companyName}</p>
+          )}
         </div>
       </div>
     );
@@ -175,12 +187,14 @@ export default function Bewerbungsgespraech() {
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 flex items-start justify-center">
       <div className="max-w-2xl w-full mt-8 md:mt-16">
+        {/* Logo centered above card */}
+        {logoUrl && (
+          <img src={logoUrl} alt={companyName || "Logo"} className="h-10 mx-auto object-contain mb-6" />
+        )}
+
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           {/* Header section */}
           <div className="p-6 pb-0 space-y-4">
-            {logoUrl && (
-              <img src={logoUrl} alt={companyName || "Logo"} className="h-10 object-contain" />
-            )}
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Termin buchen</h1>
               <p className="text-sm text-muted-foreground mt-1">
@@ -188,10 +202,23 @@ export default function Bewerbungsgespraech() {
                 {companyName ? ` bei ${companyName}` : ""}.
               </p>
             </div>
-            <div className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">{applicantName}</span>
+            {/* Applicant info row */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" />
+                <span className="font-medium text-foreground">{applicantName}</span>
+              </span>
               {applicantPhone && (
-                <span className="ml-3">{applicantPhone}</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5" />
+                  <span>{applicantPhone}</span>
+                </span>
+              )}
+              {employmentType && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Briefcase className="h-3.5 w-3.5" />
+                  <span>{employmentLabels[employmentType] || employmentType}</span>
+                </span>
               )}
             </div>
           </div>
@@ -286,6 +313,11 @@ export default function Bewerbungsgespraech() {
             )}
           </AnimatePresence>
         </div>
+
+        {/* Powered by footer */}
+        {companyName && (
+          <p className="text-xs text-muted-foreground text-center mt-4">Powered by {companyName}</p>
+        )}
       </div>
 
       {/* Confirmation Dialog */}
