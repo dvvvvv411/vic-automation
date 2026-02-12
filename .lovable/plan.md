@@ -1,60 +1,66 @@
 
 
-# Mitarbeiter-System: Benutzerkonto-Erstellung bei Genehmigung
+# Neuer Admin-Reiter: Auftraege
 
 ## Uebersicht
 
-Wenn ein Admin einen Arbeitsvertrag genehmigt, wird automatisch ein Benutzerkonto fuer den Bewerber erstellt. Dazu kommt ein neuer Admin-Reiter "Mitarbeiter" mit Tabellenuebersicht.
+Ein neuer Bereich `/admin/auftraege` wird erstellt, in dem der Admin Auftraege fuer App-Tests verwalten kann (CRUD). Bei Platzhalter-Auftraegen erscheinen zusaetzlich AppStore- und PlayStore-Link-Felder.
 
-## 1. Datenbank-Aenderungen
+## 1. Datenbank
 
-Neue Spalten in `employment_contracts`:
-- `user_id` (uuid, nullable) -- Referenz zum erstellten Auth-User
-- `temp_password` (text, nullable) -- Das generierte 6-stellige Passwort
+### Neue Tabelle: `orders`
 
-## 2. Edge Function: `create-employee-account`
+| Spalte | Typ | Pflicht | Default |
+|---|---|---|---|
+| id | uuid | ja | gen_random_uuid() |
+| order_number | text | ja | - |
+| title | text | ja | - |
+| provider | text | ja | - |
+| reward | text | ja | - |
+| is_placeholder | boolean | ja | false |
+| appstore_url | text | nein | null |
+| playstore_url | text | nein | null |
+| project_goal | text | nein | null |
+| review_questions | jsonb | nein | '[]' |
+| created_at | timestamptz | ja | now() |
 
-Da ein neuer Auth-User nur mit dem Service Role Key erstellt werden kann (nicht mit dem Anon Key), wird eine Edge Function benoetigt:
+RLS-Policies: Nur Admins duerfen SELECT, INSERT, UPDATE, DELETE (gleiches Muster wie bei `brandings`).
 
-- Empfaengt `contract_id` als Parameter
-- Liest die Vertragsdaten (E-Mail, Name) aus `employment_contracts`
-- Generiert ein 6-stelliges Passwort (Buchstaben + Zahlen)
-- Erstellt den User via `supabase.auth.admin.createUser()` (mit `email_confirm: true` damit kein Bestaetigungslink noetig ist)
-- Fuegt die Rolle "user" in `user_roles` ein
-- Speichert `user_id` und `temp_password` in `employment_contracts`
-- Setzt den Status auf "genehmigt"
-- Gibt das Passwort zurueck
+## 2. Neue Seite: `src/pages/admin/AdminAuftraege.tsx`
 
-Wichtig: Der Admin bleibt in seinem eigenen Account eingeloggt, da die User-Erstellung serverseitig in der Edge Function passiert.
+Folgt dem gleichen Pattern wie `AdminBrandings.tsx`:
 
-## 3. Frontend: Genehmigungsprozess anpassen
+### Tabelle
+- Spalten: Auftragsnummer, Titel, Anbieter, Praemie, Platzhalter (Ja/Nein Badge), Erstellt am, Aktionen (Edit, Delete)
 
-In `AdminArbeitsvertraege.tsx`:
-- `handleApprove` ruft statt `supabase.rpc("approve_employment_contract")` die neue Edge Function auf
-- Nach Erfolg wird eine Erfolgsmeldung mit dem generierten Passwort angezeigt
+### Dialog zum Erstellen und Bearbeiten
+- Felder: Auftragsnummer, Titel, Anbieter, Praemie (alle Pflicht)
+- Platzhalter-Switch: Wenn aktiv, erscheinen zwei zusaetzliche Felder fuer AppStore-URL und PlayStore-URL. Wenn inaktiv, werden diese Felder ausgeblendet und die Werte auf null gesetzt.
+- Projektziel: Textarea fuer detaillierte Anweisungen
+- Bewertungsfragen: Dynamische Liste -- jede Frage ist ein Textfeld mit Loeschen-Button, plus ein "Frage hinzufuegen"-Button am Ende. Gespeichert als JSON-Array.
+- Der Dialog wird sowohl fuer "Neu erstellen" als auch "Bearbeiten" verwendet (beim Bearbeiten werden die Felder mit den vorhandenen Daten befuellt).
 
-## 4. Neuer Admin-Reiter: Mitarbeiter
+### CRUD-Operationen
+- **Create**: `.insert()` via useMutation
+- **Read**: useQuery mit `.select("*").order("created_at", { ascending: false })`
+- **Update**: Dialog oeffnet sich mit vorausgefuellten Daten, speichert via `.update().eq("id", ...)`
+- **Delete**: Loeschen-Button in der Tabelle
 
-### Sidebar (`AdminSidebar.tsx`)
-- Neuer Eintrag "Mitarbeiter" mit Icon `Users` und URL `/admin/mitarbeiter`
+## 3. Navigation und Routing
 
-### Route (`App.tsx`)
-- Neue Route `/admin/mitarbeiter` -> `AdminMitarbeiter`
+### `AdminSidebar.tsx`
+- Neuer Eintrag "Auftraege" mit Icon `ClipboardList` und URL `/admin/auftraege` (zwischen Mitarbeiter und den bestehenden Eintraegen oder am Ende)
 
-### Neue Seite: `src/pages/admin/AdminMitarbeiter.tsx`
-- Query: Alle `employment_contracts` mit `status = 'genehmigt'` joinen mit `applications` (fuer Name, Telefon, Email, Branding)
-- Tabellenspalten: Name, Telefon, E-Mail, Passwort, Branding, Status
-- Status-Badge: "Nicht unterzeichnet" (fuer alle genehmigten Vertraege)
-- Pagination wie bei den anderen Admin-Tabellen
+### `App.tsx`
+- Neue Route: `<Route path="auftraege" element={<AdminAuftraege />} />`
+- Import von `AdminAuftraege`
 
 ## Technische Details
 
 | Datei | Aenderung |
 |---|---|
-| Migration | `ALTER TABLE employment_contracts ADD COLUMN user_id uuid, ADD COLUMN temp_password text` |
-| `supabase/functions/create-employee-account/index.ts` | Neue Edge Function fuer User-Erstellung |
-| `src/pages/admin/AdminArbeitsvertraege.tsx` | `handleApprove` ruft Edge Function statt RPC |
-| `src/pages/admin/AdminMitarbeiter.tsx` | Neue Seite mit Mitarbeiter-Tabelle |
-| `src/App.tsx` | Neue Route `/admin/mitarbeiter` |
-| `src/components/admin/AdminSidebar.tsx` | Neuer Nav-Eintrag "Mitarbeiter" |
+| Migration | CREATE TABLE orders mit RLS-Policies (Admin-only) |
+| `src/pages/admin/AdminAuftraege.tsx` | Neue Seite mit CRUD-Tabelle und Dialog |
+| `src/components/admin/AdminSidebar.tsx` | Neuer Nav-Eintrag "Auftraege" mit ClipboardList-Icon |
+| `src/App.tsx` | Neue Route + Import |
 
