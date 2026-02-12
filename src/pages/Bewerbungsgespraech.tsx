@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -12,10 +11,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { CalendarCheck, Clock, Phone, AlertCircle, CheckCircle2, User } from "lucide-react";
+import { AlertCircle, CheckCircle2, Phone } from "lucide-react";
 import { format, isWeekend, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const TIME_SLOTS = Array.from({ length: 20 }, (_, i) => {
@@ -34,7 +33,6 @@ export default function Bewerbungsgespraech() {
   const [bookedDate, setBookedDate] = useState<string>("");
   const [bookedTime, setBookedTime] = useState<string>("");
 
-  // Load application + branding
   const { data: application, isLoading, error } = useQuery({
     queryKey: ["application-public", id],
     queryFn: async () => {
@@ -49,7 +47,6 @@ export default function Bewerbungsgespraech() {
     enabled: !!id,
   });
 
-  // Load all booked appointments
   const { data: bookedSlots } = useQuery({
     queryKey: ["booked-slots"],
     queryFn: async () => {
@@ -64,14 +61,10 @@ export default function Bewerbungsgespraech() {
   const brandColor = application?.brandings?.brand_color || "#3B82F6";
   const logoUrl = application?.brandings?.logo_url;
   const companyName = application?.brandings?.company_name;
-
-  // Check if already booked
   const existingAppointment = application?.interview_appointments?.[0];
-
   const applicantName = application ? `${application.first_name} ${application.last_name}` : "";
   const applicantPhone = application?.phone;
 
-  // Filter time slots: hide past slots if today is selected
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate) return TIME_SLOTS;
     if (!isToday(selectedDate)) return TIME_SLOTS;
@@ -97,20 +90,12 @@ export default function Bewerbungsgespraech() {
     mutationFn: async () => {
       const dateStr = format(selectedDate!, "yyyy-MM-dd");
       const timeStr = selectedTime! + ":00";
-
       const { error: insertError } = await supabase
         .from("interview_appointments")
-        .insert({
-          application_id: id!,
-          appointment_date: dateStr,
-          appointment_time: timeStr,
-        });
+        .insert({ application_id: id!, appointment_date: dateStr, appointment_time: timeStr });
       if (insertError) throw insertError;
-
-      // Update status via RPC
       const { error: rpcError } = await supabase.rpc("update_application_status", {
-        _application_id: id!,
-        _status: "termin_gebucht",
+        _application_id: id!, _status: "termin_gebucht",
       });
       if (rpcError) throw rpcError;
     },
@@ -122,37 +107,34 @@ export default function Bewerbungsgespraech() {
       queryClient.invalidateQueries({ queryKey: ["application-public", id] });
       queryClient.invalidateQueries({ queryKey: ["booked-slots"] });
     },
-    onError: () => {
-      setConfirmOpen(false);
-    },
+    onError: () => setConfirmOpen(false),
   });
 
-  // Error state
+  // --- Error state ---
   if (!isLoading && (error || !application)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-8 pb-8 text-center">
-            <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Ungültiger Link</h2>
-            <p className="text-muted-foreground">
-              Dieser Bewerbungslink ist ungültig oder nicht mehr aktiv.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <div className="max-w-md w-full bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
+          <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-4" />
+          <h2 className="text-lg font-semibold mb-1">Ungültiger Link</h2>
+          <p className="text-sm text-muted-foreground">
+            Dieser Bewerbungslink ist ungültig oder nicht mehr aktiv.
+          </p>
+        </div>
       </div>
     );
   }
 
+  // --- Loading ---
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Laden...</div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-pulse text-muted-foreground text-sm">Laden...</div>
       </div>
     );
   }
 
-  // Already booked or just booked
+  // --- Confirmation / Already booked ---
   if (existingAppointment || booked) {
     const appDate = booked
       ? bookedDate
@@ -162,216 +144,148 @@ export default function Bewerbungsgespraech() {
       : existingAppointment.appointment_time?.slice(0, 5);
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: `linear-gradient(135deg, ${brandColor}10, ${brandColor}05, #f8fafc)` }}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Card className="max-w-lg w-full shadow-xl border-0">
-            <CardContent className="pt-10 pb-10 text-center space-y-6">
-              {logoUrl && (
-                <img src={logoUrl} alt={companyName || "Logo"} className="h-12 mx-auto object-contain" />
-              )}
-              <div
-                className="h-16 w-16 rounded-full mx-auto flex items-center justify-center"
-                style={{ backgroundColor: `${brandColor}15` }}
-              >
-                <CheckCircle2 className="h-8 w-8" style={{ color: brandColor }} />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Termin bestätigt!</h2>
-                <p className="text-muted-foreground">
-                  {applicantName}, Ihr Bewerbungsgespräch wurde erfolgreich gebucht.
-                </p>
-              </div>
-              <div
-                className="rounded-xl p-5 space-y-3"
-                style={{ backgroundColor: `${brandColor}08` }}
-              >
-                <div className="flex items-center gap-3 justify-center">
-                  <CalendarCheck className="h-5 w-5" style={{ color: brandColor }} />
-                  <span className="font-semibold text-lg">{appDate}</span>
-                </div>
-                <div className="flex items-center gap-3 justify-center">
-                  <Clock className="h-5 w-5" style={{ color: brandColor }} />
-                  <span className="font-semibold text-lg">{appTime} Uhr</span>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 text-left bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <Phone className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
-                <p className="text-sm text-amber-800">
-                  Bitte seien Sie zu diesem Zeitpunkt telefonisch erreichbar. Wir rufen Sie an.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <div className="max-w-lg w-full bg-white rounded-xl border border-slate-200 shadow-sm p-8 space-y-6">
+          {logoUrl && (
+            <img src={logoUrl} alt={companyName || "Logo"} className="h-10 mx-auto object-contain" />
+          )}
+          <div className="text-center space-y-2">
+            <CheckCircle2 className="h-10 w-10 mx-auto" style={{ color: brandColor }} />
+            <h2 className="text-xl font-semibold">Termin bestätigt</h2>
+            <p className="text-sm text-muted-foreground">
+              {applicantName}, Ihr Bewerbungsgespräch wurde erfolgreich gebucht.
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-200 p-4 space-y-1 text-center">
+            <p className="font-medium">{appDate}</p>
+            <p className="font-medium">{appTime} Uhr</p>
+          </div>
+          <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
+            <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              Bitte seien Sie zu diesem Zeitpunkt telefonisch erreichbar. Wir rufen Sie an.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Booking page
+  // --- Booking page: ONE unified card ---
   return (
-    <div
-      className="min-h-screen p-4 md:p-8"
-      style={{ background: `linear-gradient(135deg, ${brandColor}08, #f8fafc, ${brandColor}04)` }}
-    >
-      <div className="max-w-3xl mx-auto space-y-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center space-y-4 pt-6"
-        >
-          {logoUrl && (
-            <img src={logoUrl} alt={companyName || "Logo"} className="h-14 mx-auto object-contain" />
-          )}
-          <div>
-            <h1 className="text-3xl font-bold">Termin buchen</h1>
-            <p className="text-muted-foreground mt-2">
-              Wählen Sie einen passenden Termin für Ihr Bewerbungsgespräch
-              {companyName ? ` bei ${companyName}` : ""}.
-            </p>
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 flex items-start justify-center">
+      <div className="max-w-2xl w-full mt-8 md:mt-16">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          {/* Header section */}
+          <div className="p-6 pb-0 space-y-4">
+            {logoUrl && (
+              <img src={logoUrl} alt={companyName || "Logo"} className="h-10 object-contain" />
+            )}
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">Termin buchen</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Wählen Sie einen passenden Termin für Ihr Bewerbungsgespräch
+                {companyName ? ` bei ${companyName}` : ""}.
+              </p>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{applicantName}</span>
+              {applicantPhone && (
+                <span className="ml-3">{applicantPhone}</span>
+              )}
+            </div>
           </div>
-        </motion.div>
 
-        {/* Applicant Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="shadow-md border-0 w-fit mx-auto">
-            <CardContent className="py-3 px-5 flex items-center gap-3 justify-center text-center">
-              <div
-                className="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
-                style={{ backgroundColor: `${brandColor}15` }}
-              >
-                <User className="h-5 w-5" style={{ color: brandColor }} />
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-lg">Hallo {applicantName}</p>
-                {applicantPhone && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5" />
-                    {applicantPhone}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+          {/* Divider */}
+          <div className="border-t border-slate-200 mx-6 mt-4" />
 
-        {/* Calendar + Time slots */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
-          <Card className="shadow-lg border-0 overflow-hidden">
-            <CardContent className="p-0">
-              <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
-                {/* Calendar */}
-                <div className="p-6">
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <CalendarCheck className="h-5 w-5" style={{ color: brandColor }} />
-                    Tag auswählen
-                  </h3>
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(d) => {
-                      setSelectedDate(d);
-                      setSelectedTime(null);
-                    }}
-                    disabled={(date) =>
-                      isWeekend(date) || isBefore(date, startOfDay(new Date()))
-                    }
-                    locale={de}
-                    className="pointer-events-auto"
-                  />
-                </div>
+          {/* Calendar + Time slots */}
+          <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+            {/* Calendar */}
+            <div className="p-6">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Datum</p>
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => {
+                  setSelectedDate(d);
+                  setSelectedTime(null);
+                }}
+                disabled={(date) =>
+                  isWeekend(date) || isBefore(date, startOfDay(new Date()))
+                }
+                locale={de}
+                className="pointer-events-auto"
+                classNames={{
+                  day_selected: "!text-white",
+                }}
+                modifiersStyles={{
+                  selected: { backgroundColor: brandColor, color: "white" },
+                }}
+              />
+            </div>
 
-                {/* Time slots */}
-                <div className="p-6">
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Clock className="h-5 w-5" style={{ color: brandColor }} />
-                    Uhrzeit auswählen
-                  </h3>
-                  {!selectedDate ? (
-                    <p className="text-sm text-muted-foreground py-8 text-center">
-                      Bitte wählen Sie zuerst einen Tag aus.
+            {/* Time slots */}
+            <div className="p-6">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Uhrzeit</p>
+              {!selectedDate ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  Bitte wählen Sie zuerst ein Datum.
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-1.5 max-h-[340px] overflow-y-auto">
+                  {availableTimeSlots.length === 0 ? (
+                    <p className="text-sm text-muted-foreground col-span-2 py-4 text-center">
+                      Keine verfügbaren Zeiten.
                     </p>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-1">
-                      <AnimatePresence mode="popLayout">
-                        {availableTimeSlots.length === 0 ? (
-                          <p className="text-sm text-muted-foreground col-span-2 py-4 text-center">
-                            Keine verfügbaren Termine mehr für heute.
-                          </p>
-                        ) : availableTimeSlots.map((time) => {
-                          const isBooked = bookedTimesForDate.has(time);
-                          const isSelected = selectedTime === time;
-                          return (
-                            <motion.div
-                              key={time}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 0.15 }}
-                            >
-                              <button
-                                disabled={isBooked}
-                                onClick={() => setSelectedTime(time)}
-                                className={cn(
-                                  "w-full py-2.5 px-3 rounded-lg text-sm font-medium transition-all border",
-                                  isBooked
-                                    ? "bg-muted text-muted-foreground/40 cursor-not-allowed border-transparent"
-                                    : isSelected
-                                    ? "text-white shadow-md border-transparent"
-                                    : "bg-background border-border hover:border-primary/30 hover:bg-primary/5"
-                                )}
-                                style={
-                                  isSelected && !isBooked
-                                    ? { backgroundColor: brandColor, borderColor: brandColor }
-                                    : undefined
-                                }
-                              >
-                                {time} Uhr
-                              </button>
-                            </motion.div>
-                          );
-                        })}
-                      </AnimatePresence>
-                    </div>
-                  )}
+                  ) : availableTimeSlots.map((time) => {
+                    const isBooked = bookedTimesForDate.has(time);
+                    const isSelected = selectedTime === time;
+                    return (
+                      <button
+                        key={time}
+                        disabled={isBooked}
+                        onClick={() => setSelectedTime(time)}
+                        className={cn(
+                          "py-2 px-3 rounded-md text-sm font-medium transition-colors border",
+                          isBooked
+                            ? "bg-slate-50 text-slate-300 cursor-not-allowed border-transparent"
+                            : isSelected
+                            ? "text-white border-transparent"
+                            : "bg-white border-slate-200 hover:bg-slate-50 text-foreground"
+                        )}
+                        style={
+                          isSelected && !isBooked
+                            ? { backgroundColor: brandColor }
+                            : undefined
+                        }
+                      >
+                        {time}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Book button */}
+          <AnimatePresence>
+            {selectedDate && selectedTime && (
+              <div className="p-6 pt-0">
+                <div className="border-t border-slate-200 pt-5">
+                  <Button
+                    className="w-full text-white"
+                    style={{ backgroundColor: brandColor }}
+                    onClick={() => setConfirmOpen(true)}
+                  >
+                    Termin buchen: {format(selectedDate, "dd.MM.yyyy")} um {selectedTime} Uhr
+                  </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Book button */}
-        <AnimatePresence>
-          {selectedDate && selectedTime && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="text-center"
-            >
-              <Button
-                size="lg"
-                className="text-white shadow-lg px-8 text-base"
-                style={{ backgroundColor: brandColor }}
-                onClick={() => setConfirmOpen(true)}
-              >
-                Termin buchen: {format(selectedDate, "dd.MM.yyyy")} um {selectedTime} Uhr
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Confirmation Dialog */}
@@ -380,24 +294,15 @@ export default function Bewerbungsgespraech() {
           <DialogHeader>
             <DialogTitle>Termin bestätigen</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-muted-foreground">
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
               Möchten Sie folgenden Termin verbindlich buchen?
             </p>
-            <div
-              className="rounded-lg p-4 space-y-2"
-              style={{ backgroundColor: `${brandColor}08` }}
-            >
-              <div className="flex items-center gap-2">
-                <CalendarCheck className="h-4 w-4" style={{ color: brandColor }} />
-                <span className="font-medium">
-                  {selectedDate && format(selectedDate, "EEEE, dd. MMMM yyyy", { locale: de })}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" style={{ color: brandColor }} />
-                <span className="font-medium">{selectedTime} Uhr</span>
-              </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-1 text-sm">
+              <p className="font-medium">
+                {selectedDate && format(selectedDate, "EEEE, dd. MMMM yyyy", { locale: de })}
+              </p>
+              <p className="font-medium">{selectedTime} Uhr</p>
             </div>
           </div>
           <DialogFooter>
@@ -410,7 +315,7 @@ export default function Bewerbungsgespraech() {
               className="text-white"
               style={{ backgroundColor: brandColor }}
             >
-              {bookMutation.isPending ? "Wird gebucht..." : "Termin bestätigen"}
+              {bookMutation.isPending ? "Wird gebucht..." : "Bestätigen"}
             </Button>
           </DialogFooter>
         </DialogContent>
