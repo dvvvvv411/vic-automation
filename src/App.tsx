@@ -12,7 +12,9 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBrandings from "./pages/admin/AdminBrandings";
 import AdminBewerbungen from "./pages/admin/AdminBewerbungen";
 import AdminBewerbungsgespraeche from "./pages/admin/AdminBewerbungsgespraeche";
+import AdminArbeitsvertraege from "./pages/admin/AdminArbeitsvertraege";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
+import Arbeitsvertrag from "./pages/Arbeitsvertrag";
 import Mitarbeiter from "./pages/Mitarbeiter";
 import NotFound from "./pages/NotFound";
 
@@ -40,8 +42,10 @@ const App = () => (
               <Route path="brandings" element={<AdminBrandings />} />
               <Route path="bewerbungen" element={<AdminBewerbungen />} />
               <Route path="bewerbungsgespraeche" element={<AdminBewerbungsgespraeche />} />
+              <Route path="arbeitsvertraege" element={<AdminArbeitsvertraege />} />
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
+            <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />
             <Route
               path="/mitarbeiter"
               element={

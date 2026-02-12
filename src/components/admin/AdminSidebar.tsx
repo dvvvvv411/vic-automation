@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, LogOut } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -19,6 +19,7 @@ const navItems = [
   { title: "Brandings", url: "/admin/brandings", icon: Palette },
   { title: "Bewerbungen", url: "/admin/bewerbungen", icon: FileText },
   { title: "Bewerbungsgespräche", url: "/admin/bewerbungsgespraeche", icon: Calendar },
+  { title: "Arbeitsverträge", url: "/admin/arbeitsvertraege", icon: FileCheck },
 ];
 
 export function AdminSidebar() {

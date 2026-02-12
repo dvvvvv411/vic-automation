@@ -118,6 +118,95 @@ export type Database = {
         }
         Relationships: []
       }
+      employment_contracts: {
+        Row: {
+          application_id: string
+          bank_name: string | null
+          bic: string | null
+          birth_date: string | null
+          city: string | null
+          created_at: string
+          desired_start_date: string | null
+          email: string | null
+          employment_type: string | null
+          first_name: string | null
+          health_insurance: string | null
+          iban: string | null
+          id: string
+          id_back_url: string | null
+          id_front_url: string | null
+          last_name: string | null
+          marital_status: string | null
+          phone: string | null
+          social_security_number: string | null
+          status: string
+          street: string | null
+          submitted_at: string | null
+          tax_id: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          application_id: string
+          bank_name?: string | null
+          bic?: string | null
+          birth_date?: string | null
+          city?: string | null
+          created_at?: string
+          desired_start_date?: string | null
+          email?: string | null
+          employment_type?: string | null
+          first_name?: string | null
+          health_insurance?: string | null
+          iban?: string | null
+          id?: string
+          id_back_url?: string | null
+          id_front_url?: string | null
+          last_name?: string | null
+          marital_status?: string | null
+          phone?: string | null
+          social_security_number?: string | null
+          status?: string
+          street?: string | null
+          submitted_at?: string | null
+          tax_id?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          application_id?: string
+          bank_name?: string | null
+          bic?: string | null
+          birth_date?: string | null
+          city?: string | null
+          created_at?: string
+          desired_start_date?: string | null
+          email?: string | null
+          employment_type?: string | null
+          first_name?: string | null
+          health_insurance?: string | null
+          iban?: string | null
+          id?: string
+          id_back_url?: string | null
+          id_front_url?: string | null
+          last_name?: string | null
+          marital_status?: string | null
+          phone?: string | null
+          social_security_number?: string | null
+          status?: string
+          street?: string | null
+          submitted_at?: string | null
+          tax_id?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employment_contracts_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interview_appointments: {
         Row: {
           application_id: string
@@ -194,12 +283,41 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_employment_contract: {
+        Args: { _contract_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      submit_employment_contract: {
+        Args: {
+          _bank_name: string
+          _bic: string
+          _birth_date: string
+          _city: string
+          _contract_id: string
+          _desired_start_date: string
+          _email: string
+          _employment_type: string
+          _first_name: string
+          _health_insurance: string
+          _iban: string
+          _id_back_url: string
+          _id_front_url: string
+          _last_name: string
+          _marital_status: string
+          _phone: string
+          _social_security_number: string
+          _street: string
+          _tax_id: string
+          _zip_code: string
+        }
+        Returns: undefined
       }
       update_application_phone: {
         Args: { _application_id: string; _phone: string }
