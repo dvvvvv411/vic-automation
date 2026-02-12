@@ -1,26 +1,36 @@
 
 
-# Link-Spalte in Admin Arbeitsvertraege + Anon-Zugriff sicherstellen
+# Fix: Trigger fuer automatische Vertragserstellung registrieren
 
-## Uebersicht
+## Problem
 
-In der Tabelle auf `/admin/arbeitsvertraege` wird eine neue Spalte "Link" hinzugefuegt, mit einem Button zum Kopieren des Arbeitsvertrag-Links (`/arbeitsvertrag/{application_id}`). Der oeffentliche Zugriff auf das Formular ist bereits korrekt konfiguriert (Anon SELECT/UPDATE Policies + SECURITY DEFINER RPCs + Storage Policies vorhanden).
+Die Funktion `create_contract_on_interview_success()` existiert in der Datenbank, aber der zugehoerige **Trigger wurde nie auf der Tabelle `interview_appointments` erstellt**. Dadurch wird beim Markieren eines Bewerbungsgespraechs als "erfolgreich" kein Eintrag in `employment_contracts` angelegt -- und der kopierte Link fuehrt zu "Ungueltiger Link".
 
-## Aenderung
+## Loesung
 
-### `src/pages/admin/AdminArbeitsvertraege.tsx`
+### 1. Migration: Trigger registrieren + fehlende Eintraege nachtraeglich anlegen
 
-- Neue Spalte **"Link"** in der Tabelle (zwischen "Branding" und "Vertragsstatus")
-- Button mit Copy-Icon, der `window.location.origin + "/arbeitsvertrag/" + application_id` in die Zwischenablage kopiert
-- Toast-Benachrichtigung bei erfolgreichem Kopieren
-- Import von `Copy` Icon aus lucide-react
+```sql
+-- Trigger auf interview_appointments registrieren
+CREATE TRIGGER on_interview_success
+  AFTER UPDATE ON public.interview_appointments
+  FOR EACH ROW
+  EXECUTE FUNCTION public.create_contract_on_interview_success();
 
-### Keine Datenbank-Aenderungen noetig
+-- Bereits als erfolgreich markierte Termine nachtraeglich versorgen
+INSERT INTO public.employment_contracts (application_id)
+SELECT ia.application_id
+FROM public.interview_appointments ia
+WHERE ia.status = 'erfolgreich'
+  AND NOT EXISTS (
+    SELECT 1 FROM public.employment_contracts ec
+    WHERE ec.application_id = ia.application_id
+  );
+```
 
-Die RLS-Policies und Storage-Policies erlauben bereits anonymen Zugriff:
-- `employment_contracts`: Anon SELECT + UPDATE
-- `applications`: Anon SELECT
-- `brandings`: Anon SELECT
-- Storage `contract-documents`: Anon Upload + View
-- RPCs mit SECURITY DEFINER umgehen RLS
+Das ist die einzige Aenderung -- eine SQL-Migration. Kein Frontend-Code muss geaendert werden.
 
+### Ergebnis
+
+- Der bestehende Link `/arbeitsvertrag/0bbe3297-469c-4ce2-a3cb-054fdaf3dc46` wird sofort funktionieren (da der fehlende Eintrag nachgetragen wird)
+- Zukuenftige "erfolgreich"-Markierungen erzeugen automatisch einen Contract-Eintrag via Trigger
