@@ -198,6 +198,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_application_phone: {
+        Args: { _application_id: string; _phone: string }
+        Returns: undefined
+      }
       update_application_status: {
         Args: { _application_id: string; _status: string }
         Returns: undefined

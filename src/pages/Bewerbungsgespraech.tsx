@@ -11,7 +11,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { AlertCircle, Briefcase, CheckCircle2, Phone, User } from "lucide-react";
+import { AlertCircle, Briefcase, Check, CheckCircle2, Pencil, Phone, User } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { format, isWeekend, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
 import { AnimatePresence } from "framer-motion";
@@ -32,6 +33,8 @@ export default function Bewerbungsgespraech() {
   const [booked, setBooked] = useState(false);
   const [bookedDate, setBookedDate] = useState<string>("");
   const [bookedTime, setBookedTime] = useState<string>("");
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [editedPhone, setEditedPhone] = useState("");
 
   const { data: application, isLoading, error } = useQuery({
     queryKey: ["application-public", id],
@@ -171,7 +174,7 @@ export default function Bewerbungsgespraech() {
             <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-lg p-4">
               <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
               <p className="text-sm text-muted-foreground">
-                Bitte seien Sie zu diesem Zeitpunkt telefonisch erreichbar. Wir rufen Sie an.
+                Bitte seien Sie unter <span className="font-semibold text-foreground">{applicantPhone}</span> telefonisch erreichbar. Wir rufen Sie unter dieser Nummer an.
               </p>
             </div>
           </div>
@@ -211,7 +214,44 @@ export default function Bewerbungsgespraech() {
               {applicantPhone && (
                 <span className="inline-flex items-center gap-1.5">
                   <Phone className="h-3.5 w-3.5" />
-                  <span>{applicantPhone}</span>
+                  {isEditingPhone ? (
+                    <>
+                      <Input
+                        type="tel"
+                        value={editedPhone}
+                        onChange={(e) => setEditedPhone(e.target.value)}
+                        className="h-7 w-40 text-sm"
+                        autoFocus
+                      />
+                      <button
+                        onClick={async () => {
+                          if (!editedPhone.trim()) return;
+                          await supabase.rpc("update_application_phone", {
+                            _application_id: id!,
+                            _phone: editedPhone.trim(),
+                          });
+                          queryClient.invalidateQueries({ queryKey: ["application-public", id] });
+                          setIsEditingPhone(false);
+                        }}
+                        className="hover:text-foreground transition-colors"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span>{applicantPhone}</span>
+                      <button
+                        onClick={() => {
+                          setEditedPhone(applicantPhone || "");
+                          setIsEditingPhone(true);
+                        }}
+                        className="hover:text-foreground transition-colors"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    </>
+                  )}
                 </span>
               )}
               {employmentType && (
