@@ -64,7 +64,8 @@ export default function Bewerbungsgespraech() {
   const brandColor = application?.brandings?.brand_color || "#3B82F6";
   const logoUrl = application?.brandings?.logo_url;
   const companyName = application?.brandings?.company_name;
-  const existingAppointment = application?.interview_appointments?.[0];
+  const interviewData = application?.interview_appointments;
+  const existingAppointment = Array.isArray(interviewData) ? interviewData[0] : interviewData;
   const applicantName = application ? `${application.first_name} ${application.last_name}` : "";
   const applicantPhone = application?.phone;
   const employmentType = application?.employment_type;
