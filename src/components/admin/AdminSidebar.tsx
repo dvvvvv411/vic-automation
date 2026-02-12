@@ -1,6 +1,10 @@
 import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +28,52 @@ const navItems = [
 
 export function AdminSidebar() {
   const { user, signOut } = useAuth();
+
+  const { data: neuCount } = useQuery({
+    queryKey: ["badge-bewerbungen-neu"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("applications")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "neu");
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
+  const { data: todayCount } = useQuery({
+    queryKey: ["badge-gespraeche-heute"],
+    queryFn: async () => {
+      const now = new Date();
+      const today = format(now, "yyyy-MM-dd");
+      const nowTime = format(now, "HH:mm:ss");
+      const { count } = await supabase
+        .from("interview_appointments")
+        .select("*", { count: "exact", head: true })
+        .eq("appointment_date", today)
+        .gte("appointment_time", nowTime);
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
+  const { data: eingereichtCount } = useQuery({
+    queryKey: ["badge-vertraege-eingereicht"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("employment_contracts")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "eingereicht");
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
+  const badgeCounts: Record<string, number> = {
+    "/admin/bewerbungen": neuCount ?? 0,
+    "/admin/bewerbungsgespraeche": todayCount ?? 0,
+    "/admin/arbeitsvertraege": eingereichtCount ?? 0,
+  };
 
   return (
     <Sidebar className="border-r border-border">
@@ -49,7 +99,12 @@ export function AdminSidebar() {
                       activeClassName="bg-primary/10 text-primary font-medium"
                     >
                       <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
+                      <span className="flex-1">{item.title}</span>
+                      {badgeCounts[item.url] > 0 && (
+                        <Badge className="ml-auto text-xs px-1.5 py-0 min-w-[1.25rem] h-5 flex items-center justify-center">
+                          {badgeCounts[item.url]}
+                        </Badge>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
