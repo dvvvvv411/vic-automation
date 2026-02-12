@@ -248,6 +248,48 @@ export type Database = {
           },
         ]
       }
+      orders: {
+        Row: {
+          appstore_url: string | null
+          created_at: string
+          id: string
+          is_placeholder: boolean
+          order_number: string
+          playstore_url: string | null
+          project_goal: string | null
+          provider: string
+          review_questions: Json | null
+          reward: string
+          title: string
+        }
+        Insert: {
+          appstore_url?: string | null
+          created_at?: string
+          id?: string
+          is_placeholder?: boolean
+          order_number: string
+          playstore_url?: string | null
+          project_goal?: string | null
+          provider: string
+          review_questions?: Json | null
+          reward: string
+          title: string
+        }
+        Update: {
+          appstore_url?: string | null
+          created_at?: string
+          id?: string
+          is_placeholder?: boolean
+          order_number?: string
+          playstore_url?: string | null
+          project_goal?: string | null
+          provider?: string
+          review_questions?: Json | null
+          reward?: string
+          title?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
