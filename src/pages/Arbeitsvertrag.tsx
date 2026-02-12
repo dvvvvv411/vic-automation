@@ -33,7 +33,7 @@ export default function Arbeitsvertrag() {
   // Form state
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: "", phone: "",
-    birth_date: null as Date | null,
+    birth_date: "",
     street: "", zip_code: "", city: "",
     marital_status: "", employment_type: "",
     desired_start_date: null as Date | null,
@@ -138,7 +138,9 @@ export default function Arbeitsvertrag() {
 
   const isStepValid = () => {
     if (step === 0) {
-      return form.first_name && form.last_name && form.email && form.phone && form.birth_date && form.street && form.zip_code && form.city && form.marital_status && form.employment_type && form.desired_start_date;
+      const bdMatch = form.birth_date.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+      const bdValid = bdMatch ? !isNaN(new Date(`${bdMatch[3]}-${bdMatch[2]}-${bdMatch[1]}`).getTime()) : false;
+      return form.first_name && form.last_name && form.email && form.phone && bdValid && form.street && form.zip_code && form.city && form.marital_status && form.employment_type && form.desired_start_date;
     }
     if (step === 1) return form.social_security_number && form.tax_id && form.health_insurance;
     if (step === 2) return form.iban && form.bic && form.bank_name;
@@ -179,7 +181,7 @@ export default function Arbeitsvertrag() {
         _last_name: form.last_name,
         _email: form.email,
         _phone: form.phone,
-        _birth_date: format(form.birth_date!, "yyyy-MM-dd"),
+        _birth_date: (() => { const p = form.birth_date.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); return p ? `${p[3]}-${p[2]}-${p[1]}` : ""; })(),
         _street: form.street,
         _zip_code: form.zip_code,
         _city: form.city,
@@ -301,7 +303,23 @@ export default function Arbeitsvertrag() {
                   <Label>Telefon <span className="text-destructive">*</span></Label>
                   <Input className={cn(form.phone.trim() && "border-green-500")} type="tel" value={form.phone} onChange={e => updateForm("phone", e.target.value)} />
                 </div>
-                <DatePickerField label="Geburtsdatum" value={form.birth_date} onChange={d => updateForm("birth_date", d || null)} disableFuture useDropdownNavigation />
+                <div className="space-y-2">
+                  <Label>Geburtsdatum <span className="text-destructive">*</span></Label>
+                  <Input
+                    className={cn(/^\d{2}\.\d{2}\.\d{4}$/.test(form.birth_date) && "border-green-500")}
+                    placeholder="TT.MM.JJJJ"
+                    maxLength={10}
+                    value={form.birth_date}
+                    onChange={e => {
+                      let v = e.target.value.replace(/[^\d.]/g, "");
+                      // Auto-insert dots
+                      const digits = v.replace(/\./g, "");
+                      if (digits.length >= 5) v = digits.slice(0, 2) + "." + digits.slice(2, 4) + "." + digits.slice(4, 8);
+                      else if (digits.length >= 3) v = digits.slice(0, 2) + "." + digits.slice(2);
+                      updateForm("birth_date", v);
+                    }}
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label>Straße & Hausnummer <span className="text-destructive">*</span></Label>
                   <Input className={cn(form.street.trim() && "border-green-500")} value={form.street} onChange={e => updateForm("street", e.target.value)} />
@@ -416,7 +434,7 @@ export default function Arbeitsvertrag() {
                   <SummaryRow label="Name" value={`${form.first_name} ${form.last_name}`} />
                   <SummaryRow label="E-Mail" value={form.email} />
                   <SummaryRow label="Telefon" value={form.phone} />
-                  <SummaryRow label="Geburtsdatum" value={form.birth_date ? format(form.birth_date, "dd.MM.yyyy") : ""} />
+                  <SummaryRow label="Geburtsdatum" value={form.birth_date} />
                   <SummaryRow label="Adresse" value={`${form.street}, ${form.zip_code} ${form.city}`} />
                   <SummaryRow label="Familienstand" value={form.marital_status} />
                   <SummaryRow label="Beschäftigung" value={employmentLabels[form.employment_type] || form.employment_type} />
