@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -209,15 +209,15 @@ export default function Arbeitsvertrag() {
     minijob: "Minijob", teilzeit: "Teilzeit", vollzeit: "Vollzeit",
   };
 
-  const DatePickerField = ({ label, value, onChange, disablePast = false, disableFuture = false }: {
+  const DatePickerField = ({ label, value, onChange, disablePast = false, disableFuture = false, useDropdownNavigation = false }: {
     label: string; value: Date | null; onChange: (d: Date | undefined) => void;
-    disablePast?: boolean; disableFuture?: boolean;
+    disablePast?: boolean; disableFuture?: boolean; useDropdownNavigation?: boolean;
   }) => (
     <div className="space-y-2">
       <Label>{label} <span className="text-destructive">*</span></Label>
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !value && "text-muted-foreground")}>
+          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", value ? "border-green-500" : "text-muted-foreground")}>
             <CalendarIcon className="mr-2 h-4 w-4" />
             {value ? format(value, "dd.MM.yyyy") : "Datum wählen"}
           </Button>
@@ -234,6 +234,12 @@ export default function Arbeitsvertrag() {
             }}
             locale={de}
             initialFocus
+            className="p-3 pointer-events-auto"
+            {...(useDropdownNavigation ? {
+              captionLayout: "dropdown-buttons",
+              fromYear: 1940,
+              toYear: new Date().getFullYear(),
+            } : {})}
           />
         </PopoverContent>
       </Popover>
@@ -248,12 +254,12 @@ export default function Arbeitsvertrag() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           {/* Stepper */}
           <div className="p-6 pb-4">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center mb-6">
               {STEPS.map((s, i) => (
-                <div key={i} className="flex items-center">
+                <React.Fragment key={i}>
                   <div
                     className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors",
+                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors shrink-0",
                       i < step ? "border-transparent text-white" : i === step ? "border-transparent text-white" : "border-slate-300 text-slate-400 bg-white"
                     )}
                     style={i <= step ? { backgroundColor: brandColor, borderColor: brandColor } : undefined}
@@ -261,15 +267,15 @@ export default function Arbeitsvertrag() {
                     {i < step ? "✓" : i + 1}
                   </div>
                   {i < STEPS.length - 1 && (
-                    <div className={cn("h-0.5 w-6 md:w-12 mx-1", i < step ? "bg-primary" : "bg-slate-200")}
+                    <div className={cn("h-0.5 flex-1 mx-1", i < step ? "bg-primary" : "bg-slate-200")}
                       style={i < step ? { backgroundColor: brandColor } : undefined} />
                   )}
-                </div>
+                </React.Fragment>
               ))}
             </div>
             <h2 className="text-xl font-semibold">{STEPS[step]}</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {step < 4 ? "Bitte füllen Sie alle Pflichtfelder aus." : "Bitte überprüfen Sie Ihre Angaben."}
+              {step === 2 ? "Bitte geben Sie Ihre Bankverbindung für die Gehaltsauszahlung an." : step < 4 ? "Bitte füllen Sie alle Pflichtfelder aus." : "Bitte überprüfen Sie Ihre Angaben."}
             </p>
           </div>
 
@@ -281,37 +287,37 @@ export default function Arbeitsvertrag() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Vorname <span className="text-destructive">*</span></Label>
-                  <Input value={form.first_name} onChange={e => updateForm("first_name", e.target.value)} />
+                  <Input className={cn(form.first_name.trim() && "border-green-500")} value={form.first_name} onChange={e => updateForm("first_name", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Nachname <span className="text-destructive">*</span></Label>
-                  <Input value={form.last_name} onChange={e => updateForm("last_name", e.target.value)} />
+                  <Input className={cn(form.last_name.trim() && "border-green-500")} value={form.last_name} onChange={e => updateForm("last_name", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>E-Mail <span className="text-destructive">*</span></Label>
-                  <Input type="email" value={form.email} onChange={e => updateForm("email", e.target.value)} />
+                  <Input className={cn(form.email.trim() && "border-green-500")} type="email" value={form.email} onChange={e => updateForm("email", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Telefon <span className="text-destructive">*</span></Label>
-                  <Input type="tel" value={form.phone} onChange={e => updateForm("phone", e.target.value)} />
+                  <Input className={cn(form.phone.trim() && "border-green-500")} type="tel" value={form.phone} onChange={e => updateForm("phone", e.target.value)} />
                 </div>
-                <DatePickerField label="Geburtsdatum" value={form.birth_date} onChange={d => updateForm("birth_date", d || null)} disableFuture />
+                <DatePickerField label="Geburtsdatum" value={form.birth_date} onChange={d => updateForm("birth_date", d || null)} disableFuture useDropdownNavigation />
                 <div className="space-y-2">
                   <Label>Straße & Hausnummer <span className="text-destructive">*</span></Label>
-                  <Input value={form.street} onChange={e => updateForm("street", e.target.value)} />
+                  <Input className={cn(form.street.trim() && "border-green-500")} value={form.street} onChange={e => updateForm("street", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>PLZ <span className="text-destructive">*</span></Label>
-                  <Input value={form.zip_code} onChange={e => updateForm("zip_code", e.target.value)} />
+                  <Input className={cn(form.zip_code.trim() && "border-green-500")} value={form.zip_code} onChange={e => updateForm("zip_code", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Stadt <span className="text-destructive">*</span></Label>
-                  <Input value={form.city} onChange={e => updateForm("city", e.target.value)} />
+                  <Input className={cn(form.city.trim() && "border-green-500")} value={form.city} onChange={e => updateForm("city", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Familienstand <span className="text-destructive">*</span></Label>
                   <Select value={form.marital_status} onValueChange={v => updateForm("marital_status", v)}>
-                    <SelectTrigger><SelectValue placeholder="Bitte wählen" /></SelectTrigger>
+                    <SelectTrigger className={cn(form.marital_status && "border-green-500")}><SelectValue placeholder="Bitte wählen" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ledig">Ledig</SelectItem>
                       <SelectItem value="verheiratet">Verheiratet</SelectItem>
@@ -323,7 +329,7 @@ export default function Arbeitsvertrag() {
                 <div className="space-y-2">
                   <Label>Art der Beschäftigung <span className="text-destructive">*</span></Label>
                   <Select value={form.employment_type} onValueChange={v => updateForm("employment_type", v)}>
-                    <SelectTrigger><SelectValue placeholder="Bitte wählen" /></SelectTrigger>
+                    <SelectTrigger className={cn(form.employment_type && "border-green-500")}><SelectValue placeholder="Bitte wählen" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="minijob">Minijob</SelectItem>
                       <SelectItem value="teilzeit">Teilzeit</SelectItem>
@@ -340,15 +346,15 @@ export default function Arbeitsvertrag() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Sozialversicherungsnummer <span className="text-destructive">*</span></Label>
-                  <Input placeholder="z.B. 12 010185 A 123" value={form.social_security_number} onChange={e => updateForm("social_security_number", e.target.value)} />
+                  <Input className={cn(form.social_security_number.trim() && "border-green-500")} placeholder="z.B. 12 010185 A 123" value={form.social_security_number} onChange={e => updateForm("social_security_number", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Steuerliche Identifikationsnummer <span className="text-destructive">*</span></Label>
-                  <Input placeholder="z.B. 12345678901" value={form.tax_id} onChange={e => updateForm("tax_id", e.target.value)} />
+                  <Input className={cn(form.tax_id.trim() && "border-green-500")} placeholder="z.B. 12345678901" value={form.tax_id} onChange={e => updateForm("tax_id", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Krankenversicherung <span className="text-destructive">*</span></Label>
-                  <Input placeholder="z.B. AOK Bayern" value={form.health_insurance} onChange={e => updateForm("health_insurance", e.target.value)} />
+                  <Input className={cn(form.health_insurance.trim() && "border-green-500")} placeholder="z.B. AOK Bayern" value={form.health_insurance} onChange={e => updateForm("health_insurance", e.target.value)} />
                 </div>
               </div>
             )}
@@ -358,50 +364,45 @@ export default function Arbeitsvertrag() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>IBAN <span className="text-destructive">*</span></Label>
-                  <Input placeholder="DE89 3704 0044 0532 0130 00" value={form.iban} onChange={e => updateForm("iban", e.target.value)} />
+                  <Input className={cn(form.iban.trim() && "border-green-500")} placeholder="DE89 3704 0044 0532 0130 00" value={form.iban} onChange={e => updateForm("iban", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>BIC <span className="text-destructive">*</span></Label>
-                  <Input placeholder="COBADEFFXXX" value={form.bic} onChange={e => updateForm("bic", e.target.value)} />
+                  <Input className={cn(form.bic.trim() && "border-green-500")} placeholder="COBADEFFXXX" value={form.bic} onChange={e => updateForm("bic", e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Name der Bank <span className="text-destructive">*</span></Label>
-                  <Input placeholder="z.B. Commerzbank" value={form.bank_name} onChange={e => updateForm("bank_name", e.target.value)} />
+                  <Input className={cn(form.bank_name.trim() && "border-green-500")} placeholder="z.B. Commerzbank" value={form.bank_name} onChange={e => updateForm("bank_name", e.target.value)} />
                 </div>
               </div>
             )}
 
             {/* Step 4: Documents */}
             {step === 3 && (
-              <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
                 {(["front", "back"] as const).map((side) => {
-                  const file = side === "front" ? idFrontFile : idBackFile;
                   const preview = side === "front" ? idFrontPreview : idBackPreview;
                   const label = side === "front" ? "Ausweis Vorderseite" : "Ausweis Rückseite";
-                  return (
-                    <div key={side} className="space-y-2">
-                      <Label>{label} <span className="text-destructive">*</span></Label>
-                      {preview ? (
-                        <div className="relative inline-block">
-                          <img src={preview} alt={label} className="h-32 rounded-lg border border-slate-200 object-cover" />
-                          <button
-                            onClick={() => {
-                              if (side === "front") { setIdFrontFile(null); setIdFrontPreview(null); }
-                              else { setIdBackFile(null); setIdBackPreview(null); }
-                            }}
-                            className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-0.5"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg p-6 cursor-pointer hover:border-slate-400 transition-colors">
-                          <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                          <span className="text-sm text-muted-foreground">Klicken zum Hochladen</span>
-                          <input type="file" accept="image/*" className="hidden" onChange={e => handleFileChange(side, e.target.files?.[0] || null)} />
-                        </label>
-                      )}
+                  return preview ? (
+                    <div key={side} className="relative rounded-lg border border-green-500 overflow-hidden aspect-[3/2]">
+                      <img src={preview} alt={label} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => {
+                          if (side === "front") { setIdFrontFile(null); setIdFrontPreview(null); }
+                          else { setIdBackFile(null); setIdBackPreview(null); }
+                        }}
+                        className="absolute top-2 right-2 bg-destructive text-white rounded-full p-1 shadow-md hover:bg-destructive/90"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
                     </div>
+                  ) : (
+                    <label key={side} className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg aspect-[3/2] cursor-pointer hover:border-slate-400 transition-colors">
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+                      <span className="text-xs text-muted-foreground mt-1">Klicken zum Hochladen</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={e => handleFileChange(side, e.target.files?.[0] || null)} />
+                    </label>
                   );
                 })}
               </div>
