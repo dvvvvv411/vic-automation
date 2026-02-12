@@ -9,7 +9,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
-import { FileCheck, ChevronLeft, ChevronRight, Eye, CheckCircle, User, Phone, Mail, Building2, CreditCard, Shield, ImageIcon } from "lucide-react";
+import { FileCheck, ChevronLeft, ChevronRight, Eye, CheckCircle, User, Phone, Mail, Building2, CreditCard, Shield, ImageIcon, Copy } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -120,6 +120,7 @@ export default function AdminArbeitsvertraege() {
                     <TableHead>Telefon</TableHead>
                     <TableHead>E-Mail</TableHead>
                     <TableHead>Branding</TableHead>
+                    <TableHead>Link</TableHead>
                     <TableHead>Vertragsstatus</TableHead>
                     <TableHead>Aktionen</TableHead>
                   </TableRow>
@@ -133,6 +134,20 @@ export default function AdminArbeitsvertraege() {
                       <TableCell className="text-muted-foreground">{item.applications?.phone || "–"}</TableCell>
                       <TableCell className="text-muted-foreground">{item.applications?.email}</TableCell>
                       <TableCell className="text-muted-foreground">{item.applications?.brandings?.company_name || "–"}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            const url = `${window.location.origin}/arbeitsvertrag/${item.applications?.id}`;
+                            navigator.clipboard.writeText(url);
+                            toast.success("Link kopiert!");
+                          }}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                       <TableCell>{statusBadge(item.contract)}</TableCell>
                       <TableCell>
                         {item.contract?.status === "eingereicht" || item.contract?.status === "genehmigt" ? (
