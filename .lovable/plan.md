@@ -1,46 +1,61 @@
 
 
-# Bewerbungsgespraech-Seite: Logo, Bewerber-Info und Footer ueberarbeiten
+# Telefonnummer bearbeitbar machen und auf Bestaetigungsseite anzeigen
 
-## 1. Logo zentriert UEBER dem Container
+## Aenderungen
 
-Das Logo wird aus der weissen Card herausgenommen und mittig oberhalb platziert. Es steht als eigenstaendiges Element ueber dem Hauptcontainer.
+### 1. Telefonnummer editierbar auf der Buchungsseite
 
-## 2. Bewerber-Informationen professionell gestalten
+Neben der angezeigten Telefonnummer wird ein kleines Bearbeiten-Icon (Pencil) eingefuegt. Beim Klick oeffnet sich ein Inline-Edit-Modus: Das Textfeld wird zu einem Input-Feld, in dem der Bewerber seine Nummer aendern kann. Ein Haekchen-Button speichert die Aenderung direkt in die `applications`-Tabelle via Supabase Update (ueber die RPC-Funktion oder direkt, da Anon aktuell SELECT hat -- hier brauchen wir eine neue RLS-Policy fuer UPDATE auf das `phone`-Feld).
 
-Statt einer einfachen Textzeile mit Name und Telefonnummer wird ein strukturierter Info-Bereich mit klaren Labels erstellt:
+### 2. Bestaetigungsseite: Telefonnummer im Hinweistext
 
-- **Name**: Vor- und Nachname mit einem User-Icon
-- **Telefon**: Telefonnummer mit einem Phone-Icon
-- **Anstellungsart**: Minijob/Teilzeit/Vollzeit mit einem Briefcase-Icon (aus `application.employment_type`)
-
-Die drei Informationen werden in einer dezenten, horizontal angeordneten Zeile mit Icons und Labels dargestellt -- kompakt, uebersichtlich, professionell.
-
-## 3. Footer: "Powered by UNTERNEHMENSNAME"
-
-Unterhalb des Hauptcontainers wird ein dezenter Footer-Text angezeigt: "Powered by {companyName}" in kleiner, grauer Schrift, zentriert.
-
-## 4. Gleiche Anpassungen auf der Bestaetigungsseite
-
-Auch die Bestaetigungsansicht (nach erfolgreicher Buchung) bekommt das Logo zentriert darueber und den "Powered by"-Footer darunter.
+Der Text "Bitte seien Sie zu diesem Zeitpunkt telefonisch erreichbar. Wir rufen Sie an." wird erweitert zu:
+"Bitte seien Sie unter **{telefonnummer}** telefonisch erreichbar. Wir rufen Sie unter dieser Nummer an."
 
 ## Technische Details
 
-### Geaenderte Datei
+### Neue RLS-Policy
 
-| Datei | Aenderung |
-|---|---|
-| `src/pages/Bewerbungsgespraech.tsx` | Logo aus Card herausnehmen und zentriert darueber setzen. Bewerber-Info als strukturierte Zeile mit Icons (User, Phone, Briefcase) fuer Name, Telefon, Anstellungsart. Employment-Type-Labels (Minijob/Teilzeit/Vollzeit) mappen. "Powered by"-Footer unter dem Container. Aenderungen auch auf der Bestaetigungsansicht. |
+Da anonyme Nutzer aktuell nur SELECT-Rechte auf `applications` haben, wird eine neue RLS-Policy benoetigt:
 
-### Mapping fuer Anstellungsart-Labels
-
-```text
-minijob   -> Minijob
-teilzeit  -> Teilzeit
-vollzeit  -> Vollzeit
+```sql
+CREATE POLICY "Anon can update phone on applications"
+ON public.applications
+FOR UPDATE
+USING (true)
+WITH CHECK (true);
 ```
 
-### Keine neuen Dateien oder Abhaengigkeiten
+Um das Update moeglichst eingeschraenkt zu halten, wird stattdessen eine **Supabase Database Function** erstellt, die nur das `phone`-Feld eines bestimmten Datensatzes aktualisiert:
 
-Lucide-Icons `User` und `Briefcase` werden zusaetzlich importiert (sind bereits im Projekt verfuegbar).
+```sql
+CREATE OR REPLACE FUNCTION public.update_application_phone(_application_id uuid, _phone text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+BEGIN
+  UPDATE public.applications
+  SET phone = _phone
+  WHERE id = _application_id;
+END;
+$$;
+```
+
+So bleibt die RLS-Policy unberuehrt und nur das Telefon-Feld kann ueber diese Funktion geaendert werden -- sicher und gezielt.
+
+### Aenderungen in `src/pages/Bewerbungsgespraech.tsx`
+
+| Bereich | Aenderung |
+|---|---|
+| State | Neue States: `isEditingPhone`, `editedPhone` |
+| Bewerber-Info | Phone-Anzeige wird zu einem Toggle zwischen Text + Pencil-Icon und Input + Check-Icon |
+| Phone-Update | `supabase.rpc("update_application_phone", ...)` beim Speichern aufrufen, danach Query invalidieren |
+| Bestaetigungsseite | Hinweistext anpassen: Telefonnummer dynamisch einfuegen mit Fettdruck |
+
+### Keine neuen Abhaengigkeiten
+
+Lucide-Icons `Pencil` und `Check` werden zusaetzlich importiert (bereits im Projekt verfuegbar).
 
