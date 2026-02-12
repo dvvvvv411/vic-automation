@@ -242,8 +242,8 @@ export default function Bewerbungsgespraech() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="shadow-md border-0">
-            <CardContent className="py-5 px-6 flex items-center gap-4">
+          <Card className="shadow-md border-0 w-fit mx-auto">
+            <CardContent className="py-3 px-5 flex items-center gap-3 justify-center text-center">
               <div
                 className="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
                 style={{ backgroundColor: `${brandColor}15` }}
