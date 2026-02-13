@@ -21,14 +21,21 @@ export function useChatTyping({ contractId, role }: UseChatTypingProps) {
 
     channel
       .on("broadcast", { event: "typing" }, (payload) => {
-        const data = payload.payload as { role: string; draft?: string };
+      const data = payload.payload as { role: string; draft?: string };
         if (data.role === role) return; // ignore own events
 
-        if (role === "admin" && data.draft !== undefined) {
-          setDraftPreview(data.draft || null);
+        const draft = data.draft;
+        const hasContent = draft && draft.trim().length > 0;
+
+        if (!hasContent) {
+          setIsTyping(false);
+          setDraftPreview(null);
+          clearTimeout(typingTimeout.current);
+          return;
         }
 
         setIsTyping(true);
+        if (role === "admin") setDraftPreview(draft);
         clearTimeout(typingTimeout.current);
         typingTimeout.current = setTimeout(() => {
           setIsTyping(false);
