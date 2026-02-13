@@ -1,22 +1,64 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { ConversationList, type Conversation } from "@/components/chat/ConversationList";
-import { ChatBubble } from "@/components/chat/ChatBubble";
+import { ChatBubble, TypingIndicator } from "@/components/chat/ChatBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { TemplateManager } from "@/components/chat/TemplateManager";
+import { AvatarUpload } from "@/components/chat/AvatarUpload";
 import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatRealtime";
-import { MessageCircle } from "lucide-react";
+import { useChatTyping } from "@/components/chat/useChatTyping";
+import { MessageCircle, Pencil } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { toast } from "sonner";
 
 export default function AdminLivechat() {
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [active, setActive] = useState<Conversation | null>(null);
   const [search, setSearch] = useState("");
   const [contractData, setContractData] = useState<{ first_name?: string | null; last_name?: string | null }>({});
+  const [adminAvatar, setAdminAvatar] = useState<string | null>(null);
+  const [adminDisplayName, setAdminDisplayName] = useState("");
+  const [editingName, setEditingName] = useState(false);
+  const [employeeProfile, setEmployeeProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const { isTyping, draftPreview, sendTyping } = useChatTyping({
+    contractId: active?.contract_id ?? null,
+    role: "admin",
+  });
+
+  // Load admin profile
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("avatar_url, display_name, full_name")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        if (data) {
+          setAdminAvatar(data.avatar_url);
+          setAdminDisplayName(data.display_name || data.full_name || "");
+        }
+      });
+  }, [user]);
+
+  const saveDisplayName = async () => {
+    if (!user) return;
+    await supabase.from("profiles").update({ display_name: adminDisplayName } as any).eq("id", user.id);
+    toast.success("Anzeigename gespeichert");
+    setEditingName(false);
+  };
 
   // Load conversations
   const loadConversations = useCallback(async () => {
-    // Get all contracts that have messages
     const { data: msgs } = await supabase
       .from("chat_messages")
       .select("contract_id, content, created_at, read, sender_role")
@@ -24,39 +66,26 @@ export default function AdminLivechat() {
 
     if (!msgs) return;
 
-    // Group by contract_id
     const map = new Map<string, { last_message: string; last_message_at: string; unread_count: number }>();
     for (const m of msgs) {
       if (!map.has(m.contract_id)) {
-        map.set(m.contract_id, {
-          last_message: m.content,
-          last_message_at: m.created_at,
-          unread_count: 0,
-        });
+        map.set(m.contract_id, { last_message: m.content, last_message_at: m.created_at, unread_count: 0 });
       }
       const entry = map.get(m.contract_id)!;
-      if (m.sender_role === "user" && !m.read) {
-        entry.unread_count++;
-      }
+      if (m.sender_role === "user" && !m.read) entry.unread_count++;
     }
 
-    // Fetch contract names
     const contractIds = Array.from(map.keys());
     if (!contractIds.length) { setConversations([]); return; }
 
     const { data: contracts } = await supabase
       .from("employment_contracts")
-      .select("id, first_name, last_name")
+      .select("id, first_name, last_name, user_id")
       .in("id", contractIds);
 
     const convs: Conversation[] = (contracts ?? [])
       .filter((c) => map.has(c.id))
-      .map((c) => ({
-        contract_id: c.id,
-        first_name: c.first_name,
-        last_name: c.last_name,
-        ...map.get(c.id)!,
-      }))
+      .map((c) => ({ contract_id: c.id, first_name: c.first_name, last_name: c.last_name, ...map.get(c.id)! }))
       .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
 
     setConversations(convs);
@@ -64,43 +93,49 @@ export default function AdminLivechat() {
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
-  // Realtime for all messages (admin sees all)
+  // Realtime for all messages
   useEffect(() => {
     const channel = supabase
       .channel("admin-chat-all")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, () => {
-        loadConversations();
-      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, () => loadConversations())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [loadConversations]);
 
-  // Active chat realtime
-  const { messages, loading, sendMessage } = useChatRealtime({
-    contractId: active?.contract_id ?? null,
-  });
+  const { messages, loading, sendMessage } = useChatRealtime({ contractId: active?.contract_id ?? null });
 
-  // Load contract data for template variables
+  // Load contract data + employee profile
   useEffect(() => {
     if (!active) return;
     supabase
       .from("employment_contracts")
-      .select("first_name, last_name")
+      .select("first_name, last_name, user_id")
       .eq("id", active.contract_id)
       .maybeSingle()
-      .then(({ data }) => {
-        if (data) setContractData(data);
+      .then(({ data }: any) => {
+        if (data) {
+          setContractData(data);
+          if (data.user_id) {
+            supabase
+              .from("profiles")
+              .select("avatar_url, display_name, full_name")
+              .eq("id", data.user_id)
+              .maybeSingle()
+              .then(({ data: profile }: any) => {
+                if (profile) setEmployeeProfile({ avatar_url: profile.avatar_url, display_name: profile.display_name || profile.full_name });
+                else setEmployeeProfile({ avatar_url: null, display_name: null });
+              });
+          }
+        }
       });
   }, [active?.contract_id]);
 
   // Auto-scroll
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, isTyping, draftPreview]);
 
-  // Mark user messages as read when viewing
+  // Mark user messages as read
   useEffect(() => {
     if (!active) return;
     supabase
@@ -115,6 +150,10 @@ export default function AdminLivechat() {
   const handleSend = async (text: string) => {
     if (!active) return;
     await sendMessage(text, "admin");
+  };
+
+  const handleTyping = (draft: string) => {
+    sendTyping(draft);
   };
 
   return (
@@ -136,13 +175,55 @@ export default function AdminLivechat() {
           <>
             {/* Header */}
             <div className="border-b border-border px-6 py-4 flex items-center justify-between bg-card shrink-0">
-              <div>
-                <h2 className="font-semibold text-foreground">
-                  {active.first_name} {active.last_name}
-                </h2>
-                <p className="text-xs text-muted-foreground">Konversation</p>
+              <div className="flex items-center gap-3">
+                <AvatarUpload avatarUrl={employeeProfile.avatar_url} name={active.first_name} size={36} />
+                <div>
+                  <h2 className="font-semibold text-foreground">
+                    {active.first_name} {active.last_name}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">Konversation</p>
+                </div>
               </div>
-              <TemplateManager />
+              <div className="flex items-center gap-3">
+                <TemplateManager />
+                {/* Admin profile popover */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <div className="cursor-pointer">
+                      <AvatarUpload avatarUrl={adminAvatar} name={adminDisplayName || "Admin"} size={36} />
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-4" align="end">
+                    <p className="text-xs text-muted-foreground mb-3">Admin-Profil</p>
+                    <div className="flex justify-center mb-3">
+                      <AvatarUpload
+                        avatarUrl={adminAvatar}
+                        name={adminDisplayName || "Admin"}
+                        size={56}
+                        editable
+                        onUploaded={(url) => setAdminAvatar(url)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-foreground">Anzeigename</label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={adminDisplayName}
+                          onChange={(e) => setAdminDisplayName(e.target.value)}
+                          placeholder="Dein Name..."
+                          className="h-8 text-sm"
+                        />
+                        <button
+                          onClick={saveDisplayName}
+                          className="shrink-0 h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
+                        >
+                          OK
+                        </button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
             {/* Messages */}
@@ -163,13 +244,26 @@ export default function AdminLivechat() {
                     senderRole={msg.sender_role}
                     createdAt={msg.created_at}
                     isOwnMessage={msg.sender_role === "admin"}
+                    avatarUrl={msg.sender_role === "user" ? employeeProfile.avatar_url : undefined}
+                    senderName={msg.sender_role === "user" ? (employeeProfile.display_name || `${active.first_name} ${active.last_name}`) : undefined}
                   />
                 ))
               )}
+              {isTyping && <TypingIndicator />}
             </div>
 
+            {/* Draft preview */}
+            {draftPreview && (
+              <div className="px-6 py-2 border-t border-border bg-muted/30 flex items-center gap-2">
+                <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground italic truncate">
+                  {active.first_name} schreibt: {draftPreview}
+                </p>
+              </div>
+            )}
+
             {/* Input with templates */}
-            <ChatInput onSend={handleSend} showTemplates contractData={contractData} />
+            <ChatInput onSend={handleSend} showTemplates contractData={contractData} onTyping={handleTyping} />
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
