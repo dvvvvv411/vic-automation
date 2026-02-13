@@ -5,7 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChatRealtime, type ChatMessage } from "./useChatRealtime";
 import { useChatSounds } from "./useChatSounds";
-import { ChatBubble } from "./ChatBubble";
+import { useChatTyping } from "./useChatTyping";
+import { ChatBubble, TypingIndicator } from "./ChatBubble";
+import { AvatarUpload } from "./AvatarUpload";
 import { cn } from "@/lib/utils";
 
 interface ChatWidgetProps {
@@ -18,10 +20,15 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [myAvatar, setMyAvatar] = useState<string | null>(null);
+  const [myName, setMyName] = useState<string | null>(null);
+  const [adminProfile, setAdminProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playNotification, playSend } = useChatSounds();
   const openRef = useRef(open);
   openRef.current = open;
+
+  const { isTyping, sendTyping } = useChatTyping({ contractId, role: "user" });
 
   const { messages, loading, sendMessage } = useChatRealtime({
     contractId,
@@ -31,19 +38,32 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
           setUnreadCount((c) => c + 1);
           playNotification();
         } else {
-          // Mark as read immediately
           supabase.from("chat_messages").update({ read: true }).eq("id", msg.id).then(() => {});
         }
       }
     },
   });
 
-  // Auto-scroll on new messages
+  // Load own profile
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("avatar_url, display_name, full_name")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        if (data) {
+          setMyAvatar(data.avatar_url);
+          setMyName(data.display_name || data.full_name);
+        }
+      });
+  }, [user]);
+
+  // Auto-scroll
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, isTyping]);
 
   // Count unread on mount
   useEffect(() => {
@@ -70,10 +90,16 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
     }
   }, [open, contractId, unreadCount]);
 
+  const handleInputChange = (val: string) => {
+    setInput(val);
+    sendTyping(val);
+  };
+
   const handleSend = async () => {
     if (!input.trim() || !contractId) return;
     const text = input;
     setInput("");
+    sendTyping("");
     playSend();
     await sendMessage(text, "user");
   };
@@ -104,12 +130,21 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
                 <h3 className="text-primary-foreground font-semibold text-base">Support</h3>
                 <p className="text-primary-foreground/70 text-xs">Wir antworten sofort</p>
               </div>
-              <button
-                onClick={() => setOpen(false)}
-                className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <AvatarUpload
+                  avatarUrl={myAvatar}
+                  name={myName}
+                  size={32}
+                  editable
+                  onUploaded={(url) => setMyAvatar(url)}
+                />
+                <button
+                  onClick={() => setOpen(false)}
+                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {/* Messages */}
@@ -130,9 +165,12 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
                     senderRole={msg.sender_role}
                     createdAt={msg.created_at}
                     isOwnMessage={msg.sender_role === "user"}
+                    avatarUrl={msg.sender_role === "admin" ? adminProfile.avatar_url : undefined}
+                    senderName={msg.sender_role === "admin" ? (adminProfile.display_name || "Admin") : undefined}
                   />
                 ))
               )}
+              {isTyping && <TypingIndicator />}
             </div>
 
             {/* Input */}
@@ -140,7 +178,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
               <div className="flex items-end gap-2">
                 <textarea
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={(e) => handleInputChange(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Nachricht schreiben..."
                   className="flex-1 resize-none rounded-xl border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[40px] max-h-[100px]"

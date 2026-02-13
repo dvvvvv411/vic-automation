@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Send } from "lucide-react";
 import { TemplateDropdown } from "./TemplateDropdown";
 import { cn } from "@/lib/utils";
@@ -7,15 +7,17 @@ interface ChatInputProps {
   onSend: (text: string) => void;
   showTemplates?: boolean;
   contractData?: { first_name?: string | null; last_name?: string | null };
+  onTyping?: (draft: string) => void;
 }
 
-export function ChatInput({ onSend, showTemplates = false, contractData }: ChatInputProps) {
+export function ChatInput({ onSend, showTemplates = false, contractData, onTyping }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [templateSearch, setTemplateSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
 
   const handleChange = (val: string) => {
     setInput(val);
+    onTyping?.(val);
     if (showTemplates && val.startsWith("!")) {
       setTemplateSearch(val.slice(1));
       setShowDropdown(true);
@@ -28,8 +30,8 @@ export function ChatInput({ onSend, showTemplates = false, contractData }: ChatI
     let resolved = content;
     if (contractData) {
       resolved = resolved
-        .replace(/%vorname%/g, contractData.first_name ?? "")
-        .replace(/%nachname%/g, contractData.last_name ?? "");
+        .replace(/%vorname%/gi, contractData.first_name ?? "")
+        .replace(/%nachname%/gi, contractData.last_name ?? "");
     }
     setInput(resolved);
     setShowDropdown(false);
@@ -40,6 +42,7 @@ export function ChatInput({ onSend, showTemplates = false, contractData }: ChatI
     onSend(input.trim());
     setInput("");
     setShowDropdown(false);
+    onTyping?.("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
