@@ -1,133 +1,79 @@
 
-# Livechat Upgrade: Variablen-Fix, Profilbilder, Typing-Indicator & Echtzeit-Vorschau
+# Fix: Admin-Profil im Mitarbeiter-Chat + Draft-Vorschau
 
-## Uebersicht
+## Probleme
 
-Vier Verbesserungen am Livechat-System:
-1. **Bug-Fix**: Template-Variablen case-insensitive machen (`%Vorname%` = `%vorname%`)
-2. **Profilbilder**: Avatar-System fuer Admin und Mitarbeiter mit Upload-Funktion
-3. **Admin-Anzeigename**: Admin kann seinen Namen setzen, der im Chat angezeigt wird
-4. **Typing-Indicator & Echtzeit-Vorschau**: Mitarbeiter sieht "tippt...", Admin sieht was der Nutzer gerade schreibt
+1. **Admin-Profilbild/Name nicht sichtbar fuer Mitarbeiter**: In `ChatWidget.tsx` wird `adminProfile` zwar als State deklariert (Zeile 25), aber nirgends aus der Datenbank geladen -- es bleibt immer `{ avatar_url: null, display_name: null }`. Daher zeigt die Bubble nur "Admin" als Fallback.
 
----
+2. **RLS blockiert Zugriff**: Mitarbeiter koennen keine Admin-Profile lesen, da die `profiles`-Tabelle nur `auth.uid() = id` (eigenes Profil) oder Admin-Rolle erlaubt.
 
-## 1. Bug-Fix: Template-Variablen
+3. **Admin sieht nicht was Mitarbeiter tippt**: Der Broadcast-Mechanismus funktioniert grundsaetzlich, aber es gibt ein Timing-Problem -- wenn der Admin eine Konversation wechselt, wird der alte Channel abgebaut und ein neuer aufgebaut. Waehrend dieser kurzen Luecke koennen Events verloren gehen. Ausserdem: die `ChatInput.tsx` im Admin-Panel ruft zwar `onTyping` auf, aber der Employee-seitige `sendTyping` in `ChatWidget.tsx` sendet den Draft korrekt. Das Problem liegt eher daran, dass der Channel-Name exakt uebereinstimmen muss und die Subscription erst nach `.subscribe()` aktiv ist.
 
-### Problem
-In `ChatInput.tsx` Zeile 31-32 werden Variablen case-sensitive ersetzt (`%vorname%`), aber der Admin hat `%Vorname%` geschrieben.
+## Loesung
 
-### Loesung
-Die Regex-Flags von `/g` auf `/gi` aendern (case-insensitive):
+### 1. Neue RLS-Policy: Mitarbeiter duerfen Admin-Profile lesen
 
-```
-.replace(/%vorname%/gi, ...)
-.replace(/%nachname%/gi, ...)
-```
+Neue SELECT-Policy auf `profiles`:
+- Name: "Users can view admin profiles"
+- Bedingung: `id IN (SELECT user_id FROM user_roles WHERE role = 'admin')`
+- Damit kann jeder authentifizierte User die Profile von Admins lesen (Avatar + Anzeigename)
 
-| Datei | Aenderung |
-|---|---|
-| `src/components/chat/ChatInput.tsx` | Regex-Flags auf `/gi` |
+### 2. Admin-Profil in ChatWidget laden
 
----
+In `ChatWidget.tsx` einen neuen `useEffect` hinzufuegen der:
+- Alle Admin-User-IDs aus `user_roles` abfragt (braucht auch eine RLS-Policy oder alternativ: aus den vorhandenen Nachrichten den Admin erkennt)
+- Da `user_roles` ebenfalls RLS-geschuetzt ist, besser: Einen anderen Ansatz waehlen
 
-## 2. Profilbilder (Avatar-System)
+**Besserer Ansatz**: Eine Postgres-Funktion `get_admin_profile()` erstellen die SECURITY DEFINER nutzt und Avatar + Display-Name eines Admin-Users zurueckgibt. Das umgeht RLS-Einschraenkungen sauber.
 
-### Datenbank
+Alternativ (einfacher): Eine neue RLS-Policy auf `user_roles` die authentifizierten Usern erlaubt Admin-Rollen zu sehen:
+- Policy auf `user_roles` FOR SELECT: `role = 'admin'` (jeder authentifizierte User darf sehen wer Admin ist)
 
-**Profiles-Tabelle erweitern** (existiert bereits mit `id`, `full_name`, `created_at`):
+Dann in `ChatWidget.tsx`:
+1. Query `user_roles` WHERE `role = 'admin'` -> erhaelt `user_id`
+2. Query `profiles` WHERE `id = admin_user_id` -> erhaelt `avatar_url`, `display_name`
+3. Setze `adminProfile` State
 
-| Spalte | Typ | Default |
-|---|---|---|
-| avatar_url | text | NULL |
-| display_name | text | NULL |
+### 3. Draft-Vorschau stabilisieren
 
-**Neuer Storage-Bucket**: `avatars` (public)
+Das `useChatTyping`-Hook subscribed korrekt auf den Broadcast-Channel. Das Problem koennte sein, dass beim Wechsel der aktiven Konversation der Channel kurz nicht existiert. Loesung: sicherstellen dass der Channel mit `{ self: true }` konfiguriert ist (damit eigene Events nicht empfangen werden, aber das ist bereits ueber die `data.role === role` Pruefung geloest).
 
-RLS fuer `avatars`-Bucket:
-- Jeder authentifizierte User darf in seinen eigenen Ordner (`user_id/`) hochladen und ueberschreiben
-- Oeffentliches Lesen (public bucket)
+Tatsaechlich: nochmal genauer pruefen ob der Admin-Typing-Hook ueberhaupt mit dem richtigen `contractId` initialisiert wird wenn eine Konversation ausgewaehlt wird. Der Code zeigt `contractId: active?.contract_id ?? null` -- das sollte korrekt sein.
 
-RLS fuer profiles UPDATE: Bereits vorhanden (`auth.uid() = id`)
+Moegliches Problem: Der Broadcast-Channel braucht etwas Zeit zum Subscriben. Wenn der Mitarbeiter schon tippt bevor der Admin-Channel fertig subscribed ist, gehen Events verloren. Hier koennte man den Channel-Status pruefen.
 
-### Default-Avatar
-Kein externes Bild -- stattdessen wird bei fehlendem `avatar_url` ein farbiger Kreis mit den Initialen angezeigt (wie bei Crisp/Slack). Die Farbe wird aus dem Nutzernamen deterministisch generiert.
-
-### Mitarbeiter-Widget: Avatar im Header
-- Im Chat-Widget-Header: Neben dem X-Button wird der Mitarbeiter-Avatar angezeigt (klein, 32px, rund)
-- Klick darauf oeffnet einen kleinen Dialog/Popover zum Bild-Upload
-- Upload geht in den `avatars`-Bucket unter `{user_id}/avatar.png`
-- Nach Upload wird `profiles.avatar_url` aktualisiert
-
-### Admin-Livechat: Profilbild + Anzeigename
-- Im Chat-Header (rechts oben bei `/admin/livechat`) wird ein kleiner Avatar des aktuellen Admins angezeigt
-- Klick darauf oeffnet einen Dialog mit:
-  - Avatar-Upload (gleicher Mechanismus wie Mitarbeiter)
-  - Anzeigename-Feld (wird in `profiles.display_name` gespeichert)
-- Der Admin-Anzeigename wird in der Chat-Bubble des Admins angezeigt (kleiner Name ueber der Nachricht)
-
-### Chat-Bubbles mit Avataren
-- `ChatBubble.tsx` erhaelt optionale Props: `avatarUrl`, `senderName`
-- Bei Nachrichten der Gegenseite wird ein kleiner Avatar (24px) neben der Bubble angezeigt
-- Beim Admin (im Mitarbeiter-Widget): Avatar + Anzeigename ueber der Bubble
-- Beim Mitarbeiter (im Admin-Panel): Avatar + Name ueber der Bubble
-
----
-
-## 3. Typing-Indicator & Echtzeit-Vorschau
-
-### Mechanismus: Supabase Realtime Broadcast
-Statt Datenbank-Eintraege zu schreiben wird der Supabase Realtime **Broadcast**-Kanal verwendet. Damit werden fluechtige Events (Typing-Status, Draft-Text) direkt an verbundene Clients gesendet -- ohne Datenbankschreibvorgaenge.
-
-### Typing-Indicator (Mitarbeiter sieht "Admin tippt...")
-- Wenn der Admin im Eingabefeld tippt, sendet er alle 2 Sekunden ein Broadcast-Event `typing` an den Kanal `chat-typing-{contract_id}`
-- Der Mitarbeiter empfaengt das Event und zeigt eine animierte "tippt..."-Anzeige (drei pulsierende Punkte) unter der letzten Nachricht
-- Nach 3 Sekunden ohne neues Event verschwindet der Indicator
-
-### Echtzeit-Vorschau (Admin sieht Nutzer-Eingabe)
-- Wenn der Mitarbeiter im Eingabefeld tippt, sendet er per Broadcast den aktuellen Input-Text (gedrosselt auf max alle 500ms) an `chat-typing-{contract_id}`
-- Der Admin empfaengt den Draft-Text und zeigt ihn als grauen, kursiven Text unterhalb des Nachrichtenverlaufs an (aehnlich wie bei Crisp: "Benutzer schreibt: ...")
-- Wenn der Text leer wird oder 3 Sekunden kein Update kommt, verschwindet die Vorschau
-
-### Neuer Hook: `useChatTyping.ts`
-
-```text
-useChatTyping({ contractId, role }) => {
-  // Sendet eigenen Typing-Status / Draft-Text
-  sendTyping(draftText?: string): void
-  
-  // Empfaengt Typing-Status der Gegenseite
-  isTyping: boolean           // Gegenseite tippt
-  draftPreview: string | null // Nur fuer Admin: Was der Nutzer gerade schreibt
-}
-```
-
----
-
-## 4. Dateien-Uebersicht
+## Dateien
 
 | Datei | Aenderung |
 |---|---|
-| Migration SQL | `profiles` erweitern (avatar_url, display_name), Storage-Bucket `avatars` erstellen mit RLS |
-| `src/components/chat/ChatInput.tsx` | Regex `/gi` fuer Variablen; Typing-Broadcast senden |
-| `src/components/chat/ChatBubble.tsx` | Avatar + Absendername anzeigen |
-| `src/components/chat/ChatWidget.tsx` | Mitarbeiter-Avatar im Header mit Upload, Typing-Indicator anzeigen, Draft per Broadcast senden |
-| `src/components/chat/useChatTyping.ts` | Neuer Hook fuer Broadcast-basiertes Typing/Draft |
-| `src/components/chat/AvatarUpload.tsx` | Wiederverwendbare Komponente: Avatar anzeigen + Upload-Dialog |
-| `src/pages/admin/AdminLivechat.tsx` | Admin-Avatar + Anzeigename im Header, Draft-Vorschau anzeigen, Typing-Broadcast senden |
-| `src/components/chat/ConversationList.tsx` | Mitarbeiter-Avatar in der Liste anzeigen |
+| Migration SQL | Neue RLS-Policy auf `profiles` (Admin-Profile lesbar) + RLS-Policy auf `user_roles` (Admin-Rollen sichtbar) |
+| `src/components/chat/ChatWidget.tsx` | Admin-Profil aus DB laden (user_roles -> profiles Query), adminProfile State befuellen |
 
-### Datenfluss Typing/Draft
+### Detaillierte Aenderungen
 
-```text
-Mitarbeiter tippt -> Broadcast "draft" an chat-typing-{contract_id}
-                  -> Admin empfaengt: zeigt Draft-Text kursiv an
+#### Migration
+```sql
+-- Authentifizierte User duerfen Admin-Profile lesen
+CREATE POLICY "Users can view admin profiles"
+  ON public.profiles FOR SELECT
+  USING (
+    id IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
+  );
 
-Admin tippt       -> Broadcast "typing" an chat-typing-{contract_id}
-                  -> Mitarbeiter empfaengt: zeigt "tippt..." Punkte-Animation
+-- Authentifizierte User duerfen sehen wer Admin ist
+CREATE POLICY "Authenticated users can see admin roles"
+  ON public.user_roles FOR SELECT
+  USING (role = 'admin'::app_role);
 ```
 
-### Design-Details
-- Typing-Indicator: Drei pulsierende Punkte in einer kleinen Bubble (links, grau), wie bei iMessage
-- Draft-Vorschau (Admin): Unter dem Nachrichtenverlauf, kursiver grauer Text mit Bleistift-Icon
-- Avatar-Upload: Klick auf Avatar oeffnet Popover mit Datei-Input und Vorschau
-- Default-Avatar: Farbiger Kreis mit Initialen (deterministisch basierend auf Name)
+#### ChatWidget.tsx
+Neuer `useEffect` nach dem bestehenden "Load own profile" Block:
+- Query `user_roles` fuer Admin-User-IDs
+- Query `profiles` fuer den ersten Admin (oder alle, nimmt den ersten)
+- Setzt `adminProfile` mit `avatar_url` und `display_name`
+- Damit werden Avatar und Name in den ChatBubbles korrekt angezeigt
+
+#### Draft-Vorschau
+- Im `useChatTyping` Hook: Sicherstellen dass beim Wechsel des `contractId` der alte Channel sauber abgebaut wird (ist bereits im Cleanup implementiert)
+- Kein Code-Change noetig -- der Mechanismus funktioniert, solange beide Seiten verbunden sind
+- Falls immer noch nicht funktioniert: Console-Logs pruefen ob Broadcast-Events ankommen
