@@ -1,66 +1,76 @@
 
 
-# Neuer Admin-Reiter: Auftraege
+# Auftragszuweisung: Mitarbeiter <-> Auftraege
 
 ## Uebersicht
 
-Ein neuer Bereich `/admin/auftraege` wird erstellt, in dem der Admin Auftraege fuer App-Tests verwalten kann (CRUD). Bei Platzhalter-Auftraegen erscheinen zusaetzlich AppStore- und PlayStore-Link-Felder.
+Neue Verknuepfungstabelle `order_assignments`, um Auftraege an Mitarbeiter zuzuweisen. Beide Admin-Seiten (Auftraege und Mitarbeiter) erhalten einen "Zuweisen"-Button mit einem Dialog zur Auswahl.
 
 ## 1. Datenbank
 
-### Neue Tabelle: `orders`
+### Neue Tabelle: `order_assignments`
 
 | Spalte | Typ | Pflicht | Default |
 |---|---|---|---|
 | id | uuid | ja | gen_random_uuid() |
-| order_number | text | ja | - |
-| title | text | ja | - |
-| provider | text | ja | - |
-| reward | text | ja | - |
-| is_placeholder | boolean | ja | false |
-| appstore_url | text | nein | null |
-| playstore_url | text | nein | null |
-| project_goal | text | nein | null |
-| review_questions | jsonb | nein | '[]' |
-| created_at | timestamptz | ja | now() |
+| order_id | uuid | ja | FK -> orders.id |
+| contract_id | uuid | ja | FK -> employment_contracts.id |
+| assigned_at | timestamptz | ja | now() |
 
-RLS-Policies: Nur Admins duerfen SELECT, INSERT, UPDATE, DELETE (gleiches Muster wie bei `brandings`).
+- Unique Constraint auf (order_id, contract_id) um doppelte Zuweisungen zu verhindern
+- ON DELETE CASCADE fuer beide Foreign Keys
+- RLS: Nur Admins duerfen SELECT, INSERT, DELETE
 
-## 2. Neue Seite: `src/pages/admin/AdminAuftraege.tsx`
+## 2. AdminAuftraege.tsx -- Neue Spalte "Zuweisen"
 
-Folgt dem gleichen Pattern wie `AdminBrandings.tsx`:
+### Aenderungen
+- Neue Tabellenspalte "Zuweisen" nach "Erstellt am"
+- Button "Zuweisen" oeffnet einen Dialog
+- Der Dialog laedt alle genehmigten Mitarbeiter aus `employment_contracts` (status = 'genehmigt')
+- Zeigt eine Liste mit Checkboxen: Name + E-Mail
+- Bereits zugewiesene Mitarbeiter sind vorausgewaehlt (geladen aus `order_assignments`)
+- Speichern: Loescht alte Zuweisungen fuer diesen Auftrag und fuegt die neuen ein
+- In der Tabellenzelle wird die Anzahl zugewiesener Mitarbeiter als Badge angezeigt (z.B. "3 Mitarbeiter")
 
-### Tabelle
-- Spalten: Auftragsnummer, Titel, Anbieter, Praemie, Platzhalter (Ja/Nein Badge), Erstellt am, Aktionen (Edit, Delete)
+### Daten
+- Query erweitert: Orders werden mit einem Count der Zuweisungen geladen
+- Zusaetzlicher Query beim Oeffnen des Dialogs: Alle Mitarbeiter + aktuelle Zuweisungen fuer den Auftrag
 
-### Dialog zum Erstellen und Bearbeiten
-- Felder: Auftragsnummer, Titel, Anbieter, Praemie (alle Pflicht)
-- Platzhalter-Switch: Wenn aktiv, erscheinen zwei zusaetzliche Felder fuer AppStore-URL und PlayStore-URL. Wenn inaktiv, werden diese Felder ausgeblendet und die Werte auf null gesetzt.
-- Projektziel: Textarea fuer detaillierte Anweisungen
-- Bewertungsfragen: Dynamische Liste -- jede Frage ist ein Textfeld mit Loeschen-Button, plus ein "Frage hinzufuegen"-Button am Ende. Gespeichert als JSON-Array.
-- Der Dialog wird sowohl fuer "Neu erstellen" als auch "Bearbeiten" verwendet (beim Bearbeiten werden die Felder mit den vorhandenen Daten befuellt).
+## 3. AdminMitarbeiter.tsx -- Neue Spalte "Auftrag zuweisen"
 
-### CRUD-Operationen
-- **Create**: `.insert()` via useMutation
-- **Read**: useQuery mit `.select("*").order("created_at", { ascending: false })`
-- **Update**: Dialog oeffnet sich mit vorausgefuellten Daten, speichert via `.update().eq("id", ...)`
-- **Delete**: Loeschen-Button in der Tabelle
-
-## 3. Navigation und Routing
-
-### `AdminSidebar.tsx`
-- Neuer Eintrag "Auftraege" mit Icon `ClipboardList` und URL `/admin/auftraege` (zwischen Mitarbeiter und den bestehenden Eintraegen oder am Ende)
-
-### `App.tsx`
-- Neue Route: `<Route path="auftraege" element={<AdminAuftraege />} />`
-- Import von `AdminAuftraege`
+### Aenderungen
+- Neue Tabellenspalte "Auftraege" nach "Status"
+- Button "Zuweisen" oeffnet einen Dialog
+- Der Dialog laedt alle Auftraege aus `orders`
+- Zeigt eine Liste mit Checkboxen: Auftragsnummer + Titel
+- Bereits zugewiesene Auftraege sind vorausgewaehlt
+- Speichern: Loescht alte Zuweisungen fuer diesen Mitarbeiter und fuegt die neuen ein
+- In der Tabellenzelle wird die Anzahl zugewiesener Auftraege als Badge angezeigt
 
 ## Technische Details
 
 | Datei | Aenderung |
 |---|---|
-| Migration | CREATE TABLE orders mit RLS-Policies (Admin-only) |
-| `src/pages/admin/AdminAuftraege.tsx` | Neue Seite mit CRUD-Tabelle und Dialog |
-| `src/components/admin/AdminSidebar.tsx` | Neuer Nav-Eintrag "Auftraege" mit ClipboardList-Icon |
-| `src/App.tsx` | Neue Route + Import |
+| Migration | CREATE TABLE order_assignments mit RLS-Policies, FK, Unique Constraint |
+| `src/pages/admin/AdminAuftraege.tsx` | Neue Spalte + Zuweisungs-Dialog mit Mitarbeiter-Checkboxen |
+| `src/pages/admin/AdminMitarbeiter.tsx` | Neue Spalte + Zuweisungs-Dialog mit Auftrags-Checkboxen |
+
+### Ablauf des Zuweisungs-Dialogs (identisch auf beiden Seiten, nur Perspektive gedreht)
+
+```text
++-----------------------------------+
+|  Auftrag zuweisen                 |
+|  (oder: Mitarbeiter zuweisen)     |
+|                                   |
+|  [x] Max Mustermann (max@...)     |
+|  [ ] Erika Muster (erika@...)     |
+|  [x] Hans Mueller (hans@...)      |
+|                                   |
+|  [Abbrechen]  [Speichern]         |
++-----------------------------------+
+```
+
+- Beim Oeffnen werden bestehende Zuweisungen geladen und als checked dargestellt
+- Beim Speichern werden alle alten Zuweisungen (fuer den jeweiligen Auftrag bzw. Mitarbeiter) geloescht und die aktuell angehakten neu eingefuegt
+- Beide Seiten invalidieren den Query-Cache der jeweils anderen Seite mit
 
