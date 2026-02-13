@@ -1,121 +1,181 @@
 
 
-# Mitarbeiter Dashboard -- Komplett-Redesign
+# Livechat System -- Crisp-Style
 
 ## Uebersicht
 
-Das aktuelle simple Mitarbeiter-Dashboard wird durch ein hochwertiges, interaktives Dashboard mit Sidebar-Navigation ersetzt. Das Design orientiert sich an modernen Fintech-Apps: clean, professionell, mit subtilen Animationen und der jeweiligen Branding-Farbe des zugeordneten Unternehmens.
+Ein Echtzeit-Livechat zwischen Admin und Mitarbeitern, inspiriert vom Crisp-Chat-Design. Fuer Mitarbeiter als schwebendes Popup (unten rechts), fuer Admins als vollstaendige Inbox-Seite unter `/admin/livechat`. Nachrichten werden ueber Supabase Realtime sofort zugestellt -- kein manuelles Neuladen noetig.
 
-## 1. Datenbank-Aenderungen (RLS-Policies)
+## 1. Datenbank
 
-Aktuell koennen Mitarbeiter (Rolle "user") weder `orders`, `order_assignments` noch `brandings` lesen (nur Admin-Policies vorhanden). Folgende SELECT-Policies werden hinzugefuegt:
+### Neue Tabelle: `chat_messages`
 
-| Tabelle | Neue Policy | Bedingung |
-|---|---|---|
-| orders | Users can select assigned orders | `id IN (SELECT order_id FROM order_assignments WHERE contract_id IN (SELECT id FROM employment_contracts WHERE user_id = auth.uid()))` |
-| order_assignments | Users can select own assignments | `contract_id IN (SELECT id FROM employment_contracts WHERE user_id = auth.uid())` |
-| employment_contracts | Users can select own contract | `user_id = auth.uid()` (existiert teilweise schon ueber "Anon can select") |
+| Spalte | Typ | Pflicht | Default |
+|---|---|---|---|
+| id | uuid | ja | gen_random_uuid() |
+| contract_id | uuid | ja | FK -> employment_contracts.id ON DELETE CASCADE |
+| sender_role | text | ja | - (Werte: 'admin' oder 'user') |
+| content | text | ja | - |
+| created_at | timestamptz | ja | now() |
+| read | boolean | ja | false |
 
-Die bestehende "Anon can select brandings" Policy erlaubt bereits den Zugriff auf Brandings.
+- Index auf `(contract_id, created_at)` fuer schnelle Abfragen
+- RLS-Policies:
+  - Admins: SELECT, INSERT auf alle Nachrichten
+  - Users: SELECT, INSERT nur auf eigene Nachrichten (WHERE contract_id in eigener employment_contract)
+- UPDATE-Policy: Admins koennen `read` setzen; Users koennen `read` auf Nachrichten mit sender_role='admin' setzen
 
-## 2. Architektur -- Layout mit Sidebar
+### Neue Tabelle: `chat_templates`
 
-Aehnlich wie das Admin-Panel wird das Mitarbeiter-Dashboard ein eigenes Layout mit Sidebar erhalten:
+| Spalte | Typ | Pflicht | Default |
+|---|---|---|---|
+| id | uuid | ja | gen_random_uuid() |
+| shortcode | text | ja | unique (z.B. "hallo") |
+| content | text | ja | - |
+| created_at | timestamptz | ja | now() |
 
-### Neue Dateien
+- RLS: Nur Admins duerfen CRUD
 
-| Datei | Zweck |
-|---|---|
-| `src/components/mitarbeiter/MitarbeiterLayout.tsx` | Layout-Wrapper mit SidebarProvider, Header, Outlet |
-| `src/components/mitarbeiter/MitarbeiterSidebar.tsx` | Sidebar mit Branding-Logo, Navigation, Abmelden |
-| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | Dashboard-Hauptseite (ehemals Mitarbeiter.tsx) |
+### Supabase Realtime aktivieren
 
-### Routing-Aenderung in App.tsx
+Realtime muss fuer die Tabelle `chat_messages` aktiviert werden (via `ALTER PUBLICATION supabase_realtime ADD TABLE chat_messages`), damit neue Nachrichten sofort an alle verbundenen Clients gepusht werden.
 
-```text
-/mitarbeiter          -> MitarbeiterLayout (ProtectedRoute, role="user")
-  /mitarbeiter        -> MitarbeiterDashboard (index route)
-  (spaeter weitere Routen wie /mitarbeiter/auftraege etc.)
-```
+## 2. Mitarbeiter-Seite: Chat-Popup (Crisp-Style)
 
-Die bestehende `src/pages/Mitarbeiter.tsx` wird nicht mehr als Standalone-Seite verwendet.
+### Komponente: `ChatWidget.tsx`
 
-## 3. MitarbeiterSidebar
+Wird in `MitarbeiterLayout.tsx` eingebunden und ist auf jeder `/mitarbeiter/*` Seite sichtbar.
 
-- **Branding-Logo** oben: Wird aus der `brandings`-Tabelle geladen (ueber den `employment_contract` des eingeloggten Users, der eine `application_id` hat, die wiederum ein `branding_id` hat)
-- **Navigation**: Vorerst nur "Dashboard" mit `LayoutDashboard`-Icon
-- **Footer**: E-Mail des Users + Abmelden-Button
-- **Branding-Farbe**: Die `brand_color` aus dem Branding wird als CSS Custom Property (`--primary`) dynamisch gesetzt
+### Design (Crisp-inspiriert)
+- **Geschlossener Zustand**: Runder Button (56px) unten rechts mit Chat-Icon in Branding-Farbe, mit Puls-Animation bei ungelesenen Nachrichten und Unread-Badge
+- **Geoeffneter Zustand**: Abgerundetes Panel (ca. 380px breit, 520px hoch) mit:
+  - **Header**: Branding-Farbe als Hintergrund, "Support" Titel, Schliessen-Button
+  - **Nachrichtenverlauf**: Scrollbare Liste, Admin-Nachrichten links (grauer Hintergrund), eigene Nachrichten rechts (Branding-Farbe), Zeitstempel unter jeder Nachricht, abgerundete Bubbles
+  - **Eingabefeld**: Unten fixiert, Textarea mit Senden-Button, Enter zum Senden (Shift+Enter fuer Zeilenumbruch)
+- **Animationen**: Sanftes Hoch-/Runterfahren via framer-motion (scale + opacity)
 
-## 4. MitarbeiterDashboard -- Design
+### Echtzeit
+- Supabase Realtime Subscription auf `chat_messages` WHERE `contract_id = eigene_contract_id`
+- Neue Nachrichten werden sofort zur Liste hinzugefuegt
+- Auto-Scroll nach unten bei neuer Nachricht
 
-### Begruessung
-- Personalisiert: "Willkommen zurueck, [Vorname]" (aus `employment_contracts.first_name`)
-- Subtile fade-in Animation via framer-motion
-- Aktuelle Uhrzeit-basierte Begruessung (Guten Morgen/Tag/Abend)
+### Sounds
+- **Empfang**: Notification-Sound (kurzer "ding") wenn eine neue Admin-Nachricht reinkommt und das Widget geschlossen ist oder der Tab nicht fokussiert ist
+- **Senden**: Kurzer "swoosh"-Sound beim Absenden einer eigenen Nachricht
+- Sounds werden als Base64-kodierte Audio-Dateien direkt im Code eingebettet (kleine WAV/MP3-Snippets), damit keine externen Dateien noetig sind
 
-### Statistik-Karten (4er Grid)
-Vier Karten mit echten Daten aus der Datenbank:
+### Unread-Badge
+- Zaehlt ungelesene Nachrichten (read=false AND sender_role='admin')
+- Badge auf dem Chat-Button wenn geschlossen
+- Beim Oeffnen des Widgets werden alle ungelesenen als gelesen markiert (UPDATE read=true)
 
-| Karte | Datenquelle | Design |
-|---|---|---|
-| Zugewiesene Tests | Count aus `order_assignments` | Icon: Smartphone, grosser Zahlenwert |
-| Verdienst | Summe der `reward`-Felder der zugewiesenen Orders | Icon: DollarSign, Eurozeichen |
-| Offene Auftraege | Count der zugewiesenen Orders (noch nicht abgeschlossen) | Icon: ClipboardList |
-| Bewertung | Statischer Platzhalter "4.8" (spaeter dynamisch) | Icon: Star |
+## 3. Admin-Seite: `/admin/livechat`
 
-Jede Karte hat:
-- Subtilen Hover-Effekt (shadow elevation)
-- Farbiger Icon-Hintergrund mit Brand-Color
-- Framer-motion staggered fade-in
+### Layout (Crisp Inbox-Style)
 
-### Zugewiesene Auftraege -- Kartenansicht
-Statt einer langweiligen Tabelle werden zugewiesene Auftraege als moderne Karten dargestellt:
-
-Jede Auftragskarte zeigt:
-- **Auftragsnummer** als kleine Badge oben
-- **Titel** als Hauptueberschrift
-- **Anbieter** + **Praemie** als Metadaten
-- **Platzhalter-Badge** wenn zutreffend (mit App-Store Links als klickbare Icons)
-- **"Auftrag starten"** Button (vorerst nur visuell, Funktionalitaet spaeter)
-- Subtiler Hover-Effekt und staggered Animation
-
-Das Layout ist ein responsives Grid (1 Spalte mobil, 2 Spalten Tablet, 3 Spalten Desktop).
-
-### Leerer Zustand
-Wenn keine Auftraege zugewiesen sind: Ansprechende Illustration/Icon mit Text "Noch keine Auftraege zugewiesen".
-
-## 5. Datenfluss
+Dreispaltig auf Desktop, zweispaltig auf Tablet:
 
 ```text
-1. User loggt sich ein -> ProtectedRoute prueft role="user"
-2. MitarbeiterLayout laedt:
-   a) employment_contract WHERE user_id = auth.uid()
-   b) application (ueber contract.application_id) -> branding_id
-   c) branding (Logo + brand_color)
-3. MitarbeiterDashboard laedt:
-   a) order_assignments WHERE contract_id = user_contract.id
-   b) orders fuer die zugewiesenen order_ids
-   c) Berechnet Stats (Anzahl, Verdienst-Summe)
++------------------+--------------------------------+
+| Konversationen   |  Chat-Verlauf                  |
+|                  |                                |
+| [Suche...]       |  Header: Name + Branding       |
+|                  |                                |
+| Max Mustermann   |  Nachrichtenbubbles            |
+|   Letzte Nachri..|  (gleich wie Mitarbeiter-Seite)|
+|   vor 2 Min      |                                |
+|                  |                                |
+| Erika Muster     |  --------------------------    |
+|   Hallo, ich...  |  [Eingabefeld mit Templates]   |
+|   vor 15 Min     |                                |
++------------------+--------------------------------+
 ```
+
+### Linke Spalte: Konversationsliste
+- Alle Mitarbeiter mit mindestens einer Nachricht, sortiert nach letzter Nachricht
+- Jeder Eintrag zeigt: Name, letzte Nachricht (gekuerzt), Zeitstempel, Unread-Badge
+- Aktive Konversation hervorgehoben
+- Suchfeld oben zum Filtern nach Name
+- Echtzeit-Aktualisierung: Neue Nachrichten schieben die Konversation nach oben
+
+### Rechte Spalte: Chat-Verlauf
+- Selbes Bubble-Design wie beim Mitarbeiter
+- Admin-Nachrichten rechts (Branding-Farbe), Mitarbeiter-Nachrichten links (grau)
+- Eingabefeld unten mit Template-Trigger
+
+### Template-System (nur Admin)
+
+#### Trigger mit `!`
+- Wenn der Admin `!` am Anfang der Eingabe tippt, erscheint ein Dropdown ueber dem Eingabefeld
+- Das Dropdown filtert live waehrend des Tippens (z.B. `!hal` zeigt alle Templates die mit "hal" beginnen)
+- Jeder Eintrag zeigt: Shortcode links, Vorschau des Textes rechts
+- Klick oder Enter ersetzt den gesamten `!shortcode`-Text durch den Template-Inhalt
+- Dropdown schliesst sich nach Auswahl
+
+#### Variable Ersetzung
+- Im Template-Text koennen Variablen wie `%vorname%` und `%nachname%` verwendet werden
+- Beim Einfuegen werden diese automatisch durch die Daten des aktuell ausgewaehlten Mitarbeiters ersetzt (aus `employment_contracts`)
+- Unterstuetzte Variablen: `%vorname%` (first_name), `%nachname%` (last_name)
+
+#### Template-Verwaltung
+- Kleiner Settings-Button im Chat-Header oder neben dem Eingabefeld
+- Oeffnet einen Dialog zum Erstellen, Bearbeiten und Loeschen von Templates
+- Felder: Shortcode (ohne !-Praefix) und Inhalt (Textarea)
+
+### Echtzeit (Admin)
+- Supabase Realtime Subscription auf `chat_messages` (alle Nachrichten, da Admin alle sehen darf)
+- Neue Nachrichten aktualisieren sowohl die Konversationsliste als auch den aktiven Chat
+- Kein Sound fuer den Admin (nur fuer Mitarbeiter)
+
+## 4. Routing und Navigation
+
+### AdminSidebar.tsx
+- Neuer Eintrag "Livechat" mit `MessageCircle`-Icon und URL `/admin/livechat`
+- Badge mit Anzahl ungelesener Nachrichten (ueber alle Konversationen)
+
+### App.tsx
+- Neue Route: `<Route path="livechat" element={<AdminLivechat />} />`
+
+## 5. Dateien
+
+| Datei | Typ | Beschreibung |
+|---|---|---|
+| Migration SQL | Neu | chat_messages + chat_templates Tabellen, RLS, Realtime |
+| `src/components/chat/ChatWidget.tsx` | Neu | Mitarbeiter Popup-Widget (Crisp-Style) |
+| `src/components/chat/ChatBubble.tsx` | Neu | Wiederverwendbare Nachrichtenbubble |
+| `src/components/chat/ChatInput.tsx` | Neu | Eingabefeld mit Template-Dropdown (Admin) / einfach (User) |
+| `src/components/chat/TemplateDropdown.tsx` | Neu | Dropdown fuer !-Trigger mit Live-Filterung |
+| `src/components/chat/TemplateManager.tsx` | Neu | Dialog zur Template-Verwaltung (CRUD) |
+| `src/components/chat/ConversationList.tsx` | Neu | Linke Spalte der Admin-Inbox |
+| `src/components/chat/useChatRealtime.ts` | Neu | Hook fuer Supabase Realtime Subscription |
+| `src/components/chat/useChatSounds.ts` | Neu | Hook fuer Notification- und Swoosh-Sounds |
+| `src/pages/admin/AdminLivechat.tsx` | Neu | Admin Livechat Inbox-Seite |
+| `src/components/mitarbeiter/MitarbeiterLayout.tsx` | Bearbeiten | ChatWidget einbinden |
+| `src/components/admin/AdminSidebar.tsx` | Bearbeiten | Livechat Nav-Eintrag + Unread-Badge |
+| `src/App.tsx` | Bearbeiten | Neue Route /admin/livechat |
 
 ## 6. Technische Details
 
-| Datei | Aenderung |
-|---|---|
-| Migration | Neue RLS SELECT-Policies fuer orders + order_assignments |
-| `src/components/mitarbeiter/MitarbeiterLayout.tsx` | Neues Layout mit Sidebar |
-| `src/components/mitarbeiter/MitarbeiterSidebar.tsx` | Sidebar mit Branding, Nav, Logout |
-| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | Dashboard mit Stats + Auftragskarten |
-| `src/App.tsx` | Routing umbauen auf nested Layout |
-| `src/pages/Mitarbeiter.tsx` | Wird durch neues Layout ersetzt / kann entfernt werden |
+### Supabase Realtime Integration
+- Channel-Subscription auf `chat_messages` mit `postgres_changes` Event-Typ `INSERT`
+- Mitarbeiter filtert auf `contract_id = eigene_id`
+- Admin empfaengt alle INSERTs und aktualisiert den lokalen State
+- Beim Unmount wird die Subscription sauber aufgeraeumt
 
-### Design-Prinzipien
-- Weisses/helles Theme durchgehend
-- Inter Font
-- Brand-Color dynamisch als Akzentfarbe
-- Grosszuegige Whitespace
-- Subtile Schatten und Uebergaenge
-- Framer-motion fuer staggered Animationen
-- Responsive: Mobile-first, Sidebar collapsible
+### Sound-Implementierung
+- Zwei kurze Audio-Clips werden als Base64-Strings im Code eingebettet
+- `useChatSounds()` Hook gibt `playNotification()` und `playSend()` Funktionen zurueck
+- Audio wird via `new Audio(dataUri).play()` abgespielt
+- Notification-Sound nur wenn Widget geschlossen oder Tab nicht fokussiert
+
+### Template-Dropdown Logik
+- Input-Event-Handler prueft ob der Text mit `!` beginnt
+- Wenn ja: Extrahiert den Suchbegriff nach `!` und filtert die Templates
+- Templates werden via useQuery geladen und gecacht
+- Variable Ersetzung geschieht client-seitig beim Einfuegen: `content.replace(/%vorname%/g, contract.first_name).replace(/%nachname%/g, contract.last_name)`
+
+### Performance
+- Nachrichten werden initial mit LIMIT 50 geladen, aeltere via "Mehr laden" Button
+- Konversationsliste nutzt eine aggregierte Query (letzte Nachricht + Unread-Count pro contract_id)
+- Realtime-Updates werden in den lokalen State gemergt statt komplette Queries auszuloesen
 
