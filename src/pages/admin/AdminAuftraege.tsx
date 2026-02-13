@@ -13,9 +13,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import AssignmentDialog from "@/components/admin/AssignmentDialog";
 
 interface Order {
   id: string;
@@ -48,6 +49,7 @@ export default function AdminAuftraege() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [assignOrder, setAssignOrder] = useState<Order | null>(null);
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["orders"],
@@ -58,6 +60,22 @@ export default function AdminAuftraege() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as Order[];
+    },
+  });
+
+  // Load assignment counts per order
+  const { data: assignmentCounts } = useQuery({
+    queryKey: ["order_assignments", "counts_by_order"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_assignments")
+        .select("order_id");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach((a) => {
+        counts[a.order_id] = (counts[a.order_id] || 0) + 1;
+      });
+      return counts;
     },
   });
 
@@ -172,50 +190,61 @@ export default function AdminAuftraege() {
               <TableHead>Prämie</TableHead>
               <TableHead>Platzhalter</TableHead>
               <TableHead>Erstellt am</TableHead>
+              <TableHead>Zuweisen</TableHead>
               <TableHead className="text-right">Aktionen</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Laden...
                 </TableCell>
               </TableRow>
             ) : !orders?.length ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Keine Aufträge vorhanden
                 </TableCell>
               </TableRow>
             ) : (
-              orders.map((o) => (
-                <TableRow key={o.id}>
-                  <TableCell className="font-mono">{o.order_number}</TableCell>
-                  <TableCell>{o.title}</TableCell>
-                  <TableCell>{o.provider}</TableCell>
-                  <TableCell>{o.reward}</TableCell>
-                  <TableCell>
-                    <Badge variant={o.is_placeholder ? "default" : "secondary"}>
-                      {o.is_placeholder ? "Ja" : "Nein"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{format(new Date(o.created_at), "dd.MM.yyyy")}</TableCell>
-                  <TableCell className="text-right space-x-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(o)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(o.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              orders.map((o) => {
+                const count = assignmentCounts?.[o.id] || 0;
+                return (
+                  <TableRow key={o.id}>
+                    <TableCell className="font-mono">{o.order_number}</TableCell>
+                    <TableCell>{o.title}</TableCell>
+                    <TableCell>{o.provider}</TableCell>
+                    <TableCell>{o.reward}</TableCell>
+                    <TableCell>
+                      <Badge variant={o.is_placeholder ? "default" : "secondary"}>
+                        {o.is_placeholder ? "Ja" : "Nein"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{format(new Date(o.created_at), "dd.MM.yyyy")}</TableCell>
+                    <TableCell>
+                      <Button variant="outline" size="sm" onClick={() => setAssignOrder(o)}>
+                        <Users className="h-3.5 w-3.5 mr-1.5" />
+                        {count > 0 ? `${count} Mitarbeiter` : "Zuweisen"}
+                      </Button>
+                    </TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(o)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(o.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
       </div>
 
+      {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -313,6 +342,17 @@ export default function AdminAuftraege() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Assignment Dialog */}
+      {assignOrder && (
+        <AssignmentDialog
+          open={!!assignOrder}
+          onOpenChange={(v) => { if (!v) setAssignOrder(null); }}
+          mode="order"
+          sourceId={assignOrder.id}
+          sourceLabel={`${assignOrder.order_number} – ${assignOrder.title}`}
+        />
+      )}
     </div>
   );
 }

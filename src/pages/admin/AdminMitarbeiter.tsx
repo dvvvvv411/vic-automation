@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Users, ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import { Users, ChevronLeft, ChevronRight, Copy, ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import AssignmentDialog from "@/components/admin/AssignmentDialog";
 
 const PAGE_SIZE = 20;
 
 export default function AdminMitarbeiter() {
   const [page, setPage] = useState(0);
+  const [assignContract, setAssignContract] = useState<{ id: string; label: string } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["mitarbeiter", page],
@@ -27,6 +29,22 @@ export default function AdminMitarbeiter() {
 
       if (error) throw error;
       return { items: contracts || [], total: count || 0 };
+    },
+  });
+
+  // Load assignment counts per contract
+  const { data: assignmentCounts } = useQuery({
+    queryKey: ["order_assignments", "counts_by_contract"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_assignments")
+        .select("contract_id");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach((a) => {
+        counts[a.contract_id] = (counts[a.contract_id] || 0) + 1;
+      });
+      return counts;
     },
   });
 
@@ -59,44 +77,61 @@ export default function AdminMitarbeiter() {
                     <TableHead>Passwort</TableHead>
                     <TableHead>Branding</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Aufträge</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.items.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">
-                        {item.first_name} {item.last_name}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{item.phone || "–"}</TableCell>
-                      <TableCell className="text-muted-foreground">{item.email || "–"}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{item.temp_password || "–"}</code>
-                          {item.temp_password && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => {
-                                navigator.clipboard.writeText(item.temp_password);
-                                toast.success("Passwort kopiert!");
-                              }}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {(item as any).applications?.brandings?.company_name || "–"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-orange-600 border-orange-300">
-                          Nicht unterzeichnet
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {data.items.map((item: any) => {
+                    const count = assignmentCounts?.[item.id] || 0;
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">
+                          {item.first_name} {item.last_name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{item.phone || "–"}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.email || "–"}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{item.temp_password || "–"}</code>
+                            {item.temp_password && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(item.temp_password);
+                                  toast.success("Passwort kopiert!");
+                                }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {(item as any).applications?.brandings?.company_name || "–"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-orange-600 border-orange-300">
+                            Nicht unterzeichnet
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAssignContract({
+                              id: item.id,
+                              label: `${item.first_name ?? ""} ${item.last_name ?? ""}`.trim(),
+                            })}
+                          >
+                            <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
+                            {count > 0 ? `${count} Aufträge` : "Zuweisen"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -117,6 +152,17 @@ export default function AdminMitarbeiter() {
           </>
         )}
       </motion.div>
+
+      {/* Assignment Dialog */}
+      {assignContract && (
+        <AssignmentDialog
+          open={!!assignContract}
+          onOpenChange={(v) => { if (!v) setAssignContract(null); }}
+          mode="contract"
+          sourceId={assignContract.id}
+          sourceLabel={assignContract.label}
+        />
+      )}
     </>
   );
 }

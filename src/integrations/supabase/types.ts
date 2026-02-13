@@ -248,6 +248,42 @@ export type Database = {
           },
         ]
       }
+      order_assignments: {
+        Row: {
+          assigned_at: string
+          contract_id: string
+          id: string
+          order_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          contract_id: string
+          id?: string
+          order_id: string
+        }
+        Update: {
+          assigned_at?: string
+          contract_id?: string
+          id?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_assignments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_assignments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           appstore_url: string | null
