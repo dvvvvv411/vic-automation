@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { MitarbeiterSidebar } from "./MitarbeiterSidebar";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -92,6 +93,7 @@ export default function MitarbeiterLayout() {
             <Outlet context={{ contract, branding, loading }} />
           </main>
         </div>
+        <ChatWidget contractId={contract?.id ?? null} brandColor={branding?.brand_color} />
       </div>
     </SidebarProvider>
   );
