@@ -17,7 +17,8 @@ import AdminMitarbeiter from "./pages/admin/AdminMitarbeiter";
 import AdminAuftraege from "./pages/admin/AdminAuftraege";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
-import Mitarbeiter from "./pages/Mitarbeiter";
+import MitarbeiterLayout from "./components/mitarbeiter/MitarbeiterLayout";
+import MitarbeiterDashboard from "./pages/mitarbeiter/MitarbeiterDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,10 +55,12 @@ const App = () => (
               path="/mitarbeiter"
               element={
                 <ProtectedRoute allowedRole="user">
-                  <Mitarbeiter />
+                  <MitarbeiterLayout />
                 </ProtectedRoute>
               }
-            />
+            >
+              <Route index element={<MitarbeiterDashboard />} />
+            </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
