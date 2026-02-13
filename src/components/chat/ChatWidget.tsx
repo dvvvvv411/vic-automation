@@ -83,8 +83,14 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
 
   // Auto-scroll
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, isTyping]);
+    if (scrollRef.current) {
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      }, 50);
+    }
+  }, [messages, loading, isTyping]);
 
   // Count unread on mount
   useEffect(() => {

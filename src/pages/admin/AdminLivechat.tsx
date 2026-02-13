@@ -132,8 +132,14 @@ export default function AdminLivechat() {
 
   // Auto-scroll
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, isTyping, draftPreview]);
+    if (scrollRef.current) {
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      }, 50);
+    }
+  }, [messages, loading, isTyping, draftPreview]);
 
   // Mark user messages as read
   useEffect(() => {
