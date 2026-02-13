@@ -60,6 +60,27 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
       });
   }, [user]);
 
+  // Load admin profile
+  useEffect(() => {
+    const loadAdmin = async () => {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin")
+        .limit(1);
+      if (!roles || roles.length === 0) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("avatar_url, display_name")
+        .eq("id", roles[0].user_id)
+        .maybeSingle();
+      if (profile) {
+        setAdminProfile({ avatar_url: profile.avatar_url, display_name: profile.display_name });
+      }
+    };
+    loadAdmin();
+  }, []);
+
   // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
