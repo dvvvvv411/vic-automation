@@ -15,6 +15,7 @@ import AdminBewerbungsgespraeche from "./pages/admin/AdminBewerbungsgespraeche";
 import AdminArbeitsvertraege from "./pages/admin/AdminArbeitsvertraege";
 import AdminMitarbeiter from "./pages/admin/AdminMitarbeiter";
 import AdminAuftraege from "./pages/admin/AdminAuftraege";
+import AdminLivechat from "./pages/admin/AdminLivechat";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
 import MitarbeiterLayout from "./components/mitarbeiter/MitarbeiterLayout";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="arbeitsvertraege" element={<AdminArbeitsvertraege />} />
               <Route path="mitarbeiter" element={<AdminMitarbeiter />} />
               <Route path="auftraege" element={<AdminAuftraege />} />
+              <Route path="livechat" element={<AdminLivechat />} />
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
             <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />

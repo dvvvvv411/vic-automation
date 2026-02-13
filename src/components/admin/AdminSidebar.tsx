@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +26,7 @@ const navItems = [
   { title: "Arbeitsverträge", url: "/admin/arbeitsvertraege", icon: FileCheck },
   { title: "Mitarbeiter", url: "/admin/mitarbeiter", icon: Users },
   { title: "Aufträge", url: "/admin/auftraege", icon: ClipboardList },
+  { title: "Livechat", url: "/admin/livechat", icon: MessageCircle },
 ];
 
 export function AdminSidebar() {
@@ -71,10 +72,24 @@ export function AdminSidebar() {
     refetchInterval: 30000,
   });
 
+  const { data: chatUnreadCount } = useQuery({
+    queryKey: ["badge-chat-unread"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("chat_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("sender_role", "user")
+        .eq("read", false);
+      return count ?? 0;
+    },
+    refetchInterval: 10000,
+  });
+
   const badgeCounts: Record<string, number> = {
     "/admin/bewerbungen": neuCount ?? 0,
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
     "/admin/arbeitsvertraege": eingereichtCount ?? 0,
+    "/admin/livechat": chatUnreadCount ?? 0,
   };
 
   return (

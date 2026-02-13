@@ -118,6 +118,62 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          content: string
+          contract_id: string
+          created_at: string
+          id: string
+          read: boolean
+          sender_role: string
+        }
+        Insert: {
+          content: string
+          contract_id: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          sender_role: string
+        }
+        Update: {
+          content?: string
+          contract_id?: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          sender_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_templates: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          shortcode: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          shortcode: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          shortcode?: string
+        }
+        Relationships: []
+      }
       employment_contracts: {
         Row: {
           application_id: string
