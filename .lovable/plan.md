@@ -1,47 +1,49 @@
 
-
-# Fix: Nach Seitenneuladen immer zur neuesten Nachricht scrollen
+# Fix: Livechat-Layout fixieren bei langen Nachrichten
 
 ## Problem
 
-Beim Neuladen der Seite wird nicht automatisch nach unten gescrollt. Die bestehenden `useEffect`-Hooks fuer Auto-Scroll reagieren zwar auf Aenderungen an `messages`, aber beim initialen Laden kann es passieren, dass der Scroll ausgefuehrt wird bevor die Nachrichten im DOM gerendert sind (z.B. waehrend `loading` noch `true` ist).
+Wenn ein Nutzer eine sehr lange Nachricht schickt (besonders mit langen Woertern ohne Leerzeichen), kann die Chat-Bubble breiter werden als der Container, wodurch das gesamte Layout wachst und man rauszoomen muss.
+
+## Ursache
+
+1. Die Chat-Area (`flex-1 flex flex-col min-w-0`) hat kein `overflow-hidden`, sodass ueberlange Inhalte den Container ausdehnen koennen
+2. In `ChatBubble.tsx` nutzt die Nachricht `break-words`, aber fuer extrem lange Strings ohne Leerzeichen reicht das nicht -- es braucht zusaetzlich `overflow-wrap: anywhere` bzw. die Tailwind-Klasse `break-all` als Fallback
 
 ## Loesung
 
-In beiden Dateien den Auto-Scroll `useEffect` so anpassen, dass er auch auf den `loading`-State reagiert -- konkret: wenn `loading` von `true` auf `false` wechselt und Nachrichten vorhanden sind, wird nach unten gescrollt. Zusaetzlich ein kleines `setTimeout` einbauen, damit der Browser den DOM-Update abschliessen kann bevor gescrollt wird.
-
-## Aenderungen
-
 | Datei | Aenderung |
 |---|---|
-| `src/components/chat/ChatWidget.tsx` | Auto-Scroll useEffect: `loading` als Dependency hinzufuegen + `setTimeout` fuer zuverlaessiges Scrollen nach Render |
-| `src/pages/admin/AdminLivechat.tsx` | Gleiche Anpassung: `loading` als Dependency + `setTimeout` |
+| `src/pages/admin/AdminLivechat.tsx` | Chat-Area Container: `overflow-hidden` hinzufuegen damit nichts ueber den Rand hinauswachsen kann |
+| `src/components/chat/ChatBubble.tsx` | Nachrichten-Paragraph: `break-all` als zusaetzlichen Fallback hinzufuegen und `overflow-hidden` auf der Bubble-Div |
 
-### Detaillierte Aenderung
+### Detaillierte Aenderungen
 
-Beide Dateien haben aktuell diesen Auto-Scroll Code:
+**AdminLivechat.tsx, Zeile 179:**
+```
+// Vorher
+<div className="flex-1 flex flex-col min-w-0">
 
-```text
-useEffect(() => {
-  if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-}, [messages, isTyping]);
+// Nachher
+<div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 ```
 
-Wird geaendert zu:
+**ChatBubble.tsx, Zeile 24-31:**
+```
+// Vorher
+<div className={cn("px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm", ...)}>
 
-```text
-useEffect(() => {
-  if (scrollRef.current) {
-    setTimeout(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }
-    }, 50);
-  }
-}, [messages, loading, isTyping]);
+// Nachher
+<div className={cn("px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm overflow-hidden", ...)}>
 ```
 
-Durch die Ergaenzung von `loading` in den Dependencies wird der Scroll auch ausgeloest wenn die Nachrichten nach dem initialen Laden erscheinen. Das `setTimeout(50ms)` stellt sicher, dass der Browser den DOM-Render abgeschlossen hat bevor gescrollt wird.
+**ChatBubble.tsx, Zeile 32:**
+```
+// Vorher
+<p className="whitespace-pre-wrap break-words">{content}</p>
 
-In `AdminLivechat.tsx` hat der useEffect auch `draftPreview` als Dependency -- das bleibt erhalten.
+// Nachher
+<p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{content}</p>
+```
 
+`overflow-wrap: anywhere` ist staerker als `break-words` und bricht auch extrem lange Strings (z.B. URLs) um. Die Kombination mit `overflow-hidden` auf dem Container und der Chat-Area stellt sicher, dass das Layout fixiert bleibt.
