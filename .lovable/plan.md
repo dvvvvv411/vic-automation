@@ -1,50 +1,47 @@
 
 
-# Fix: Typing-Animation sofort nach Absenden ausblenden
+# Fix: Nach Seitenneuladen immer zur neuesten Nachricht scrollen
 
 ## Problem
 
-Wenn eine Nachricht abgeschickt wird, sendet der Absender ein letztes Broadcast-Event mit leerem Text (`sendTyping("")`). Der Empfaenger behandelt aber **jedes** Broadcast-Event als "tippt gerade" (`setIsTyping(true)`) und wartet dann 3 Sekunden auf den Timeout. Deshalb bleibt die Tipp-Animation noch 3 Sekunden sichtbar, obwohl die Nachricht bereits gesendet wurde.
+Beim Neuladen der Seite wird nicht automatisch nach unten gescrollt. Die bestehenden `useEffect`-Hooks fuer Auto-Scroll reagieren zwar auf Aenderungen an `messages`, aber beim initialen Laden kann es passieren, dass der Scroll ausgefuehrt wird bevor die Nachrichten im DOM gerendert sind (z.B. waehrend `loading` noch `true` ist).
 
 ## Loesung
 
-In `useChatTyping.ts` eine Pruefung einbauen: Wenn der empfangene `draft`-Text leer ist (oder nicht vorhanden), sofort `isTyping = false` und `draftPreview = null` setzen statt den 3-Sekunden-Timeout zu starten.
+In beiden Dateien den Auto-Scroll `useEffect` so anpassen, dass er auch auf den `loading`-State reagiert -- konkret: wenn `loading` von `true` auf `false` wechselt und Nachrichten vorhanden sind, wird nach unten gescrollt. Zusaetzlich ein kleines `setTimeout` einbauen, damit der Browser den DOM-Update abschliessen kann bevor gescrollt wird.
 
-## Aenderung
+## Aenderungen
 
 | Datei | Aenderung |
 |---|---|
-| `src/components/chat/useChatTyping.ts` | Broadcast-Handler: bei leerem Draft sofort `isTyping(false)` setzen statt Timeout |
+| `src/components/chat/ChatWidget.tsx` | Auto-Scroll useEffect: `loading` als Dependency hinzufuegen + `setTimeout` fuer zuverlaessiges Scrollen nach Render |
+| `src/pages/admin/AdminLivechat.tsx` | Gleiche Anpassung: `loading` als Dependency + `setTimeout` |
 
 ### Detaillierte Aenderung
 
-Im Broadcast-Handler (Zeile 23-37) wird vor dem `setIsTyping(true)` geprueft ob der Draft leer ist:
+Beide Dateien haben aktuell diesen Auto-Scroll Code:
 
-```
-// Vorher: Jedes Event setzt isTyping=true + 3s Timeout
-setIsTyping(true);
-clearTimeout(typingTimeout.current);
-typingTimeout.current = setTimeout(() => { ... }, 3000);
-
-// Nachher: Leerer Draft = sofort aufhoeren
-const draft = data.draft;
-const hasContent = draft && draft.trim().length > 0;
-
-if (!hasContent) {
-  setIsTyping(false);
-  setDraftPreview(null);
-  clearTimeout(typingTimeout.current);
-  return;
-}
-
-setIsTyping(true);
-if (role === "admin") setDraftPreview(draft);
-clearTimeout(typingTimeout.current);
-typingTimeout.current = setTimeout(() => {
-  setIsTyping(false);
-  setDraftPreview(null);
-}, 3000);
+```text
+useEffect(() => {
+  if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+}, [messages, isTyping]);
 ```
 
-Der 3-Sekunden-Timeout bleibt als Fallback fuer den Fall, dass der Nutzer einfach aufhoert zu tippen ohne abzuschicken.
+Wird geaendert zu:
+
+```text
+useEffect(() => {
+  if (scrollRef.current) {
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, 50);
+  }
+}, [messages, loading, isTyping]);
+```
+
+Durch die Ergaenzung von `loading` in den Dependencies wird der Scroll auch ausgeloest wenn die Nachrichten nach dem initialen Laden erscheinen. Das `setTimeout(50ms)` stellt sicher, dass der Browser den DOM-Render abgeschlossen hat bevor gescrollt wird.
+
+In `AdminLivechat.tsx` hat der useEffect auch `draftPreview` als Dependency -- das bleibt erhalten.
 
