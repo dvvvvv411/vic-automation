@@ -23,13 +23,13 @@ export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, sender
         )}
         <div
           className={cn(
-            "px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm",
+            "px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm overflow-hidden",
             isOwnMessage
               ? "bg-primary text-primary-foreground rounded-br-md"
               : "bg-muted text-foreground rounded-bl-md"
           )}
         >
-          <p className="whitespace-pre-wrap break-words">{content}</p>
+          <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{content}</p>
           <p
             className={cn(
               "text-[10px] mt-1.5 opacity-60",
