@@ -1,181 +1,133 @@
 
-
-# Livechat System -- Crisp-Style
+# Livechat Upgrade: Variablen-Fix, Profilbilder, Typing-Indicator & Echtzeit-Vorschau
 
 ## Uebersicht
 
-Ein Echtzeit-Livechat zwischen Admin und Mitarbeitern, inspiriert vom Crisp-Chat-Design. Fuer Mitarbeiter als schwebendes Popup (unten rechts), fuer Admins als vollstaendige Inbox-Seite unter `/admin/livechat`. Nachrichten werden ueber Supabase Realtime sofort zugestellt -- kein manuelles Neuladen noetig.
+Vier Verbesserungen am Livechat-System:
+1. **Bug-Fix**: Template-Variablen case-insensitive machen (`%Vorname%` = `%vorname%`)
+2. **Profilbilder**: Avatar-System fuer Admin und Mitarbeiter mit Upload-Funktion
+3. **Admin-Anzeigename**: Admin kann seinen Namen setzen, der im Chat angezeigt wird
+4. **Typing-Indicator & Echtzeit-Vorschau**: Mitarbeiter sieht "tippt...", Admin sieht was der Nutzer gerade schreibt
 
-## 1. Datenbank
+---
 
-### Neue Tabelle: `chat_messages`
+## 1. Bug-Fix: Template-Variablen
 
-| Spalte | Typ | Pflicht | Default |
-|---|---|---|---|
-| id | uuid | ja | gen_random_uuid() |
-| contract_id | uuid | ja | FK -> employment_contracts.id ON DELETE CASCADE |
-| sender_role | text | ja | - (Werte: 'admin' oder 'user') |
-| content | text | ja | - |
-| created_at | timestamptz | ja | now() |
-| read | boolean | ja | false |
+### Problem
+In `ChatInput.tsx` Zeile 31-32 werden Variablen case-sensitive ersetzt (`%vorname%`), aber der Admin hat `%Vorname%` geschrieben.
 
-- Index auf `(contract_id, created_at)` fuer schnelle Abfragen
-- RLS-Policies:
-  - Admins: SELECT, INSERT auf alle Nachrichten
-  - Users: SELECT, INSERT nur auf eigene Nachrichten (WHERE contract_id in eigener employment_contract)
-- UPDATE-Policy: Admins koennen `read` setzen; Users koennen `read` auf Nachrichten mit sender_role='admin' setzen
+### Loesung
+Die Regex-Flags von `/g` auf `/gi` aendern (case-insensitive):
 
-### Neue Tabelle: `chat_templates`
-
-| Spalte | Typ | Pflicht | Default |
-|---|---|---|---|
-| id | uuid | ja | gen_random_uuid() |
-| shortcode | text | ja | unique (z.B. "hallo") |
-| content | text | ja | - |
-| created_at | timestamptz | ja | now() |
-
-- RLS: Nur Admins duerfen CRUD
-
-### Supabase Realtime aktivieren
-
-Realtime muss fuer die Tabelle `chat_messages` aktiviert werden (via `ALTER PUBLICATION supabase_realtime ADD TABLE chat_messages`), damit neue Nachrichten sofort an alle verbundenen Clients gepusht werden.
-
-## 2. Mitarbeiter-Seite: Chat-Popup (Crisp-Style)
-
-### Komponente: `ChatWidget.tsx`
-
-Wird in `MitarbeiterLayout.tsx` eingebunden und ist auf jeder `/mitarbeiter/*` Seite sichtbar.
-
-### Design (Crisp-inspiriert)
-- **Geschlossener Zustand**: Runder Button (56px) unten rechts mit Chat-Icon in Branding-Farbe, mit Puls-Animation bei ungelesenen Nachrichten und Unread-Badge
-- **Geoeffneter Zustand**: Abgerundetes Panel (ca. 380px breit, 520px hoch) mit:
-  - **Header**: Branding-Farbe als Hintergrund, "Support" Titel, Schliessen-Button
-  - **Nachrichtenverlauf**: Scrollbare Liste, Admin-Nachrichten links (grauer Hintergrund), eigene Nachrichten rechts (Branding-Farbe), Zeitstempel unter jeder Nachricht, abgerundete Bubbles
-  - **Eingabefeld**: Unten fixiert, Textarea mit Senden-Button, Enter zum Senden (Shift+Enter fuer Zeilenumbruch)
-- **Animationen**: Sanftes Hoch-/Runterfahren via framer-motion (scale + opacity)
-
-### Echtzeit
-- Supabase Realtime Subscription auf `chat_messages` WHERE `contract_id = eigene_contract_id`
-- Neue Nachrichten werden sofort zur Liste hinzugefuegt
-- Auto-Scroll nach unten bei neuer Nachricht
-
-### Sounds
-- **Empfang**: Notification-Sound (kurzer "ding") wenn eine neue Admin-Nachricht reinkommt und das Widget geschlossen ist oder der Tab nicht fokussiert ist
-- **Senden**: Kurzer "swoosh"-Sound beim Absenden einer eigenen Nachricht
-- Sounds werden als Base64-kodierte Audio-Dateien direkt im Code eingebettet (kleine WAV/MP3-Snippets), damit keine externen Dateien noetig sind
-
-### Unread-Badge
-- Zaehlt ungelesene Nachrichten (read=false AND sender_role='admin')
-- Badge auf dem Chat-Button wenn geschlossen
-- Beim Oeffnen des Widgets werden alle ungelesenen als gelesen markiert (UPDATE read=true)
-
-## 3. Admin-Seite: `/admin/livechat`
-
-### Layout (Crisp Inbox-Style)
-
-Dreispaltig auf Desktop, zweispaltig auf Tablet:
-
-```text
-+------------------+--------------------------------+
-| Konversationen   |  Chat-Verlauf                  |
-|                  |                                |
-| [Suche...]       |  Header: Name + Branding       |
-|                  |                                |
-| Max Mustermann   |  Nachrichtenbubbles            |
-|   Letzte Nachri..|  (gleich wie Mitarbeiter-Seite)|
-|   vor 2 Min      |                                |
-|                  |                                |
-| Erika Muster     |  --------------------------    |
-|   Hallo, ich...  |  [Eingabefeld mit Templates]   |
-|   vor 15 Min     |                                |
-+------------------+--------------------------------+
+```
+.replace(/%vorname%/gi, ...)
+.replace(/%nachname%/gi, ...)
 ```
 
-### Linke Spalte: Konversationsliste
-- Alle Mitarbeiter mit mindestens einer Nachricht, sortiert nach letzter Nachricht
-- Jeder Eintrag zeigt: Name, letzte Nachricht (gekuerzt), Zeitstempel, Unread-Badge
-- Aktive Konversation hervorgehoben
-- Suchfeld oben zum Filtern nach Name
-- Echtzeit-Aktualisierung: Neue Nachrichten schieben die Konversation nach oben
+| Datei | Aenderung |
+|---|---|
+| `src/components/chat/ChatInput.tsx` | Regex-Flags auf `/gi` |
 
-### Rechte Spalte: Chat-Verlauf
-- Selbes Bubble-Design wie beim Mitarbeiter
-- Admin-Nachrichten rechts (Branding-Farbe), Mitarbeiter-Nachrichten links (grau)
-- Eingabefeld unten mit Template-Trigger
+---
 
-### Template-System (nur Admin)
+## 2. Profilbilder (Avatar-System)
 
-#### Trigger mit `!`
-- Wenn der Admin `!` am Anfang der Eingabe tippt, erscheint ein Dropdown ueber dem Eingabefeld
-- Das Dropdown filtert live waehrend des Tippens (z.B. `!hal` zeigt alle Templates die mit "hal" beginnen)
-- Jeder Eintrag zeigt: Shortcode links, Vorschau des Textes rechts
-- Klick oder Enter ersetzt den gesamten `!shortcode`-Text durch den Template-Inhalt
-- Dropdown schliesst sich nach Auswahl
+### Datenbank
 
-#### Variable Ersetzung
-- Im Template-Text koennen Variablen wie `%vorname%` und `%nachname%` verwendet werden
-- Beim Einfuegen werden diese automatisch durch die Daten des aktuell ausgewaehlten Mitarbeiters ersetzt (aus `employment_contracts`)
-- Unterstuetzte Variablen: `%vorname%` (first_name), `%nachname%` (last_name)
+**Profiles-Tabelle erweitern** (existiert bereits mit `id`, `full_name`, `created_at`):
 
-#### Template-Verwaltung
-- Kleiner Settings-Button im Chat-Header oder neben dem Eingabefeld
-- Oeffnet einen Dialog zum Erstellen, Bearbeiten und Loeschen von Templates
-- Felder: Shortcode (ohne !-Praefix) und Inhalt (Textarea)
-
-### Echtzeit (Admin)
-- Supabase Realtime Subscription auf `chat_messages` (alle Nachrichten, da Admin alle sehen darf)
-- Neue Nachrichten aktualisieren sowohl die Konversationsliste als auch den aktiven Chat
-- Kein Sound fuer den Admin (nur fuer Mitarbeiter)
-
-## 4. Routing und Navigation
-
-### AdminSidebar.tsx
-- Neuer Eintrag "Livechat" mit `MessageCircle`-Icon und URL `/admin/livechat`
-- Badge mit Anzahl ungelesener Nachrichten (ueber alle Konversationen)
-
-### App.tsx
-- Neue Route: `<Route path="livechat" element={<AdminLivechat />} />`
-
-## 5. Dateien
-
-| Datei | Typ | Beschreibung |
+| Spalte | Typ | Default |
 |---|---|---|
-| Migration SQL | Neu | chat_messages + chat_templates Tabellen, RLS, Realtime |
-| `src/components/chat/ChatWidget.tsx` | Neu | Mitarbeiter Popup-Widget (Crisp-Style) |
-| `src/components/chat/ChatBubble.tsx` | Neu | Wiederverwendbare Nachrichtenbubble |
-| `src/components/chat/ChatInput.tsx` | Neu | Eingabefeld mit Template-Dropdown (Admin) / einfach (User) |
-| `src/components/chat/TemplateDropdown.tsx` | Neu | Dropdown fuer !-Trigger mit Live-Filterung |
-| `src/components/chat/TemplateManager.tsx` | Neu | Dialog zur Template-Verwaltung (CRUD) |
-| `src/components/chat/ConversationList.tsx` | Neu | Linke Spalte der Admin-Inbox |
-| `src/components/chat/useChatRealtime.ts` | Neu | Hook fuer Supabase Realtime Subscription |
-| `src/components/chat/useChatSounds.ts` | Neu | Hook fuer Notification- und Swoosh-Sounds |
-| `src/pages/admin/AdminLivechat.tsx` | Neu | Admin Livechat Inbox-Seite |
-| `src/components/mitarbeiter/MitarbeiterLayout.tsx` | Bearbeiten | ChatWidget einbinden |
-| `src/components/admin/AdminSidebar.tsx` | Bearbeiten | Livechat Nav-Eintrag + Unread-Badge |
-| `src/App.tsx` | Bearbeiten | Neue Route /admin/livechat |
+| avatar_url | text | NULL |
+| display_name | text | NULL |
 
-## 6. Technische Details
+**Neuer Storage-Bucket**: `avatars` (public)
 
-### Supabase Realtime Integration
-- Channel-Subscription auf `chat_messages` mit `postgres_changes` Event-Typ `INSERT`
-- Mitarbeiter filtert auf `contract_id = eigene_id`
-- Admin empfaengt alle INSERTs und aktualisiert den lokalen State
-- Beim Unmount wird die Subscription sauber aufgeraeumt
+RLS fuer `avatars`-Bucket:
+- Jeder authentifizierte User darf in seinen eigenen Ordner (`user_id/`) hochladen und ueberschreiben
+- Oeffentliches Lesen (public bucket)
 
-### Sound-Implementierung
-- Zwei kurze Audio-Clips werden als Base64-Strings im Code eingebettet
-- `useChatSounds()` Hook gibt `playNotification()` und `playSend()` Funktionen zurueck
-- Audio wird via `new Audio(dataUri).play()` abgespielt
-- Notification-Sound nur wenn Widget geschlossen oder Tab nicht fokussiert
+RLS fuer profiles UPDATE: Bereits vorhanden (`auth.uid() = id`)
 
-### Template-Dropdown Logik
-- Input-Event-Handler prueft ob der Text mit `!` beginnt
-- Wenn ja: Extrahiert den Suchbegriff nach `!` und filtert die Templates
-- Templates werden via useQuery geladen und gecacht
-- Variable Ersetzung geschieht client-seitig beim Einfuegen: `content.replace(/%vorname%/g, contract.first_name).replace(/%nachname%/g, contract.last_name)`
+### Default-Avatar
+Kein externes Bild -- stattdessen wird bei fehlendem `avatar_url` ein farbiger Kreis mit den Initialen angezeigt (wie bei Crisp/Slack). Die Farbe wird aus dem Nutzernamen deterministisch generiert.
 
-### Performance
-- Nachrichten werden initial mit LIMIT 50 geladen, aeltere via "Mehr laden" Button
-- Konversationsliste nutzt eine aggregierte Query (letzte Nachricht + Unread-Count pro contract_id)
-- Realtime-Updates werden in den lokalen State gemergt statt komplette Queries auszuloesen
+### Mitarbeiter-Widget: Avatar im Header
+- Im Chat-Widget-Header: Neben dem X-Button wird der Mitarbeiter-Avatar angezeigt (klein, 32px, rund)
+- Klick darauf oeffnet einen kleinen Dialog/Popover zum Bild-Upload
+- Upload geht in den `avatars`-Bucket unter `{user_id}/avatar.png`
+- Nach Upload wird `profiles.avatar_url` aktualisiert
 
+### Admin-Livechat: Profilbild + Anzeigename
+- Im Chat-Header (rechts oben bei `/admin/livechat`) wird ein kleiner Avatar des aktuellen Admins angezeigt
+- Klick darauf oeffnet einen Dialog mit:
+  - Avatar-Upload (gleicher Mechanismus wie Mitarbeiter)
+  - Anzeigename-Feld (wird in `profiles.display_name` gespeichert)
+- Der Admin-Anzeigename wird in der Chat-Bubble des Admins angezeigt (kleiner Name ueber der Nachricht)
+
+### Chat-Bubbles mit Avataren
+- `ChatBubble.tsx` erhaelt optionale Props: `avatarUrl`, `senderName`
+- Bei Nachrichten der Gegenseite wird ein kleiner Avatar (24px) neben der Bubble angezeigt
+- Beim Admin (im Mitarbeiter-Widget): Avatar + Anzeigename ueber der Bubble
+- Beim Mitarbeiter (im Admin-Panel): Avatar + Name ueber der Bubble
+
+---
+
+## 3. Typing-Indicator & Echtzeit-Vorschau
+
+### Mechanismus: Supabase Realtime Broadcast
+Statt Datenbank-Eintraege zu schreiben wird der Supabase Realtime **Broadcast**-Kanal verwendet. Damit werden fluechtige Events (Typing-Status, Draft-Text) direkt an verbundene Clients gesendet -- ohne Datenbankschreibvorgaenge.
+
+### Typing-Indicator (Mitarbeiter sieht "Admin tippt...")
+- Wenn der Admin im Eingabefeld tippt, sendet er alle 2 Sekunden ein Broadcast-Event `typing` an den Kanal `chat-typing-{contract_id}`
+- Der Mitarbeiter empfaengt das Event und zeigt eine animierte "tippt..."-Anzeige (drei pulsierende Punkte) unter der letzten Nachricht
+- Nach 3 Sekunden ohne neues Event verschwindet der Indicator
+
+### Echtzeit-Vorschau (Admin sieht Nutzer-Eingabe)
+- Wenn der Mitarbeiter im Eingabefeld tippt, sendet er per Broadcast den aktuellen Input-Text (gedrosselt auf max alle 500ms) an `chat-typing-{contract_id}`
+- Der Admin empfaengt den Draft-Text und zeigt ihn als grauen, kursiven Text unterhalb des Nachrichtenverlaufs an (aehnlich wie bei Crisp: "Benutzer schreibt: ...")
+- Wenn der Text leer wird oder 3 Sekunden kein Update kommt, verschwindet die Vorschau
+
+### Neuer Hook: `useChatTyping.ts`
+
+```text
+useChatTyping({ contractId, role }) => {
+  // Sendet eigenen Typing-Status / Draft-Text
+  sendTyping(draftText?: string): void
+  
+  // Empfaengt Typing-Status der Gegenseite
+  isTyping: boolean           // Gegenseite tippt
+  draftPreview: string | null // Nur fuer Admin: Was der Nutzer gerade schreibt
+}
+```
+
+---
+
+## 4. Dateien-Uebersicht
+
+| Datei | Aenderung |
+|---|---|
+| Migration SQL | `profiles` erweitern (avatar_url, display_name), Storage-Bucket `avatars` erstellen mit RLS |
+| `src/components/chat/ChatInput.tsx` | Regex `/gi` fuer Variablen; Typing-Broadcast senden |
+| `src/components/chat/ChatBubble.tsx` | Avatar + Absendername anzeigen |
+| `src/components/chat/ChatWidget.tsx` | Mitarbeiter-Avatar im Header mit Upload, Typing-Indicator anzeigen, Draft per Broadcast senden |
+| `src/components/chat/useChatTyping.ts` | Neuer Hook fuer Broadcast-basiertes Typing/Draft |
+| `src/components/chat/AvatarUpload.tsx` | Wiederverwendbare Komponente: Avatar anzeigen + Upload-Dialog |
+| `src/pages/admin/AdminLivechat.tsx` | Admin-Avatar + Anzeigename im Header, Draft-Vorschau anzeigen, Typing-Broadcast senden |
+| `src/components/chat/ConversationList.tsx` | Mitarbeiter-Avatar in der Liste anzeigen |
+
+### Datenfluss Typing/Draft
+
+```text
+Mitarbeiter tippt -> Broadcast "draft" an chat-typing-{contract_id}
+                  -> Admin empfaengt: zeigt Draft-Text kursiv an
+
+Admin tippt       -> Broadcast "typing" an chat-typing-{contract_id}
+                  -> Mitarbeiter empfaengt: zeigt "tippt..." Punkte-Animation
+```
+
+### Design-Details
+- Typing-Indicator: Drei pulsierende Punkte in einer kleinen Bubble (links, grau), wie bei iMessage
+- Draft-Vorschau (Admin): Unter dem Nachrichtenverlauf, kursiver grauer Text mit Bleistift-Icon
+- Avatar-Upload: Klick auf Avatar oeffnet Popover mit Datei-Input und Vorschau
+- Default-Avatar: Farbiger Kreis mit Initialen (deterministisch basierend auf Name)
