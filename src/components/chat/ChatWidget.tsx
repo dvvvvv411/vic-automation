@@ -20,8 +20,6 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
-  const [myAvatar, setMyAvatar] = useState<string | null>(null);
-  const [myName, setMyName] = useState<string | null>(null);
   const [adminProfile, setAdminProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
   const scrollRef = useRef<HTMLDivElement>(null);
   const { playNotification, playSend } = useChatSounds();
@@ -44,21 +42,6 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
     },
   });
 
-  // Load own profile
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("profiles")
-      .select("avatar_url, display_name, full_name")
-      .eq("id", user.id)
-      .maybeSingle()
-      .then(({ data }: any) => {
-        if (data) {
-          setMyAvatar(data.avatar_url);
-          setMyName(data.display_name || data.full_name);
-        }
-      });
-  }, [user]);
 
   // Load admin profile (with sessionStorage cache)
   useEffect(() => {
@@ -167,25 +150,25 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
           >
             {/* Header */}
             <div className="bg-primary px-5 py-4 flex items-center justify-between shrink-0">
-              <div>
-                <h3 className="text-primary-foreground font-semibold text-base">Support</h3>
-                <p className="text-primary-foreground/70 text-xs">Wir antworten sofort</p>
-              </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <AvatarUpload
-                  avatarUrl={myAvatar}
-                  name={myName}
-                  size={32}
-                  editable
-                  onUploaded={(url) => setMyAvatar(url)}
+                  avatarUrl={adminProfile.avatar_url}
+                  name={adminProfile.display_name || "Admin"}
+                  size={36}
                 />
-                <button
-                  onClick={() => setOpen(false)}
-                  className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+                <div>
+                  <h3 className="text-primary-foreground font-semibold text-sm leading-tight">
+                    {adminProfile.display_name || "Admin"}
+                  </h3>
+                  <p className="text-primary-foreground/70 text-xs">Dein Ansprechpartner</p>
+                </div>
               </div>
+              <button
+                onClick={() => setOpen(false)}
+                className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             {/* Messages */}
