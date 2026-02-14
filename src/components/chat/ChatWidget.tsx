@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,16 +92,12 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
     }
   }, [messages, loading, isTyping]);
 
-  // Beim Oeffnen smooth nach unten scrollen
-  useEffect(() => {
+  // Beim Oeffnen sofort ganz unten starten (vor dem Paint)
+  useLayoutEffect(() => {
     if (open && scrollRef.current) {
-      setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-      }, 150);
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [open]);
+  }, [open, messages, loading]);
 
   // Count unread on mount
   useEffect(() => {
