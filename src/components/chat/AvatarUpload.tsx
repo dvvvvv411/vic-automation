@@ -68,10 +68,10 @@ export function AvatarUpload({
       if (uploadErr) throw uploadErr;
 
       const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      const url = `${data.publicUrl}?t=${Date.now()}`;
+      const cleanUrl = data.publicUrl;
 
-      await supabase.from("profiles").update({ avatar_url: url } as any).eq("id", user.id);
-      onUploaded?.(url);
+      await supabase.from("profiles").update({ avatar_url: cleanUrl } as any).eq("id", user.id);
+      onUploaded?.(`${cleanUrl}?t=${Date.now()}`);
       toast.success("Profilbild aktualisiert");
       setOpen(false);
     } catch (err: any) {

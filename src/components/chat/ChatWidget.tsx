@@ -60,8 +60,13 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
       });
   }, [user]);
 
-  // Load admin profile
+  // Load admin profile (with sessionStorage cache)
   useEffect(() => {
+    const cached = sessionStorage.getItem("admin_chat_profile");
+    if (cached) {
+      try { setAdminProfile(JSON.parse(cached)); } catch {}
+    }
+
     const loadAdmin = async () => {
       const { data: roles } = await supabase
         .from("user_roles")
@@ -75,7 +80,9 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
         .eq("id", roles[0].user_id)
         .maybeSingle();
       if (profile) {
-        setAdminProfile({ avatar_url: profile.avatar_url, display_name: profile.display_name });
+        const p = { avatar_url: profile.avatar_url, display_name: profile.display_name };
+        setAdminProfile(p);
+        sessionStorage.setItem("admin_chat_profile", JSON.stringify(p));
       }
     };
     loadAdmin();
