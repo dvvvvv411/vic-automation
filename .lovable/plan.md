@@ -1,49 +1,42 @@
 
-# Datumstrenner im Chatverlauf
 
-## Was wird gemacht
+# Chat-Header: Admin-Ansprechpartner statt eigenes Profilbild
 
-Zwischen Nachrichten verschiedener Tage wird ein dezenter Datumstrenner angezeigt -- eine horizontale Linie mit dem Datum in der Mitte (wie bei WhatsApp/Telegram). So sieht man sofort, an welchem Tag welche Nachrichten geschrieben wurden.
+## Was wird geaendert
 
-## Umsetzung
+Im Livechat-Popup des Mitarbeiters (`/mitarbeiter`) wird der Header umgebaut:
 
-### 1. Neue Komponente `DateSeparator` in `ChatBubble.tsx`
+- **Weg**: Das editierbare eigene Profilbild des Mitarbeiters (AvatarUpload mit `editable`)
+- **Neu**: Avatar und Name des Administrators mit dem Label "Dein Ansprechpartner"
 
-Eine einfache Komponente, die das Datum zentriert zwischen zwei feinen Linien anzeigt:
-
-```text
-——————— 12. Februar 2026 ———————
-```
-
-- Styling: `text-xs text-muted-foreground` mit Linien links und rechts (`border-t`)
-- Datumsformat: `dd. MMMM yyyy` (deutsch, z.B. "14. Februar 2026")
-- Fuer heute: "Heute", fuer gestern: "Gestern"
-
-### 2. Rendering-Logik in `AdminLivechat.tsx` und `ChatWidget.tsx`
-
-In beiden Dateien wird beim Rendern der Nachrichten-Liste geprueft: Hat die aktuelle Nachricht ein anderes Datum als die vorherige? Falls ja, wird vor der Nachricht ein `DateSeparator` eingefuegt.
+## Vorher / Nachher
 
 ```text
-messages.map((msg, i) => {
-  const showDate = i === 0 || !isSameDay(new Date(msg.created_at), new Date(messages[i-1].created_at));
-  return (
-    <>
-      {showDate && <DateSeparator date={msg.created_at} />}
-      <ChatBubble ... />
-    </>
-  );
-})
+VORHER:
+┌─────────────────────────────────┐
+│  Support                [Avatar]│
+│  Wir antworten sofort      [X]  │
+└─────────────────────────────────┘
+
+NACHHER:
+┌─────────────────────────────────┐
+│ [Admin-Avatar]                  │
+│  Admin-Name              [X]    │
+│  Dein Ansprechpartner           │
+└─────────────────────────────────┘
 ```
 
-## Dateien
+## Aenderungen
 
 | Datei | Aenderung |
 |---|---|
-| `src/components/chat/ChatBubble.tsx` | Neue `DateSeparator`-Komponente exportieren |
-| `src/pages/admin/AdminLivechat.tsx` | `DateSeparator` vor Nachrichten mit neuem Datum rendern |
-| `src/components/chat/ChatWidget.tsx` | Gleiche Logik fuer das Mitarbeiter-Widget |
+| `src/components/chat/ChatWidget.tsx` | Header umbauen: eigenes Avatar entfernen, Admin-Avatar + Name + Label "Dein Ansprechpartner" anzeigen |
 
-## Technische Details
+### Technische Details
 
-- `date-fns` ist bereits installiert -- `isSameDay`, `isToday`, `isYesterday` und `format` werden verwendet
-- Kein zusaetzlicher State noetig, die Logik laeuft rein beim Rendern ueber den Nachrichten-Index
+Der Header-Bereich (Zeilen 168-188) wird ersetzt:
+
+- Links: Admin-Avatar (nicht editierbar, aus `adminProfile.avatar_url`) + Admin-Name (`adminProfile.display_name || "Admin"`) + Untertitel "Dein Ansprechpartner"
+- Rechts: Nur noch der Schliessen-Button (X)
+- Die States `myAvatar` und `myName` sowie der zugehoerige `useEffect` zum Laden des eigenen Profils koennen entfernt werden, da sie nicht mehr benoetigt werden
+
