@@ -15,6 +15,17 @@ interface ChatWidgetProps {
   brandColor?: string | null;
 }
 
+const isOnline = () => {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin",
+    hour: "numeric",
+    hour12: false,
+  });
+  const hour = parseInt(formatter.format(now), 10);
+  return hour >= 8 && hour < 18;
+};
+
 export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -151,11 +162,17 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
             {/* Header */}
             <div className="bg-primary px-5 py-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <AvatarUpload
-                  avatarUrl={adminProfile.avatar_url}
-                  name={adminProfile.display_name || "Admin"}
-                  size={36}
-                />
+                <div className="relative">
+                  <AvatarUpload
+                    avatarUrl={adminProfile.avatar_url}
+                    name={adminProfile.display_name || "Admin"}
+                    size={36}
+                  />
+                  <span className={cn(
+                    "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-primary",
+                    isOnline() ? "bg-green-500" : "bg-gray-400"
+                  )} />
+                </div>
                 <div>
                   <h3 className="text-primary-foreground font-semibold text-sm leading-tight">
                     {adminProfile.display_name || "Admin"}
