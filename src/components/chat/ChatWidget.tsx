@@ -81,7 +81,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
     loadAdmin();
   }, []);
 
-  // Auto-scroll
+  // Auto-scroll bei neuen Nachrichten
   useEffect(() => {
     if (scrollRef.current) {
       setTimeout(() => {
@@ -90,7 +90,18 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
         }
       }, 50);
     }
-  }, [messages, loading, isTyping, open]);
+  }, [messages, loading, isTyping]);
+
+  // Beim Oeffnen smooth nach unten scrollen
+  useEffect(() => {
+    if (open && scrollRef.current) {
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      }, 150);
+    }
+  }, [open]);
 
   // Count unread on mount
   useEffect(() => {
