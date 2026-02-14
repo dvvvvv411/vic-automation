@@ -1,4 +1,5 @@
-import { format } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
+import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { AvatarUpload } from "./AvatarUpload";
 
@@ -40,6 +41,23 @@ export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, sender
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+export function DateSeparator({ date }: { date: string }) {
+  const d = new Date(date);
+  const label = isToday(d)
+    ? "Heute"
+    : isYesterday(d)
+      ? "Gestern"
+      : format(d, "d. MMMM yyyy", { locale: de });
+
+  return (
+    <div className="flex items-center gap-3 my-4">
+      <div className="flex-1 border-t border-border" />
+      <span className="text-[11px] text-muted-foreground font-medium">{label}</span>
+      <div className="flex-1 border-t border-border" />
     </div>
   );
 }

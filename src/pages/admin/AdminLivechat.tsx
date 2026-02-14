@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ConversationList, type Conversation } from "@/components/chat/ConversationList";
-import { ChatBubble, TypingIndicator } from "@/components/chat/ChatBubble";
+import { ChatBubble, TypingIndicator, DateSeparator } from "@/components/chat/ChatBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { TemplateManager } from "@/components/chat/TemplateManager";
 import { AvatarUpload } from "@/components/chat/AvatarUpload";
@@ -243,17 +243,22 @@ export default function AdminLivechat() {
                   Noch keine Nachrichten
                 </div>
               ) : (
-                messages.map((msg) => (
-                  <ChatBubble
-                    key={msg.id}
-                    content={msg.content}
-                    senderRole={msg.sender_role}
-                    createdAt={msg.created_at}
-                    isOwnMessage={msg.sender_role === "admin"}
-                    avatarUrl={msg.sender_role === "user" ? employeeProfile.avatar_url : undefined}
-                    senderName={msg.sender_role === "user" ? (employeeProfile.display_name || `${active.first_name} ${active.last_name}`) : undefined}
-                  />
-                ))
+                messages.map((msg, i) => {
+                  const showDate = i === 0 || new Date(msg.created_at).toDateString() !== new Date(messages[i - 1].created_at).toDateString();
+                  return (
+                    <div key={msg.id}>
+                      {showDate && <DateSeparator date={msg.created_at} />}
+                      <ChatBubble
+                        content={msg.content}
+                        senderRole={msg.sender_role}
+                        createdAt={msg.created_at}
+                        isOwnMessage={msg.sender_role === "admin"}
+                        avatarUrl={msg.sender_role === "user" ? employeeProfile.avatar_url : undefined}
+                        senderName={msg.sender_role === "user" ? (employeeProfile.display_name || `${active.first_name} ${active.last_name}`) : undefined}
+                      />
+                    </div>
+                  );
+                })
               )}
               {isTyping && <TypingIndicator />}
             </div>
