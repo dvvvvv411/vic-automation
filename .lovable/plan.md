@@ -1,32 +1,53 @@
 
-
-# Fix: Beim Oeffnen des Livechat-Popups zur neuesten Nachricht scrollen
+# Fix: Flackern beim Oeffnen des Chat-Popups beseitigen
 
 ## Problem
 
-Der Auto-Scroll `useEffect` in `ChatWidget.tsx` reagiert auf `messages`, `loading` und `isTyping` -- aber nicht auf `open`. Wenn der Nutzer das Chat-Popup oeffnet, sind die Nachrichten bereits geladen (kein Wechsel bei `messages` oder `loading`), daher wird der Scroll nicht ausgeloest.
+Der Auto-Scroll `useEffect` feuert bei jeder Aenderung von `open` -- also auch beim Schliessen. Ausserdem kollidiert der 50ms-Timeout mit der Framer-Motion-Oeffnungsanimation, was zu sichtbarem Flackern fuehrt.
 
 ## Loesung
 
-`open` als Dependency zum Auto-Scroll `useEffect` hinzufuegen.
+Den Scroll-Trigger fuer `open` vom allgemeinen Auto-Scroll trennen:
+
+1. **Separater useEffect nur fuers Oeffnen**: Reagiert nur auf `open`, prueft ob `open === true`, und scrollt dann mit einem laengeren Delay (150ms) damit die Animation abgeschlossen ist.
+2. **Allgemeiner Auto-Scroll bleibt wie vorher**: Nur fuer `messages`, `loading`, `isTyping` -- ohne `open`.
 
 ## Aenderung
 
 | Datei | Aenderung |
 |---|---|
-| `src/components/chat/ChatWidget.tsx` | `open` zur Dependency-Liste des Auto-Scroll useEffect hinzufuegen |
+| `src/components/chat/ChatWidget.tsx` | `open` aus dem bestehenden useEffect entfernen, separaten useEffect hinzufuegen |
 
 ### Detail
 
-Zeile 93 aendern:
+**Bestehenden useEffect (Zeile 85-93) aendern:**
 
-```
-// Vorher
+```text
+// Auto-scroll bei neuen Nachrichten
+useEffect(() => {
+  if (scrollRef.current) {
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, 50);
+  }
 }, [messages, loading, isTyping]);
-
-// Nachher
-}, [messages, loading, isTyping, open]);
 ```
 
-Damit wird jedes Mal wenn das Popup geoeffnet wird (`open` wechselt auf `true`) automatisch nach unten gescrollt.
+**Neuen useEffect direkt danach einfuegen:**
 
+```text
+// Beim Oeffnen smooth nach unten scrollen
+useEffect(() => {
+  if (open && scrollRef.current) {
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, 150);
+  }
+}, [open]);
+```
+
+Der laengere Delay von 150ms gibt der Framer-Motion-Animation (spring mit damping 25, stiffness 350) genug Zeit sich zu entfalten, bevor gescrollt wird. Und weil der Effect nur bei `open === true` scrollt, passiert beim Schliessen nichts.
