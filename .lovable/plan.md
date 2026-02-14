@@ -1,42 +1,47 @@
 
 
-# Chat-Header: Admin-Ansprechpartner statt eigenes Profilbild
+# Gruener Online-Punkt am Admin-Avatar im Chat-Header
 
-## Was wird geaendert
+## Was wird gemacht
 
-Im Livechat-Popup des Mitarbeiters (`/mitarbeiter`) wird der Header umgebaut:
+Im Livechat-Popup-Header wird am Admin-Avatar ein kleiner Statusindikator (Punkt) angezeigt:
 
-- **Weg**: Das editierbare eigene Profilbild des Mitarbeiters (AvatarUpload mit `editable`)
-- **Neu**: Avatar und Name des Administrators mit dem Label "Dein Ansprechpartner"
+- **Gruen** zwischen 08:00 und 18:00 Uhr (deutsche Zeit, Europe/Berlin)
+- **Grau** ausserhalb dieser Zeiten
 
-## Vorher / Nachher
+## Umsetzung
+
+### Datei: `src/components/chat/ChatWidget.tsx`
+
+Im Header-Bereich wird der `AvatarUpload`-Bereich mit einem `relative`-Container umschlossen. In diesem Container wird ein kleiner Punkt (`absolute bottom-0 right-0`) platziert, dessen Farbe per Logik bestimmt wird:
 
 ```text
-VORHER:
-┌─────────────────────────────────┐
-│  Support                [Avatar]│
-│  Wir antworten sofort      [X]  │
-└─────────────────────────────────┘
-
-NACHHER:
-┌─────────────────────────────────┐
-│ [Admin-Avatar]                  │
-│  Admin-Name              [X]    │
-│  Dein Ansprechpartner           │
-└─────────────────────────────────┘
+const isOnline = () => {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin",
+    hour: "numeric",
+    hour12: false,
+  });
+  const hour = parseInt(formatter.format(now), 10);
+  return hour >= 8 && hour < 18;
+};
 ```
 
-## Aenderungen
+Der Punkt wird so gestaltet:
+
+```text
+<span className={cn(
+  "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-primary",
+  isOnline() ? "bg-green-500" : "bg-gray-400"
+)} />
+```
+
+### Aenderungen
 
 | Datei | Aenderung |
 |---|---|
-| `src/components/chat/ChatWidget.tsx` | Header umbauen: eigenes Avatar entfernen, Admin-Avatar + Name + Label "Dein Ansprechpartner" anzeigen |
+| `src/components/chat/ChatWidget.tsx` | `isOnline()`-Funktion hinzufuegen + gruenen/grauen Punkt am Avatar im Header rendern |
 
-### Technische Details
-
-Der Header-Bereich (Zeilen 168-188) wird ersetzt:
-
-- Links: Admin-Avatar (nicht editierbar, aus `adminProfile.avatar_url`) + Admin-Name (`adminProfile.display_name || "Admin"`) + Untertitel "Dein Ansprechpartner"
-- Rechts: Nur noch der Schliessen-Button (X)
-- Die States `myAvatar` und `myName` sowie der zugehoerige `useEffect` zum Laden des eigenen Profils koennen entfernt werden, da sie nicht mehr benoetigt werden
+Keine neuen Abhaengigkeiten noetig -- `Intl.DateTimeFormat` ist nativ im Browser verfuegbar und liefert zuverlaessig die deutsche Zeitzone.
 
