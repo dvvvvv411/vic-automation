@@ -1,79 +1,49 @@
 
+# Datumstrenner im Chatverlauf
 
-# Fix: Admin-Avatar cachen statt bei jedem Seitenaufruf neu laden
+## Was wird gemacht
 
-## Problem
+Zwischen Nachrichten verschiedener Tage wird ein dezenter Datumstrenner angezeigt -- eine horizontale Linie mit dem Datum in der Mitte (wie bei WhatsApp/Telegram). So sieht man sofort, an welchem Tag welche Nachrichten geschrieben wurden.
 
-Zwei Ursachen verhindern das Caching des Admin-Avatars:
+## Umsetzung
 
-1. **Cache-Busting URL**: Beim Upload wird `?t=${Date.now()}` an die Bild-URL angehängt (Zeile 71, `AvatarUpload.tsx`). Der Browser behandelt jede URL mit unterschiedlichem Query-Parameter als neues Bild und lädt es jedes Mal neu herunter.
+### 1. Neue Komponente `DateSeparator` in `ChatBubble.tsx`
 
-2. **Kein Client-seitiger Cache**: In `ChatWidget.tsx` wird das Admin-Profil bei jedem Mounten (also bei jedem Seitenaufruf) frisch von der Datenbank geladen. Währenddessen zeigt das Widget keinen Avatar an.
+Eine einfache Komponente, die das Datum zentriert zwischen zwei feinen Linien anzeigt:
 
-## Lösung
+```text
+——————— 12. Februar 2026 ———————
+```
 
-### 1. Admin-Profil im `sessionStorage` cachen
+- Styling: `text-xs text-muted-foreground` mit Linien links und rechts (`border-t`)
+- Datumsformat: `dd. MMMM yyyy` (deutsch, z.B. "14. Februar 2026")
+- Fuer heute: "Heute", fuer gestern: "Gestern"
 
-Beim ersten Laden wird das Admin-Profil (Avatar-URL + Anzeigename) im `sessionStorage` gespeichert. Bei erneutem Öffnen wird zuerst der Cache angezeigt (sofort sichtbar), dann im Hintergrund aktualisiert.
+### 2. Rendering-Logik in `AdminLivechat.tsx` und `ChatWidget.tsx`
 
-### 2. Cache-Buster nur beim Upload verwenden
+In beiden Dateien wird beim Rendern der Nachrichten-Liste geprueft: Hat die aktuelle Nachricht ein anderes Datum als die vorherige? Falls ja, wird vor der Nachricht ein `DateSeparator` eingefuegt.
 
-Der `?t=...`-Parameter wird nur **einmalig direkt nach dem Upload** gesetzt (damit der Nutzer sofort das neue Bild sieht). Beim **Speichern in die Datenbank** wird die saubere URL ohne Cache-Buster verwendet, damit der Browser das Bild danach normal cachen kann.
+```text
+messages.map((msg, i) => {
+  const showDate = i === 0 || !isSameDay(new Date(msg.created_at), new Date(messages[i-1].created_at));
+  return (
+    <>
+      {showDate && <DateSeparator date={msg.created_at} />}
+      <ChatBubble ... />
+    </>
+  );
+})
+```
 
-## Änderungen
+## Dateien
 
-| Datei | Änderung |
+| Datei | Aenderung |
 |---|---|
-| `src/components/chat/ChatWidget.tsx` | Admin-Profil aus sessionStorage laden (sofortige Anzeige), dann im Hintergrund aktualisieren |
-| `src/components/chat/AvatarUpload.tsx` | Cache-Buster nur lokal nutzen, saubere URL in die Datenbank schreiben |
+| `src/components/chat/ChatBubble.tsx` | Neue `DateSeparator`-Komponente exportieren |
+| `src/pages/admin/AdminLivechat.tsx` | `DateSeparator` vor Nachrichten mit neuem Datum rendern |
+| `src/components/chat/ChatWidget.tsx` | Gleiche Logik fuer das Mitarbeiter-Widget |
 
-### Technische Details
+## Technische Details
 
-**AvatarUpload.tsx** -- Zeilen 70-73 ändern:
-
-```text
-// Saubere URL in DB speichern (ohne Cache-Buster)
-const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-const cleanUrl = data.publicUrl;
-
-// In DB ohne Cache-Buster speichern
-await supabase.from("profiles").update({ avatar_url: cleanUrl }).eq("id", user.id);
-
-// Lokal mit Cache-Buster anzeigen (damit sofort das neue Bild erscheint)
-onUploaded?.(`${cleanUrl}?t=${Date.now()}`);
-```
-
-**ChatWidget.tsx** -- Admin-Profil-Laden (ca. Zeile 63-77) erweitern:
-
-```text
-// Admin-Profil laden mit sessionStorage-Cache
-useEffect(() => {
-  // Sofort aus Cache laden
-  const cached = sessionStorage.getItem("admin_chat_profile");
-  if (cached) {
-    try {
-      setAdminProfile(JSON.parse(cached));
-    } catch {}
-  }
-
-  // Im Hintergrund aktualisieren
-  const loadAdmin = async () => {
-    const { data: roles } = await supabase
-      .from("user_roles").select("user_id").eq("role", "admin").limit(1);
-    if (!roles?.length) return;
-    const { data: profile } = await supabase
-      .from("profiles").select("avatar_url, display_name").eq("id", roles[0].user_id).maybeSingle();
-    if (profile) {
-      setAdminProfile({ avatar_url: profile.avatar_url, display_name: profile.display_name });
-      sessionStorage.setItem("admin_chat_profile", JSON.stringify({
-        avatar_url: profile.avatar_url,
-        display_name: profile.display_name,
-      }));
-    }
-  };
-  loadAdmin();
-}, []);
-```
-
-Damit wird das Admin-Bild beim ersten Mal geladen, ab dann sofort aus dem Cache angezeigt -- und still im Hintergrund aktualisiert, falls sich etwas geändert hat.
-
+- `date-fns` ist bereits installiert -- `isSameDay`, `isToday`, `isYesterday` und `format` werden verwendet
+- Kein zusaetzlicher State noetig, die Logik laeuft rein beim Rendern ueber den Nachrichten-Index
