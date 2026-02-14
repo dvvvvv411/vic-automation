@@ -90,7 +90,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
         }
       }, 50);
     }
-  }, [messages, loading, isTyping]);
+  }, [messages, loading, isTyping, open]);
 
   // Count unread on mount
   useEffect(() => {
