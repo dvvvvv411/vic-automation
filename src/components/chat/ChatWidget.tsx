@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useChatRealtime, type ChatMessage } from "./useChatRealtime";
 import { useChatSounds } from "./useChatSounds";
 import { useChatTyping } from "./useChatTyping";
-import { ChatBubble, TypingIndicator } from "./ChatBubble";
+import { ChatBubble, TypingIndicator, DateSeparator } from "./ChatBubble";
 import { AvatarUpload } from "./AvatarUpload";
 import { cn } from "@/lib/utils";
 
@@ -199,17 +199,22 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
                   <p>Willkommen! Schreibe uns eine Nachricht und wir helfen dir weiter.</p>
                 </div>
               ) : (
-                messages.map((msg) => (
-                  <ChatBubble
-                    key={msg.id}
-                    content={msg.content}
-                    senderRole={msg.sender_role}
-                    createdAt={msg.created_at}
-                    isOwnMessage={msg.sender_role === "user"}
-                    avatarUrl={msg.sender_role === "admin" ? adminProfile.avatar_url : undefined}
-                    senderName={msg.sender_role === "admin" ? (adminProfile.display_name || "Admin") : undefined}
-                  />
-                ))
+                messages.map((msg, i) => {
+                  const showDate = i === 0 || new Date(msg.created_at).toDateString() !== new Date(messages[i - 1].created_at).toDateString();
+                  return (
+                    <div key={msg.id}>
+                      {showDate && <DateSeparator date={msg.created_at} />}
+                      <ChatBubble
+                        content={msg.content}
+                        senderRole={msg.sender_role}
+                        createdAt={msg.created_at}
+                        isOwnMessage={msg.sender_role === "user"}
+                        avatarUrl={msg.sender_role === "admin" ? adminProfile.avatar_url : undefined}
+                        senderName={msg.sender_role === "admin" ? (adminProfile.display_name || "Admin") : undefined}
+                      />
+                    </div>
+                  );
+                })
               )}
               {isTyping && <TypingIndicator />}
             </div>
