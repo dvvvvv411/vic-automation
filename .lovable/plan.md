@@ -1,47 +1,54 @@
 
 
-# Gruener Online-Punkt am Admin-Avatar im Chat-Header
+# Auftragsdetails-Seite fuer Mitarbeiter
 
-## Was wird gemacht
+## Was wird gebaut
 
-Im Livechat-Popup-Header wird am Admin-Avatar ein kleiner Statusindikator (Punkt) angezeigt:
+Eine neue Seite unter `/mitarbeiter/auftragdetails/:id`, die beim Klick auf "Auftrag starten" im Dashboard angezeigt wird. Sie zeigt alle Details eines Auftrags uebersichtlich an: Titel, Auftragsnummer, Anbieter, Praemie, Projektziel, Bewertungsfragen sowie App-Store-Links.
 
-- **Gruen** zwischen 08:00 und 18:00 Uhr (deutsche Zeit, Europe/Berlin)
-- **Grau** ausserhalb dieser Zeiten
-
-## Umsetzung
-
-### Datei: `src/components/chat/ChatWidget.tsx`
-
-Im Header-Bereich wird der `AvatarUpload`-Bereich mit einem `relative`-Container umschlossen. In diesem Container wird ein kleiner Punkt (`absolute bottom-0 right-0`) platziert, dessen Farbe per Logik bestimmt wird:
+## Seitenaufbau
 
 ```text
-const isOnline = () => {
-  const now = new Date();
-  const formatter = new Intl.DateTimeFormat("de-DE", {
-    timeZone: "Europe/Berlin",
-    hour: "numeric",
-    hour12: false,
-  });
-  const hour = parseInt(formatter.format(now), 10);
-  return hour >= 8 && hour < 18;
-};
+┌──────────────────────────────────────────────┐
+│ [<- Zurueck]              Badge: #AUF-001    │
+├──────────────────────────────────────────────┤
+│                                              │
+│  Titel des Auftrags                          │
+│  Anbieter: XYZ Corp         Praemie: €50     │
+│                                              │
+├──────────────────────────────────────────────┤
+│  Projektziel                                 │
+│  ─────────                                   │
+│  Beschreibungstext des Projektziels...       │
+│                                              │
+├──────────────────────────────────────────────┤
+│  Bewertungsfragen                            │
+│  ─────────────────                           │
+│  1. Wie war die Benutzeroberflaeche?         │
+│  2. Gab es technische Probleme?              │
+│  3. ...                                      │
+│                                              │
+├──────────────────────────────────────────────┤
+│  Downloads                                   │
+│  [App Store]  [Play Store]                   │
+│                                              │
+└──────────────────────────────────────────────┘
 ```
 
-Der Punkt wird so gestaltet:
-
-```text
-<span className={cn(
-  "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-primary",
-  isOnline() ? "bg-green-500" : "bg-gray-400"
-)} />
-```
-
-### Aenderungen
+## Aenderungen
 
 | Datei | Aenderung |
 |---|---|
-| `src/components/chat/ChatWidget.tsx` | `isOnline()`-Funktion hinzufuegen + gruenen/grauen Punkt am Avatar im Header rendern |
+| `src/pages/mitarbeiter/AuftragDetails.tsx` | **Neue Datei** -- Detailseite mit Laden des Auftrags per `useParams().id` aus der `orders`-Tabelle |
+| `src/App.tsx` | Neue Route `auftragdetails/:id` als Child-Route von `/mitarbeiter` hinzufuegen |
+| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | "Auftrag starten"-Button mit `useNavigate` zu `/mitarbeiter/auftragdetails/${order.id}` verlinken |
 
-Keine neuen Abhaengigkeiten noetig -- `Intl.DateTimeFormat` ist nativ im Browser verfuegbar und liefert zuverlaessig die deutsche Zeitzone.
+## Technische Details
+
+- Der Auftrag wird ueber `supabase.from("orders").select("*").eq("id", id).maybeSingle()` geladen
+- Zusaetzlich wird geprueft, ob der Mitarbeiter ueber `order_assignments` dem Auftrag zugewiesen ist (Sicherheit)
+- `review_questions` ist ein JSON-Feld -- wird als Array von Strings geparst und als nummerierte Liste dargestellt
+- Zurueck-Button navigiert per `useNavigate(-1)` zum Dashboard
+- Loading- und Fehlerzustaende werden mit Skeleton bzw. Fehlermeldung abgedeckt
+- Die Seite nutzt `useOutletContext` fuer `contract`-Daten (gleich wie das Dashboard)
 
