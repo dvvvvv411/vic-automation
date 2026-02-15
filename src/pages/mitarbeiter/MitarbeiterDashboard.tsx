@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import DashboardReviewsSummary from "@/components/mitarbeiter/DashboardReviewsSummary";
-import DashboardProfileSummary from "@/components/mitarbeiter/DashboardProfileSummary";
+import DashboardPayoutSummary from "@/components/mitarbeiter/DashboardPayoutSummary";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string } | null;
@@ -134,7 +134,7 @@ const MitarbeiterDashboard = () => {
   const [avgRating, setAvgRating] = useState<number>(0);
   const [reviewCount, setReviewCount] = useState<number>(0);
   const [recentReviews, setRecentReviews] = useState<{order_title: string; avg: number; date: string}[]>([]);
-  const [profileSummary, setProfileSummary] = useState<{name: string; email: string; iban: string | null} | null>(null);
+  
 
   useEffect(() => {
     if (!contract) {
@@ -152,11 +152,6 @@ const MitarbeiterDashboard = () => {
 
       if (contractDetails) {
         setBalance(Number(contractDetails.balance) || 0);
-        setProfileSummary({
-          name: [contractDetails.first_name, contractDetails.last_name].filter(Boolean).join(" "),
-          email: contractDetails.email || "",
-          iban: contractDetails.iban,
-        });
       }
 
       // Fetch assignments
@@ -453,7 +448,7 @@ const MitarbeiterDashboard = () => {
       {/* Summary Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <DashboardReviewsSummary recentReviews={recentReviews} />
-        <DashboardProfileSummary profile={profileSummary} balance={balance} />
+        <DashboardPayoutSummary balance={balance} />
       </div>
     </div>
   );
