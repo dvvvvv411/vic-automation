@@ -23,7 +23,7 @@ const isOnline = () => {
     hour12: false,
   });
   const hour = parseInt(formatter.format(now), 10);
-  return hour >= 8 && hour < 18;
+  return hour >= 8 && hour < 19;
 };
 
 export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
