@@ -1,33 +1,35 @@
 
-# Bewertungs-Redirect + Auftraege-Seite
 
-## 1. Redirect nach Bewertung aendern
+# Auftraege-Seite Redesign
 
-In `src/pages/mitarbeiter/Bewertung.tsx` wird nach erfolgreichem Absenden der Bewertung aktuell zu `/mitarbeiter/auftragdetails/:id` navigiert. Das wird geaendert zu `/mitarbeiter`, damit der Mitarbeiter zurueck zum Dashboard gelangt.
+## Problem
 
-## 2. Neuer Sidebar-Reiter "Auftraege"
+Die aktuelle Seite nutzt eine unschoene Tabelle und fuenf Tabs, die unnoetig Platz verbrauchen. Das Dashboard hat bereits schoene Cards -- die Auftraege-Seite sollte dem gleichen Stil folgen.
 
-In `src/components/mitarbeiter/MitarbeiterSidebar.tsx` wird ein zweiter Navigationseintrag "Auftraege" mit dem `ClipboardList`-Icon hinzugefuegt, der zu `/mitarbeiter/auftraege` fuehrt.
+## Loesung
 
-## 3. Neue Seite `/mitarbeiter/auftraege`
+Die gesamte `MitarbeiterAuftraege.tsx` wird ueberarbeitet:
 
-Eine dedizierte Auftragsseite (`src/pages/mitarbeiter/MitarbeiterAuftraege.tsx`) mit besserer Uebersicht als im Dashboard:
+### Aenderungen
 
-- **Filter-Tabs**: Alle / Offen / In Ueberpruefung / Erfolgreich / Fehlgeschlagen
-- **Tabellen-Ansicht** statt Karten-Grid: Uebersichtliche Tabelle mit Spalten fuer Auftragsnummer, Titel, Anbieter, Praemie, Status (farbiger Badge) und Aktion-Button
-- **Sortierung** nach Datum (neueste zuerst)
-- Gleiche Datenquelle wie das Dashboard (order_assignments + orders)
-- Nutzt `useOutletContext` fuer Contract-Daten
+**Tabs entfernen, Select-Dropdown einbauen**
+- Statt 5 Tabs: Ein einzelnes `Select`-Dropdown ("Alle Status", "Offen", "In Ueberpruefung", "Erfolgreich", "Fehlgeschlagen") in der Header-Zeile neben dem Titel
+- Kompakter und moderner
 
-## 4. Routing
+**Tabelle durch Cards ersetzen**
+- Responsive Grid (1 Spalte mobil, 2 Spalten Tablet, 3 Spalten Desktop) -- gleicher Stil wie im Dashboard
+- Jede Card zeigt: Auftragsnummer (Badge), Titel, Anbieter, Praemie, Status-Badge und Aktions-Button
+- Farbiger Top-Stripe auf jeder Card (wie im Dashboard)
+- Framer-Motion Animationen fuer staggered Einblendung
 
-In `src/App.tsx` wird die neue Child-Route `auftraege` unter `/mitarbeiter` registriert.
+**Betroffene Datei**: `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx` (komplett ueberarbeitet, gleicher Daten-Fetch bleibt)
 
-## Aenderungen
+### Design-Referenz
 
-| Datei | Aenderung |
-|---|---|
-| `src/pages/mitarbeiter/Bewertung.tsx` | Redirect von `/mitarbeiter/auftragdetails/:id` zu `/mitarbeiter` aendern |
-| `src/components/mitarbeiter/MitarbeiterSidebar.tsx` | Neuer Nav-Eintrag "Auftraege" mit ClipboardList-Icon |
-| `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx` | **Neue Datei** -- Auftraege-Seite mit Filter-Tabs und Tabellen-Ansicht |
-| `src/App.tsx` | Neue Route `auftraege` als Child von `/mitarbeiter` |
+Das Layout orientiert sich exakt am Dashboard-Kartenstil aus `MitarbeiterDashboard.tsx`:
+- Card mit `border-border/60`, `shadow-sm`, `hover:shadow-lg`, `hover:-translate-y-1`
+- Gradient-Stripe oben
+- Badge fuer Auftragsnummer, Status-Badge rechts
+- Anbieter/Praemie als Key-Value-Zeilen
+- Aktions-Button am unteren Rand (Starten / Erneut / In Ueberpruefung / Erfolgreich)
+
