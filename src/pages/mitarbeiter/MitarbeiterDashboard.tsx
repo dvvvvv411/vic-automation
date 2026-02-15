@@ -142,7 +142,7 @@ const MitarbeiterDashboard = () => {
   const stats = [
     { label: "Zugewiesene Tests", value: orders.length.toString(), icon: Smartphone, detail: orders.length === 1 ? "1 Test" : `${orders.length} Tests` },
     { label: "Verdienst", value: `€${totalEarnings.toFixed(0)}`, icon: Euro, detail: "Gesamtprämie" },
-    { label: "Offene Aufträge", value: orders.filter((o) => o.assignment_status === "offen").length.toString(), icon: ClipboardList, detail: "Bereit zum Starten" },
+    { label: "Offene Aufträge", value: orders.filter((o) => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen").length.toString(), icon: ClipboardList, detail: "Handlungsbedarf" },
     { label: "Bewertung", value: "4.8", icon: Star, detail: "Top 10%" },
   ];
 
@@ -219,18 +219,22 @@ const MitarbeiterDashboard = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5, duration: 0.4 }}
       >
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Deine Aufträge</h2>
-            <p className="text-sm text-muted-foreground">
-              {orders.length
-                ? `${orders.length} ${orders.length === 1 ? "Auftrag" : "Aufträge"} zugewiesen`
-                : "Noch keine Aufträge zugewiesen"}
-            </p>
-          </div>
-        </div>
+        {(() => {
+          const dashboardOrders = orders.filter(o => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen");
+          return (
+            <>
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Deine Aufträge</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {dashboardOrders.length
+                      ? `${dashboardOrders.length} ${dashboardOrders.length === 1 ? "Auftrag" : "Aufträge"} mit Handlungsbedarf`
+                      : "Keine offenen Aufträge"}
+                  </p>
+                </div>
+              </div>
 
-        {orders.length === 0 ? (
+              {dashboardOrders.length === 0 ? (
           <Card className="border-dashed border-2 border-border/60">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
@@ -246,7 +250,7 @@ const MitarbeiterDashboard = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {orders.map((order, i) => (
+            {dashboardOrders.map((order, i) => (
               <motion.div
                 key={order.id}
                 initial={{ opacity: 0, y: 16 }}
@@ -320,7 +324,10 @@ const MitarbeiterDashboard = () => {
               </motion.div>
             ))}
           </div>
-        )}
+              )}
+            </>
+          );
+        })()}
       </motion.div>
     </div>
   );
