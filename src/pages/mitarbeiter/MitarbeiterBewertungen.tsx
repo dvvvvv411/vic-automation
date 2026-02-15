@@ -157,7 +157,7 @@ export default function MitarbeiterBewertungen() {
                           key={i}
                           className={`h-4 w-4 ${
                             i < Math.round(group.averageRating)
-                              ? "fill-primary text-primary"
+                              ? "fill-yellow-400 text-yellow-400"
                               : "text-muted-foreground/30"
                           }`}
                         />
@@ -209,7 +209,7 @@ export default function MitarbeiterBewertungen() {
                         key={i}
                         className={`h-4 w-4 ${
                           i < review.rating
-                            ? "fill-primary text-primary"
+                            ? "fill-yellow-400 text-yellow-400"
                             : "text-muted-foreground/30"
                         }`}
                       />
