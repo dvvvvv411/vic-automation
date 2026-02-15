@@ -177,6 +177,7 @@ export type Database = {
       employment_contracts: {
         Row: {
           application_id: string
+          balance: number
           bank_name: string | null
           bic: string | null
           birth_date: string | null
@@ -205,6 +206,7 @@ export type Database = {
         }
         Insert: {
           application_id: string
+          balance?: number
           bank_name?: string | null
           bic?: string | null
           birth_date?: string | null
@@ -233,6 +235,7 @@ export type Database = {
         }
         Update: {
           application_id?: string
+          balance?: number
           bank_name?: string | null
           bic?: string | null
           birth_date?: string | null
@@ -310,18 +313,21 @@ export type Database = {
           contract_id: string
           id: string
           order_id: string
+          status: string
         }
         Insert: {
           assigned_at?: string
           contract_id: string
           id?: string
           order_id: string
+          status?: string
         }
         Update: {
           assigned_at?: string
           contract_id?: string
           id?: string
           order_id?: string
+          status?: string
         }
         Relationships: [
           {

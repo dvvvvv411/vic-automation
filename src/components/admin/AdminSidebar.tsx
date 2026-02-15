@@ -86,11 +86,24 @@ export function AdminSidebar() {
     refetchInterval: 10000,
   });
 
+  const { data: inPruefungCount } = useQuery({
+    queryKey: ["badge-bewertungen-pruefung"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("order_assignments")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "in_pruefung");
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
   const badgeCounts: Record<string, number> = {
     "/admin/bewerbungen": neuCount ?? 0,
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
     "/admin/arbeitsvertraege": eingereichtCount ?? 0,
     "/admin/livechat": chatUnreadCount ?? 0,
+    "/admin/bewertungen": inPruefungCount ?? 0,
   };
 
   return (
