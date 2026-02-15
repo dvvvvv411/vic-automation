@@ -1,89 +1,80 @@
 
 
-# Bewertungssystem fuer App-Tests
+# Bewertungs-Workflow mit Status, Genehmigung und Kontoguthaben
 
 ## Uebersicht
 
-Mitarbeiter koennen nach dem Testen einer App die Bewertungsfragen mit Sternen (0-5) und einem Pflichtkommentar beantworten. Admins sehen alle Bewertungen in einer Tabelle mit Durchschnittswerten und koennen Details in einem Popup einsehen.
+Nach dem Absenden einer Bewertung geht der Auftrag in den Status "in_pruefung". Admins koennen Bewertungen genehmigen oder ablehnen. Bei Genehmigung wird die Praemie dem Mitarbeiter-Kontoguthaben gutgeschrieben. Bei Ablehnung kann der Mitarbeiter die Bewertung erneut durchfuehren.
 
-## 1. Datenbank: Neue Tabelle `order_reviews`
+## 1. Datenbank-Aenderungen
 
-Eine neue Tabelle speichert die einzelnen Bewertungen pro Frage:
+### Neue Spalte: `order_assignments.status`
+- Typ: `text`, Default: `offen`
+- Moegliche Werte: `offen`, `in_pruefung`, `fehlgeschlagen`, `erfolgreich`
 
-| Spalte | Typ | Beschreibung |
-|---|---|---|
-| id | uuid (PK) | Auto-generiert |
-| order_id | uuid (FK -> orders) | Zugehoeriger Auftrag |
-| contract_id | uuid (FK -> employment_contracts) | Bewertender Mitarbeiter |
-| question | text | Die Bewertungsfrage |
-| rating | integer (0-5) | Sterne-Bewertung |
-| comment | text | Pflichtkommentar |
-| created_at | timestamptz | Zeitstempel |
+### Neue Spalte: `employment_contracts.balance`
+- Typ: `numeric(10,2)`, Default: `0`
+- Speichert das Kontoguthaben des Mitarbeiters
 
-RLS-Policies:
-- Admins: SELECT (alle Bewertungen einsehen)
-- Users: INSERT (eigene Bewertungen abgeben, nur fuer zugewiesene Auftraege)
-- Users: SELECT (eigene Bewertungen lesen)
+### RLS-Policy-Erweiterung
+- Users: UPDATE auf `order_assignments` fuer eigene Eintraege (noetig um Status auf `in_pruefung` zu setzen)
+- Admins: UPDATE auf `order_assignments` bereits vorhanden
 
-## 2. Auftragsdetails: Reihenfolge aendern + Button
-
-In `AuftragDetails.tsx`:
-- Downloads-Card **ueber** die Projektziel-Card verschieben
-- In der Bewertungsfragen-Card einen Button "Bewertung starten" hinzufuegen, der zu `/mitarbeiter/bewertung/:orderId` navigiert
-- Wenn bereits bewertet, Button deaktivieren mit Text "Bereits bewertet"
-
-## 3. Neue Seite: `/mitarbeiter/bewertung/:id`
-
-Moderne Bewertungsseite mit:
+## 2. Ablauf
 
 ```text
-┌──────────────────────────────────────────────┐
-│ [<- Zurueck]     Bewertung: App-Titel        │
-├──────────────────────────────────────────────┤
-│                                              │
-│  Frage 1/5: Wie war die Benutzeroberflaeche? │
-│                                              │
-│  [★] [★] [★] [★] [☆]    4/5 Sterne          │
-│                                              │
-│  ┌──────────────────────────────────────┐    │
-│  │ Dein Kommentar (Pflicht)...          │    │
-│  └──────────────────────────────────────┘    │
-│                                              │
-│  --- Separator ---                           │
-│                                              │
-│  Frage 2/5: Gab es technische Probleme?      │
-│  ...                                         │
-│                                              │
-├──────────────────────────────────────────────┤
-│            [Bewertung abschicken]             │
-└──────────────────────────────────────────────┘
+Mitarbeiter bewertet Auftrag
+        |
+        v
+Status -> "in_pruefung"
+        |
+        v
+Admin prueft unter /admin/bewertungen
+       / \
+      /   \
+Genehmigen  Ablehnen
+     |         |
+     v         v
+"erfolgreich"  "fehlgeschlagen"
++ Praemie      Mitarbeiter kann
+  gutschreiben  erneut bewerten
 ```
 
-- Alle Fragen auf einer Seite mit Sterne-Auswahl (klickbare Sterne 0-5) und Textarea
-- Validierung: Alle Fragen muessen mindestens 1 Stern und einen Kommentar haben
-- Abschicken: Alle Antworten als Batch-Insert in `order_reviews`
-- Nach erfolgreichem Absenden: Redirect zurueck zur Auftragsdetails-Seite mit Erfolgsmeldung
-
-## 4. Admin: Neuer Reiter `/admin/bewertungen`
-
-Tabelle mit folgenden Spalten:
-
-| Mitarbeiter | Auftrag | Durchschnitt | Datum | Aktion |
-|---|---|---|---|---|
-| Max Mustermann | App-Test XY | 4.2 / 5 ★ | 15.02.2026 | [Details] |
-
-- Daten werden ueber einen Join aus `order_reviews`, `employment_contracts` und `orders` geladen
-- Gruppierung nach order_id + contract_id fuer die Durchschnittsberechnung
-- **Details-Popup (Dialog)**: Zeigt alle Einzelbewertungen mit Frage, Sterne und Kommentar
-
-## Aenderungen
+## 3. Datei-Aenderungen
 
 | Datei | Aenderung |
 |---|---|
-| Migration | Neue Tabelle `order_reviews` mit RLS-Policies |
-| `src/pages/mitarbeiter/AuftragDetails.tsx` | Downloads ueber Projektziel verschieben, "Bewertung starten"-Button hinzufuegen |
-| `src/pages/mitarbeiter/Bewertung.tsx` | **Neue Datei** -- Bewertungsseite mit Sterne-Rating und Kommentaren |
-| `src/pages/admin/AdminBewertungen.tsx` | **Neue Datei** -- Admin-Tabelle mit Bewertungsuebersicht und Detail-Dialog |
-| `src/App.tsx` | Neue Routen: `bewertung/:id` (Mitarbeiter) und `bewertungen` (Admin) |
-| `src/components/admin/AdminSidebar.tsx` | Neuer Nav-Eintrag "Bewertungen" mit Star-Icon |
+| **Migration** | `status` auf `order_assignments` + `balance` auf `employment_contracts` + RLS-Policy fuer User-UPDATE auf `order_assignments` |
+| `src/pages/mitarbeiter/Bewertung.tsx` | Nach Insert der Reviews: `order_assignments.status` auf `in_pruefung` setzen |
+| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | Status pro Auftrag laden (via Join auf `order_assignments`), Button-Text je nach Status aendern: "Auftrag starten" / "In Ueberprüfung" (disabled) / "Erneut bewerten" / "Erfolgreich" (disabled) |
+| `src/pages/mitarbeiter/AuftragDetails.tsx` | Status laden und "Bewertung starten"-Button entsprechend anpassen; bei `fehlgeschlagen` erneutes Bewerten ermoeglichen (alte Reviews loeschen oder neue erlauben) |
+| `src/pages/mitarbeiter/Bewertung.tsx` | Bei erneutem Bewerten: alte Reviews loeschen vor neuem Insert |
+| `src/pages/admin/AdminBewertungen.tsx` | Aktion-Spalte: "Genehmigen"/"Ablehnen" Buttons statt nur "Details"; bei Genehmigung: Status auf `erfolgreich` setzen + Praemie auf `balance` addieren; bei Ablehnung: Status auf `fehlgeschlagen` + alte Reviews loeschen |
+| `src/components/admin/AdminSidebar.tsx` | Badge mit Anzahl der Bewertungen im Status `in_pruefung` am "Bewertungen"-Reiter |
+| `src/integrations/supabase/types.ts` | Typen fuer neue Spalten aktualisieren |
+
+## 4. Technische Details
+
+### Dashboard-Button-Logik (MitarbeiterDashboard)
+- `offen` -> "Auftrag starten" (navigiert zu Details)
+- `in_pruefung` -> "In Ueberprüfung" (gelber Badge, disabled)
+- `fehlgeschlagen` -> "Erneut bewerten" (rot, navigiert zu Details)
+- `erfolgreich` -> "Erfolgreich" (gruener Badge, disabled)
+
+### Admin Genehmigung
+- Praemie wird aus `orders.reward` geparst (z.B. "50€" -> 50.00)
+- UPDATE `employment_contracts SET balance = balance + praemie WHERE id = contract_id`
+- UPDATE `order_assignments SET status = 'erfolgreich' WHERE ...`
+
+### Admin Ablehnung
+- UPDATE `order_assignments SET status = 'fehlgeschlagen'`
+- DELETE alte Reviews aus `order_reviews` fuer diese order_id + contract_id Kombination
+- Mitarbeiter kann dann erneut `/mitarbeiter/bewertung/:id` aufrufen
+
+### Badge im Sidebar
+- Query: `SELECT count(*) FROM order_assignments WHERE status = 'in_pruefung'`
+- Polling alle 30 Sekunden (gleich wie andere Badges)
+
+### RLS fuer Reviews-Loeschung
+- Neue DELETE-Policy auf `order_reviews` fuer Admins erforderlich
 
