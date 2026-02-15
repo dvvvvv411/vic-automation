@@ -41,14 +41,14 @@ const StatusButton = ({ status, orderId, navigate }: { status: string; orderId: 
   switch (status) {
     case "in_pruefung":
       return (
-        <Button className="w-full mt-2" size="sm" disabled variant="outline">
+        <Button className="w-full mt-2 rounded-xl" size="sm" disabled variant="outline">
           <Clock className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />
           In Überprüfung
         </Button>
       );
     case "erfolgreich":
       return (
-        <Button className="w-full mt-2" size="sm" disabled variant="outline">
+        <Button className="w-full mt-2 rounded-xl" size="sm" disabled variant="outline">
           <CheckCircle className="h-3.5 w-3.5 mr-1.5 text-green-500" />
           Erfolgreich
         </Button>
@@ -56,7 +56,7 @@ const StatusButton = ({ status, orderId, navigate }: { status: string; orderId: 
     case "fehlgeschlagen":
       return (
         <Button
-          className="w-full mt-2 border-destructive/40 text-destructive hover:bg-destructive/10"
+          className="w-full mt-2 rounded-xl border-destructive/40 text-destructive hover:bg-destructive/10"
           size="sm"
           variant="outline"
           onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
@@ -68,7 +68,7 @@ const StatusButton = ({ status, orderId, navigate }: { status: string; orderId: 
     default:
       return (
         <Button
-          className="w-full mt-2 group/btn"
+          className="w-full mt-2 rounded-xl group/btn bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
           size="sm"
           onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
         >
@@ -155,12 +155,12 @@ const MitarbeiterDashboard = () => {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-xl" />
+            <Skeleton key={i} className="h-36 rounded-2xl" />
           ))}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-56 rounded-xl" />
+            <Skeleton key={i} className="h-64 rounded-2xl" />
           ))}
         </div>
       </div>
@@ -192,18 +192,18 @@ const MitarbeiterDashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.1 + i * 0.08, ease: "easeOut" }}
           >
-            <Card className="group relative overflow-hidden border border-border/60 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <Card className="group relative overflow-hidden border border-border/40 ring-1 ring-border/10 shadow-sm hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 bg-card/80 backdrop-blur-sm rounded-2xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.label}
                 </CardTitle>
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 group-hover:bg-primary/15 transition-colors">
-                  <stat.icon className="h-[18px] w-[18px] text-primary" />
+                <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 group-hover:from-primary/25 group-hover:to-primary/10 transition-colors">
+                  <stat.icon className="h-5 w-5 text-primary" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold tracking-tight text-foreground">
+                <div className="text-4xl font-bold tracking-tight text-foreground">
                   {stat.value}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1.5">{stat.detail}</p>
@@ -235,95 +235,95 @@ const MitarbeiterDashboard = () => {
               </div>
 
               {dashboardOrders.length === 0 ? (
-          <Card className="border-dashed border-2 border-border/60">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                <Package className="h-8 w-8 text-muted-foreground/60" />
-              </div>
-              <h3 className="text-base font-medium text-foreground mb-1">
-                Noch keine Aufträge
-              </h3>
-              <p className="text-sm text-muted-foreground max-w-sm">
-                Sobald dir Aufträge zugewiesen werden, erscheinen sie hier. Du wirst benachrichtigt.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {dashboardOrders.map((order, i) => (
-              <motion.div
-                key={order.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.55 + i * 0.08, ease: "easeOut" }}
-              >
-                <Card className="group relative overflow-hidden border border-border/60 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col h-full">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/80 to-primary/40" />
-
-                  <CardHeader className="pb-3 pt-5">
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted">
-                        #{order.order_number}
-                      </Badge>
-                      <div className="flex items-center gap-1.5">
-                        {order.is_placeholder && (
-                          <Badge variant="outline" className="text-[11px] text-muted-foreground">
-                            Platzhalter
-                          </Badge>
-                        )}
-                        <StatusBadge status={order.assignment_status} />
-                      </div>
+                <Card className="border-dashed border-2 border-border/40 rounded-2xl">
+                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center mb-4">
+                      <Package className="h-8 w-8 text-muted-foreground/50" />
                     </div>
-                    <CardTitle className="text-base font-semibold leading-snug text-foreground line-clamp-2">
-                      {order.title}
-                    </CardTitle>
-                  </CardHeader>
-
-                  <CardContent className="flex-1 flex flex-col justify-between gap-4 pt-0">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Anbieter</span>
-                        <span className="font-medium text-foreground">{order.provider}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Prämie</span>
-                        <span className="font-semibold text-primary">{order.reward}</span>
-                      </div>
-
-                      {(order.appstore_url || order.playstore_url) && (
-                        <div className="flex items-center gap-2 pt-1">
-                          {order.appstore_url && (
-                            <a
-                              href={order.appstore_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors bg-muted/60 rounded-lg px-2.5 py-1.5"
-                            >
-                              <Apple className="h-3.5 w-3.5" />
-                              App Store
-                            </a>
-                          )}
-                          {order.playstore_url && (
-                            <a
-                              href={order.playstore_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors bg-muted/60 rounded-lg px-2.5 py-1.5"
-                            >
-                              <Play className="h-3.5 w-3.5" />
-                              Play Store
-                            </a>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <StatusButton status={order.assignment_status} orderId={order.id} navigate={navigate} />
+                    <h3 className="text-base font-medium text-foreground mb-1">
+                      Noch keine Aufträge
+                    </h3>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      Sobald dir Aufträge zugewiesen werden, erscheinen sie hier. Du wirst benachrichtigt.
+                    </p>
                   </CardContent>
                 </Card>
-              </motion.div>
-            ))}
-          </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {dashboardOrders.map((order, i) => (
+                    <motion.div
+                      key={order.id}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.55 + i * 0.08, ease: "easeOut" }}
+                    >
+                      <Card className="group relative overflow-hidden border border-border/40 ring-1 ring-border/10 shadow-sm hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full bg-card/80 backdrop-blur-sm rounded-2xl">
+                        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary/80 to-primary/30 rounded-t-2xl" />
+
+                        <CardHeader className="pb-3 pt-5">
+                          <div className="flex items-center justify-between mb-2">
+                            <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
+                              #{order.order_number}
+                            </Badge>
+                            <div className="flex items-center gap-1.5">
+                              {order.is_placeholder && (
+                                <Badge variant="outline" className="text-[11px] text-muted-foreground rounded-full">
+                                  Platzhalter
+                                </Badge>
+                              )}
+                              <StatusBadge status={order.assignment_status} />
+                            </div>
+                          </div>
+                          <CardTitle className="text-base font-semibold leading-snug text-foreground line-clamp-2">
+                            {order.title}
+                          </CardTitle>
+                        </CardHeader>
+
+                        <CardContent className="flex-1 flex flex-col justify-between gap-4 pt-0">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between text-sm pb-3 border-b border-border/30">
+                              <span className="text-muted-foreground">Anbieter</span>
+                              <span className="font-medium text-foreground">{order.provider}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Prämie</span>
+                              <span className="font-semibold text-primary bg-primary/10 rounded-full px-3 py-0.5">{order.reward}</span>
+                            </div>
+
+                            {(order.appstore_url || order.playstore_url) && (
+                              <div className="flex items-center gap-2 pt-1">
+                                {order.appstore_url && (
+                                  <a
+                                    href={order.appstore_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors bg-muted/60 rounded-full px-3 py-1.5"
+                                  >
+                                    <Apple className="h-3.5 w-3.5" />
+                                    App Store
+                                  </a>
+                                )}
+                                {order.playstore_url && (
+                                  <a
+                                    href={order.playstore_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors bg-muted/60 rounded-full px-3 py-1.5"
+                                  >
+                                    <Play className="h-3.5 w-3.5" />
+                                    Play Store
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          <StatusButton status={order.assignment_status} orderId={order.id} navigate={navigate} />
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
               )}
             </>
           );

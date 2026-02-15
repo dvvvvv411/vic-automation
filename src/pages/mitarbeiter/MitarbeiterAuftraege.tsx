@@ -45,7 +45,7 @@ const StatusBadge = ({ status }: { status: string }) => {
   const cfg = statusConfig[status] ?? statusConfig.offen;
   const Icon = cfg.icon;
   return (
-    <Badge variant="outline" className={`text-[11px] ${cfg.color}`}>
+    <Badge variant="outline" className={`text-[11px] rounded-full ${cfg.color}`}>
       <Icon className="h-3 w-3 mr-1" />
       {cfg.label}
     </Badge>
@@ -56,14 +56,14 @@ const StatusButton = ({ status, orderId, navigate }: { status: string; orderId: 
   switch (status) {
     case "in_pruefung":
       return (
-        <Button className="w-full mt-2" size="sm" disabled variant="outline">
+        <Button className="w-full mt-2 rounded-xl" size="sm" disabled variant="outline">
           <Clock className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />
           In Überprüfung
         </Button>
       );
     case "erfolgreich":
       return (
-        <Button className="w-full mt-2" size="sm" disabled variant="outline">
+        <Button className="w-full mt-2 rounded-xl" size="sm" disabled variant="outline">
           <CheckCircle className="h-3.5 w-3.5 mr-1.5 text-green-500" />
           Erfolgreich
         </Button>
@@ -71,7 +71,7 @@ const StatusButton = ({ status, orderId, navigate }: { status: string; orderId: 
     case "fehlgeschlagen":
       return (
         <Button
-          className="w-full mt-2 border-destructive/40 text-destructive hover:bg-destructive/10"
+          className="w-full mt-2 rounded-xl border-destructive/40 text-destructive hover:bg-destructive/10"
           size="sm"
           variant="outline"
           onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
@@ -83,7 +83,7 @@ const StatusButton = ({ status, orderId, navigate }: { status: string; orderId: 
     default:
       return (
         <Button
-          className="w-full mt-2 group/btn"
+          className="w-full mt-2 rounded-xl group/btn bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
           size="sm"
           onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
         >
@@ -150,7 +150,7 @@ const MitarbeiterAuftraege = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-56 rounded-xl" />
+            <Skeleton key={i} className="h-64 rounded-2xl" />
           ))}
         </div>
       </div>
@@ -173,7 +173,7 @@ const MitarbeiterAuftraege = () => {
           </p>
         </div>
         <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[180px] rounded-xl">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -188,10 +188,10 @@ const MitarbeiterAuftraege = () => {
 
       {/* Cards Grid */}
       {filtered.length === 0 ? (
-        <Card className="border-dashed border-2 border-border/60">
+        <Card className="border-dashed border-2 border-border/40 rounded-2xl">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-              <Package className="h-8 w-8 text-muted-foreground/60" />
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center mb-4">
+              <Package className="h-8 w-8 text-muted-foreground/50" />
             </div>
             <h3 className="text-base font-medium text-foreground mb-1">Keine Aufträge</h3>
             <p className="text-sm text-muted-foreground max-w-sm">
@@ -208,12 +208,12 @@ const MitarbeiterAuftraege = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.06, ease: "easeOut" }}
             >
-              <Card className="group relative overflow-hidden border border-border/60 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col h-full">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/80 to-primary/40" />
+              <Card className="group relative overflow-hidden border border-border/40 ring-1 ring-border/10 shadow-sm hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full bg-card/80 backdrop-blur-sm rounded-2xl">
+                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary/80 to-primary/30 rounded-t-2xl" />
 
                 <CardHeader className="pb-3 pt-5">
                   <div className="flex items-center justify-between mb-2">
-                    <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted">
+                    <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
                       #{a.order_number}
                     </Badge>
                     <StatusBadge status={a.status} />
@@ -225,13 +225,13 @@ const MitarbeiterAuftraege = () => {
 
                 <CardContent className="flex-1 flex flex-col justify-between gap-4 pt-0">
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-sm pb-3 border-b border-border/30">
                       <span className="text-muted-foreground">Anbieter</span>
                       <span className="font-medium text-foreground">{a.provider}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Prämie</span>
-                      <span className="font-semibold text-primary">{a.reward}</span>
+                      <span className="font-semibold text-primary bg-primary/10 rounded-full px-3 py-0.5">{a.reward}</span>
                     </div>
                   </div>
 

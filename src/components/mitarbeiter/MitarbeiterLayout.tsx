@@ -86,7 +86,7 @@ export default function MitarbeiterLayout() {
       <div className="min-h-screen flex w-full bg-muted/30">
         <MitarbeiterSidebar branding={branding} brandingLoading={loading} />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="border-b border-border bg-card sticky top-0 z-50 h-14 flex items-center px-4 shadow-sm">
+          <header className="border-b border-border/40 bg-card/80 backdrop-blur-md sticky top-0 z-50 h-16 flex items-center px-5">
             <SidebarTrigger />
           </header>
           <main className="flex-1 p-6 lg:p-8">
