@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Apple, Play, Package } from "lucide-react";
+import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Apple, Play, Package, Clock, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,10 @@ interface Order {
   project_goal: string | null;
 }
 
+interface OrderWithStatus extends Order {
+  assignment_status: string;
+}
+
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return "Guten Morgen";
@@ -33,10 +37,65 @@ function getGreeting(): string {
   return "Guten Abend";
 }
 
+const StatusButton = ({ status, orderId, navigate }: { status: string; orderId: string; navigate: (path: string) => void }) => {
+  switch (status) {
+    case "in_pruefung":
+      return (
+        <Button className="w-full mt-2" size="sm" disabled variant="outline">
+          <Clock className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />
+          In Überprüfung
+        </Button>
+      );
+    case "erfolgreich":
+      return (
+        <Button className="w-full mt-2" size="sm" disabled variant="outline">
+          <CheckCircle className="h-3.5 w-3.5 mr-1.5 text-green-500" />
+          Erfolgreich
+        </Button>
+      );
+    case "fehlgeschlagen":
+      return (
+        <Button
+          className="w-full mt-2 border-destructive/40 text-destructive hover:bg-destructive/10"
+          size="sm"
+          variant="outline"
+          onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
+        >
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+          Erneut bewerten
+        </Button>
+      );
+    default:
+      return (
+        <Button
+          className="w-full mt-2 group/btn"
+          size="sm"
+          onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
+        >
+          Auftrag starten
+          <ExternalLink className="h-3.5 w-3.5 ml-1.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
+        </Button>
+      );
+  }
+};
+
+const StatusBadge = ({ status }: { status: string }) => {
+  switch (status) {
+    case "in_pruefung":
+      return <Badge variant="outline" className="text-[11px] text-yellow-600 border-yellow-300 bg-yellow-50">In Überprüfung</Badge>;
+    case "erfolgreich":
+      return <Badge variant="outline" className="text-[11px] text-green-600 border-green-300 bg-green-50">Erfolgreich</Badge>;
+    case "fehlgeschlagen":
+      return <Badge variant="outline" className="text-[11px] text-destructive border-destructive/30 bg-destructive/5">Fehlgeschlagen</Badge>;
+    default:
+      return null;
+  }
+};
+
 const MitarbeiterDashboard = () => {
   const navigate = useNavigate();
   const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderWithStatus[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -48,7 +107,7 @@ const MitarbeiterDashboard = () => {
     const fetchOrders = async () => {
       const { data: assignments } = await supabase
         .from("order_assignments")
-        .select("order_id")
+        .select("order_id, status")
         .eq("contract_id", contract.id);
 
       if (!assignments?.length) {
@@ -57,12 +116,16 @@ const MitarbeiterDashboard = () => {
       }
 
       const orderIds = assignments.map((a) => a.order_id);
+      const statusMap = Object.fromEntries(assignments.map((a) => [a.order_id, a.status ?? "offen"]));
+
       const { data: ordersData } = await supabase
         .from("orders")
         .select("*")
         .in("id", orderIds);
 
-      if (ordersData) setOrders(ordersData);
+      if (ordersData) {
+        setOrders(ordersData.map((o) => ({ ...o, assignment_status: statusMap[o.id] ?? "offen" })));
+      }
       setDataLoading(false);
     };
 
@@ -77,30 +140,10 @@ const MitarbeiterDashboard = () => {
   }, 0);
 
   const stats = [
-    {
-      label: "Zugewiesene Tests",
-      value: orders.length.toString(),
-      icon: Smartphone,
-      detail: orders.length === 1 ? "1 Test" : `${orders.length} Tests`,
-    },
-    {
-      label: "Verdienst",
-      value: `€${totalEarnings.toFixed(0)}`,
-      icon: Euro,
-      detail: "Gesamtprämie",
-    },
-    {
-      label: "Offene Aufträge",
-      value: orders.length.toString(),
-      icon: ClipboardList,
-      detail: "Bereit zum Starten",
-    },
-    {
-      label: "Bewertung",
-      value: "4.8",
-      icon: Star,
-      detail: "Top 10%",
-    },
+    { label: "Zugewiesene Tests", value: orders.length.toString(), icon: Smartphone, detail: orders.length === 1 ? "1 Test" : `${orders.length} Tests` },
+    { label: "Verdienst", value: `€${totalEarnings.toFixed(0)}`, icon: Euro, detail: "Gesamtprämie" },
+    { label: "Offene Aufträge", value: orders.filter((o) => o.assignment_status === "offen").length.toString(), icon: ClipboardList, detail: "Bereit zum Starten" },
+    { label: "Bewertung", value: "4.8", icon: Star, detail: "Top 10%" },
   ];
 
   if (isLoading) {
@@ -218,11 +261,14 @@ const MitarbeiterDashboard = () => {
                       <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted">
                         #{order.order_number}
                       </Badge>
-                      {order.is_placeholder && (
-                        <Badge variant="outline" className="text-[11px] text-muted-foreground">
-                          Platzhalter
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {order.is_placeholder && (
+                          <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                            Platzhalter
+                          </Badge>
+                        )}
+                        <StatusBadge status={order.assignment_status} />
+                      </div>
                     </div>
                     <CardTitle className="text-base font-semibold leading-snug text-foreground line-clamp-2">
                       {order.title}
@@ -268,14 +314,7 @@ const MitarbeiterDashboard = () => {
                       )}
                     </div>
 
-                    <Button
-                      className="w-full mt-2 group/btn"
-                      size="sm"
-                      onClick={() => navigate(`/mitarbeiter/auftragdetails/${order.id}`)}
-                    >
-                      Auftrag starten
-                      <ExternalLink className="h-3.5 w-3.5 ml-1.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
-                    </Button>
+                    <StatusButton status={order.assignment_status} orderId={order.id} navigate={navigate} />
                   </CardContent>
                 </Card>
               </motion.div>

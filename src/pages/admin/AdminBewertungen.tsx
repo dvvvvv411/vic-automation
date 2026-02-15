@@ -1,36 +1,29 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Star } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Star, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-
-interface ReviewRow {
-  order_id: string;
-  contract_id: string;
-  question: string;
-  rating: number;
-  comment: string;
-  created_at: string;
-  order_title: string;
-  employee_name: string;
-}
+import { toast } from "sonner";
 
 interface GroupedReview {
   order_id: string;
   contract_id: string;
   order_title: string;
+  order_reward: string;
   employee_name: string;
   avg_rating: number;
   date: string;
+  assignment_status: string;
   details: { question: string; rating: number; comment: string }[];
 }
 
@@ -45,8 +38,23 @@ const Stars = ({ count }: { count: number }) => (
   </div>
 );
 
+const StatusBadge = ({ status }: { status: string }) => {
+  switch (status) {
+    case "in_pruefung":
+      return <Badge variant="outline" className="text-[11px] text-yellow-600 border-yellow-300 bg-yellow-50">In Überprüfung</Badge>;
+    case "erfolgreich":
+      return <Badge variant="outline" className="text-[11px] text-green-600 border-green-300 bg-green-50">Genehmigt</Badge>;
+    case "fehlgeschlagen":
+      return <Badge variant="outline" className="text-[11px] text-destructive border-destructive/30 bg-destructive/5">Abgelehnt</Badge>;
+    default:
+      return <Badge variant="outline" className="text-[11px]">Offen</Badge>;
+  }
+};
+
 const AdminBewertungen = () => {
   const [selected, setSelected] = useState<GroupedReview | null>(null);
+  const [processing, setProcessing] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: grouped = [], isLoading } = useQuery({
     queryKey: ["admin-bewertungen"],
@@ -60,33 +68,34 @@ const AdminBewertungen = () => {
       const orderIds = [...new Set(reviews.map((r) => r.order_id))];
       const contractIds = [...new Set(reviews.map((r) => r.contract_id))];
 
-      const [{ data: orders }, { data: contracts }] = await Promise.all([
-        supabase.from("orders").select("id, title").in("id", orderIds),
+      const [{ data: orders }, { data: contracts }, { data: assignments }] = await Promise.all([
+        supabase.from("orders").select("id, title, reward").in("id", orderIds),
         supabase.from("employment_contracts").select("id, first_name, last_name").in("id", contractIds),
+        supabase.from("order_assignments").select("order_id, contract_id, status").in("order_id", orderIds).in("contract_id", contractIds),
       ]);
 
-      const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o.title]));
+      const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
       const contractMap = Object.fromEntries(
         (contracts ?? []).map((c) => [c.id, [c.first_name, c.last_name].filter(Boolean).join(" ") || "Unbekannt"])
       );
-
-      const enriched: ReviewRow[] = reviews.map((r) => ({
-        ...r,
-        order_title: orderMap[r.order_id] ?? "Unbekannt",
-        employee_name: contractMap[r.contract_id] ?? "Unbekannt",
-      }));
+      const statusMap = Object.fromEntries(
+        (assignments ?? []).map((a) => [`${a.order_id}_${a.contract_id}`, a.status ?? "offen"])
+      );
 
       const map = new Map<string, GroupedReview>();
-      for (const r of enriched) {
+      for (const r of reviews) {
         const key = `${r.order_id}_${r.contract_id}`;
         if (!map.has(key)) {
+          const o = orderMap[r.order_id];
           map.set(key, {
             order_id: r.order_id,
             contract_id: r.contract_id,
-            order_title: r.order_title,
-            employee_name: r.employee_name,
+            order_title: o?.title ?? "Unbekannt",
+            order_reward: o?.reward ?? "0€",
+            employee_name: contractMap[r.contract_id] ?? "Unbekannt",
             avg_rating: 0,
             date: r.created_at,
+            assignment_status: statusMap[key] ?? "offen",
             details: [],
           });
         }
@@ -101,6 +110,81 @@ const AdminBewertungen = () => {
     },
     refetchInterval: 30000,
   });
+
+  const parseReward = (reward: string): number => {
+    const num = parseFloat(reward.replace(/[^0-9.,]/g, "").replace(",", "."));
+    return isNaN(num) ? 0 : num;
+  };
+
+  const handleApprove = async (g: GroupedReview) => {
+    const key = `${g.order_id}_${g.contract_id}`;
+    setProcessing(key);
+
+    const reward = parseReward(g.order_reward);
+
+    // Update assignment status
+    const { error: statusErr } = await supabase
+      .from("order_assignments")
+      .update({ status: "erfolgreich" })
+      .eq("order_id", g.order_id)
+      .eq("contract_id", g.contract_id);
+
+    if (statusErr) {
+      toast.error("Fehler beim Genehmigen.");
+      setProcessing(null);
+      return;
+    }
+
+    // Add reward to balance
+    if (reward > 0) {
+      const { data: contract } = await supabase
+        .from("employment_contracts")
+        .select("balance")
+        .eq("id", g.contract_id)
+        .single();
+
+      const currentBalance = Number(contract?.balance ?? 0);
+      await supabase
+        .from("employment_contracts")
+        .update({ balance: currentBalance + reward })
+        .eq("id", g.contract_id);
+    }
+
+    toast.success("Bewertung genehmigt und Prämie gutgeschrieben!");
+    queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
+    setProcessing(null);
+    setSelected(null);
+  };
+
+  const handleReject = async (g: GroupedReview) => {
+    const key = `${g.order_id}_${g.contract_id}`;
+    setProcessing(key);
+
+    // Update assignment status
+    const { error: statusErr } = await supabase
+      .from("order_assignments")
+      .update({ status: "fehlgeschlagen" })
+      .eq("order_id", g.order_id)
+      .eq("contract_id", g.contract_id);
+
+    if (statusErr) {
+      toast.error("Fehler beim Ablehnen.");
+      setProcessing(null);
+      return;
+    }
+
+    // Delete old reviews
+    await supabase
+      .from("order_reviews")
+      .delete()
+      .eq("order_id", g.order_id)
+      .eq("contract_id", g.contract_id);
+
+    toast.success("Bewertung abgelehnt. Mitarbeiter kann erneut bewerten.");
+    queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
+    setProcessing(null);
+    setSelected(null);
+  };
 
   if (isLoading) {
     return (
@@ -125,33 +209,65 @@ const AdminBewertungen = () => {
                 <TableHead>Mitarbeiter</TableHead>
                 <TableHead>Auftrag</TableHead>
                 <TableHead>Durchschnitt</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Datum</TableHead>
                 <TableHead className="text-right">Aktion</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {grouped.map((g) => (
-                <TableRow key={`${g.order_id}_${g.contract_id}`}>
-                  <TableCell className="font-medium">{g.employee_name}</TableCell>
-                  <TableCell>{g.order_title}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Stars count={g.avg_rating} />
-                      <span className="text-sm text-muted-foreground">
-                        {g.avg_rating.toFixed(1)} / 5
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(g.date), "dd.MM.yyyy")}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => setSelected(g)}>
-                      Details
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {grouped.map((g) => {
+                const key = `${g.order_id}_${g.contract_id}`;
+                const isProcessing = processing === key;
+                return (
+                  <TableRow key={key}>
+                    <TableCell className="font-medium">{g.employee_name}</TableCell>
+                    <TableCell>{g.order_title}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Stars count={g.avg_rating} />
+                        <span className="text-sm text-muted-foreground">
+                          {g.avg_rating.toFixed(1)} / 5
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell><StatusBadge status={g.assignment_status} /></TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {format(new Date(g.date), "dd.MM.yyyy")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setSelected(g)}>
+                          Details
+                        </Button>
+                        {g.assignment_status === "in_pruefung" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 border-green-300 hover:bg-green-50"
+                              disabled={isProcessing}
+                              onClick={() => handleApprove(g)}
+                            >
+                              <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                              Genehmigen
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                              disabled={isProcessing}
+                              onClick={() => handleReject(g)}
+                            >
+                              <XCircle className="h-3.5 w-3.5 mr-1" />
+                              Ablehnen
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -179,6 +295,33 @@ const AdminBewertungen = () => {
               </div>
             ))}
           </div>
+          {selected?.assignment_status === "in_pruefung" && (
+            <>
+              <Separator className="my-2" />
+              <div className="flex gap-2 justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-green-600 border-green-300 hover:bg-green-50"
+                  disabled={!!processing}
+                  onClick={() => selected && handleApprove(selected)}
+                >
+                  <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                  Genehmigen
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                  disabled={!!processing}
+                  onClick={() => selected && handleReject(selected)}
+                >
+                  <XCircle className="h-3.5 w-3.5 mr-1" />
+                  Ablehnen
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

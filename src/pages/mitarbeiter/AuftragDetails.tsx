@@ -35,6 +35,7 @@ const AuftragDetails = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [assignmentStatus, setAssignmentStatus] = useState<string>("offen");
 
   useEffect(() => {
     if (!contract || !id) {
@@ -43,10 +44,10 @@ const AuftragDetails = () => {
     }
 
     const fetchOrder = async () => {
-      // Verify assignment
+      // Verify assignment and get status
       const { data: assignment } = await supabase
         .from("order_assignments")
-        .select("id")
+        .select("id, status")
         .eq("order_id", id)
         .eq("contract_id", contract.id)
         .maybeSingle();
@@ -56,6 +57,8 @@ const AuftragDetails = () => {
         setLoading(false);
         return;
       }
+
+      setAssignmentStatus(assignment.status ?? "offen");
 
       const { data, error: fetchError } = await supabase
         .from("orders")
@@ -74,19 +77,6 @@ const AuftragDetails = () => {
     fetchOrder();
   }, [contract, id]);
 
-  const [hasReviewed, setHasReviewed] = useState(false);
-
-  useEffect(() => {
-    if (!contract || !id) return;
-    supabase
-      .from("order_reviews")
-      .select("id")
-      .eq("order_id", id)
-      .eq("contract_id", contract.id)
-      .limit(1)
-      .then(({ data }) => setHasReviewed((data?.length ?? 0) > 0));
-  }, [contract, id]);
-
   const questions: string[] = (() => {
     if (!order?.review_questions) return [];
     try {
@@ -98,6 +88,15 @@ const AuftragDetails = () => {
       return [];
     }
   })();
+
+  const canReview = assignmentStatus === "offen" || assignmentStatus === "fehlgeschlagen";
+  const reviewButtonText = assignmentStatus === "in_pruefung"
+    ? "In Überprüfung"
+    : assignmentStatus === "erfolgreich"
+    ? "Erfolgreich abgeschlossen"
+    : assignmentStatus === "fehlgeschlagen"
+    ? "Erneut bewerten"
+    : "Bewertung starten";
 
   if (layoutLoading || loading) {
     return (
@@ -252,11 +251,12 @@ const AuftragDetails = () => {
               <Separator />
               <Button
                 onClick={() => navigate(`/mitarbeiter/bewertung/${order.id}`)}
-                disabled={hasReviewed}
+                disabled={!canReview}
                 className="gap-2"
+                variant={assignmentStatus === "fehlgeschlagen" ? "destructive" : "default"}
               >
                 <Star className="h-4 w-4" />
-                {hasReviewed ? "Bereits bewertet" : "Bewertung starten"}
+                {reviewButtonText}
               </Button>
             </CardContent>
           </Card>

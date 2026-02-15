@@ -107,6 +107,13 @@ const Bewertung = () => {
     if (!isValid || !contract || !order) return;
     setSubmitting(true);
 
+    // Delete old reviews if re-evaluating
+    await supabase
+      .from("order_reviews")
+      .delete()
+      .eq("order_id", order.id)
+      .eq("contract_id", contract.id);
+
     const rows = questions.map((q, i) => ({
       order_id: order.id,
       contract_id: contract.id,
@@ -122,6 +129,13 @@ const Bewertung = () => {
       setSubmitting(false);
       return;
     }
+
+    // Set assignment status to in_pruefung
+    await supabase
+      .from("order_assignments")
+      .update({ status: "in_pruefung" })
+      .eq("order_id", order.id)
+      .eq("contract_id", contract.id);
 
     toast.success("Bewertung erfolgreich abgeschickt!");
     navigate(`/mitarbeiter/auftragdetails/${order.id}`);
