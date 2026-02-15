@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, MapPin, Star, ClipboardCheck, Euro, CreditCard, CalendarClock } from "lucide-react";
+import { User, Mail, Phone, MapPin, Star, ClipboardCheck, Euro, CreditCard, CalendarClock, History } from "lucide-react";
 import { addMonths, startOfMonth, format, startOfDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -33,6 +34,7 @@ const MeineDaten = () => {
   const [contractDetails, setContractDetails] = useState<ContractDetails | null>(null);
   const [stats, setStats] = useState({ ratedOrders: 0, avgRating: 0 });
   const [pendingPayout, setPendingPayout] = useState(0);
+  const [rewardHistory, setRewardHistory] = useState<{ title: string; reward: string; date: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,7 +56,7 @@ const MeineDaten = () => {
           .eq("contract_id", contract.id),
         supabase
           .from("order_assignments")
-          .select("order_id, orders(reward)")
+          .select("order_id, assigned_at, orders(title, reward)")
           .eq("contract_id", contract.id)
           .eq("status", "erfolgreich"),
       ]);
@@ -93,6 +95,19 @@ const MeineDaten = () => {
           }
         }
         setPendingPayout(total);
+
+        // Build reward history from all successful assignments
+        const history = assignmentsRes.data
+          .map((a) => {
+            const order = (a as any).orders;
+            return {
+              title: order?.title || "—",
+              reward: order?.reward || "0",
+              date: a.assigned_at,
+            };
+          })
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setRewardHistory(history);
       }
 
       setLoading(false);
@@ -217,6 +232,42 @@ const MeineDaten = () => {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Reward History */}
+      <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.4 }}>
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <History className="h-4 w-4 text-primary" />
+              Verdienst-Historie
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {rewardHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Noch keine abgeschlossenen Aufträge.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Auftrag</TableHead>
+                    <TableHead>Prämie</TableHead>
+                    <TableHead>Datum</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rewardHistory.map((item, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium">{item.title}</TableCell>
+                      <TableCell>{item.reward.replace(/[^0-9.,]/g, "").replace(",", ".")} €</TableCell>
+                      <TableCell>{format(new Date(item.date), "dd.MM.yyyy", { locale: de })}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </motion.div>
