@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Package, ExternalLink, Clock, CheckCircle, XCircle, RefreshCw, CalendarCheck } from "lucide-react";
+import { Package, ExternalLink, Clock, CheckCircle, XCircle, RefreshCw, CalendarCheck, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -98,6 +98,19 @@ const StatusButton = ({ status, orderId, isPlaceholder, hasAppointment, navigate
           >
             <CalendarCheck className="h-3.5 w-3.5 mr-1.5" />
             Termin buchen
+          </Button>
+        );
+      }
+      if (!isPlaceholder && hasAppointment) {
+        return (
+          <Button
+            className="w-full mt-2 rounded-xl"
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
+          >
+            <Eye className="h-3.5 w-3.5 mr-1.5" />
+            Auftrag ansehen
           </Button>
         );
       }
@@ -260,7 +273,7 @@ const MitarbeiterAuftraege = () => {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Prämie</span>
-                      <span className="font-semibold text-primary bg-primary/10 rounded-full px-3 py-0.5">{a.reward}</span>
+                      <span className="font-semibold text-primary bg-primary/10 rounded-full px-3 py-0.5">{a.reward}{a.reward.includes("€") ? "" : " €"}</span>
                     </div>
 
                     {/* Appointment badge for non-placeholder with booked appointment */}
