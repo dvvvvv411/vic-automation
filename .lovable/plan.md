@@ -1,18 +1,26 @@
 
 
-# Sterne in Gold statt Branding-Farbe
+# Dashboard: Auftraege "In Ueberpruefung" anzeigen
 
 ## Problem
-Die Sterne auf der Bewertungsseite und im Detail-Dialog nutzen aktuell `fill-primary text-primary` (Branding-Blau). Sie sollen stattdessen in Gold dargestellt werden.
+
+Auf dem Mitarbeiter-Dashboard werden unter "Deine Auftraege" nur Auftraege mit Status "offen" und "fehlgeschlagen" angezeigt. Auftraege mit Status "in_pruefung" fehlen, obwohl der Mitarbeiter sehen sollte, welche Tests gerade ueberprueft werden.
 
 ## Aenderung
 
-### Datei: `src/pages/mitarbeiter/MitarbeiterBewertungen.tsx`
+### Datei: `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`
 
-An zwei Stellen muessen die Stern-Farben geaendert werden:
+Eine einzige Zeile wird angepasst -- der Filter fuer `dashboardOrders` wird um `in_pruefung` erweitert:
 
-1. **Card-Grid** (Durchschnittsbewertung): `fill-primary text-primary` wird zu `fill-yellow-400 text-yellow-400`
-2. **Detail-Dialog** (Einzelbewertungen): `fill-primary text-primary` wird zu `fill-yellow-400 text-yellow-400`
+**Vorher:**
+```
+orders.filter(o => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen")
+```
 
-Beide Aenderungen betreffen nur die CSS-Klassen der `Star`-Komponente -- keine Logik-Aenderung.
+**Nachher:**
+```
+orders.filter(o => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen" || o.assignment_status === "in_pruefung")
+```
+
+Der Untertitel "X Auftraege mit Handlungsbedarf" passt weiterhin, da "in_pruefung"-Auftraege ebenfalls relevant fuer den Mitarbeiter sind. Die bestehenden `StatusBadge` und `StatusButton` Komponenten behandeln "in_pruefung" bereits korrekt (gelbes Badge, deaktivierter Button mit "In Ueberpruefung").
 
