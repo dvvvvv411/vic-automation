@@ -25,6 +25,7 @@ import AuftragDetails from "./pages/mitarbeiter/AuftragDetails";
 import Bewertung from "./pages/mitarbeiter/Bewertung";
 import MitarbeiterAuftraege from "./pages/mitarbeiter/MitarbeiterAuftraege";
 import MitarbeiterBewertungen from "./pages/mitarbeiter/MitarbeiterBewertungen";
+import MeineDaten from "./pages/mitarbeiter/MeineDaten";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const App = () => (
               <Route path="auftragdetails/:id" element={<AuftragDetails />} />
               <Route path="bewertung/:id" element={<Bewertung />} />
               <Route path="bewertungen" element={<MitarbeiterBewertungen />} />
+              <Route path="meine-daten" element={<MeineDaten />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
