@@ -24,6 +24,7 @@ import MitarbeiterDashboard from "./pages/mitarbeiter/MitarbeiterDashboard";
 import AuftragDetails from "./pages/mitarbeiter/AuftragDetails";
 import Bewertung from "./pages/mitarbeiter/Bewertung";
 import MitarbeiterAuftraege from "./pages/mitarbeiter/MitarbeiterAuftraege";
+import MitarbeiterBewertungen from "./pages/mitarbeiter/MitarbeiterBewertungen";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,7 @@ const App = () => (
               <Route path="auftraege" element={<MitarbeiterAuftraege />} />
               <Route path="auftragdetails/:id" element={<AuftragDetails />} />
               <Route path="bewertung/:id" element={<Bewertung />} />
+              <Route path="bewertungen" element={<MitarbeiterBewertungen />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
