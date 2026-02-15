@@ -1,45 +1,57 @@
 
 
-# Neuer Reiter "Bewertungen" im Mitarbeiter-Panel
+# Bewertungen-Seite: Cards mit Durchschnitt + Detail-Popup
 
-## Uebersicht
+## Problem
 
-Ein neuer Sidebar-Eintrag "Bewertungen" wird hinzugefuegt, der zu `/mitarbeiter/bewertungen` fuehrt. Dort sieht der Mitarbeiter alle seine abgegebenen Bewertungen in einer uebersichtlichen Card-Ansicht -- gruppiert nach Auftrag.
+Aktuell werden alle einzelnen Bewertungsfragen direkt auf der Seite angezeigt. Das ist unuebersichtlich. Stattdessen soll pro Auftrag nur eine kompakte Card mit der Durchschnittsbewertung gezeigt werden, und die einzelnen Fragen erst in einem Detail-Dialog sichtbar sein.
 
-## Aenderungen
+## Loesung
 
-### 1. Sidebar-Eintrag (`src/components/mitarbeiter/MitarbeiterSidebar.tsx`)
-- Neuer Nav-Eintrag "Bewertungen" mit `Star`-Icon, Ziel: `/mitarbeiter/bewertungen`
+### Neue Darstellung pro Auftrag-Card
+- **Auftragstitel** und **Auftragsnummer** im Header
+- **Durchschnittsbewertung** gross dargestellt (z.B. "4.2" mit Sternen)
+- **Anzahl Fragen** als Info (z.B. "3 Bewertungen")
+- **Bewertungsdatum**
+- **"Details ansehen"-Button** oeffnet einen Dialog
 
-### 2. Neue Seite (`src/pages/mitarbeiter/MitarbeiterBewertungen.tsx`)
-- Laedt alle `order_reviews` des Mitarbeiters (ueber `contract_id`) mit zugehoeriger Order-Info (Titel, Auftragsnummer)
-- Gruppiert nach Auftrag: Pro Auftrag eine Card mit dem Titel als Header
-- Innerhalb jeder Card: Alle Fragen mit Sternebewertung (nur Anzeige, nicht editierbar) und Kommentar
-- Erstellungsdatum der Bewertung wird angezeigt
-- Gleicher Card-Stil wie die Auftraege-Seite (border-border/60, shadow-sm, Gradient-Stripe)
-- Framer-Motion Animationen
-- Leerer Zustand wenn noch keine Bewertungen abgegeben wurden
+### Detail-Dialog (Popup)
+- Oeffnet sich per Klick auf den Button
+- Zeigt alle einzelnen Bewertungsfragen mit:
+  - Frage-Text
+  - Sternebewertung (read-only)
+  - Kommentar (falls vorhanden)
+- Nutzt die bestehende `Dialog`-Komponente aus `src/components/ui/dialog.tsx`
 
-### 3. Routing (`src/App.tsx`)
-- Neue Child-Route `bewertungen` unter `/mitarbeiter` mit `MitarbeiterBewertungen`-Komponente
+### Layout
+- Responsive Grid (1 Spalte mobil, 2 Spalten ab md) fuer die Auftrag-Cards
+- Gleicher Card-Stil wie ueberall (gradient-stripe, border-border/60, shadow-sm, hover-Effekt)
 
-## Datenquelle
+## Technische Umsetzung
 
-```text
-SELECT or.question, or.rating, or.comment, or.created_at, o.title, o.order_number
-FROM order_reviews or
-JOIN orders o ON o.id = or.order_id
-WHERE or.contract_id = :contractId
-ORDER BY or.created_at DESC
-```
-
-RLS ist bereits konfiguriert: "Users can select own order_reviews" erlaubt Mitarbeitern das Lesen ihrer eigenen Bewertungen.
-
-## Betroffene Dateien
-
+### Betroffene Datei
 | Datei | Aenderung |
 |---|---|
-| `src/components/mitarbeiter/MitarbeiterSidebar.tsx` | Neuer Nav-Eintrag "Bewertungen" mit Star-Icon |
-| `src/pages/mitarbeiter/MitarbeiterBewertungen.tsx` | **Neue Datei** -- Bewertungsuebersicht gruppiert nach Auftrag |
-| `src/App.tsx` | Neue Route `bewertungen` als Child von `/mitarbeiter` |
+| `src/pages/mitarbeiter/MitarbeiterBewertungen.tsx` | Kompletter Umbau der Darstellung |
+
+### Aenderungen im Detail
+
+1. **State fuer Dialog**: `selectedGroup` State hinzufuegen, der die aktuell geoeffnete Gruppe haelt
+2. **Durchschnittsberechnung**: Pro Gruppe den Schnitt aller Ratings berechnen (`reviews.reduce / reviews.length`)
+3. **Card-Grid**: Statt der aktuellen Einzel-Darstellung ein Grid mit kompakten Cards:
+
+```text
++----------------------------------+
+| [Gradient-Stripe]                |
+| Auftragstitel          #AUF-001  |
+| Bewertet am 12. Januar 2026      |
+|                                  |
+|  ★★★★☆  4.2 / 5                 |
+|  3 Bewertungen                   |
+|                                  |
+|  [Details ansehen]               |
++----------------------------------+
+```
+
+4. **Dialog**: Beim Klick oeffnet sich ein Dialog mit ScrollArea fuer die einzelnen Fragen -- gleiche Darstellung wie bisher (Frage, Sterne, Kommentar), aber eben im Popup
 
