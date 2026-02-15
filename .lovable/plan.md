@@ -1,35 +1,26 @@
 
+# Dashboard-Filter: Nur relevante Auftraege anzeigen
 
-# Auftraege-Seite Redesign
+## Aenderungen in `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`
 
-## Problem
+### 1. Auftraege-Liste filtern
+Im Bereich "Deine Auftraege" werden nur noch Auftraege mit Status `offen` oder `fehlgeschlagen` angezeigt. Erfolgreiche und in Pruefung befindliche Auftraege werden ausgeblendet -- dafuer gibt es die dedizierte Auftraege-Seite unter `/mitarbeiter/auftraege`.
 
-Die aktuelle Seite nutzt eine unschoene Tabelle und fuenf Tabs, die unnoetig Platz verbrauchen. Das Dashboard hat bereits schoene Cards -- die Auftraege-Seite sollte dem gleichen Stil folgen.
+Konkret: Vor dem Rendern des Order-Grids wird eine gefilterte Liste erstellt:
+```text
+const dashboardOrders = orders.filter(o => 
+  o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen"
+);
+```
+Diese gefilterte Liste wird fuer das Grid und die Zaehlung "X Auftraege zugewiesen" verwendet.
 
-## Loesung
+### 2. Statistik-Card "Offene Auftraege" anpassen
+Die Card "Offene Auftraege" zaehlt aktuell nur `offen`. Sie wird erweitert um auch `fehlgeschlagen` einzubeziehen, da diese ebenfalls Handlungsbedarf haben:
 
-Die gesamte `MitarbeiterAuftraege.tsx` wird ueberarbeitet:
+- **Wert**: Anzahl der Auftraege mit Status `offen` ODER `fehlgeschlagen`
+- **Detail-Text**: "Handlungsbedarf" statt "Bereit zum Starten"
 
-### Aenderungen
-
-**Tabs entfernen, Select-Dropdown einbauen**
-- Statt 5 Tabs: Ein einzelnes `Select`-Dropdown ("Alle Status", "Offen", "In Ueberpruefung", "Erfolgreich", "Fehlgeschlagen") in der Header-Zeile neben dem Titel
-- Kompakter und moderner
-
-**Tabelle durch Cards ersetzen**
-- Responsive Grid (1 Spalte mobil, 2 Spalten Tablet, 3 Spalten Desktop) -- gleicher Stil wie im Dashboard
-- Jede Card zeigt: Auftragsnummer (Badge), Titel, Anbieter, Praemie, Status-Badge und Aktions-Button
-- Farbiger Top-Stripe auf jeder Card (wie im Dashboard)
-- Framer-Motion Animationen fuer staggered Einblendung
-
-**Betroffene Datei**: `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx` (komplett ueberarbeitet, gleicher Daten-Fetch bleibt)
-
-### Design-Referenz
-
-Das Layout orientiert sich exakt am Dashboard-Kartenstil aus `MitarbeiterDashboard.tsx`:
-- Card mit `border-border/60`, `shadow-sm`, `hover:shadow-lg`, `hover:-translate-y-1`
-- Gradient-Stripe oben
-- Badge fuer Auftragsnummer, Status-Badge rechts
-- Anbieter/Praemie als Key-Value-Zeilen
-- Aktions-Button am unteren Rand (Starten / Erneut / In Ueberpruefung / Erfolgreich)
-
+### Betroffene Datei
+| Datei | Aenderung |
+|---|---|
+| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | Zeile 145: Filter fuer "Offene Auftraege" um `fehlgeschlagen` erweitern; Auftraege-Grid mit gefilterter Liste (`offen` + `fehlgeschlagen`) rendern |
