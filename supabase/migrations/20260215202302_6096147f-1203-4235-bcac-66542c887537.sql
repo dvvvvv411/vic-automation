@@ -1,0 +1,1 @@
+ALTER TABLE order_assignments ADD COLUMN review_unlocked boolean NOT NULL DEFAULT false;

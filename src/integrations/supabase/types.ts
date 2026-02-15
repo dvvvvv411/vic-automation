@@ -355,6 +355,7 @@ export type Database = {
           contract_id: string
           id: string
           order_id: string
+          review_unlocked: boolean
           status: string
         }
         Insert: {
@@ -362,6 +363,7 @@ export type Database = {
           contract_id: string
           id?: string
           order_id: string
+          review_unlocked?: boolean
           status?: string
         }
         Update: {
@@ -369,6 +371,7 @@ export type Database = {
           contract_id?: string
           id?: string
           order_id?: string
+          review_unlocked?: boolean
           status?: string
         }
         Relationships: [

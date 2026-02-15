@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { CalendarClock, ChevronLeft, ChevronRight, History, ArrowRight } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, History, ArrowRight, Unlock, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { format, addDays } from "date-fns";
+import { toast } from "sonner";
 
 const PAGE_SIZE = 20;
 type ViewMode = "default" | "past" | "future";
@@ -16,6 +17,7 @@ type ViewMode = "default" | "past" | "future";
 export default function AdminAuftragstermine() {
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("default");
+  const queryClient = useQueryClient();
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
@@ -50,22 +52,29 @@ export default function AdminAuftragstermine() {
       if (error) throw error;
       if (!appointments?.length) return { items: [], total: count || 0 };
 
-      // Fetch related orders and contracts
       const orderIds = [...new Set(appointments.map((a: any) => a.order_id))];
       const contractIds = [...new Set(appointments.map((a: any) => a.contract_id))];
 
-      const [{ data: orders }, { data: contracts }] = await Promise.all([
+      // Build unique order_id+contract_id pairs for assignments lookup
+      const pairs = appointments.map((a: any) => ({ order_id: a.order_id, contract_id: a.contract_id }));
+
+      const [{ data: orders }, { data: contracts }, { data: assignments }] = await Promise.all([
         supabase.from("orders").select("id, title, order_number").in("id", orderIds),
         supabase.from("employment_contracts").select("id, first_name, last_name").in("id", contractIds),
+        supabase.from("order_assignments").select("order_id, contract_id, status, review_unlocked").in("order_id", orderIds).in("contract_id", contractIds),
       ]);
 
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
       const contractMap = Object.fromEntries((contracts ?? []).map((c) => [c.id, c]));
+      const assignmentMap = Object.fromEntries(
+        (assignments ?? []).map((a: any) => [`${a.order_id}_${a.contract_id}`, a])
+      );
 
       const items = appointments.map((a: any) => ({
         ...a,
         order: orderMap[a.order_id] || null,
         contract: contractMap[a.contract_id] || null,
+        assignment: assignmentMap[`${a.order_id}_${a.contract_id}`] || null,
       }));
 
       return { items, total: count || 0 };
@@ -77,6 +86,21 @@ export default function AdminAuftragstermine() {
   const toggleView = (mode: ViewMode) => {
     setViewMode((prev) => (prev === mode ? "default" : mode));
     setPage(0);
+  };
+
+  const handleUnlockReview = async (orderId: string, contractId: string) => {
+    const { error } = await supabase
+      .from("order_assignments")
+      .update({ review_unlocked: true } as any)
+      .eq("order_id", orderId)
+      .eq("contract_id", contractId);
+
+    if (error) {
+      toast.error("Freigabe fehlgeschlagen.");
+      return;
+    }
+    toast.success("Bewertung freigegeben.");
+    queryClient.invalidateQueries({ queryKey: ["order-appointments-admin"] });
   };
 
   return (
@@ -132,6 +156,7 @@ export default function AdminAuftragstermine() {
                     <TableHead>Uhrzeit</TableHead>
                     <TableHead>Mitarbeiter</TableHead>
                     <TableHead>Auftrag</TableHead>
+                    <TableHead>Aktion</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -160,6 +185,23 @@ export default function AdminAuftragstermine() {
                             <span className="font-medium">{item.order.title}</span>
                           </span>
                         ) : "–"}
+                      </TableCell>
+                      <TableCell>
+                        {item.assignment?.review_unlocked ? (
+                          <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Freigegeben
+                          </Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleUnlockReview(item.order_id, item.contract_id)}
+                          >
+                            <Unlock className="h-3.5 w-3.5 mr-1" />
+                            Bewertung freigeben
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -53,6 +53,7 @@ const AuftragDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [assignmentStatus, setAssignmentStatus] = useState<string>("offen");
+  const [reviewUnlocked, setReviewUnlocked] = useState(false);
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -67,7 +68,7 @@ const AuftragDetails = () => {
     const fetchOrder = async () => {
       const { data: assignment } = await supabase
         .from("order_assignments")
-        .select("id, status")
+        .select("id, status, review_unlocked")
         .eq("order_id", id)
         .eq("contract_id", contract.id)
         .maybeSingle();
@@ -79,6 +80,7 @@ const AuftragDetails = () => {
       }
 
       setAssignmentStatus(assignment.status ?? "offen");
+      setReviewUnlocked(!!(assignment as any).review_unlocked);
 
       const { data, error: fetchError } = await supabase
         .from("orders")
@@ -251,7 +253,7 @@ const AuftragDetails = () => {
             </div>
             <div>
               <span className="text-muted-foreground">Prämie</span>
-              <p className="font-semibold text-primary">{order.reward}</p>
+              <p className="font-semibold text-primary">{order.reward}{order.reward.includes("€") ? "" : " €"}</p>
             </div>
           </CardContent>
         </Card>
@@ -436,7 +438,7 @@ const AuftragDetails = () => {
       )}
 
       {/* Review Questions (only for placeholder orders) */}
-      {order.is_placeholder && questions.length > 0 && (
+      {questions.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -458,15 +460,26 @@ const AuftragDetails = () => {
                 ))}
               </ol>
               <Separator />
-              <Button
-                onClick={() => navigate(`/mitarbeiter/bewertung/${order.id}`)}
-                disabled={!canReview}
-                className="gap-2"
-                variant={assignmentStatus === "fehlgeschlagen" ? "destructive" : "default"}
-              >
-                <Star className="h-4 w-4" />
-                {reviewButtonText}
-              </Button>
+              {/* Placeholder orders: always show review button */}
+              {/* Non-placeholder orders: only show if review_unlocked */}
+              {order.is_placeholder || reviewUnlocked ? (
+                <Button
+                  onClick={() => navigate(`/mitarbeiter/bewertung/${order.id}`)}
+                  disabled={!canReview}
+                  className="gap-2"
+                  variant={assignmentStatus === "fehlgeschlagen" ? "destructive" : "default"}
+                >
+                  <Star className="h-4 w-4" />
+                  {reviewButtonText}
+                </Button>
+              ) : (
+                <div className="flex items-start gap-3 bg-muted/40 border border-border rounded-lg p-4">
+                  <HelpCircle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <p className="text-sm text-muted-foreground">
+                    Die Bewertung wird nach Freigabe durch Ihren Ansprechpartner freigeschaltet.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
