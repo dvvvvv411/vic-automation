@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import DashboardReviewsSummary from "@/components/mitarbeiter/DashboardReviewsSummary";
+import DashboardProfileSummary from "@/components/mitarbeiter/DashboardProfileSummary";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string } | null;
@@ -128,6 +130,11 @@ const MitarbeiterDashboard = () => {
   const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
   const [orders, setOrders] = useState<OrderWithStatus[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [balance, setBalance] = useState<number>(0);
+  const [avgRating, setAvgRating] = useState<number>(0);
+  const [reviewCount, setReviewCount] = useState<number>(0);
+  const [recentReviews, setRecentReviews] = useState<{order_title: string; avg: number; date: string}[]>([]);
+  const [profileSummary, setProfileSummary] = useState<{name: string; email: string; iban: string | null} | null>(null);
 
   useEffect(() => {
     if (!contract) {
@@ -135,7 +142,24 @@ const MitarbeiterDashboard = () => {
       return;
     }
 
-    const fetchOrders = async () => {
+    const fetchData = async () => {
+      // Fetch contract details (balance, profile)
+      const { data: contractDetails } = await supabase
+        .from("employment_contracts")
+        .select("balance, first_name, last_name, email, iban")
+        .eq("id", contract.id)
+        .maybeSingle();
+
+      if (contractDetails) {
+        setBalance(Number(contractDetails.balance) || 0);
+        setProfileSummary({
+          name: [contractDetails.first_name, contractDetails.last_name].filter(Boolean).join(" "),
+          email: contractDetails.email || "",
+          iban: contractDetails.iban,
+        });
+      }
+
+      // Fetch assignments
       const { data: assignments } = await supabase
         .from("order_assignments")
         .select("order_id, status")
@@ -154,7 +178,6 @@ const MitarbeiterDashboard = () => {
         .select("*")
         .in("id", orderIds);
 
-      // Load appointments
       const { data: appointments } = await supabase
         .from("order_appointments")
         .select("order_id, appointment_date, appointment_time")
@@ -169,24 +192,62 @@ const MitarbeiterDashboard = () => {
           appointment: apptMap[o.id] || null,
         })));
       }
+
+      // Fetch reviews with order titles
+      const { data: reviews } = await supabase
+        .from("order_reviews")
+        .select("rating, order_id, created_at, question")
+        .eq("contract_id", contract.id);
+
+      if (reviews?.length) {
+        const allRatings = reviews.map((r) => r.rating);
+        const avg = allRatings.reduce((s, r) => s + r, 0) / allRatings.length;
+        setAvgRating(avg);
+
+        // Group by order_id
+        const grouped: Record<string, { ratings: number[]; date: string }> = {};
+        for (const r of reviews) {
+          if (!grouped[r.order_id]) grouped[r.order_id] = { ratings: [], date: r.created_at };
+          grouped[r.order_id].ratings.push(r.rating);
+          if (r.created_at > grouped[r.order_id].date) grouped[r.order_id].date = r.created_at;
+        }
+
+        const uniqueOrderIds = Object.keys(grouped);
+        setReviewCount(uniqueOrderIds.length);
+
+        // Get order titles for recent reviews
+        const { data: reviewOrders } = await supabase
+          .from("orders")
+          .select("id, title")
+          .in("id", uniqueOrderIds);
+
+        const titleMap = Object.fromEntries((reviewOrders ?? []).map((o) => [o.id, o.title]));
+
+        const recent = uniqueOrderIds
+          .map((oid) => ({
+            order_title: titleMap[oid] || "Unbekannt",
+            avg: grouped[oid].ratings.reduce((s, r) => s + r, 0) / grouped[oid].ratings.length,
+            date: grouped[oid].date,
+          }))
+          .sort((a, b) => b.date.localeCompare(a.date))
+          .slice(0, 3);
+
+        setRecentReviews(recent);
+      }
+
       setDataLoading(false);
     };
 
-    fetchOrders();
+    fetchData();
   }, [contract]);
 
   const isLoading = layoutLoading || dataLoading;
 
-  const totalEarnings = orders.reduce((sum, o) => {
-    const num = parseFloat(o.reward.replace(/[^0-9.,]/g, "").replace(",", "."));
-    return sum + (isNaN(num) ? 0 : num);
-  }, 0);
-
   const stats = [
     { label: "Zugewiesene Tests", value: orders.length.toString(), icon: Smartphone, detail: orders.length === 1 ? "1 Test" : `${orders.length} Tests` },
-    { label: "Verdienst", value: `€${totalEarnings.toFixed(0)}`, icon: Euro, detail: "Gesamtprämie" },
+    { label: "Guthaben", value: `${balance.toFixed(2)} €`, icon: Euro, detail: "Aktueller Kontostand" },
     { label: "Offene Aufträge", value: orders.filter((o) => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen").length.toString(), icon: ClipboardList, detail: "Handlungsbedarf" },
-    { label: "Bewertung", value: "4.8", icon: Star, detail: "Top 10%" },
+    { label: "Bewertung", value: avgRating > 0 ? avgRating.toFixed(1) : "—", icon: Star, detail: reviewCount > 0 ? `${reviewCount} Bewertung${reviewCount !== 1 ? "en" : ""}` : "Noch keine" },
   ];
 
   if (isLoading) {
@@ -388,6 +449,12 @@ const MitarbeiterDashboard = () => {
           );
         })()}
       </motion.div>
+
+      {/* Summary Sections */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <DashboardReviewsSummary recentReviews={recentReviews} />
+        <DashboardProfileSummary profile={profileSummary} balance={balance} />
+      </div>
     </div>
   );
 };
