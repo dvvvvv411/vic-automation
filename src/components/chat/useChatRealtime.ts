@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface ChatMessage {
   id: string;
   contract_id: string;
-  sender_role: "admin" | "user";
+  sender_role: "admin" | "user" | "system";
   content: string;
   created_at: string;
   read: boolean;
@@ -67,7 +67,7 @@ export function useChatRealtime({ contractId, onNewMessage }: UseChatRealtimeOpt
   }, [contractId]);
 
   const sendMessage = useCallback(
-    async (content: string, senderRole: "admin" | "user") => {
+    async (content: string, senderRole: "admin" | "user" | "system") => {
       if (!contractId || !content.trim()) return;
       await supabase.from("chat_messages").insert({
         contract_id: contractId,

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ConversationList, type Conversation } from "@/components/chat/ConversationList";
-import { ChatBubble, TypingIndicator, DateSeparator } from "@/components/chat/ChatBubble";
+import { ChatBubble, TypingIndicator, DateSeparator, SystemMessage } from "@/components/chat/ChatBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { TemplateManager } from "@/components/chat/TemplateManager";
 import { AvatarUpload } from "@/components/chat/AvatarUpload";
@@ -248,14 +248,18 @@ export default function AdminLivechat() {
                   return (
                     <div key={msg.id}>
                       {showDate && <DateSeparator date={msg.created_at} />}
-                      <ChatBubble
-                        content={msg.content}
-                        senderRole={msg.sender_role}
-                        createdAt={msg.created_at}
-                        isOwnMessage={msg.sender_role === "admin"}
-                        avatarUrl={msg.sender_role === "user" ? employeeProfile.avatar_url : undefined}
-                        senderName={msg.sender_role === "user" ? (employeeProfile.display_name || `${active.first_name} ${active.last_name}`) : undefined}
-                      />
+                      {msg.sender_role === "system" ? (
+                        <SystemMessage content={msg.content} />
+                      ) : (
+                        <ChatBubble
+                          content={msg.content}
+                          senderRole={msg.sender_role as "admin" | "user"}
+                          createdAt={msg.created_at}
+                          isOwnMessage={msg.sender_role === "admin"}
+                          avatarUrl={msg.sender_role === "user" ? employeeProfile.avatar_url : undefined}
+                          senderName={msg.sender_role === "user" ? (employeeProfile.display_name || `${active.first_name} ${active.last_name}`) : undefined}
+                        />
+                      )}
                     </div>
                   );
                 })
