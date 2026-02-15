@@ -42,7 +42,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const { messages, loading, sendMessage } = useChatRealtime({
     contractId,
     onNewMessage: (msg: ChatMessage) => {
-      if (msg.sender_role === "admin") {
+      if (msg.sender_role !== "user") {
         if (!openRef.current || document.hidden) {
           setUnreadCount((c) => c + 1);
           playNotification();
@@ -120,7 +120,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
       .from("chat_messages")
       .select("id", { count: "exact", head: true })
       .eq("contract_id", contractId)
-      .eq("sender_role", "admin")
+      .in("sender_role", ["admin", "system"])
       .eq("read", false)
       .then(({ count }) => setUnreadCount(count ?? 0));
   }, [contractId]);
@@ -132,7 +132,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
         .from("chat_messages")
         .update({ read: true })
         .eq("contract_id", contractId)
-        .eq("sender_role", "admin")
+        .in("sender_role", ["admin", "system"])
         .eq("read", false)
         .then(() => setUnreadCount(0));
     }
