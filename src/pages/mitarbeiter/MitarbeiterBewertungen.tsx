@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Star, MessageSquare, FileText } from "lucide-react";
+import { Star, MessageSquare, FileText, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -25,6 +28,7 @@ interface GroupedReviews {
   order_number: string;
   created_at: string;
   reviews: Review[];
+  averageRating: number;
 }
 
 interface OutletContext {
@@ -36,6 +40,7 @@ export default function MitarbeiterBewertungen() {
   const { contract, loading: layoutLoading } = useOutletContext<OutletContext>();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedGroup, setSelectedGroup] = useState<GroupedReviews | null>(null);
 
   useEffect(() => {
     if (!contract?.id) return;
@@ -76,20 +81,24 @@ export default function MitarbeiterBewertungen() {
         order_number: r.order_number,
         created_at: r.created_at,
         reviews: [],
+        averageRating: 0,
       };
       map.set(r.order_id, g);
       grouped.push(g);
     }
     map.get(r.order_id)!.reviews.push(r);
   }
+  for (const g of grouped) {
+    g.averageRating = g.reviews.reduce((sum, r) => sum + r.rating, 0) / g.reviews.length;
+  }
 
   if (layoutLoading || loading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2].map((i) => (
-            <Skeleton key={i} className="h-40 w-full rounded-xl" />
+            <Skeleton key={i} className="h-48 w-full rounded-xl" />
           ))}
         </div>
       </div>
@@ -116,7 +125,7 @@ export default function MitarbeiterBewertungen() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {grouped.map((group, idx) => (
             <motion.div
               key={group.order_id}
@@ -124,9 +133,9 @@ export default function MitarbeiterBewertungen() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: idx * 0.05 }}
             >
-              <Card className="border-border/60 shadow-sm overflow-hidden">
+              <Card className="border-border/60 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                 <div className="h-1 bg-gradient-to-r from-primary/80 to-primary/20" />
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base font-semibold text-foreground">
                       {group.order_title}
@@ -140,39 +149,84 @@ export default function MitarbeiterBewertungen() {
                     {format(new Date(group.created_at), "dd. MMMM yyyy", { locale: de })}
                   </p>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {group.reviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="rounded-lg border border-border/40 bg-muted/30 p-4 space-y-2"
-                    >
-                      <p className="text-sm font-medium text-foreground">{review.question}</p>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${
-                              i < review.rating
-                                ? "fill-primary text-primary"
-                                : "text-muted-foreground/30"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      {review.comment && (
-                        <div className="flex items-start gap-2 mt-1">
-                          <MessageSquare className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                          <p className="text-sm text-muted-foreground">{review.comment}</p>
-                        </div>
-                      )}
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${
+                            i < Math.round(group.averageRating)
+                              ? "fill-primary text-primary"
+                              : "text-muted-foreground/30"
+                          }`}
+                        />
+                      ))}
                     </div>
-                  ))}
+                    <span className="text-sm font-semibold text-foreground">
+                      {group.averageRating.toFixed(1)} / 5
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {group.reviews.length} {group.reviews.length === 1 ? "Bewertung" : "Bewertungen"}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setSelectedGroup(group)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Details ansehen
+                  </Button>
                 </CardContent>
               </Card>
             </motion.div>
           ))}
         </div>
       )}
+
+      <Dialog open={!!selectedGroup} onOpenChange={(open) => !open && setSelectedGroup(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{selectedGroup?.order_title}</DialogTitle>
+            <DialogDescription>
+              #{selectedGroup?.order_number} – Bewertet am{" "}
+              {selectedGroup && format(new Date(selectedGroup.created_at), "dd. MMMM yyyy", { locale: de })}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="space-y-4 pr-3">
+              {selectedGroup?.reviews.map((review) => (
+                <div
+                  key={review.id}
+                  className="rounded-lg border border-border/40 bg-muted/30 p-4 space-y-2"
+                >
+                  <p className="text-sm font-medium text-foreground">{review.question}</p>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${
+                          i < review.rating
+                            ? "fill-primary text-primary"
+                            : "text-muted-foreground/30"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  {review.comment && (
+                    <div className="flex items-start gap-2 mt-1">
+                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                      <p className="text-sm text-muted-foreground">{review.comment}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
