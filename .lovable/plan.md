@@ -1,80 +1,33 @@
 
+# Bewertungs-Redirect + Auftraege-Seite
 
-# Bewertungs-Workflow mit Status, Genehmigung und Kontoguthaben
+## 1. Redirect nach Bewertung aendern
 
-## Uebersicht
+In `src/pages/mitarbeiter/Bewertung.tsx` wird nach erfolgreichem Absenden der Bewertung aktuell zu `/mitarbeiter/auftragdetails/:id` navigiert. Das wird geaendert zu `/mitarbeiter`, damit der Mitarbeiter zurueck zum Dashboard gelangt.
 
-Nach dem Absenden einer Bewertung geht der Auftrag in den Status "in_pruefung". Admins koennen Bewertungen genehmigen oder ablehnen. Bei Genehmigung wird die Praemie dem Mitarbeiter-Kontoguthaben gutgeschrieben. Bei Ablehnung kann der Mitarbeiter die Bewertung erneut durchfuehren.
+## 2. Neuer Sidebar-Reiter "Auftraege"
 
-## 1. Datenbank-Aenderungen
+In `src/components/mitarbeiter/MitarbeiterSidebar.tsx` wird ein zweiter Navigationseintrag "Auftraege" mit dem `ClipboardList`-Icon hinzugefuegt, der zu `/mitarbeiter/auftraege` fuehrt.
 
-### Neue Spalte: `order_assignments.status`
-- Typ: `text`, Default: `offen`
-- Moegliche Werte: `offen`, `in_pruefung`, `fehlgeschlagen`, `erfolgreich`
+## 3. Neue Seite `/mitarbeiter/auftraege`
 
-### Neue Spalte: `employment_contracts.balance`
-- Typ: `numeric(10,2)`, Default: `0`
-- Speichert das Kontoguthaben des Mitarbeiters
+Eine dedizierte Auftragsseite (`src/pages/mitarbeiter/MitarbeiterAuftraege.tsx`) mit besserer Uebersicht als im Dashboard:
 
-### RLS-Policy-Erweiterung
-- Users: UPDATE auf `order_assignments` fuer eigene Eintraege (noetig um Status auf `in_pruefung` zu setzen)
-- Admins: UPDATE auf `order_assignments` bereits vorhanden
+- **Filter-Tabs**: Alle / Offen / In Ueberpruefung / Erfolgreich / Fehlgeschlagen
+- **Tabellen-Ansicht** statt Karten-Grid: Uebersichtliche Tabelle mit Spalten fuer Auftragsnummer, Titel, Anbieter, Praemie, Status (farbiger Badge) und Aktion-Button
+- **Sortierung** nach Datum (neueste zuerst)
+- Gleiche Datenquelle wie das Dashboard (order_assignments + orders)
+- Nutzt `useOutletContext` fuer Contract-Daten
 
-## 2. Ablauf
+## 4. Routing
 
-```text
-Mitarbeiter bewertet Auftrag
-        |
-        v
-Status -> "in_pruefung"
-        |
-        v
-Admin prueft unter /admin/bewertungen
-       / \
-      /   \
-Genehmigen  Ablehnen
-     |         |
-     v         v
-"erfolgreich"  "fehlgeschlagen"
-+ Praemie      Mitarbeiter kann
-  gutschreiben  erneut bewerten
-```
+In `src/App.tsx` wird die neue Child-Route `auftraege` unter `/mitarbeiter` registriert.
 
-## 3. Datei-Aenderungen
+## Aenderungen
 
 | Datei | Aenderung |
 |---|---|
-| **Migration** | `status` auf `order_assignments` + `balance` auf `employment_contracts` + RLS-Policy fuer User-UPDATE auf `order_assignments` |
-| `src/pages/mitarbeiter/Bewertung.tsx` | Nach Insert der Reviews: `order_assignments.status` auf `in_pruefung` setzen |
-| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | Status pro Auftrag laden (via Join auf `order_assignments`), Button-Text je nach Status aendern: "Auftrag starten" / "In Ueberprüfung" (disabled) / "Erneut bewerten" / "Erfolgreich" (disabled) |
-| `src/pages/mitarbeiter/AuftragDetails.tsx` | Status laden und "Bewertung starten"-Button entsprechend anpassen; bei `fehlgeschlagen` erneutes Bewerten ermoeglichen (alte Reviews loeschen oder neue erlauben) |
-| `src/pages/mitarbeiter/Bewertung.tsx` | Bei erneutem Bewerten: alte Reviews loeschen vor neuem Insert |
-| `src/pages/admin/AdminBewertungen.tsx` | Aktion-Spalte: "Genehmigen"/"Ablehnen" Buttons statt nur "Details"; bei Genehmigung: Status auf `erfolgreich` setzen + Praemie auf `balance` addieren; bei Ablehnung: Status auf `fehlgeschlagen` + alte Reviews loeschen |
-| `src/components/admin/AdminSidebar.tsx` | Badge mit Anzahl der Bewertungen im Status `in_pruefung` am "Bewertungen"-Reiter |
-| `src/integrations/supabase/types.ts` | Typen fuer neue Spalten aktualisieren |
-
-## 4. Technische Details
-
-### Dashboard-Button-Logik (MitarbeiterDashboard)
-- `offen` -> "Auftrag starten" (navigiert zu Details)
-- `in_pruefung` -> "In Ueberprüfung" (gelber Badge, disabled)
-- `fehlgeschlagen` -> "Erneut bewerten" (rot, navigiert zu Details)
-- `erfolgreich` -> "Erfolgreich" (gruener Badge, disabled)
-
-### Admin Genehmigung
-- Praemie wird aus `orders.reward` geparst (z.B. "50€" -> 50.00)
-- UPDATE `employment_contracts SET balance = balance + praemie WHERE id = contract_id`
-- UPDATE `order_assignments SET status = 'erfolgreich' WHERE ...`
-
-### Admin Ablehnung
-- UPDATE `order_assignments SET status = 'fehlgeschlagen'`
-- DELETE alte Reviews aus `order_reviews` fuer diese order_id + contract_id Kombination
-- Mitarbeiter kann dann erneut `/mitarbeiter/bewertung/:id` aufrufen
-
-### Badge im Sidebar
-- Query: `SELECT count(*) FROM order_assignments WHERE status = 'in_pruefung'`
-- Polling alle 30 Sekunden (gleich wie andere Badges)
-
-### RLS fuer Reviews-Loeschung
-- Neue DELETE-Policy auf `order_reviews` fuer Admins erforderlich
-
+| `src/pages/mitarbeiter/Bewertung.tsx` | Redirect von `/mitarbeiter/auftragdetails/:id` zu `/mitarbeiter` aendern |
+| `src/components/mitarbeiter/MitarbeiterSidebar.tsx` | Neuer Nav-Eintrag "Auftraege" mit ClipboardList-Icon |
+| `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx` | **Neue Datei** -- Auftraege-Seite mit Filter-Tabs und Tabellen-Ansicht |
+| `src/App.tsx` | Neue Route `auftraege` als Child von `/mitarbeiter` |
