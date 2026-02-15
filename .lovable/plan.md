@@ -1,26 +1,67 @@
 
 
-# Dashboard: Auftraege "In Ueberpruefung" anzeigen
+# Neuer Reiter "Meine Daten" im Mitarbeiter-Panel
 
-## Problem
+## Uebersicht
 
-Auf dem Mitarbeiter-Dashboard werden unter "Deine Auftraege" nur Auftraege mit Status "offen" und "fehlgeschlagen" angezeigt. Auftraege mit Status "in_pruefung" fehlen, obwohl der Mitarbeiter sehen sollte, welche Tests gerade ueberprueft werden.
+Neue Seite `/mitarbeiter/meine-daten` als reiner Read-Only-Bereich, in dem der Mitarbeiter seine persoenlichen Daten, Statistiken und Bankdaten einsehen kann.
 
-## Aenderung
+## Aufbau der Seite
 
-### Datei: `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`
+### Sektion 1: Persoenliche Informationen (Card)
+- Vor- und Nachname
+- E-Mail, Telefonnummer
+- Strasse, PLZ, Ort
 
-Eine einzige Zeile wird angepasst -- der Filter fuer `dashboardOrders` wird um `in_pruefung` erweitert:
+### Sektion 2: Statistiken (Card)
+- Anzahl bewerteter Auftraege (aus `order_reviews` gruppiert nach `order_id`)
+- Durchschnittliche Bewertung (Sterne in Gold)
+- Gesamtverdienst / Kontostand (`balance` aus `employment_contracts`)
 
-**Vorher:**
+### Sektion 3: Bankkarte (visuell gestaltete Card)
+- Visualisierung als Kreditkarten-Design mit Gradient-Hintergrund
+- Zeigt: Kontoinhaber (Name), IBAN, BIC, Bankname
+- Rein dekorativ, keine Interaktion
+
+## Technische Umsetzung
+
+| Datei | Aenderung |
+|---|---|
+| `src/pages/mitarbeiter/MeineDaten.tsx` | Neue Seite erstellen |
+| `src/components/mitarbeiter/MitarbeiterSidebar.tsx` | Nav-Item "Meine Daten" mit `User`-Icon hinzufuegen |
+| `src/App.tsx` | Route `meine-daten` registrieren |
+
+### Datenquellen
+- **Persoenliche Daten + Bankdaten + Balance**: `employment_contracts` (bereits per RLS fuer den Mitarbeiter lesbar ueber die bestehende Anon-Policy)
+- **Statistiken**: `order_reviews` (eigene Reviews per RLS lesbar) + `order_assignments` (eigene Zuweisungen per RLS lesbar)
+
+### Bankkarten-Design
+
+```text
++--------------------------------------+
+|                                      |
+|  IBAN                                |
+|  DE89 3704 0044 0532 0130 00         |
+|                                      |
+|  BIC: COBADEFFXXX                    |
+|  Sparkasse Musterstadt              |
+|                                      |
+|  Max Mustermann                      |
++--------------------------------------+
 ```
-orders.filter(o => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen")
+
+Gradient-Hintergrund (z.B. `from-slate-800 to-slate-600`), weisse Schrift, abgerundete Ecken, leichter Schatten -- aehnlich einer echten Bankkarte.
+
+### Sidebar-Eintrag
+Neues Item in `navItems` Array:
+```
+{ title: "Meine Daten", url: "/mitarbeiter/meine-daten", icon: User }
 ```
 
-**Nachher:**
-```
-orders.filter(o => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen" || o.assignment_status === "in_pruefung")
-```
-
-Der Untertitel "X Auftraege mit Handlungsbedarf" passt weiterhin, da "in_pruefung"-Auftraege ebenfalls relevant fuer den Mitarbeiter sind. Die bestehenden `StatusBadge` und `StatusButton` Komponenten behandeln "in_pruefung" bereits korrekt (gelbes Badge, deaktivierter Button mit "In Ueberpruefung").
+### Patterns
+- Gleicher `useOutletContext` Pattern wie alle anderen Mitarbeiter-Seiten
+- Daten werden per `supabase.from("employment_contracts")` geladen (Contract-ID aus Context)
+- Statistiken per separatem Query auf `order_reviews` und `order_assignments`
+- `framer-motion` Animationen wie auf den anderen Seiten
+- Gleicher Card-Stil (border-border/60, shadow-sm)
 
