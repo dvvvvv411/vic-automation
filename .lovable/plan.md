@@ -1,18 +1,15 @@
 
-# Systemnachrichten als ungelesene Nachrichten zaehlen
 
-## Problem
+# Onlinezeit auf 19:00 verlaengern
 
-Im `ChatWidget` werden ungelesene Nachrichten nur gezaehlt wenn `sender_role === "admin"`. Systemnachrichten (z.B. Terminbuchungen) werden komplett ignoriert -- kein Badge, keine Benachrichtigung.
+## Aenderung
 
-## Loesung
+In `src/components/chat/ChatWidget.tsx` wird in der `isOnline()`-Funktion die Bedingung `hour < 18` auf `hour < 19` geaendert, sodass der gruene Status-Punkt bis 19:00 Uhr Berliner Zeit aktiv bleibt.
 
-An drei Stellen in `ChatWidget.tsx` wird die Bedingung von `sender_role === "admin"` auf `sender_role !== "user"` geaendert, damit sowohl Admin- als auch Systemnachrichten als ungelesen zaehlen:
+## Technische Umsetzung
 
-**Datei**: `src/components/chat/ChatWidget.tsx`
+**Datei**: `src/components/chat/ChatWidget.tsx`, Zeile 29
 
-1. **Realtime-Callback** (Zeile 45): `msg.sender_role === "admin"` wird zu `msg.sender_role !== "user"` -- damit loesen auch Systemnachrichten den Badge und den Benachrichtigungston aus
+Vorher: `return hour >= 8 && hour < 18;`
+Nachher: `return hour >= 8 && hour < 19;`
 
-2. **Unread-Count beim Laden** (Zeile 123): Der Filter `.eq("sender_role", "admin")` wird zu `.in("sender_role", ["admin", "system"])` -- damit werden auch bestehende ungelesene Systemnachrichten gezaehlt
-
-3. **Mark-as-read beim Oeffnen** (Zeile 135): Der Filter `.eq("sender_role", "admin")` wird zu `.in("sender_role", ["admin", "system"])` -- damit werden beim Oeffnen des Chats auch Systemnachrichten als gelesen markiert
