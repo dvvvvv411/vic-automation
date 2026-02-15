@@ -166,11 +166,14 @@ const AuftragDetails = () => {
     const formattedDate = format(selectedDate, "d. MMMM yyyy", { locale: de });
     const systemContent = `Auftragstermin gebucht: „${order.title}" am ${formattedDate} um ${selectedTime} Uhr. Der Auftrag wird im Livechat durchgeführt.`;
 
-    await supabase.from("chat_messages").insert({
+    const { error: chatError } = await supabase.from("chat_messages").insert({
       contract_id: contract.id,
       sender_role: "system",
       content: systemContent,
     });
+    if (chatError) {
+      console.error("Systemnachricht konnte nicht gesendet werden:", chatError);
+    }
 
     setAppointment({
       id: "new",
