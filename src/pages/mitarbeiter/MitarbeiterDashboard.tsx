@@ -220,7 +220,7 @@ const MitarbeiterDashboard = () => {
         transition={{ delay: 0.5, duration: 0.4 }}
       >
         {(() => {
-          const dashboardOrders = orders.filter(o => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen");
+          const dashboardOrders = orders.filter(o => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen" || o.assignment_status === "in_pruefung");
           return (
             <>
               <div className="flex items-center justify-between mb-5">
