@@ -138,7 +138,7 @@ const Bewertung = () => {
       .eq("contract_id", contract.id);
 
     toast.success("Bewertung erfolgreich abgeschickt!");
-    navigate(`/mitarbeiter/auftragdetails/${order.id}`);
+    navigate("/mitarbeiter");
   };
 
   if (layoutLoading || loading) {
