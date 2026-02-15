@@ -1,53 +1,59 @@
 
-# Fix: Branding wird nicht in der Mitarbeiter-Sidebar geladen
 
-## Ursache
+# Logo-Anzeige in der Sidebar: Nur Logo, zentriert, ohne Box
 
-Die RLS-Policies auf den Tabellen `applications` und `brandings` erlauben SELECT nur fuer:
-- **admin** (authentifiziert mit Admin-Rolle)
-- **anon** (nicht eingeloggt)
+## Aenderung
 
-Eingeloggte Mitarbeiter haben die Rolle `authenticated` und werden von keiner SELECT-Policy abgedeckt. Beide Queries in `MitarbeiterLayout.tsx` (Zeilen 45-49 und 53-57) geben daher leere Ergebnisse zurueck.
+**Datei**: `src/components/mitarbeiter/MitarbeiterSidebar.tsx` (Zeilen 38-68)
 
-## Loesung
+Der gesamte Branding-Header-Bereich wird vereinfacht:
 
-Zwei neue RLS-Policies erstellen:
+- **Kein Firmenname-Text** mehr neben dem Logo
+- **Keine Box/Card** um das Logo (kein `bg-muted`, kein `rounded-lg`, kein `p-1`)
+- **Logo zentriert** mit `flex justify-center items-center`
+- **Logo skaliert** auf die volle verfuegbare Breite mit `max-h-14 w-auto object-contain` (passt sich proportional an)
+- **Transparenter Hintergrund** -- keine Hintergrundfarbe, kein Border
 
-### 1. `applications` - Mitarbeiter darf eigene Bewerbung lesen
+### Vorher
 
-```sql
-CREATE POLICY "Users can read own application"
-ON public.applications
-FOR SELECT
-TO authenticated
-USING (
-  id IN (
-    SELECT application_id FROM employment_contracts
-    WHERE user_id = auth.uid()
-  )
-);
+```text
++----------------------------+
+| [Logo-Box] Firmenname      |
++----------------------------+
 ```
 
-Der Mitarbeiter kann nur die Bewerbung lesen, die mit seinem eigenen Arbeitsvertrag verknuepft ist.
+### Nachher
 
-### 2. `brandings` - Mitarbeiter darf zugewiesenes Branding lesen
-
-```sql
-CREATE POLICY "Users can read assigned branding"
-ON public.brandings
-FOR SELECT
-TO authenticated
-USING (
-  id IN (
-    SELECT a.branding_id FROM applications a
-    JOIN employment_contracts ec ON ec.application_id = a.id
-    WHERE ec.user_id = auth.uid()
-  )
-);
+```text
++----------------------------+
+|        [Logo gross]        |
++----------------------------+
 ```
 
-Der Mitarbeiter kann nur das Branding lesen, das ueber seine Bewerbung zugeordnet ist.
+### Konkrete Aenderungen
 
-### Keine Code-Aenderungen noetig
+**Zeilen 38-67** werden ersetzt durch:
 
-Der Code in `MitarbeiterLayout.tsx` ist korrekt. Sobald die RLS-Policies greifen, wird das Branding (Logo + Firmenname) automatisch korrekt in der Sidebar angezeigt.
+```tsx
+<div className="py-5 px-4 border-b border-border flex justify-center items-center">
+  {brandingLoading ? (
+    <Skeleton className="h-10 w-32" />
+  ) : branding?.logo_url ? (
+    <img
+      src={branding.logo_url}
+      alt={branding.company_name}
+      className="max-h-14 w-auto object-contain"
+    />
+  ) : (
+    <span className="text-sm font-semibold text-foreground">
+      {branding?.company_name || "Unbekannt"}
+    </span>
+  )}
+</div>
+```
+
+- Logo ohne jegliche Box-Styles, direkt auf transparentem Hintergrund
+- Zentriert in der Sidebar
+- `max-h-14` begrenzt die Hoehe, `w-auto` laesst die Breite proportional skalieren
+- Fallback: Nur Firmenname als Text (wenn kein Logo vorhanden)
+
