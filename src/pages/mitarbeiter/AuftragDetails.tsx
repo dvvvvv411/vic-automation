@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Apple, Play, Target, HelpCircle, Download } from "lucide-react";
+import { ArrowLeft, Apple, Play, Target, HelpCircle, Download, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,19 @@ const AuftragDetails = () => {
     };
 
     fetchOrder();
+  }, [contract, id]);
+
+  const [hasReviewed, setHasReviewed] = useState(false);
+
+  useEffect(() => {
+    if (!contract || !id) return;
+    supabase
+      .from("order_reviews")
+      .select("id")
+      .eq("order_id", id)
+      .eq("contract_id", contract.id)
+      .limit(1)
+      .then(({ data }) => setHasReviewed((data?.length ?? 0) > 0));
   }, [contract, id]);
 
   const questions: string[] = (() => {
@@ -157,12 +170,46 @@ const AuftragDetails = () => {
         </Card>
       </motion.div>
 
+      {/* Downloads */}
+      {(order.appstore_url || order.playstore_url) && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
+          <Card className="border border-border/60 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
+                <Download className="h-4 w-4 text-primary" />
+                Downloads
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-3">
+              {order.appstore_url && (
+                <a href={order.appstore_url} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Apple className="h-4 w-4" /> App Store
+                  </Button>
+                </a>
+              )}
+              {order.playstore_url && (
+                <a href={order.playstore_url} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Play className="h-4 w-4" /> Play Store
+                  </Button>
+                </a>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Project Goal */}
       {order.project_goal && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
+          transition={{ duration: 0.4, delay: 0.15 }}
         >
           <Card className="border border-border/60 shadow-sm">
             <CardHeader className="pb-2">
@@ -185,7 +232,7 @@ const AuftragDetails = () => {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.15 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
         >
           <Card className="border border-border/60 shadow-sm">
             <CardHeader className="pb-2">
@@ -194,7 +241,7 @@ const AuftragDetails = () => {
                 Bewertungsfragen
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <ol className="list-decimal list-inside space-y-2">
                 {questions.map((q, i) => (
                   <li key={i} className="text-sm text-muted-foreground leading-relaxed">
@@ -202,50 +249,15 @@ const AuftragDetails = () => {
                   </li>
                 ))}
               </ol>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* Downloads */}
-      {(order.appstore_url || order.playstore_url) && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-        >
-          <Card className="border border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
-                <Download className="h-4 w-4 text-primary" />
-                Downloads
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-3">
-              {order.appstore_url && (
-                <a
-                  href={order.appstore_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Apple className="h-4 w-4" />
-                    App Store
-                  </Button>
-                </a>
-              )}
-              {order.playstore_url && (
-                <a
-                  href={order.playstore_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Play className="h-4 w-4" />
-                    Play Store
-                  </Button>
-                </a>
-              )}
+              <Separator />
+              <Button
+                onClick={() => navigate(`/mitarbeiter/bewertung/${order.id}`)}
+                disabled={hasReviewed}
+                className="gap-2"
+              >
+                <Star className="h-4 w-4" />
+                {hasReviewed ? "Bereits bewertet" : "Bewertung starten"}
+              </Button>
             </CardContent>
           </Card>
         </motion.div>

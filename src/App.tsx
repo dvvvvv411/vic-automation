@@ -16,11 +16,13 @@ import AdminArbeitsvertraege from "./pages/admin/AdminArbeitsvertraege";
 import AdminMitarbeiter from "./pages/admin/AdminMitarbeiter";
 import AdminAuftraege from "./pages/admin/AdminAuftraege";
 import AdminLivechat from "./pages/admin/AdminLivechat";
+import AdminBewertungen from "./pages/admin/AdminBewertungen";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
 import MitarbeiterLayout from "./components/mitarbeiter/MitarbeiterLayout";
 import MitarbeiterDashboard from "./pages/mitarbeiter/MitarbeiterDashboard";
 import AuftragDetails from "./pages/mitarbeiter/AuftragDetails";
+import Bewertung from "./pages/mitarbeiter/Bewertung";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +53,7 @@ const App = () => (
               <Route path="mitarbeiter" element={<AdminMitarbeiter />} />
               <Route path="auftraege" element={<AdminAuftraege />} />
               <Route path="livechat" element={<AdminLivechat />} />
+              <Route path="bewertungen" element={<AdminBewertungen />} />
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
             <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />
@@ -64,6 +67,7 @@ const App = () => (
             >
               <Route index element={<MitarbeiterDashboard />} />
               <Route path="auftragdetails/:id" element={<AuftragDetails />} />
+              <Route path="bewertung/:id" element={<Bewertung />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
