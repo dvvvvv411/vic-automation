@@ -1,30 +1,39 @@
 
 
-# Fix: Systemnachricht im Chat nach Terminbuchung
+# Fix: CHECK-Constraint auf chat_messages blockiert Systemnachrichten
 
 ## Problem
 
-Die RLS-Policy auf `chat_messages` erlaubt Mitarbeitern nur das Einfuegen von Nachrichten mit `sender_role = 'user'`. Beim Buchen eines Termins versucht der Code eine Nachricht mit `sender_role = 'system'` einzufuegen, was von der Policy stillschweigend blockiert wird.
+Die Spalte `sender_role` in `chat_messages` hat einen CHECK-Constraint:
+
+```sql
+CHECK (sender_role = ANY (ARRAY['admin', 'user']))
+```
+
+Dieser Constraint blockiert das Einfuegen von Nachrichten mit `sender_role = 'system'` auf Datenbankebene -- noch bevor die RLS-Policy ueberhaupt greift. Die RLS-Policy ist korrekt, aber der Constraint verhindert den Insert.
 
 ## Loesung
 
-Die bestehende RLS-Policy "Users can insert own chat_messages" wird erweitert, sodass Mitarbeiter auch Nachrichten mit `sender_role = 'system'` einfuegen duerfen.
-
-## Technische Umsetzung
-
-### Migration
+Eine Migration, die den bestehenden CHECK-Constraint droppt und durch einen erweiterten ersetzt:
 
 ```sql
-DROP POLICY "Users can insert own chat_messages" ON chat_messages;
-
-CREATE POLICY "Users can insert own chat_messages" ON chat_messages
-  FOR INSERT
-  WITH CHECK (
-    contract_id IN (
-      SELECT id FROM employment_contracts WHERE user_id = auth.uid()
-    )
-    AND sender_role IN ('user', 'system')
-  );
+ALTER TABLE chat_messages DROP CONSTRAINT chat_messages_sender_role_check;
+ALTER TABLE chat_messages ADD CONSTRAINT chat_messages_sender_role_check
+  CHECK (sender_role = ANY (ARRAY['admin', 'user', 'system']));
 ```
 
-Das ist die einzige Aenderung -- kein Code-Update noetig, da die Insert-Logik in `AuftragDetails.tsx` bereits korrekt implementiert ist.
+## Zusaetzlich: Fehlerbehandlung im Code
+
+**Datei**: `src/pages/mitarbeiter/AuftragDetails.tsx`
+
+Der Insert fuer die System-Nachricht (Zeile 169-173) prueft aktuell nicht auf Fehler. Falls der Insert fehlschlaegt, bemerkt der Nutzer das nicht. Ich fuege eine Fehlerbehandlung mit `console.error` hinzu, damit solche Probleme kuenftig sichtbar sind.
+
+## Zusammenfassung
+
+| Aenderung | Datei |
+|---|---|
+| CHECK-Constraint erweitern auf `'system'` | Migration (neu) |
+| Fehlerbehandlung beim chat_messages Insert | `AuftragDetails.tsx` |
+
+Nach dieser Aenderung wird die Systemnachricht bei der naechsten Terminbuchung korrekt im Chat erscheinen -- auch wenn der Chat nicht geoeffnet ist, da die Nachricht in der Datenbank gespeichert wird und beim naechsten Oeffnen geladen wird.
+
