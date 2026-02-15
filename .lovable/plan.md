@@ -1,67 +1,55 @@
 
 
-# Neuer Reiter "Meine Daten" im Mitarbeiter-Panel
+# Bankverbindung-Card erweitern: Gehaltsauszahlungen
 
 ## Uebersicht
 
-Neue Seite `/mitarbeiter/meine-daten` als reiner Read-Only-Bereich, in dem der Mitarbeiter seine persoenlichen Daten, Statistiken und Bankdaten einsehen kann.
+Die Bankverbindung-Sektion wird zu einem zweispaltigen Layout umgebaut. Links bleibt die Bankkarte, rechts kommt eine Tabelle mit Gehaltsauszahlungen. Da es aktuell keine separate Auszahlungs-Tabelle in der Datenbank gibt, wird ein Platzhalter-Zustand angezeigt.
 
-## Aufbau der Seite
+## Aufbau
 
-### Sektion 1: Persoenliche Informationen (Card)
-- Vor- und Nachname
-- E-Mail, Telefonnummer
-- Strasse, PLZ, Ort
+```text
++---------------------------+----------------------------------+
+|                           |                                  |
+|   [Bankkarte]             |   Gehaltsauszahlungen            |
+|   IBAN, BIC, Bank         |                                  |
+|   Name                    |   Anstehende Auszahlung          |
+|                           |   am 01.03.2026                  |
+|                           |   Betrag: €XX.XX                 |
+|                           |                                  |
++---------------------------+----------------------------------+
+```
 
-### Sektion 2: Statistiken (Card)
-- Anzahl bewerteter Auftraege (aus `order_reviews` gruppiert nach `order_id`)
-- Durchschnittliche Bewertung (Sterne in Gold)
-- Gesamtverdienst / Kontostand (`balance` aus `employment_contracts`)
+## Logik fuer "Anstehende Auszahlung"
 
-### Sektion 3: Bankkarte (visuell gestaltete Card)
-- Visualisierung als Kreditkarten-Design mit Gradient-Hintergrund
-- Zeigt: Kontoinhaber (Name), IBAN, BIC, Bankname
-- Rein dekorativ, keine Interaktion
+- **Datum**: Immer der 1. des naechsten Monats (berechnet mit `date-fns`)
+- **Betrag**: Summe aller Praemien aus Auftraegen mit Status "erfolgreich" in `order_assignments`, deren zugehoerige `order_reviews` im aktuellen Monat erstellt wurden
+  - Query: `order_assignments` (status = "erfolgreich", contract_id = eigene) verbunden mit `orders` (fuer `reward`-Feld) und `order_reviews` (fuer `created_at` im aktuellen Monat)
+  - Das `reward`-Feld ist ein String (z.B. "5€"), wird geparst wie auf anderen Seiten
 
 ## Technische Umsetzung
 
-| Datei | Aenderung |
-|---|---|
-| `src/pages/mitarbeiter/MeineDaten.tsx` | Neue Seite erstellen |
-| `src/components/mitarbeiter/MitarbeiterSidebar.tsx` | Nav-Item "Meine Daten" mit `User`-Icon hinzufuegen |
-| `src/App.tsx` | Route `meine-daten` registrieren |
+### Datei: `src/pages/mitarbeiter/MeineDaten.tsx`
 
-### Datenquellen
-- **Persoenliche Daten + Bankdaten + Balance**: `employment_contracts` (bereits per RLS fuer den Mitarbeiter lesbar ueber die bestehende Anon-Policy)
-- **Statistiken**: `order_reviews` (eigene Reviews per RLS lesbar) + `order_assignments` (eigene Zuweisungen per RLS lesbar)
+1. **Layout-Aenderung**: Die Bankverbindungs-Card bekommt ein `grid grid-cols-1 lg:grid-cols-2 gap-6` Layout
+   - Linke Spalte: Bestehende Bankkarten-Visualisierung (max-w-md Begrenzung entfernen)
+   - Rechte Spalte: Auszahlungs-Bereich
 
-### Bankkarten-Design
+2. **Neuer Daten-Fetch**: Zusaetzlich zu den bestehenden Queries werden geladen:
+   - `order_assignments` mit Status "erfolgreich" fuer die eigene `contract_id`
+   - `orders` fuer die zugehoerigen `reward`-Werte
+   - `order_reviews` mit `created_at` im aktuellen Monat zur Filterung
 
-```text
-+--------------------------------------+
-|                                      |
-|  IBAN                                |
-|  DE89 3704 0044 0532 0130 00         |
-|                                      |
-|  BIC: COBADEFFXXX                    |
-|  Sparkasse Musterstadt              |
-|                                      |
-|  Max Mustermann                      |
-+--------------------------------------+
-```
+3. **Anstehende Auszahlung berechnen**:
+   - Naechster Monatserster mit `date-fns` (`startOfMonth`, `addMonths`, `format`)
+   - Praemien-Summe: Alle erfolgreich abgeschlossenen Auftraege des aktuellen Monats summieren
+   - Reward-String parsen (gleiche Logik wie in `MitarbeiterDashboard.tsx`)
 
-Gradient-Hintergrund (z.B. `from-slate-800 to-slate-600`), weisse Schrift, abgerundete Ecken, leichter Schatten -- aehnlich einer echten Bankkarte.
+4. **Anzeige**:
+   - Ueberschrift "Gehaltsauszahlungen"
+   - Wenn keine vergangenen Auszahlungen: Hinweis-Box mit "Anstehende Gehaltsauszahlung am DD.MM.YYYY" und dem berechneten Betrag
+   - Formatierung: Datum im deutschen Format (01.03.2026), Betrag als €XX.XX
 
-### Sidebar-Eintrag
-Neues Item in `navItems` Array:
-```
-{ title: "Meine Daten", url: "/mitarbeiter/meine-daten", icon: User }
-```
-
-### Patterns
-- Gleicher `useOutletContext` Pattern wie alle anderen Mitarbeiter-Seiten
-- Daten werden per `supabase.from("employment_contracts")` geladen (Contract-ID aus Context)
-- Statistiken per separatem Query auf `order_reviews` und `order_assignments`
-- `framer-motion` Animationen wie auf den anderen Seiten
-- Gleicher Card-Stil (border-border/60, shadow-sm)
+### Keine DB-Aenderungen noetig
+Alle Daten koennen aus bestehenden Tabellen berechnet werden. Die RLS-Policies erlauben dem Mitarbeiter bereits Lesezugriff auf seine eigenen `order_assignments`, `orders` und `order_reviews`.
 
