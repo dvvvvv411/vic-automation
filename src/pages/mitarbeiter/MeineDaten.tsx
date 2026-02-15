@@ -192,13 +192,11 @@ const MeineDaten = () => {
                   <p className="text-[10px] uppercase tracking-widest text-white/50">IBAN</p>
                   <p className="text-sm font-mono tracking-wider">{formatIban(contractDetails.iban)}</p>
                 </div>
-                <div className="flex justify-between items-end">
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-white/50">BIC: {contractDetails.bic || "—"}</p>
-                    <p className="text-xs text-white/50">{contractDetails.bank_name || "—"}</p>
-                  </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs text-white/50">BIC: {contractDetails.bic || "—"}</p>
+                  <p className="text-xs text-white/50">{contractDetails.bank_name || "—"}</p>
+                  <p className="text-sm font-semibold tracking-wide mt-1">{fullName}</p>
                 </div>
-                <p className="text-sm font-semibold tracking-wide">{fullName}</p>
               </div>
 
               {/* Right: Payouts */}
