@@ -181,7 +181,9 @@ const MitarbeiterAuftraege = () => {
     fetchData();
   }, [contract]);
 
+  const statusOrder: Record<string, number> = { offen: 0, in_pruefung: 1, fehlgeschlagen: 2, erfolgreich: 3 };
   const filtered = filter === "alle" ? assignments : assignments.filter((a) => a.status === filter);
+  const sorted = [...filtered].sort((a, b) => (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99));
 
   if (layoutLoading || loading) {
     return (
@@ -229,7 +231,7 @@ const MitarbeiterAuftraege = () => {
       </motion.div>
 
       {/* Cards Grid */}
-      {filtered.length === 0 ? (
+      {sorted.length === 0 ? (
         <Card className="border-dashed border-2 border-border/40 rounded-2xl">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center mb-4">
@@ -243,7 +245,7 @@ const MitarbeiterAuftraege = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {filtered.map((a, i) => (
+          {sorted.map((a, i) => (
             <motion.div
               key={a.order_id}
               initial={{ opacity: 0, y: 16 }}
