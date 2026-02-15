@@ -35,35 +35,19 @@ export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSid
 
   return (
     <Sidebar className="border-r border-border bg-card">
-      <div className="p-5 border-b border-border">
+      <div className="py-5 px-4 border-b border-border flex justify-center items-center">
         {brandingLoading ? (
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-10 rounded-lg" />
-            <Skeleton className="h-4 w-24" />
-          </div>
+          <Skeleton className="h-10 w-32" />
         ) : branding?.logo_url ? (
-          <div className="flex items-center gap-3">
-            <img
-              src={branding.logo_url}
-              alt={branding.company_name}
-              className="h-10 w-10 rounded-lg object-contain bg-muted p-1"
-            />
-            <span className="text-sm font-semibold text-foreground truncate">
-              {branding.company_name}
-            </span>
-          </div>
+          <img
+            src={branding.logo_url}
+            alt={branding.company_name}
+            className="max-h-14 w-auto object-contain"
+          />
         ) : (
-          <div className="flex items-center gap-3">
-            <div
-              className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold text-lg"
-              style={{ backgroundColor: branding?.brand_color || "hsl(var(--primary))" }}
-            >
-              {branding?.company_name?.charAt(0) || "V"}
-            </div>
-            <span className="text-sm font-semibold text-foreground truncate">
-              {branding?.company_name || "Vic Tester"}
-            </span>
-          </div>
+          <span className="text-sm font-semibold text-foreground">
+            {branding?.company_name || "Unbekannt"}
+          </span>
         )}
       </div>
 
