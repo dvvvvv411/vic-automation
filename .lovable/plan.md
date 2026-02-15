@@ -1,57 +1,18 @@
 
 
-# Bewertungen-Seite: Cards mit Durchschnitt + Detail-Popup
+# Sterne in Gold statt Branding-Farbe
 
 ## Problem
+Die Sterne auf der Bewertungsseite und im Detail-Dialog nutzen aktuell `fill-primary text-primary` (Branding-Blau). Sie sollen stattdessen in Gold dargestellt werden.
 
-Aktuell werden alle einzelnen Bewertungsfragen direkt auf der Seite angezeigt. Das ist unuebersichtlich. Stattdessen soll pro Auftrag nur eine kompakte Card mit der Durchschnittsbewertung gezeigt werden, und die einzelnen Fragen erst in einem Detail-Dialog sichtbar sein.
+## Aenderung
 
-## Loesung
+### Datei: `src/pages/mitarbeiter/MitarbeiterBewertungen.tsx`
 
-### Neue Darstellung pro Auftrag-Card
-- **Auftragstitel** und **Auftragsnummer** im Header
-- **Durchschnittsbewertung** gross dargestellt (z.B. "4.2" mit Sternen)
-- **Anzahl Fragen** als Info (z.B. "3 Bewertungen")
-- **Bewertungsdatum**
-- **"Details ansehen"-Button** oeffnet einen Dialog
+An zwei Stellen muessen die Stern-Farben geaendert werden:
 
-### Detail-Dialog (Popup)
-- Oeffnet sich per Klick auf den Button
-- Zeigt alle einzelnen Bewertungsfragen mit:
-  - Frage-Text
-  - Sternebewertung (read-only)
-  - Kommentar (falls vorhanden)
-- Nutzt die bestehende `Dialog`-Komponente aus `src/components/ui/dialog.tsx`
+1. **Card-Grid** (Durchschnittsbewertung): `fill-primary text-primary` wird zu `fill-yellow-400 text-yellow-400`
+2. **Detail-Dialog** (Einzelbewertungen): `fill-primary text-primary` wird zu `fill-yellow-400 text-yellow-400`
 
-### Layout
-- Responsive Grid (1 Spalte mobil, 2 Spalten ab md) fuer die Auftrag-Cards
-- Gleicher Card-Stil wie ueberall (gradient-stripe, border-border/60, shadow-sm, hover-Effekt)
-
-## Technische Umsetzung
-
-### Betroffene Datei
-| Datei | Aenderung |
-|---|---|
-| `src/pages/mitarbeiter/MitarbeiterBewertungen.tsx` | Kompletter Umbau der Darstellung |
-
-### Aenderungen im Detail
-
-1. **State fuer Dialog**: `selectedGroup` State hinzufuegen, der die aktuell geoeffnete Gruppe haelt
-2. **Durchschnittsberechnung**: Pro Gruppe den Schnitt aller Ratings berechnen (`reviews.reduce / reviews.length`)
-3. **Card-Grid**: Statt der aktuellen Einzel-Darstellung ein Grid mit kompakten Cards:
-
-```text
-+----------------------------------+
-| [Gradient-Stripe]                |
-| Auftragstitel          #AUF-001  |
-| Bewertet am 12. Januar 2026      |
-|                                  |
-|  ★★★★☆  4.2 / 5                 |
-|  3 Bewertungen                   |
-|                                  |
-|  [Details ansehen]               |
-+----------------------------------+
-```
-
-4. **Dialog**: Beim Klick oeffnet sich ein Dialog mit ScrollArea fuer die einzelnen Fragen -- gleiche Darstellung wie bisher (Frage, Sterne, Kommentar), aber eben im Popup
+Beide Aenderungen betreffen nur die CSS-Klassen der `Star`-Komponente -- keine Logik-Aenderung.
 
