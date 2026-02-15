@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Apple, Play, Package } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +34,7 @@ function getGreeting(): string {
 }
 
 const MitarbeiterDashboard = () => {
+  const navigate = useNavigate();
   const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
   const [orders, setOrders] = useState<Order[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -270,6 +271,7 @@ const MitarbeiterDashboard = () => {
                     <Button
                       className="w-full mt-2 group/btn"
                       size="sm"
+                      onClick={() => navigate(`/mitarbeiter/auftragdetails/${order.id}`)}
                     >
                       Auftrag starten
                       <ExternalLink className="h-3.5 w-3.5 ml-1.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
