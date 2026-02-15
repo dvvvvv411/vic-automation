@@ -1,78 +1,78 @@
 
 
-# Auftragstermine: Terminbuchung für Nicht-Platzhalter-Aufträge
+# Auftragstermine: Terminbuchung fuer Nicht-Platzhalter-Auftraege
 
-## Übersicht
+## Uebersicht
 
-Nicht-Platzhalter-Aufträge erfordern künftig eine Terminbuchung, bevor der Mitarbeiter sie durchführen kann. Der Mitarbeiter bucht einen Termin (Tag + Uhrzeit, ohne Slot-Limit), erhält den Hinweis, dass der Auftrag im Livechat mit dem Ansprechpartner durchgeführt wird, und im Chat erscheint eine Systemnachricht als Bestätigung. Admins erhalten einen neuen Reiter "Auftragstermine" mit einer Übersicht aller gebuchten Termine.
+Platzhalter-Auftraege funktionieren weiterhin wie bisher. Nicht-Platzhalter-Auftraege erfordern kuenftig eine Terminbuchung. Der Mitarbeiter bucht Tag und Uhrzeit (ohne Slot-Limit), erhaelt den Hinweis, dass der Auftrag im Livechat mit dem Ansprechpartner durchgefuehrt wird, und im Chat erscheint eine dezente Systemnachricht als Bestaetigung. Die Auftrags-Cards auf Dashboard und Auftraege-Seite zeigen den gebuchten Terminzeitpunkt an. Admins erhalten einen neuen Reiter "Auftragstermine".
 
 ---
 
 ## 1. Neue Datenbanktabelle: `order_appointments`
 
-Migration erstellt eine neue Tabelle:
+Migration erstellt:
 
-- `id` (uuid, PK)
+- `id` (uuid, PK, default gen_random_uuid())
 - `order_id` (uuid, FK -> orders)
 - `contract_id` (uuid, FK -> employment_contracts)
 - `appointment_date` (date)
 - `appointment_time` (time)
 - `created_at` (timestamptz, default now())
 
+Keine Unique-Constraints -- beliebig viele Buchungen pro Slot erlaubt.
+
 RLS-Policies:
-- Admins: voller Lesezugriff (SELECT)
+- Admins: SELECT
 - Mitarbeiter: SELECT + INSERT auf eigene `contract_id`
-- Keine UPDATE/DELETE nötig
 
-Wichtig: Keine Unique-Constraints auf Datum/Uhrzeit, da beliebig viele Buchungen pro Slot erlaubt sind.
+## 2. Systemnachricht im Chat
 
-## 2. Systemnachricht im Chat (neuer Nachrichtentyp)
+### 2a. Typ erweitern
+
+**Datei**: `src/components/chat/useChatRealtime.ts`
+- `sender_role` Typ wird auf `"admin" | "user" | "system"` erweitert
+
+### 2b. SystemMessage-Komponente
 
 **Datei**: `src/components/chat/ChatBubble.tsx`
+- Neuer Export `SystemMessage` -- dezentes, zentriertes Element (aehnlich `DateSeparator`), mit kleinem CalendarCheck-Icon und hellgrauem Hintergrund-Pill
+- Beispiel: "Auftragstermin gebucht: 'Auftragstitel' am 15. Februar 2026 um 14:00 Uhr"
 
-Neuer Export `SystemMessage` -- ein dezentes, zentriertes Element (ähnlich dem `DateSeparator`), das z.B. so aussieht:
+### 2c. Rendering im ChatWidget
 
-> Auftragstermin gebucht: "Auftragstitel" am 15. Februar 2026 um 14:00 Uhr
+**Datei**: `src/components/chat/ChatWidget.tsx`
+- System-Nachrichten (`sender_role === "system"`) werden als `SystemMessage` gerendert statt als `ChatBubble`
 
-Styling: Zentrierter Text mit kleinem Icon, hellgrauer Hintergrund-Pill, kleiner Schrift -- kein Bubble-Stil.
+## 3. Terminbuchungs-Flow fuer Mitarbeiter
 
-**Datei**: `src/components/chat/ChatBubble.tsx` -- Erweiterung um `sender_role === "system"` Erkennung.
-
-**Datei**: `src/components/chat/useChatRealtime.ts` -- `sender_role` Typ erweitern auf `"admin" | "user" | "system"`.
-
-**Datei**: `src/components/chat/ChatWidget.tsx` -- System-Nachrichten im Chatverlauf als `SystemMessage` rendern statt als `ChatBubble`.
-
-## 3. Terminbuchungs-Flow für Nicht-Platzhalter-Aufträge
-
-### 3a. Auftrags-Cards (Dashboard + Aufträge-Seite)
-
-**Dateien**: `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`, `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx`
-
-- `is_placeholder` Feld wird beim Laden der Orders mit abgefragt
-- Bei Nicht-Platzhalter-Aufträgen im Status "offen": Button zeigt "Termin buchen" statt "Auftrag starten"
-- Bei Nicht-Platzhalter-Aufträgen mit bereits gebuchtem Termin: Badge "Termin gebucht" + Datum/Uhrzeit anzeigen
-
-### 3b. AuftragDetails-Seite -- Terminbuchung integriert
+### 3a. AuftragDetails-Seite
 
 **Datei**: `src/pages/mitarbeiter/AuftragDetails.tsx`
 
-Für Nicht-Platzhalter-Aufträge:
-- Statt der Bewertungsfragen und des "Bewertung starten"-Buttons wird eine Terminbuchungs-Komponente angezeigt
-- Hinweistext: "Dieser Auftrag wird gemeinsam mit Ihrem Ansprechpartner im Livechat durchgeführt. Bitte buchen Sie einen Termin."
-- Kalender + Zeitslot-Auswahl (wiederverwendbares Pattern aus `Bewerbungsgespraech.tsx`)
-- Keine Slot-Limits: Jede Uhrzeit kann beliebig oft gebucht werden
-- 30-Minuten-Slots von 08:00 bis 18:00
-- Vergangene Zeiten am aktuellen Tag werden ausgefiltert
-- Nach Buchung: Bestätigungsansicht + System-Nachricht wird in `chat_messages` geschrieben
+Fuer Nicht-Platzhalter-Auftraege (wenn `!order.is_placeholder`):
+- Statt Bewertungsfragen und "Bewertung starten"-Button wird eine Terminbuchungs-Sektion angezeigt
+- Hinweistext: "Dieser Auftrag wird gemeinsam mit Ihrem Ansprechpartner im Livechat durchgefuehrt. Bitte buchen Sie einen Termin."
+- Kalender + Zeitslot-Auswahl (gleiches Pattern wie `Bewerbungsgespraech.tsx`)
+- 30-Minuten-Slots von 08:00 bis 18:00, vergangene Zeiten am aktuellen Tag ausgefiltert
+- Keine Slot-Limits (alle Zeiten immer buchbar)
+- Wenn bereits ein Termin gebucht: Bestaetigungsansicht mit Datum/Uhrzeit
+- Nach Buchung: System-Nachricht wird in `chat_messages` eingefuegt:
 
-### 3c. System-Nachricht nach Buchung
-
-Nach erfolgreicher Terminbuchung wird in `chat_messages` eine Nachricht eingefügt:
-
-```
+```text
 sender_role: "system"
-content: "Auftragstermin gebucht: „[Auftragstitel]" am [Datum] um [Uhrzeit] Uhr. Der Auftrag wird im Livechat durchgeführt."
+content: "Auftragstermin gebucht: „[Titel]" am [Datum] um [Uhrzeit] Uhr. Der Auftrag wird im Livechat durchgeführt."
 ```
+
+### 3b. Auftrags-Cards mit Terminanzeige
+
+**Dateien**: `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`, `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx`
+
+- `is_placeholder` wird beim Laden der Orders mit abgefragt (Dashboard hat es bereits, Auftraege-Seite muss erweitert werden)
+- Bestehende Termine aus `order_appointments` werden fuer die eigene `contract_id` geladen
+- Bei Nicht-Platzhalter-Auftraegen im Status "offen":
+  - Ohne Termin: Button zeigt "Termin buchen" statt "Auftrag starten"
+  - Mit Termin: Badge mit CalendarCheck-Icon + "Termin: [Datum], [Uhrzeit] Uhr" auf der Card
+- `StatusButton`-Komponente wird um die `is_placeholder`-Logik erweitert
 
 ## 4. Admin: Neuer Reiter "Auftragstermine"
 
@@ -80,38 +80,35 @@ content: "Auftragstermin gebucht: „[Auftragstitel]" am [Datum] um [Uhrzeit] Uh
 
 **Neue Datei**: `src/pages/admin/AdminAuftragstermine.tsx`
 
-Tabellarische Übersicht aller gebuchten Auftragstermine:
-- Spalten: Datum, Uhrzeit, Mitarbeiter (Name aus employment_contracts), Auftrag (Titel + Nummer aus orders)
-- Sortierung: nächster Termin oben
-- Filterbuttons wie bei Bewerbungsgesprächen (Heute/Morgen, Vergangene, Zukünftige)
+Tabellarische Uebersicht (gleiches Layout wie `AdminBewerbungsgespraeche.tsx`):
+- Spalten: Datum, Uhrzeit, Mitarbeiter (first_name + last_name aus employment_contracts), Auftrag (Titel + Nummer aus orders)
+- Sortierung: naechster Termin oben
+- Filterbuttons: Heute/Morgen (default), Vergangene, Zukuenftige
 - Pagination (20 pro Seite)
 
-### 4b. Admin-Sidebar erweitern
+### 4b. Admin-Sidebar
 
 **Datei**: `src/components/admin/AdminSidebar.tsx`
-
-- Neuer Nav-Item "Auftragstermine" mit `CalendarClock`-Icon zwischen "Aufträge" und "Livechat"
+- Neuer Nav-Item "Auftragstermine" mit `CalendarClock`-Icon, positioniert zwischen "Auftraege" und "Livechat"
 - Badge mit Anzahl heutiger Termine
 
-### 4c. Route registrieren
+### 4c. Route
 
 **Datei**: `src/App.tsx`
-
 - Import + Route: `/admin/auftragstermine` -> `AdminAuftragstermine`
 
-## 5. Angepasste Dateien (Zusammenfassung)
+## 5. Zusammenfassung aller Aenderungen
 
-| Datei | Änderung |
+| Datei | Aenderung |
 |---|---|
 | Migration (neu) | Tabelle `order_appointments` + RLS |
-| `src/components/chat/ChatBubble.tsx` | Neuer `SystemMessage`-Export |
-| `src/components/chat/useChatRealtime.ts` | `sender_role` Typ erweitern |
-| `src/components/chat/ChatWidget.tsx` | System-Nachrichten rendern |
-| `src/pages/mitarbeiter/AuftragDetails.tsx` | Terminbuchung für Nicht-Platzhalter |
-| `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx` | `is_placeholder` laden, Button-Logik |
-| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | `is_placeholder` bereits vorhanden, Button-Logik |
-| `src/pages/admin/AdminAuftragstermine.tsx` (neu) | Termine-Übersicht |
-| `src/components/admin/AdminSidebar.tsx` | Neuer Nav-Eintrag + Badge |
-| `src/App.tsx` | Neue Route |
-| `src/integrations/supabase/types.ts` | Typ-Update nach Migration |
+| `useChatRealtime.ts` | `sender_role` Typ erweitern auf `"system"` |
+| `ChatBubble.tsx` | Neuer `SystemMessage`-Export |
+| `ChatWidget.tsx` | System-Nachrichten als `SystemMessage` rendern |
+| `AuftragDetails.tsx` | Terminbuchung fuer Nicht-Platzhalter |
+| `MitarbeiterAuftraege.tsx` | `is_placeholder` + Termine laden, Button-/Badge-Logik |
+| `MitarbeiterDashboard.tsx` | Termine laden, Button-/Badge-Logik |
+| `AdminAuftragstermine.tsx` (neu) | Admin-Termine-Uebersicht |
+| `AdminSidebar.tsx` | Neuer Nav-Eintrag + Badge |
+| `App.tsx` | Neue Route |
 
