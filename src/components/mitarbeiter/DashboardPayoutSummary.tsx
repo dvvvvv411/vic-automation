@@ -1,0 +1,67 @@
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { CalendarDays, Euro, ArrowRight } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { format, addMonths, startOfMonth } from "date-fns";
+import { de } from "date-fns/locale";
+
+interface Props {
+  balance: number;
+}
+
+const DashboardPayoutSummary = ({ balance }: Props) => {
+  const navigate = useNavigate();
+  const nextPayout = startOfMonth(addMonths(new Date(), 1));
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.78, ease: "easeOut" }}
+    >
+      <Card className="border border-border/40 ring-1 ring-border/10 shadow-sm bg-card/80 backdrop-blur-sm rounded-2xl h-full">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold text-foreground">Gehaltsauszahlung</CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => navigate("/mitarbeiter/meine-daten")}
+            >
+              Details
+              <ArrowRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 py-2 border-b border-border/20">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <CalendarDays className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">Nächste Auszahlung</p>
+                <p className="text-sm font-medium text-foreground">
+                  {format(nextPayout, "d. MMMM yyyy", { locale: de })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 py-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Euro className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">Voraussichtlicher Betrag</p>
+                <p className="text-lg font-bold text-primary">{balance.toFixed(2)} €</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+};
+
+export default DashboardPayoutSummary;
