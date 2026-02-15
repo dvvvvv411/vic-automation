@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useChatRealtime, type ChatMessage } from "./useChatRealtime";
 import { useChatSounds } from "./useChatSounds";
 import { useChatTyping } from "./useChatTyping";
-import { ChatBubble, TypingIndicator, DateSeparator } from "./ChatBubble";
+import { ChatBubble, TypingIndicator, DateSeparator, SystemMessage } from "./ChatBubble";
 import { AvatarUpload } from "./AvatarUpload";
 import { cn } from "@/lib/utils";
 
@@ -217,14 +217,18 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
                   return (
                     <div key={msg.id}>
                       {showDate && <DateSeparator date={msg.created_at} />}
-                      <ChatBubble
-                        content={msg.content}
-                        senderRole={msg.sender_role}
-                        createdAt={msg.created_at}
-                        isOwnMessage={msg.sender_role === "user"}
-                        avatarUrl={msg.sender_role === "admin" ? adminProfile.avatar_url : undefined}
-                        senderName={msg.sender_role === "admin" ? (adminProfile.display_name || "Admin") : undefined}
-                      />
+                      {msg.sender_role === "system" ? (
+                        <SystemMessage content={msg.content} />
+                      ) : (
+                        <ChatBubble
+                          content={msg.content}
+                          senderRole={msg.sender_role}
+                          createdAt={msg.created_at}
+                          isOwnMessage={msg.sender_role === "user"}
+                          avatarUrl={msg.sender_role === "admin" ? adminProfile.avatar_url : undefined}
+                          senderName={msg.sender_role === "admin" ? (adminProfile.display_name || "Admin") : undefined}
+                        />
+                      )}
                     </div>
                   );
                 })

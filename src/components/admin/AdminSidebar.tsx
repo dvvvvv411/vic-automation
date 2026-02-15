@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +26,7 @@ const navItems = [
   { title: "Arbeitsverträge", url: "/admin/arbeitsvertraege", icon: FileCheck },
   { title: "Mitarbeiter", url: "/admin/mitarbeiter", icon: Users },
   { title: "Aufträge", url: "/admin/auftraege", icon: ClipboardList },
+  { title: "Auftragstermine", url: "/admin/auftragstermine", icon: CalendarClock },
   { title: "Livechat", url: "/admin/livechat", icon: MessageCircle },
   { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
 ];
@@ -98,10 +99,24 @@ export function AdminSidebar() {
     refetchInterval: 30000,
   });
 
+  const { data: todayAppointmentsCount } = useQuery({
+    queryKey: ["badge-auftragstermine-heute"],
+    queryFn: async () => {
+      const today = format(new Date(), "yyyy-MM-dd");
+      const { count } = await supabase
+        .from("order_appointments")
+        .select("*", { count: "exact", head: true })
+        .eq("appointment_date", today);
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
   const badgeCounts: Record<string, number> = {
     "/admin/bewerbungen": neuCount ?? 0,
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
     "/admin/arbeitsvertraege": eingereichtCount ?? 0,
+    "/admin/auftragstermine": todayAppointmentsCount ?? 0,
     "/admin/livechat": chatUnreadCount ?? 0,
     "/admin/bewertungen": inPruefungCount ?? 0,
   };

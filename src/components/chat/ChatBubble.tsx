@@ -2,6 +2,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { AvatarUpload } from "./AvatarUpload";
+import { CalendarCheck } from "lucide-react";
 
 interface ChatBubbleProps {
   content: string;
@@ -58,6 +59,17 @@ export function DateSeparator({ date }: { date: string }) {
       <div className="flex-1 border-t border-border" />
       <span className="text-[11px] text-muted-foreground font-medium">{label}</span>
       <div className="flex-1 border-t border-border" />
+    </div>
+  );
+}
+
+export function SystemMessage({ content }: { content: string }) {
+  return (
+    <div className="flex items-center justify-center gap-2 my-4">
+      <div className="inline-flex items-center gap-2 bg-muted/60 rounded-full px-4 py-2 max-w-[85%]">
+        <CalendarCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span className="text-[11px] text-muted-foreground leading-snug">{content}</span>
+      </div>
     </div>
   );
 }
