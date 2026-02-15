@@ -1,39 +1,90 @@
 
+# Aenderungen: Praemie-Symbol, Bewertungsfragen, Bewertungsfreigabe, Button-Text
 
-# Fix: CHECK-Constraint auf chat_messages blockiert Systemnachrichten
+## Uebersicht
 
-## Problem
+Vier Aenderungen werden umgesetzt:
+1. Euro-Zeichen bei Praemien auf allen Auftrags-Cards
+2. Bewertungsfragen auch bei Nicht-Platzhalter-Auftraegen anzeigen
+3. Admin kann Bewertung bei Auftragsterminen freigeben -- erst danach kann der Mitarbeiter bewerten
+4. Button-Text "Auftrag ansehen" statt "Auftrag starten" bei gebuchtem Termin
 
-Die Spalte `sender_role` in `chat_messages` hat einen CHECK-Constraint:
+---
+
+## 1. Euro-Zeichen bei Praemien
+
+**Dateien**: `MitarbeiterAuftraege.tsx`, `MitarbeiterDashboard.tsx`, `AuftragDetails.tsx`
+
+Aktuell wird `{order.reward}` direkt angezeigt (z.B. "50"). Aenderung: `{order.reward} €` -- ein Euro-Zeichen wird angehaengt, sofern nicht bereits eines enthalten ist.
+
+Betroffene Stellen:
+- `MitarbeiterAuftraege.tsx` Zeile ca. 186: Praemie-Anzeige auf der Card
+- `MitarbeiterDashboard.tsx` Zeile ca. 320: Praemie-Anzeige auf der Card
+- `AuftragDetails.tsx` Zeile ca. 254: Praemie in der Detail-Ansicht
+
+---
+
+## 2. Bewertungsfragen auch bei Nicht-Platzhalter-Auftraegen
+
+**Datei**: `AuftragDetails.tsx`
+
+Aktuell (Zeile 438-473): Bewertungsfragen werden nur angezeigt wenn `order.is_placeholder === true`. Die Bedingung wird geaendert, sodass Fragen immer angezeigt werden wenn vorhanden.
+
+Fuer Nicht-Platzhalter-Auftraege wird der "Bewertung starten"-Button aber nur angezeigt wenn die Bewertung freigeschaltet ist (siehe Punkt 3). Ohne Freischaltung werden die Fragen als reine Info-Liste dargestellt mit einem Hinweis "Die Bewertung wird nach Freigabe durch den Admin freigeschaltet."
+
+---
+
+## 3. Bewertungsfreigabe durch Admin bei Auftragsterminen
+
+### 3a. Neue Spalte in `order_assignments`: `review_unlocked`
+
+**Migration**: Neue boolesche Spalte `review_unlocked` (default `false`) auf `order_assignments`. Bei Platzhalter-Auftraegen wird dieses Feld nicht beachtet -- dort funktioniert alles wie bisher.
 
 ```sql
-CHECK (sender_role = ANY (ARRAY['admin', 'user']))
+ALTER TABLE order_assignments ADD COLUMN review_unlocked boolean NOT NULL DEFAULT false;
 ```
 
-Dieser Constraint blockiert das Einfuegen von Nachrichten mit `sender_role = 'system'` auf Datenbankebene -- noch bevor die RLS-Policy ueberhaupt greift. Die RLS-Policy ist korrekt, aber der Constraint verhindert den Insert.
+### 3b. Admin-Auftragstermine: Freigabe-Button
 
-## Loesung
+**Datei**: `AdminAuftragstermine.tsx`
 
-Eine Migration, die den bestehenden CHECK-Constraint droppt und durch einen erweiterten ersetzt:
+- Zusaetzlich wird `order_assignments` geladen (status + review_unlocked) fuer jedes Appointment
+- Neue Spalte "Aktion" in der Tabelle
+- Button "Bewertung freigeben" wenn `review_unlocked = false`
+- Badge "Freigegeben" wenn `review_unlocked = true`
+- Klick auf Button setzt `review_unlocked = true` fuer die entsprechende `order_id` + `contract_id` Kombination in `order_assignments`
 
-```sql
-ALTER TABLE chat_messages DROP CONSTRAINT chat_messages_sender_role_check;
-ALTER TABLE chat_messages ADD CONSTRAINT chat_messages_sender_role_check
-  CHECK (sender_role = ANY (ARRAY['admin', 'user', 'system']));
-```
+### 3c. Mitarbeiter: Bewertungs-Button nur wenn freigeschaltet
 
-## Zusaetzlich: Fehlerbehandlung im Code
+**Datei**: `AuftragDetails.tsx`
 
-**Datei**: `src/pages/mitarbeiter/AuftragDetails.tsx`
+- `review_unlocked` wird aus `order_assignments` mitgeladen (wird bereits geladen, Feld muss ergaenzt werden)
+- Bei Nicht-Platzhalter-Auftraegen:
+  - Wenn `review_unlocked = false`: Bewertungsfragen werden als Info angezeigt + Hinweistext "Bewertung wird nach Freigabe durch Ihren Ansprechpartner freigeschaltet."
+  - Wenn `review_unlocked = true`: "Bewertung starten"-Button wird angezeigt (gleich wie bei Platzhaltern)
+- Bei Platzhalter-Auftraegen: Keine Aenderung, alles wie bisher
 
-Der Insert fuer die System-Nachricht (Zeile 169-173) prueft aktuell nicht auf Fehler. Falls der Insert fehlschlaegt, bemerkt der Nutzer das nicht. Ich fuege eine Fehlerbehandlung mit `console.error` hinzu, damit solche Probleme kuenftig sichtbar sind.
+### 3d. Praemien-Gutschrift nur bei Genehmigung
 
-## Zusammenfassung
+Dies funktioniert bereits korrekt: In `AdminBewertungen.tsx` wird die Praemie nur gutgeschrieben wenn der Admin auf "Genehmigen" klickt (Zeile 119-157). Keine Aenderung noetig.
 
-| Aenderung | Datei |
+---
+
+## 4. Button-Text: "Auftrag ansehen" bei gebuchtem Termin
+
+**Dateien**: `MitarbeiterDashboard.tsx`, `MitarbeiterAuftraege.tsx`
+
+In beiden `StatusButton`-Komponenten im `default`-Case: Wenn `!isPlaceholder && hasAppointment`, wird der Text von "Auftrag starten" auf "Auftrag ansehen" geaendert und das Icon wird angepasst (z.B. `ExternalLink` durch `Eye` ersetzt).
+
+---
+
+## Technische Zusammenfassung
+
+| Datei | Aenderung |
 |---|---|
-| CHECK-Constraint erweitern auf `'system'` | Migration (neu) |
-| Fehlerbehandlung beim chat_messages Insert | `AuftragDetails.tsx` |
-
-Nach dieser Aenderung wird die Systemnachricht bei der naechsten Terminbuchung korrekt im Chat erscheinen -- auch wenn der Chat nicht geoeffnet ist, da die Nachricht in der Datenbank gespeichert wird und beim naechsten Oeffnen geladen wird.
-
+| Migration (neu) | `review_unlocked` boolean auf `order_assignments` |
+| `MitarbeiterAuftraege.tsx` | Euro-Zeichen, Button "Auftrag ansehen" |
+| `MitarbeiterDashboard.tsx` | Euro-Zeichen, Button "Auftrag ansehen" |
+| `AuftragDetails.tsx` | Euro-Zeichen, Bewertungsfragen fuer alle Auftraege, Freischaltlogik |
+| `AdminAuftragstermine.tsx` | Freigabe-Button-Spalte, Assignment-Daten laden |
+| `types.ts` | `review_unlocked` Feld in Types ergaenzen |
