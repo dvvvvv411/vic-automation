@@ -1,35 +1,18 @@
 
+# Systemnachrichten als ungelesene Nachrichten zaehlen
 
-# Sortierung der Auftrags-Cards nach Status
+## Problem
 
-## Aenderung
+Im `ChatWidget` werden ungelesene Nachrichten nur gezaehlt wenn `sender_role === "admin"`. Systemnachrichten (z.B. Terminbuchungen) werden komplett ignoriert -- kein Badge, keine Benachrichtigung.
 
-Die Auftrags-Cards auf `/mitarbeiter/auftraege` werden nach Status sortiert, sodass offene Auftraege immer zuerst erscheinen.
+## Loesung
 
-**Sortierreihenfolge:**
-1. Offen
-2. In Ueberprüfung
-3. Fehlgeschlagen
-4. Erfolgreich
+An drei Stellen in `ChatWidget.tsx` wird die Bedingung von `sender_role === "admin"` auf `sender_role !== "user"` geaendert, damit sowohl Admin- als auch Systemnachrichten als ungelesen zaehlen:
 
-## Technische Umsetzung
+**Datei**: `src/components/chat/ChatWidget.tsx`
 
-**Datei**: `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx`
+1. **Realtime-Callback** (Zeile 45): `msg.sender_role === "admin"` wird zu `msg.sender_role !== "user"` -- damit loesen auch Systemnachrichten den Badge und den Benachrichtigungston aus
 
-Nach dem Filtern (`filtered`) wird ein zusaetzlicher Sortierungsschritt eingefuegt, der die Cards anhand einer Status-Prioritaet ordnet:
+2. **Unread-Count beim Laden** (Zeile 123): Der Filter `.eq("sender_role", "admin")` wird zu `.in("sender_role", ["admin", "system"])` -- damit werden auch bestehende ungelesene Systemnachrichten gezaehlt
 
-```typescript
-const statusOrder: Record<string, number> = {
-  offen: 0,
-  in_pruefung: 1,
-  fehlgeschlagen: 2,
-  erfolgreich: 3,
-};
-
-const sorted = [...filtered].sort(
-  (a, b) => (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99)
-);
-```
-
-`sorted` wird dann anstelle von `filtered` im Grid gerendert. Innerhalb desselben Status bleibt die bestehende Sortierung nach `assigned_at` (neueste zuerst) erhalten, da `Array.sort` stabil ist.
-
+3. **Mark-as-read beim Oeffnen** (Zeile 135): Der Filter `.eq("sender_role", "admin")` wird zu `.in("sender_role", ["admin", "system"])` -- damit werden beim Oeffnen des Chats auch Systemnachrichten als gelesen markiert
