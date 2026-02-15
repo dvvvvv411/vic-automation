@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, MapPin, Star, ClipboardCheck, Euro, CreditCard } from "lucide-react";
+import { User, Mail, Phone, MapPin, Star, ClipboardCheck, Euro, CreditCard, CalendarClock } from "lucide-react";
+import { addMonths, startOfMonth, format, startOfDay } from "date-fns";
+import { de } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,13 +32,17 @@ const MeineDaten = () => {
   const { contract, loading: contextLoading } = useOutletContext<ContextType>();
   const [contractDetails, setContractDetails] = useState<ContractDetails | null>(null);
   const [stats, setStats] = useState({ ratedOrders: 0, avgRating: 0 });
+  const [pendingPayout, setPendingPayout] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!contract?.id) return;
 
     const fetchData = async () => {
-      const [contractRes, reviewsRes] = await Promise.all([
+      const now = new Date();
+      const monthStart = startOfDay(startOfMonth(now));
+
+      const [contractRes, reviewsRes, assignmentsRes] = await Promise.all([
         supabase
           .from("employment_contracts")
           .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name")
@@ -46,6 +52,11 @@ const MeineDaten = () => {
           .from("order_reviews")
           .select("order_id, rating")
           .eq("contract_id", contract.id),
+        supabase
+          .from("order_assignments")
+          .select("order_id, orders(reward)")
+          .eq("contract_id", contract.id)
+          .eq("status", "erfolgreich"),
       ]);
 
       if (contractRes.data) {
@@ -56,6 +67,32 @@ const MeineDaten = () => {
         const uniqueOrders = new Set(reviewsRes.data.map((r) => r.order_id));
         const avg = reviewsRes.data.reduce((sum, r) => sum + r.rating, 0) / reviewsRes.data.length;
         setStats({ ratedOrders: uniqueOrders.size, avgRating: Math.round(avg * 10) / 10 });
+      }
+
+      // Calculate current month payout from successful assignments
+      if (assignmentsRes.data) {
+        // Get reviews created this month to filter
+        const reviewsThisMonth = await supabase
+          .from("order_reviews")
+          .select("order_id, created_at")
+          .eq("contract_id", contract.id)
+          .gte("created_at", monthStart.toISOString());
+
+        const thisMonthOrderIds = new Set(
+          (reviewsThisMonth.data || []).map((r) => r.order_id)
+        );
+
+        let total = 0;
+        for (const a of assignmentsRes.data) {
+          if (thisMonthOrderIds.has(a.order_id)) {
+            const reward = (a as any).orders?.reward as string | undefined;
+            if (reward) {
+              const parsed = parseFloat(reward.replace(/[^0-9.,]/g, "").replace(",", "."));
+              if (!isNaN(parsed)) total += parsed;
+            }
+          }
+        }
+        setPendingPayout(total);
       }
 
       setLoading(false);
@@ -134,7 +171,7 @@ const MeineDaten = () => {
         </Card>
       </motion.div>
 
-      {/* Bank Card */}
+      {/* Bank Card + Payouts */}
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 }}>
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-4">
@@ -144,27 +181,42 @@ const MeineDaten = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="w-full max-w-md">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left: Bank card */}
               <div className="relative rounded-2xl bg-gradient-to-br from-slate-800 via-slate-700 to-slate-600 p-6 text-white shadow-xl aspect-[1.6/1] flex flex-col justify-between overflow-hidden">
-                {/* Decorative circles */}
-                <div className="absolute top-4 right-4 flex gap-[-8px]">
+                <div className="absolute top-4 right-4 flex">
                   <div className="w-8 h-8 rounded-full bg-white/20" />
                   <div className="w-8 h-8 rounded-full bg-white/10 -ml-3" />
                 </div>
-
                 <div className="space-y-1 mt-2">
                   <p className="text-[10px] uppercase tracking-widest text-white/50">IBAN</p>
                   <p className="text-sm font-mono tracking-wider">{formatIban(contractDetails.iban)}</p>
                 </div>
-
                 <div className="flex justify-between items-end">
                   <div className="space-y-0.5">
                     <p className="text-xs text-white/50">BIC: {contractDetails.bic || "—"}</p>
                     <p className="text-xs text-white/50">{contractDetails.bank_name || "—"}</p>
                   </div>
                 </div>
-
                 <p className="text-sm font-semibold tracking-wide">{fullName}</p>
+              </div>
+
+              {/* Right: Payouts */}
+              <div className="flex flex-col justify-center">
+                <h4 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <CalendarClock className="h-4 w-4 text-primary" />
+                  Gehaltsauszahlungen
+                </h4>
+                <div className="rounded-xl bg-muted/50 p-5 space-y-3">
+                  <p className="text-xs text-muted-foreground">Anstehende Gehaltsauszahlung am</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {format(startOfMonth(addMonths(new Date(), 1)), "dd.MM.yyyy", { locale: de })}
+                  </p>
+                  <div className="border-t border-border pt-3">
+                    <p className="text-xs text-muted-foreground">Voraussichtlicher Betrag</p>
+                    <p className="text-2xl font-bold text-primary">€{pendingPayout.toFixed(2)}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
