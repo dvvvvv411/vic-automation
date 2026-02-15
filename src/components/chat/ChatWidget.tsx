@@ -53,6 +53,19 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
     },
   });
 
+  // Auto-welcome on first contact
+  const welcomeSentRef = useRef(false);
+  useEffect(() => {
+    if (loading || !contractId || messages.length > 0 || welcomeSentRef.current) return;
+    welcomeSentRef.current = true;
+
+    const name = adminProfile.display_name;
+    const text = name
+      ? `Herzlich willkommen im Livechat! Mein Name ist ${name} und ich bin Ihr persönlicher Ansprechpartner. Wie kann ich Ihnen behilflich sein?`
+      : `Herzlich willkommen im Livechat! Ich bin Ihr persönlicher Ansprechpartner. Wie kann ich Ihnen behilflich sein?`;
+
+    sendMessage(text, "admin");
+  }, [loading, contractId, messages.length, adminProfile.display_name, sendMessage]);
 
   // Load admin profile (with sessionStorage cache)
   useEffect(() => {
