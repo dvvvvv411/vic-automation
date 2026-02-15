@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut } from "lucide-react";
+import { LayoutDashboard, ClipboardList, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -25,6 +25,7 @@ interface MitarbeiterSidebarProps {
 
 const navItems = [
   { title: "Dashboard", url: "/mitarbeiter", icon: LayoutDashboard },
+  { title: "Aufträge", url: "/mitarbeiter/auftraege", icon: ClipboardList },
 ];
 
 export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSidebarProps) {
