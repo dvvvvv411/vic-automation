@@ -340,6 +340,51 @@ export type Database = {
           },
         ]
       }
+      order_reviews: {
+        Row: {
+          comment: string
+          contract_id: string
+          created_at: string
+          id: string
+          order_id: string
+          question: string
+          rating: number
+        }
+        Insert: {
+          comment: string
+          contract_id: string
+          created_at?: string
+          id?: string
+          order_id: string
+          question: string
+          rating: number
+        }
+        Update: {
+          comment?: string
+          contract_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          question?: string
+          rating?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_reviews_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           appstore_url: string | null
