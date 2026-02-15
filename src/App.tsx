@@ -20,6 +20,7 @@ import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
 import MitarbeiterLayout from "./components/mitarbeiter/MitarbeiterLayout";
 import MitarbeiterDashboard from "./pages/mitarbeiter/MitarbeiterDashboard";
+import AuftragDetails from "./pages/mitarbeiter/AuftragDetails";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => (
               }
             >
               <Route index element={<MitarbeiterDashboard />} />
+              <Route path="auftragdetails/:id" element={<AuftragDetails />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
