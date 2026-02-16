@@ -197,7 +197,7 @@ const Auth = () => {
                   <Input
                     id="login-email"
                     type="email"
-                    placeholder="name@unternehmen.de"
+placeholder="ihre@email.de"
                     className="h-12 rounded-lg"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
@@ -241,7 +241,7 @@ const Auth = () => {
                   <Input
                     id="reg-email"
                     type="email"
-                    placeholder="name@unternehmen.de"
+placeholder="ihre@email.de"
                     className="h-12 rounded-lg"
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
