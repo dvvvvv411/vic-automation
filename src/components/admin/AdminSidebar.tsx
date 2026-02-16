@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
@@ -18,17 +19,37 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 
-const navItems = [
-  { title: "Übersicht", url: "/admin", icon: LayoutDashboard },
-  { title: "Brandings", url: "/admin/brandings", icon: Palette },
-  { title: "Bewerbungen", url: "/admin/bewerbungen", icon: FileText },
-  { title: "Bewerbungsgespräche", url: "/admin/bewerbungsgespraeche", icon: Calendar },
-  { title: "Arbeitsverträge", url: "/admin/arbeitsvertraege", icon: FileCheck },
-  { title: "Mitarbeiter", url: "/admin/mitarbeiter", icon: Users },
-  { title: "Aufträge", url: "/admin/auftraege", icon: ClipboardList },
-  { title: "Auftragstermine", url: "/admin/auftragstermine", icon: CalendarClock },
-  { title: "Livechat", url: "/admin/livechat", icon: MessageCircle },
-  { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
+const navGroups = [
+  {
+    label: null,
+    items: [
+      { title: "Übersicht", url: "/admin", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Recruiting",
+    items: [
+      { title: "Bewerbungen", url: "/admin/bewerbungen", icon: FileText },
+      { title: "Bewerbungsgespräche", url: "/admin/bewerbungsgespraeche", icon: Calendar },
+      { title: "Arbeitsverträge", url: "/admin/arbeitsvertraege", icon: FileCheck },
+    ],
+  },
+  {
+    label: "Betrieb",
+    items: [
+      { title: "Mitarbeiter", url: "/admin/mitarbeiter", icon: Users },
+      { title: "Aufträge", url: "/admin/auftraege", icon: ClipboardList },
+      { title: "Auftragstermine", url: "/admin/auftragstermine", icon: CalendarClock },
+      { title: "Livechat", url: "/admin/livechat", icon: MessageCircle },
+      { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
+    ],
+  },
+  {
+    label: "Einstellungen",
+    items: [
+      { title: "Brandings", url: "/admin/brandings", icon: Palette },
+    ],
+  },
 ];
 
 export function AdminSidebar() {
@@ -131,33 +152,38 @@ export function AdminSidebar() {
           <p className="text-xs text-muted-foreground mt-0.5">Kontrollpanel</p>
         </div>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end
-                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
-                      activeClassName="bg-primary/10 text-primary font-medium"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span className="flex-1">{item.title}</span>
-                      {badgeCounts[item.url] > 0 && (
-                        <Badge className="ml-auto text-xs px-1.5 py-0 min-w-[1.25rem] h-5 flex items-center justify-center">
-                          {badgeCounts[item.url]}
-                        </Badge>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {navGroups.map((group, groupIndex) => (
+          <div key={group.label ?? "overview"}>
+            {groupIndex > 0 && <Separator className="mx-4 my-2" />}
+            <SidebarGroup>
+              {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild>
+                        <NavLink
+                          to={item.url}
+                          end
+                          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
+                          activeClassName="bg-primary/10 text-primary font-medium"
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span className="flex-1">{item.title}</span>
+                          {badgeCounts[item.url] > 0 && (
+                            <Badge className="ml-auto text-xs px-1.5 py-0 min-w-[1.25rem] h-5 flex items-center justify-center">
+                              {badgeCounts[item.url]}
+                            </Badge>
+                          )}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </div>
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-border p-4">
