@@ -1,48 +1,19 @@
 
 
-# Admin-Sidebar in Gruppen strukturieren
+# Horizontale Scrollbar in der Admin-Sidebar entfernen
 
 ## Aenderung
 
-Die Navigation in der Admin-Sidebar wird in vier logische Gruppen mit Trennlinien (Separator) aufgeteilt, statt alle Links in einer einzigen Liste zu zeigen.
+Die `SidebarContent`-Komponente verwendet aktuell `overflow-auto`, was sowohl horizontales als auch vertikales Scrollen erlaubt. Das wird auf `overflow-y-auto overflow-x-hidden` geaendert, damit nur vertikal gescrollt werden kann.
 
-## Gruppen
+## Technische Details
 
-1. **Uebersicht** - Dashboard
-2. **Recruiting** - Bewerbungen, Bewerbungsgespraeche, Arbeitsvertraege
-3. **Betrieb** - Mitarbeiter, Auftraege, Auftragstermine, Livechat, Bewertungen
-4. **Einstellungen** - Brandings
+**Datei**: `src/components/ui/sidebar.tsx`, Zeile 334
 
-## Technische Umsetzung
-
-**Datei**: `src/components/admin/AdminSidebar.tsx`
-
-- Das einzelne `navItems`-Array wird durch mehrere Gruppen-Arrays ersetzt, jeweils mit einem Label
-- Jede Gruppe bekommt eine eigene `SidebarGroup` mit `SidebarGroupLabel`
-- Zwischen den Gruppen wird ein `Separator` eingefuegt fuer visuelle Trennung
-- Die Badge-Logik bleibt unveraendert
-
-Struktur:
+Ersetze `overflow-auto` durch `overflow-y-auto overflow-x-hidden`, sodass die Zeile wird:
 
 ```
-const navGroups = [
-  {
-    label: null,  // keine Ueberschrift fuer Uebersicht
-    items: [Uebersicht]
-  },
-  {
-    label: "Recruiting",
-    items: [Bewerbungen, Bewerbungsgespraeche, Arbeitsvertraege]
-  },
-  {
-    label: "Betrieb",
-    items: [Mitarbeiter, Auftraege, Auftragstermine, Livechat, Bewertungen]
-  },
-  {
-    label: "Einstellungen",
-    items: [Brandings]
-  }
-]
+"flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden group-data-[collapsible=icon]:overflow-hidden"
 ```
 
 Keine neuen Dateien oder Abhaengigkeiten noetig.
