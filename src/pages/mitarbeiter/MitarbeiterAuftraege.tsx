@@ -252,7 +252,7 @@ const MitarbeiterAuftraege = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.06, ease: "easeOut" }}
             >
-              <Card className="bg-background border border-border/50 shadow-sm rounded-xl hover:shadow-md transition-shadow flex flex-col h-full">
+              <Card className="bg-white border border-border/40 shadow-md rounded-2xl hover:shadow-lg transition-all duration-200 flex flex-col h-full border-l-4 border-l-primary">
 
                 <CardHeader className="pb-3 pt-5">
                   <div className="flex items-center justify-between mb-2">
