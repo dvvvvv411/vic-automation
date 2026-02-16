@@ -295,7 +295,7 @@ function StatCard({ icon: Icon, label, value, showStars, rating }: { icon: React
       <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary shadow-md shadow-primary/20 mb-2">
         <Icon className="h-5 w-5 text-white" />
       </div>
-      <p className="text-3xl font-extrabold text-foreground">{value}</p>
+      <p className="text-2xl font-semibold text-foreground">{value}</p>
       {showStars && rating && rating > 0 && (
         <div className="flex gap-0.5 mt-1">
           {[1, 2, 3, 4, 5].map((s) => (

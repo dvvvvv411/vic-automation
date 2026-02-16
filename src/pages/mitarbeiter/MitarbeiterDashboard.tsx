@@ -301,7 +301,7 @@ const MitarbeiterDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-extrabold tracking-tight text-foreground">
+                <div className="text-2xl font-semibold tracking-tight text-foreground">
                   {stat.value}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1.5">{stat.detail}</p>
