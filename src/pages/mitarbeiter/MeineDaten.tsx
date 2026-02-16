@@ -278,7 +278,7 @@ const MeineDaten = () => {
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted">
+      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent">
         <Icon className="h-4 w-4 text-muted-foreground" />
       </div>
       <div>
@@ -291,7 +291,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
 
 function StatCard({ icon: Icon, label, value, showStars, rating }: { icon: React.ElementType; label: string; value: string; showStars?: boolean; rating?: number }) {
   return (
-    <div className="flex flex-col items-center text-center p-4 rounded-xl bg-muted/50">
+    <div className="flex flex-col items-center text-center p-4 rounded-xl bg-accent/50">
       <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 mb-2">
         <Icon className="h-5 w-5 text-primary" />
       </div>

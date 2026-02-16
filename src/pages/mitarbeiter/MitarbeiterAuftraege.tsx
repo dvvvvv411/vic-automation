@@ -232,9 +232,9 @@ const MitarbeiterAuftraege = () => {
 
       {/* Cards Grid */}
       {sorted.length === 0 ? (
-        <Card className="border-dashed border-2 border-border/40 rounded-2xl">
+        <Card className="border-dashed border-2 border-border/40 rounded-xl">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center mb-4">
+            <div className="w-14 h-14 rounded-xl bg-accent flex items-center justify-center mb-4">
               <Package className="h-8 w-8 text-muted-foreground/50" />
             </div>
             <h3 className="text-base font-medium text-foreground mb-1">Keine Aufträge</h3>
@@ -252,8 +252,7 @@ const MitarbeiterAuftraege = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.06, ease: "easeOut" }}
             >
-              <Card className="group relative overflow-hidden border border-border/40 ring-1 ring-border/10 shadow-sm hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full bg-card/80 backdrop-blur-sm rounded-2xl">
-                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary/80 to-primary/30 rounded-t-2xl" />
+              <Card className="bg-background border border-border/50 shadow-sm rounded-xl hover:shadow-md transition-shadow flex flex-col h-full">
 
                 <CardHeader className="pb-3 pt-5">
                   <div className="flex items-center justify-between mb-2">
@@ -275,7 +274,7 @@ const MitarbeiterAuftraege = () => {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Prämie</span>
-                      <span className="font-semibold text-primary bg-primary/10 rounded-full px-3 py-0.5">{a.reward}{a.reward.includes("€") ? "" : " €"}</span>
+                      <span className="font-semibold text-primary">{a.reward}{a.reward.includes("€") ? "" : " €"}</span>
                     </div>
 
                     {/* Appointment badge for non-placeholder with booked appointment */}
