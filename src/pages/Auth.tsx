@@ -13,9 +13,9 @@ import { toast } from "sonner";
 import { Shield, CheckCircle, Building2 } from "lucide-react";
 
 const trustPoints = [
-  { icon: Shield, title: "Enterprise Security", desc: "Höchste Sicherheitsstandards" },
+  { icon: Shield, title: "Sicherer Zugang", desc: "Geschützter Mitarbeiterbereich" },
   { icon: CheckCircle, title: "DSGVO-konform", desc: "Vollständig datenschutzkonform" },
-  { icon: Building2, title: "Seit 2026", desc: "Deutsches Qualitätsunternehmen" },
+  { icon: Building2, title: "Einfach & Schnell", desc: "Alle Infos an einem Ort" },
 ];
 
 const Auth = () => {
@@ -73,12 +73,13 @@ const Auth = () => {
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-[hsl(217,91%,25%)] to-[hsl(217,91%,50%)] text-white flex-col justify-center px-16 overflow-hidden">
-        {/* Geometric decorations */}
-        <div className="absolute top-20 right-20 w-64 h-64 rounded-full border border-white/10" />
-        <div className="absolute bottom-32 left-10 w-40 h-40 rounded-full border border-white/10" />
-        <div className="absolute top-1/2 right-10 w-24 h-24 rounded-full bg-white/5" />
-        <div className="absolute bottom-10 right-32 w-16 h-16 rounded-full bg-white/5" />
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-[hsl(217,80%,55%)] via-[hsl(220,85%,60%)] to-[hsl(210,90%,65%)] text-white flex-col justify-center px-16 overflow-hidden">
+        {/* Glassmorphism decorations */}
+        <div className="absolute -top-10 -right-10 w-80 h-80 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute bottom-20 -left-16 w-72 h-72 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute top-1/3 right-1/4 w-48 h-48 rounded-full bg-white/5 blur-2xl" />
+        <div className="absolute bottom-1/4 right-10 w-32 h-32 rounded-full bg-white/10 blur-xl" />
+        <div className="absolute top-2/3 left-1/3 w-24 h-24 rounded-full bg-white/5 blur-lg" />
 
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -90,7 +91,7 @@ const Auth = () => {
             Vic Automation <span className="font-light">2.0</span>
           </h1>
           <p className="text-lg text-white/70 mb-12">
-            Professionelle App-Testing Plattform
+            Ihr Mitarbeiterportal
           </p>
 
           <div className="space-y-6">
@@ -128,7 +129,7 @@ const Auth = () => {
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Vic Automation <span className="text-primary">2.0</span>
             </h1>
-            <p className="text-muted-foreground text-sm mt-1">App-Testing Plattform</p>
+            <p className="text-muted-foreground text-sm mt-1">Mitarbeiterportal</p>
           </div>
 
           <div className="mb-8">
