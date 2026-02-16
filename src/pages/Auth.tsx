@@ -135,17 +135,17 @@ const Auth = () => {
             Ihr Mitarbeiterportal
           </p>
 
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
             {trustPoints.map((point, i) => (
               <motion.div
                 key={point.title}
-                initial={{ opacity: 0, x: -15 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.4, delay: 0.3 + i * 0.15 }}
-                className="flex items-center gap-4"
+                className="flex items-center gap-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-5 hover:bg-white/15 hover:-translate-y-1 transition-all duration-300 cursor-default"
               >
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/10">
-                  <point.icon className="w-5 h-5" />
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-white/25 to-white/5">
+                  <point.icon className="w-6 h-6" />
                 </div>
                 <div>
                   <p className="font-semibold text-sm">{point.title}</p>
