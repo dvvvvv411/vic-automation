@@ -29,6 +29,37 @@ const Auth = () => {
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
+  const [brandingReady, setBrandingReady] = useState(false);
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      let hostname = window.location.hostname;
+      const parts = hostname.split(".");
+      if (parts.length > 2) {
+        hostname = parts.slice(-2).join(".");
+      }
+
+      const { data } = await supabase
+        .from("brandings")
+        .select("logo_url")
+        .eq("domain", hostname)
+        .maybeSingle();
+
+      if (data?.logo_url) {
+        setBrandingLogoUrl(data.logo_url);
+      } else {
+        const { data: fallback } = await supabase
+          .from("brandings")
+          .select("logo_url")
+          .eq("domain", "frik-maxeiner.de")
+          .maybeSingle();
+        setBrandingLogoUrl(fallback?.logo_url ?? null);
+      }
+      setBrandingReady(true);
+    };
+    fetchBranding();
+  }, []);
 
   useEffect(() => {
     if (user && role) {
@@ -70,6 +101,10 @@ const Auth = () => {
     }
   };
 
+  if (!brandingReady) {
+    return <div className="min-h-screen bg-background" />;
+  }
+
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel */}
@@ -87,10 +122,16 @@ const Auth = () => {
           transition={{ duration: 0.6 }}
           className="relative z-10"
         >
-          <h1 className="text-4xl font-bold tracking-tight mb-2">
-            Vic Automation <span className="font-light">2.0</span>
-          </h1>
-          <p className="text-lg text-white/70 mb-12">
+          {brandingLogoUrl ? (
+            <img
+              src={brandingLogoUrl}
+              alt="Logo"
+              className="max-h-16 w-auto object-contain brightness-0 invert"
+            />
+          ) : (
+            <h1 className="text-4xl font-bold tracking-tight mb-2">Mitarbeiterportal</h1>
+          )}
+          <p className="text-lg text-white/70 mb-12 mt-2">
             Ihr Mitarbeiterportal
           </p>
 
@@ -126,9 +167,11 @@ const Auth = () => {
         >
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-10">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Vic Automation <span className="text-primary">2.0</span>
-            </h1>
+            {brandingLogoUrl ? (
+              <img src={brandingLogoUrl} alt="Logo" className="max-h-12 w-auto object-contain mx-auto" />
+            ) : (
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">Mitarbeiterportal</h1>
+            )}
             <p className="text-muted-foreground text-sm mt-1">Mitarbeiterportal</p>
           </div>
 
