@@ -36,9 +36,9 @@ export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSid
   const userInitial = user?.email?.charAt(0).toUpperCase() || "?";
 
   return (
-    <Sidebar className="border-r border-border/40 bg-card">
+    <Sidebar className="border-r border-border/30 bg-background">
       {/* Logo */}
-      <div className="py-6 px-5 border-b border-border/40 flex justify-center items-center">
+      <div className="py-6 px-5 border-b border-border/30 flex justify-center items-center">
         {brandingLoading ? (
           <Skeleton className="h-10 w-32" />
         ) : branding?.logo_url ? (
@@ -55,20 +55,20 @@ export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSid
       </div>
 
       {/* Navigation */}
-      <SidebarContent className="pt-6 px-3">
+      <SidebarContent className="pt-5 px-3">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
+            <SidebarMenu className="space-y-0.5">
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
                       end
-                      className="relative flex items-center gap-3 px-3 py-3 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200"
-                      activeClassName="bg-primary/10 text-primary font-medium shadow-sm border-l-[3px] border-primary"
+                      className="relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-150"
+                      activeClassName="bg-primary/[0.08] text-primary font-medium"
                     >
-                      <item.icon className="h-5 w-5" />
+                      <item.icon className="h-[18px] w-[18px]" />
                       <span className="text-sm">{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
@@ -80,10 +80,10 @@ export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSid
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="border-t border-border/40 p-4">
-        <div className="flex flex-col gap-3">
+      <SidebarFooter className="border-t border-border/30 p-4">
+        <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-3 px-1">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold shrink-0">
+            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-muted-foreground text-xs font-semibold shrink-0">
               {userInitial}
             </div>
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
@@ -92,7 +92,7 @@ export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSid
             variant="ghost"
             size="sm"
             onClick={signOut}
-            className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all duration-200"
+            className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors duration-150"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Abmelden

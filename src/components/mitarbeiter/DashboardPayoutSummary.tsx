@@ -20,7 +20,7 @@ const DashboardPayoutSummary = ({ balance }: Props) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.78, ease: "easeOut" }}
     >
-      <Card className="border border-border/40 ring-1 ring-border/10 shadow-sm bg-card/80 backdrop-blur-sm rounded-2xl h-full">
+      <Card className="bg-background border border-border/50 shadow-sm rounded-xl hover:shadow-md transition-shadow h-full">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-semibold text-foreground">Gehaltsauszahlung</CardTitle>
