@@ -147,7 +147,7 @@ const MeineDaten = () => {
 
       {/* Personal Info */}
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}>
-        <Card className="border-border/60 shadow-sm">
+        <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <User className="h-4 w-4 text-primary" />
@@ -169,7 +169,7 @@ const MeineDaten = () => {
 
       {/* Statistics */}
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }}>
-        <Card className="border-border/60 shadow-sm">
+        <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Star className="h-4 w-4 text-primary" />
@@ -188,7 +188,7 @@ const MeineDaten = () => {
 
       {/* Bank Card + Payouts */}
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 }}>
-        <Card className="border-border/60 shadow-sm">
+        <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-primary" />
@@ -238,7 +238,7 @@ const MeineDaten = () => {
 
       {/* Reward History */}
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.4 }}>
-        <Card className="border-border/60 shadow-sm">
+        <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <History className="h-4 w-4 text-primary" />
@@ -278,8 +278,8 @@ const MeineDaten = () => {
 function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent">
-        <Icon className="h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-primary/10">
+        <Icon className="h-4 w-4 text-primary" />
       </div>
       <div>
         <p className="text-xs text-muted-foreground">{label}</p>
@@ -291,11 +291,11 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
 
 function StatCard({ icon: Icon, label, value, showStars, rating }: { icon: React.ElementType; label: string; value: string; showStars?: boolean; rating?: number }) {
   return (
-    <div className="flex flex-col items-center text-center p-4 rounded-xl bg-accent/50">
-      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 mb-2">
-        <Icon className="h-5 w-5 text-primary" />
+    <div className="flex flex-col items-center text-center p-5 rounded-2xl bg-white border border-border/40 shadow-md">
+      <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary shadow-md shadow-primary/20 mb-2">
+        <Icon className="h-5 w-5 text-white" />
       </div>
-      <p className="text-2xl font-bold text-foreground">{value}</p>
+      <p className="text-3xl font-extrabold text-foreground">{value}</p>
       {showStars && rating && rating > 0 && (
         <div className="flex gap-0.5 mt-1">
           {[1, 2, 3, 4, 5].map((s) => (

@@ -133,7 +133,7 @@ export default function MitarbeiterBewertungen() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: idx * 0.05 }}
             >
-              <Card className="bg-background border border-border/50 shadow-sm rounded-xl hover:shadow-md transition-shadow overflow-hidden">
+              <Card className="bg-white border border-border/40 shadow-md rounded-2xl hover:shadow-lg transition-all duration-200 overflow-hidden">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base font-semibold text-foreground">

@@ -38,7 +38,7 @@ export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSid
   return (
     <Sidebar className="border-r border-border/30 bg-background">
       {/* Logo */}
-      <div className="py-6 px-5 border-b border-border/30 flex justify-center items-center">
+      <div className="py-7 px-5 border-b border-border/30 flex justify-center items-center">
         {brandingLoading ? (
           <Skeleton className="h-10 w-32" />
         ) : branding?.logo_url ? (
@@ -65,10 +65,10 @@ export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSid
                     <NavLink
                       to={item.url}
                       end
-                      className="relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-150"
-                      activeClassName="bg-primary/[0.08] text-primary font-medium"
+                      className="relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-muted-foreground hover:bg-slate-100 hover:text-foreground transition-all duration-150"
+                      activeClassName="bg-primary text-white font-medium shadow-md"
                     >
-                      <item.icon className="h-[18px] w-[18px]" />
+                      <item.icon className="h-5 w-5" />
                       <span className="text-sm">{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
@@ -83,7 +83,7 @@ export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSid
       <SidebarFooter className="border-t border-border/30 p-4">
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-3 px-1">
-            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-muted-foreground text-xs font-semibold shrink-0">
+            <div className="w-8 h-8 rounded-full bg-primary/10 ring-2 ring-primary/20 flex items-center justify-center text-primary text-xs font-semibold shrink-0">
               {userInitial}
             </div>
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>

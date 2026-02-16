@@ -291,17 +291,17 @@ const MitarbeiterDashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.1 + i * 0.08, ease: "easeOut" }}
           >
-            <Card className="bg-background border border-border/50 shadow-sm rounded-xl hover:shadow-md transition-shadow">
+            <Card className="bg-white border border-border/40 shadow-md rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">
                   {stat.label}
                 </CardTitle>
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-                  <stat.icon className="h-5 w-5 text-primary" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary shadow-md shadow-primary/20">
+                  <stat.icon className="h-5 w-5 text-white" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold tracking-tight text-foreground">
+                <div className="text-4xl font-extrabold tracking-tight text-foreground">
                   {stat.value}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1.5">{stat.detail}</p>
@@ -355,7 +355,7 @@ const MitarbeiterDashboard = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.4, delay: 0.55 + i * 0.08, ease: "easeOut" }}
                     >
-                      <Card className="bg-background border border-border/50 shadow-sm rounded-xl hover:shadow-md transition-shadow flex flex-col h-full">
+                      <Card className="bg-white border border-border/40 shadow-md rounded-2xl hover:shadow-lg transition-all duration-200 flex flex-col h-full border-l-4 border-l-primary">
 
                         <CardHeader className="pb-3 pt-5">
                           <div className="flex items-center justify-between mb-2">
