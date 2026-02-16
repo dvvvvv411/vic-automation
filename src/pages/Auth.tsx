@@ -108,7 +108,7 @@ const Auth = () => {
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-[hsl(217,80%,55%)] via-[hsl(220,85%,60%)] to-[hsl(210,90%,65%)] text-white flex-col justify-center px-16 overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-[hsl(217,80%,55%)] via-[hsl(220,85%,60%)] to-[hsl(210,90%,65%)] text-white flex-col justify-center items-center px-16 overflow-hidden text-center">
         {/* Glassmorphism decorations */}
         <div className="absolute -top-10 -right-10 w-80 h-80 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute bottom-20 -left-16 w-72 h-72 rounded-full bg-white/10 blur-2xl" />
@@ -120,7 +120,7 @@ const Auth = () => {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
-          className="relative z-10"
+          className="relative z-10 flex flex-col items-center"
         >
           {brandingLogoUrl ? (
             <img
