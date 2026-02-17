@@ -9,9 +9,12 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
-import { FileCheck, ChevronLeft, ChevronRight, Eye, CheckCircle, User, Phone, Mail, Building2, CreditCard, Shield, ImageIcon, Copy } from "lucide-react";
+import { FileCheck, ChevronLeft, ChevronRight, Eye, CheckCircle, User, Phone, Mail, Building2, CreditCard, Shield, ImageIcon, Copy, CalendarIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { de } from "date-fns/locale/de";
 
 const PAGE_SIZE = 20;
 
@@ -20,6 +23,8 @@ export default function AdminArbeitsvertraege() {
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [startDateDialogOpen, setStartDateDialogOpen] = useState(false);
+  const [confirmedStartDate, setConfirmedStartDate] = useState<Date | undefined>(undefined);
   const queryClient = useQueryClient();
 
   // Fetch all interview_appointments with status=erfolgreich + their contracts
@@ -58,8 +63,28 @@ export default function AdminArbeitsvertraege() {
 
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
 
+  const openStartDateDialog = (contract: any) => {
+    const dateStr = contract.desired_start_date;
+    const parsed = dateStr ? new Date(dateStr + "T00:00:00") : undefined;
+    setConfirmedStartDate(parsed);
+    setStartDateDialogOpen(true);
+  };
+
   const handleApprove = async (contractId: string) => {
     try {
+      // Update desired_start_date if changed
+      if (confirmedStartDate) {
+        const formatted = format(confirmedStartDate, "yyyy-MM-dd");
+        const { error: updateError } = await supabase
+          .from("employment_contracts")
+          .update({ desired_start_date: formatted })
+          .eq("id", contractId);
+        if (updateError) {
+          toast.error("Fehler beim Aktualisieren des Startdatums.");
+          return;
+        }
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
         "https://luorlnagxpsibarcygjm.supabase.co/functions/v1/create-employee-account",
@@ -79,6 +104,7 @@ export default function AdminArbeitsvertraege() {
         return;
       }
       toast.success(`Genehmigt! Temporäres Passwort: ${result.temp_password}`, { duration: 15000 });
+      setStartDateDialogOpen(false);
       setDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["arbeitsvertraege"] });
     } catch {
@@ -284,7 +310,7 @@ export default function AdminArbeitsvertraege() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Schließen</Button>
             {selectedContract?.status === "eingereicht" && (
-              <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleApprove(selectedContract.id)}>
+              <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => openStartDateDialog(selectedContract)}>
                 <CheckCircle className="h-4 w-4 mr-1" /> Genehmigen
               </Button>
             )}
@@ -302,6 +328,45 @@ export default function AdminArbeitsvertraege() {
           {imagePreview && (
             <img src={imagePreview} alt="Dokumentenvorschau" className="w-full rounded-lg" />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Start Date Confirmation Dialog */}
+      <Dialog open={startDateDialogOpen} onOpenChange={setStartDateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Startdatum bestätigen</DialogTitle>
+            <DialogDescription>
+              Bitte bestätigen oder ändern Sie das gewünschte Startdatum des Mitarbeiters.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="text-sm text-muted-foreground">
+              Gewähltes Datum:{" "}
+              <span className="font-semibold text-foreground">
+                {confirmedStartDate ? format(confirmedStartDate, "dd. MMMM yyyy", { locale: de }) : "Kein Datum"}
+              </span>
+            </div>
+            <Calendar
+              mode="single"
+              selected={confirmedStartDate}
+              onSelect={setConfirmedStartDate}
+              locale={de}
+              className="rounded-md border pointer-events-auto"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStartDateDialogOpen(false)}>Abbrechen</Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={!confirmedStartDate}
+              onClick={() => selectedContract && handleApprove(selectedContract.id)}
+            >
+              <CheckCircle className="h-4 w-4 mr-1" /> Genehmigen & bestätigen
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
