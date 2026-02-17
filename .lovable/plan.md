@@ -1,33 +1,19 @@
 
 
-# Auszahlungsdatum von 1. auf 15. des Monats aendern
+# Landingpage entfernen und direkt zu /auth weiterleiten
 
-## Problem
-Aktuell wird ueberall der 1. des naechsten Monats als Auszahlungsdatum angezeigt. Es soll auf den 15. geaendert werden.
+## Aenderungen
 
-## Betroffene Stellen
+### 1. `src/pages/Index.tsx` loeschen
+- Die Datei wird nicht mehr benoetigt.
 
-Es gibt **zwei Dateien**, in denen das Auszahlungsdatum berechnet wird:
-
-### 1. `src/components/mitarbeiter/DashboardPayoutSummary.tsx` (Zeile 15)
-- Aktuell: `startOfMonth(addMonths(new Date(), 1))` (= 1. des Folgemonats)
-- Neu: Den 15. des aktuellen oder naechsten Monats berechnen. Wenn heute vor dem 15. liegt, wird der 15. dieses Monats genommen. Wenn heute der 15. oder spaeter ist, wird der 15. des naechsten Monats genommen.
-
-### 2. `src/pages/mitarbeiter/MeineDaten.tsx` (Zeile 227)
-- Gleiche Logik wie oben: `startOfMonth(addMonths(new Date(), 1))` durch die neue Berechnung mit dem 15. ersetzen.
-
-## Logik
-
-```text
-Heute = 17. Februar 2026
-  -> 17 >= 15 -> naechste Auszahlung = 15. Maerz 2026
-
-Beispiel: 10. Maerz 2026
-  -> 10 < 15 -> naechste Auszahlung = 15. Maerz 2026
-```
+### 2. `src/App.tsx` anpassen
+- Den Import von `Index` entfernen
+- Die Route `path="/"` aendern: statt `<Index />` eine Weiterleitung zu `/auth` einrichten mit `<Navigate to="/auth" replace />`
+- `Navigate` aus `react-router-dom` importieren
 
 | Datei | Aenderung |
 |-------|-----------|
-| `src/components/mitarbeiter/DashboardPayoutSummary.tsx` | Auszahlungsdatum auf den 15. umstellen |
-| `src/pages/mitarbeiter/MeineDaten.tsx` | Gleiche Anpassung fuer die Gehaltsseite |
+| `src/pages/Index.tsx` | Datei loeschen |
+| `src/App.tsx` | Index-Import entfernen, Route "/" auf `<Navigate to="/auth" replace />` aendern |
 
