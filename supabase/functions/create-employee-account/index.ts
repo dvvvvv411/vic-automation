@@ -132,6 +132,26 @@ Deno.serve(async (req) => {
       temp_password: tempPassword,
     }).eq("id", contract_id);
 
+    // Generate contract PDF via Docmosis
+    try {
+      const generateUrl = `${supabaseUrl}/functions/v1/generate-contract`;
+      const generateRes = await fetch(generateUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+          apikey: anonKey,
+        },
+        body: JSON.stringify({ contract_id }),
+      });
+      if (!generateRes.ok) {
+        const errData = await generateRes.json();
+        console.error("generate-contract error:", errData);
+      }
+    } catch (genErr) {
+      console.error("generate-contract call failed:", genErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true, temp_password: tempPassword, user_id: newUser.user.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

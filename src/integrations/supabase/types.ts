@@ -184,7 +184,9 @@ export type Database = {
           bank_name: string | null
           bic: string | null
           birth_date: string | null
+          birth_place: string | null
           city: string | null
+          contract_pdf_url: string | null
           created_at: string
           desired_start_date: string | null
           email: string | null
@@ -197,7 +199,10 @@ export type Database = {
           id_front_url: string | null
           last_name: string | null
           marital_status: string | null
+          nationality: string | null
           phone: string | null
+          signature_data: string | null
+          signed_contract_pdf_url: string | null
           social_security_number: string | null
           status: string
           street: string | null
@@ -213,7 +218,9 @@ export type Database = {
           bank_name?: string | null
           bic?: string | null
           birth_date?: string | null
+          birth_place?: string | null
           city?: string | null
+          contract_pdf_url?: string | null
           created_at?: string
           desired_start_date?: string | null
           email?: string | null
@@ -226,7 +233,10 @@ export type Database = {
           id_front_url?: string | null
           last_name?: string | null
           marital_status?: string | null
+          nationality?: string | null
           phone?: string | null
+          signature_data?: string | null
+          signed_contract_pdf_url?: string | null
           social_security_number?: string | null
           status?: string
           street?: string | null
@@ -242,7 +252,9 @@ export type Database = {
           bank_name?: string | null
           bic?: string | null
           birth_date?: string | null
+          birth_place?: string | null
           city?: string | null
+          contract_pdf_url?: string | null
           created_at?: string
           desired_start_date?: string | null
           email?: string | null
@@ -255,7 +267,10 @@ export type Database = {
           id_front_url?: string | null
           last_name?: string | null
           marital_status?: string | null
+          nationality?: string | null
           phone?: string | null
+          signature_data?: string | null
+          signed_contract_pdf_url?: string | null
           social_security_number?: string | null
           status?: string
           street?: string | null
@@ -539,31 +554,59 @@ export type Database = {
         }
         Returns: boolean
       }
-      submit_employment_contract: {
-        Args: {
-          _bank_name: string
-          _bic: string
-          _birth_date: string
-          _city: string
-          _contract_id: string
-          _desired_start_date: string
-          _email: string
-          _employment_type: string
-          _first_name: string
-          _health_insurance: string
-          _iban: string
-          _id_back_url: string
-          _id_front_url: string
-          _last_name: string
-          _marital_status: string
-          _phone: string
-          _social_security_number: string
-          _street: string
-          _tax_id: string
-          _zip_code: string
-        }
-        Returns: undefined
-      }
+      submit_employment_contract:
+        | {
+            Args: {
+              _bank_name: string
+              _bic: string
+              _birth_date: string
+              _birth_place: string
+              _city: string
+              _contract_id: string
+              _desired_start_date: string
+              _email: string
+              _employment_type: string
+              _first_name: string
+              _health_insurance: string
+              _iban: string
+              _id_back_url: string
+              _id_front_url: string
+              _last_name: string
+              _marital_status: string
+              _nationality: string
+              _phone: string
+              _social_security_number: string
+              _street: string
+              _tax_id: string
+              _zip_code: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _bank_name: string
+              _bic: string
+              _birth_date: string
+              _city: string
+              _contract_id: string
+              _desired_start_date: string
+              _email: string
+              _employment_type: string
+              _first_name: string
+              _health_insurance: string
+              _iban: string
+              _id_back_url: string
+              _id_front_url: string
+              _last_name: string
+              _marital_status: string
+              _phone: string
+              _social_security_number: string
+              _street: string
+              _tax_id: string
+              _zip_code: string
+            }
+            Returns: undefined
+          }
       update_application_phone: {
         Args: { _application_id: string; _phone: string }
         Returns: undefined
