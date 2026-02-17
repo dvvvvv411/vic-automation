@@ -168,6 +168,41 @@ const MeineDaten = () => {
         </Card>
       </motion.div>
 
+      {/* Arbeitsvertrag */}
+      {contract?.signed_contract_pdf_url && (
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
+          <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <FileDown className="h-4 w-4 text-primary" />
+                Arbeitsvertrag
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-primary/10">
+                    <FileDown className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Vertrag unterzeichnet</p>
+                    <p className="text-xs text-muted-foreground">Dein unterschriebener Arbeitsvertrag steht zum Download bereit</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(contract.signed_contract_pdf_url!, '_blank')}
+                >
+                  <FileDown className="h-4 w-4 mr-1" />
+                  Herunterladen
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Statistics */}
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }}>
         <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
