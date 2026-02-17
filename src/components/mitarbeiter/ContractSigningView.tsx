@@ -132,7 +132,7 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
         </div>
 
         {/* PDF Viewer */}
-        <div style={{ height: "75vh" }}>
+        <div className="max-w-3xl mx-auto w-full shadow-lg" style={{ height: "65vh" }}>
           <iframe
             src={`${contractPdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
             className="w-full h-full bg-white"
