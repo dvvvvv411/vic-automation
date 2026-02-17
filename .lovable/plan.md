@@ -1,43 +1,47 @@
 
 
-# Branding bearbeiten - Edit-Button und Dialog
+# Admin Dashboard ueberarbeiten - Echte Daten statt Platzhalter
 
 ## Uebersicht
-Ein neuer "Bearbeiten"-Button wird in jeder Tabellenzeile der Brandings-Uebersicht hinzugefuegt. Beim Klick oeffnet sich ein Dialog mit allen Feldern (vorausgefuellt), ausser der Branding-ID, die nur angezeigt aber nicht aenderbar ist.
+Das aktuelle Dashboard zeigt nur hartcodierte Platzhalter-Statistiken. Es wird komplett ueberarbeitet mit echten Daten aus der Datenbank fuer die fuenf wichtigsten Bereiche.
 
-## Aenderungen
+## Layout
 
-**Datei:** `src/pages/admin/AdminBrandings.tsx`
+### Oberer Bereich: 5 Statistik-Cards (Grid)
+Jede Card zeigt eine Zahl mit Icon und ist klickbar (navigiert zum jeweiligen Bereich):
 
-### 1. State fuer Edit-Modus
-- Neuer State `editBranding` (das aktuell zu bearbeitende Branding oder `null`)
-- Den bestehenden Dialog wiederverwenden: Wenn `editBranding` gesetzt ist, werden die Felder vorausgefuellt und der Submit fuehrt ein UPDATE statt INSERT aus
+| Card | Datenquelle | Anzeige | Link |
+|------|------------|---------|------|
+| Neue Bewerbungen | `applications` mit `status = 'neu'` | Anzahl neue Bewerbungen | `/admin/bewerbungen` |
+| Gespraeche heute | `interview_appointments` mit `appointment_date = heute` | Anzahl heutiger Termine | `/admin/bewerbungsgespraeche` |
+| Offene Vertraege | `employment_contracts` mit `status = 'eingereicht'` | Anzahl eingereichte Vertraege | `/admin/arbeitsvertraege` |
+| Termine heute | `order_appointments` mit `appointment_date = heute` | Anzahl heutiger Auftragstermine | `/admin/auftragstermine` |
+| Ungelesene Chats | `chat_messages` mit `sender_role = 'user'` und `read = false` | Anzahl ungelesener Nachrichten | `/admin/livechat` |
 
-### 2. Update-Mutation hinzufuegen
-- Neue `useMutation` fuer `supabase.from("brandings").update(...)` mit `.eq("id", editBranding.id)`
-- Bei Erfolg: Query invalidieren, Dialog schliessen, Toast anzeigen
+### Unterer Bereich: Detail-Listen (2-Spalten Grid)
 
-### 3. Dialog anpassen
-- Der bestehende Dialog wird fuer beide Zwecke (Erstellen und Bearbeiten) genutzt
-- Titel aendert sich dynamisch: "Neues Branding erstellen" vs. "Branding bearbeiten"
-- Button-Text aendert sich: "Branding erstellen" vs. "Branding speichern"
-- Im Edit-Modus wird die Branding-ID oben im Dialog als nicht editierbares Feld angezeigt
-- Logo-Upload bleibt optional: Wenn kein neues Logo hochgeladen wird, bleibt das bestehende erhalten
+**Linke Spalte:**
+- **Neueste Bewerbungen**: Die letzten 5 Bewerbungen mit Name, Status und Datum (aus `applications`, sortiert nach `created_at desc`, Limit 5)
+- **Heutige Gespraeche**: Alle Gespraeche fuer heute mit Name (ueber Join auf `applications`), Uhrzeit und Status
 
-### 4. Edit-Button in der Tabelle
-- Neuer Button mit Pencil-Icon (aus lucide-react) neben dem Loeschen-Button in jeder Zeile
-- Beim Klick: `editBranding` setzen, Formular mit den Werten des Brandings befuellen, Dialog oeffnen
-
-### 5. Dialog-Reset
-- Beim Schliessen des Dialogs: `editBranding` auf `null` zuruecksetzen und Formular leeren
+**Rechte Spalte:**
+- **Eingereichte Vertraege**: Die letzten 5 eingereichten Vertraege mit Name und Eingangsdatum
+- **Heutige Auftragstermine**: Alle Termine fuer heute mit Mitarbeitername und Uhrzeit
+- **Ungelesene Chat-Nachrichten**: Anzahl ungelesener Nachrichten pro Konversation (gruppiert nach `contract_id`), die letzten 5
 
 ## Technische Details
 
-| Aspekt | Detail |
-|--------|--------|
-| Datei | `src/pages/admin/AdminBrandings.tsx` |
-| Neuer Import | `Pencil` aus `lucide-react` |
-| Neuer State | `editBranding: Branding oder null` |
-| Neue Mutation | `updateMutation` mit `.update().eq("id", ...)` |
-| Dialog | Wiederverwendung des bestehenden Dialogs mit dynamischem Titel/Button |
+### Datei: `src/pages/admin/AdminDashboard.tsx`
+- Komplett neu geschrieben
+- 5 `useQuery`-Hooks fuer die Statistik-Cards (aehnlich wie bereits in `AdminSidebar.tsx` fuer Badges)
+- 5 weitere `useQuery`-Hooks fuer die Detail-Listen
+- `useNavigate` aus react-router-dom fuer klickbare Cards
+- `format` aus date-fns fuer Datumsformatierung
+- Icons: `FileText`, `Calendar`, `FileCheck`, `CalendarClock`, `MessageCircle` (passend zur Sidebar)
+- Jede Detail-Liste wird in einer eigenen Card dargestellt mit Tabelle oder einfacher Liste
+- Loading-State mit Skeleton-Komponenten
+- Responsive: 1 Spalte auf Mobile, 2 Spalten auf Desktop fuer die Listen
+
+### Keine weiteren Dateien betroffen
+Alles findet in `AdminDashboard.tsx` statt. Die Supabase-Queries nutzen die bestehenden Tabellen und benoetigen keine Schema-Aenderungen.
 
