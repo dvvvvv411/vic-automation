@@ -484,7 +484,7 @@ export default function Arbeitsvertrag() {
                 className="text-white"
                 style={{ backgroundColor: brandColor }}
               >
-                {submitting ? "Wird eingereicht..." : "Daten verbindlich einreichen"}
+                {submitting ? "Wird eingereicht..." : "Daten einreichen"}
               </Button>
             )}
           </div>
