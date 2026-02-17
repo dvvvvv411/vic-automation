@@ -9,7 +9,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -19,10 +18,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Palette, Trash2, Copy } from "lucide-react";
+import { Plus, Palette, Trash2, Copy, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { z } from "zod";
+import type { Tables } from "@/integrations/supabase/types";
 
 const brandingSchema = z.object({
   company_name: z.string().min(1, "Unternehmensname erforderlich").max(200),
@@ -59,6 +59,7 @@ export default function AdminBrandings() {
   const [form, setForm] = useState<BrandingForm>(initialForm);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [editBranding, setEditBranding] = useState<Tables<"brandings"> | null>(null);
   const queryClient = useQueryClient();
 
   const { data: brandings, isLoading } = useQuery({
@@ -96,14 +97,54 @@ export default function AdminBrandings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["brandings"] });
-      setOpen(false);
-      setForm(initialForm);
-      setLogoFile(null);
-      setErrors({});
+      closeDialog();
       toast.success("Branding erstellt");
     },
     onError: () => toast.error("Fehler beim Erstellen"),
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: BrandingForm & { logo_url?: string } }) => {
+      const cleaned: Record<string, string | null> = {};
+      Object.entries(data).forEach(([key, value]) => {
+        cleaned[key] = value === "" ? null : (value as string);
+      });
+      const { error } = await supabase.from("brandings").update(cleaned as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["brandings"] });
+      closeDialog();
+      toast.success("Branding aktualisiert");
+    },
+    onError: () => toast.error("Fehler beim Aktualisieren"),
+  });
+
+  const closeDialog = () => {
+    setOpen(false);
+    setForm(initialForm);
+    setLogoFile(null);
+    setErrors({});
+    setEditBranding(null);
+  };
+
+  const openEdit = (branding: Tables<"brandings">) => {
+    setEditBranding(branding);
+    setForm({
+      company_name: branding.company_name || "",
+      street: branding.street || "",
+      zip_code: branding.zip_code || "",
+      city: branding.city || "",
+      trade_register: branding.trade_register || "",
+      register_court: branding.register_court || "",
+      managing_director: branding.managing_director || "",
+      vat_id: branding.vat_id || "",
+      domain: branding.domain || "",
+      email: branding.email || "",
+      brand_color: branding.brand_color || "#3B82F6",
+    });
+    setOpen(true);
+  };
 
   const handleSubmit = async () => {
     const result = brandingSchema.safeParse(form);
@@ -134,13 +175,23 @@ export default function AdminBrandings() {
       logo_url = publicUrl.publicUrl;
     }
 
-    createMutation.mutate({ ...result.data, logo_url });
+    if (editBranding) {
+      updateMutation.mutate({
+        id: editBranding.id,
+        data: { ...result.data, ...(logo_url ? { logo_url } : {}) },
+      });
+    } else {
+      createMutation.mutate({ ...result.data, logo_url });
+    }
   };
 
   const updateField = (key: keyof BrandingForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
   };
+
+  const isEditing = !!editBranding;
+  const isPending = isEditing ? updateMutation.isPending : createMutation.isPending;
 
   return (
     <>
@@ -154,121 +205,136 @@ export default function AdminBrandings() {
           <h2 className="text-3xl font-bold tracking-tight text-foreground">Brandings</h2>
           <p className="text-muted-foreground mt-1">Verwalten Sie alle Ihre Landingpage-Brandings.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Branding hinzufügen
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Neues Branding erstellen</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              {/* Logo */}
-              <div className="space-y-2">
-                <Label>Logo</Label>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                />
-              </div>
-
-              {/* Company Name */}
-              <div className="space-y-2">
-                <Label>Unternehmensname *</Label>
-                <Input
-                  value={form.company_name}
-                  onChange={(e) => updateField("company_name", e.target.value)}
-                  placeholder="Muster GmbH"
-                />
-                {errors.company_name && <p className="text-xs text-destructive">{errors.company_name}</p>}
-              </div>
-
-              {/* Address */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Straße & Hausnummer</Label>
-                  <Input value={form.street} onChange={(e) => updateField("street", e.target.value)} placeholder="Musterstr. 1" />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-2">
-                    <Label>PLZ</Label>
-                    <Input value={form.zip_code} onChange={(e) => updateField("zip_code", e.target.value)} placeholder="93047" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Stadt</Label>
-                    <Input value={form.city} onChange={(e) => updateField("city", e.target.value)} placeholder="Regensburg" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Register */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Handelsregister</Label>
-                  <Input value={form.trade_register} onChange={(e) => updateField("trade_register", e.target.value)} placeholder="HRB 16675" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Registergericht</Label>
-                  <Input value={form.register_court} onChange={(e) => updateField("register_court", e.target.value)} placeholder="Amtsgericht Regensburg" />
-                </div>
-              </div>
-
-              {/* Director & VAT */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Geschäftsführer</Label>
-                  <Input value={form.managing_director} onChange={(e) => updateField("managing_director", e.target.value)} placeholder="Max Mustermann" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Umsatzsteuer-ID</Label>
-                  <Input value={form.vat_id} onChange={(e) => updateField("vat_id", e.target.value)} placeholder="DE123456789" />
-                </div>
-              </div>
-
-              {/* Domain & Email */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Domain</Label>
-                  <Input value={form.domain} onChange={(e) => updateField("domain", e.target.value)} placeholder="example.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label>E-Mail</Label>
-                  <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="info@example.com" />
-                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-                </div>
-              </div>
-
-              {/* Brand Color */}
-              <div className="space-y-2">
-                <Label>Brandingfarbe</Label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={form.brand_color}
-                    onChange={(e) => updateField("brand_color", e.target.value)}
-                    className="w-10 h-10 rounded-md border border-input cursor-pointer p-0"
-                  />
-                  <Input
-                    value={form.brand_color}
-                    onChange={(e) => updateField("brand_color", e.target.value)}
-                    placeholder="#3B82F6"
-                    className="w-32"
-                  />
-                  {errors.brand_color && <p className="text-xs text-destructive">{errors.brand_color}</p>}
-                </div>
-              </div>
-
-              <Button onClick={handleSubmit} disabled={createMutation.isPending} className="w-full mt-2">
-                {createMutation.isPending ? "Wird erstellt..." : "Branding erstellen"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => { setEditBranding(null); setForm(initialForm); setOpen(true); }}>
+          <Plus className="h-4 w-4 mr-2" />
+          Branding hinzufügen
+        </Button>
       </motion.div>
+
+      <Dialog open={open} onOpenChange={(v) => { if (!v) closeDialog(); else setOpen(true); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{isEditing ? "Branding bearbeiten" : "Neues Branding erstellen"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {/* Branding ID (read-only, only in edit mode) */}
+            {isEditing && (
+              <div className="space-y-2">
+                <Label>Branding-ID</Label>
+                <Input value={editBranding.id} disabled className="font-mono text-xs" />
+              </div>
+            )}
+
+            {/* Logo */}
+            <div className="space-y-2">
+              <Label>Logo</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+              />
+              {isEditing && editBranding.logo_url && !logoFile && (
+                <div className="flex items-center gap-2 mt-1">
+                  <img src={editBranding.logo_url} alt="Aktuelles Logo" className="h-8 w-8 rounded object-contain" />
+                  <span className="text-xs text-muted-foreground">Aktuelles Logo</span>
+                </div>
+              )}
+            </div>
+
+            {/* Company Name */}
+            <div className="space-y-2">
+              <Label>Unternehmensname *</Label>
+              <Input
+                value={form.company_name}
+                onChange={(e) => updateField("company_name", e.target.value)}
+                placeholder="Muster GmbH"
+              />
+              {errors.company_name && <p className="text-xs text-destructive">{errors.company_name}</p>}
+            </div>
+
+            {/* Address */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Straße & Hausnummer</Label>
+                <Input value={form.street} onChange={(e) => updateField("street", e.target.value)} placeholder="Musterstr. 1" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label>PLZ</Label>
+                  <Input value={form.zip_code} onChange={(e) => updateField("zip_code", e.target.value)} placeholder="93047" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Stadt</Label>
+                  <Input value={form.city} onChange={(e) => updateField("city", e.target.value)} placeholder="Regensburg" />
+                </div>
+              </div>
+            </div>
+
+            {/* Register */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Handelsregister</Label>
+                <Input value={form.trade_register} onChange={(e) => updateField("trade_register", e.target.value)} placeholder="HRB 16675" />
+              </div>
+              <div className="space-y-2">
+                <Label>Registergericht</Label>
+                <Input value={form.register_court} onChange={(e) => updateField("register_court", e.target.value)} placeholder="Amtsgericht Regensburg" />
+              </div>
+            </div>
+
+            {/* Director & VAT */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Geschäftsführer</Label>
+                <Input value={form.managing_director} onChange={(e) => updateField("managing_director", e.target.value)} placeholder="Max Mustermann" />
+              </div>
+              <div className="space-y-2">
+                <Label>Umsatzsteuer-ID</Label>
+                <Input value={form.vat_id} onChange={(e) => updateField("vat_id", e.target.value)} placeholder="DE123456789" />
+              </div>
+            </div>
+
+            {/* Domain & Email */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Domain</Label>
+                <Input value={form.domain} onChange={(e) => updateField("domain", e.target.value)} placeholder="example.com" />
+              </div>
+              <div className="space-y-2">
+                <Label>E-Mail</Label>
+                <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="info@example.com" />
+                {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+              </div>
+            </div>
+
+            {/* Brand Color */}
+            <div className="space-y-2">
+              <Label>Brandingfarbe</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={form.brand_color}
+                  onChange={(e) => updateField("brand_color", e.target.value)}
+                  className="w-10 h-10 rounded-md border border-input cursor-pointer p-0"
+                />
+                <Input
+                  value={form.brand_color}
+                  onChange={(e) => updateField("brand_color", e.target.value)}
+                  placeholder="#3B82F6"
+                  className="w-32"
+                />
+                {errors.brand_color && <p className="text-xs text-destructive">{errors.brand_color}</p>}
+              </div>
+            </div>
+
+            <Button onClick={handleSubmit} disabled={isPending} className="w-full mt-2">
+              {isPending
+                ? (isEditing ? "Wird gespeichert..." : "Wird erstellt...")
+                : (isEditing ? "Branding speichern" : "Branding erstellen")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Table */}
       <motion.div
@@ -298,7 +364,7 @@ export default function AdminBrandings() {
                   <TableHead>Domain</TableHead>
                   <TableHead>Farbe</TableHead>
                   <TableHead>Erstellt</TableHead>
-                  <TableHead className="w-16"></TableHead>
+                  <TableHead className="w-24"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -344,13 +410,22 @@ export default function AdminBrandings() {
                       {new Date(b.created_at).toLocaleDateString("de-DE")}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteMutation.mutate(b.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-muted-foreground" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEdit(b)}
+                        >
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteMutation.mutate(b.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
