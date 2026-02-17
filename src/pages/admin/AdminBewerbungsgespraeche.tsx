@@ -204,15 +204,17 @@ export default function AdminBewerbungsgespraeche() {
                       <TableCell>{statusBadge(item.status)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                            onClick={() => handleStatusUpdate(item.id, "erfolgreich")}
-                            title="Als erfolgreich markieren"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
+                          {item.status !== "erfolgreich" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => handleStatusUpdate(item.id, "erfolgreich")}
+                              title="Als erfolgreich markieren"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
