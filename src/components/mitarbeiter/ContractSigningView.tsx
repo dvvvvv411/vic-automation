@@ -122,7 +122,7 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
 
   return (
     <div className="flex-1 flex flex-col items-center justify-start p-6 lg:p-8 bg-slate-50">
-      <div className="max-w-4xl w-full space-y-6">
+      <div className="w-full space-y-4">
         <div className="text-center space-y-2">
           <FileText className="h-12 w-12 mx-auto text-primary" />
           <h1 className="text-2xl font-bold">Arbeitsvertrag</h1>
@@ -132,10 +132,11 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
         </div>
 
         {/* PDF Viewer */}
-        <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden" style={{ height: "70vh" }}>
+        <div style={{ height: "75vh" }}>
           <iframe
-            src={`${contractPdfUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-            className="w-full h-full"
+            src={`${contractPdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+            className="w-full h-full bg-white"
+            style={{ border: "none" }}
             title="Arbeitsvertrag PDF"
           />
         </div>
