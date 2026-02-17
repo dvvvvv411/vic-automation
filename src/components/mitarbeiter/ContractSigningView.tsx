@@ -134,7 +134,7 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
         {/* PDF Viewer */}
         <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden" style={{ height: "70vh" }}>
           <iframe
-            src={contractPdfUrl}
+            src={`${contractPdfUrl}#toolbar=0&navpanes=0&scrollbar=0`}
             className="w-full h-full"
             title="Arbeitsvertrag PDF"
           />
