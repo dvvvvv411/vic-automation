@@ -1,47 +1,32 @@
 
 
-# Admin Dashboard ueberarbeiten - Echte Daten statt Platzhalter
+# Nationalitaet-Dropdown erweitern mit Suchfunktion
 
-## Uebersicht
-Das aktuelle Dashboard zeigt nur hartcodierte Platzhalter-Statistiken. Es wird komplett ueberarbeitet mit echten Daten aus der Datenbank fuer die fuenf wichtigsten Bereiche.
+## Problem
+Aktuell stehen nur 4 Optionen zur Verfuegung: Deutsch, Oesterreichisch, Schweizerisch, Sonstige. Es sollen alle Nationalitaeten verfuegbar sein, mit einer Suchfunktion und "Deutsch" ganz oben.
 
-## Layout
+## Loesung
+Das bestehende `Select`-Dropdown wird durch ein `Popover` + `Command` (cmdk) ersetzt - die bereits installierten Komponenten fuer durchsuchbare Auswahllisten (Combobox-Pattern).
 
-### Oberer Bereich: 5 Statistik-Cards (Grid)
-Jede Card zeigt eine Zahl mit Icon und ist klickbar (navigiert zum jeweiligen Bereich):
+## Aenderungen
 
-| Card | Datenquelle | Anzeige | Link |
-|------|------------|---------|------|
-| Neue Bewerbungen | `applications` mit `status = 'neu'` | Anzahl neue Bewerbungen | `/admin/bewerbungen` |
-| Gespraeche heute | `interview_appointments` mit `appointment_date = heute` | Anzahl heutiger Termine | `/admin/bewerbungsgespraeche` |
-| Offene Vertraege | `employment_contracts` mit `status = 'eingereicht'` | Anzahl eingereichte Vertraege | `/admin/arbeitsvertraege` |
-| Termine heute | `order_appointments` mit `appointment_date = heute` | Anzahl heutiger Auftragstermine | `/admin/auftragstermine` |
-| Ungelesene Chats | `chat_messages` mit `sender_role = 'user'` und `read = false` | Anzahl ungelesener Nachrichten | `/admin/livechat` |
+**Datei:** `src/pages/Arbeitsvertrag.tsx`
 
-### Unterer Bereich: Detail-Listen (2-Spalten Grid)
+### 1. Imports ergaenzen
+- `Popover`, `PopoverTrigger`, `PopoverContent` importieren
+- `Command`, `CommandInput`, `CommandList`, `CommandEmpty`, `CommandGroup`, `CommandItem` importieren
+- `Check`, `ChevronsUpDown` aus lucide-react importieren
 
-**Linke Spalte:**
-- **Neueste Bewerbungen**: Die letzten 5 Bewerbungen mit Name, Status und Datum (aus `applications`, sortiert nach `created_at desc`, Limit 5)
-- **Heutige Gespraeche**: Alle Gespraeche fuer heute mit Name (ueber Join auf `applications`), Uhrzeit und Status
+### 2. Nationalitaeten-Liste als Konstante
+- Eine vollstaendige Liste aller gaengigen Nationalitaeten (ca. 195 Eintraege) als Array definieren
+- "Deutsch" steht an erster Stelle, gefolgt von allen anderen alphabetisch sortiert
 
-**Rechte Spalte:**
-- **Eingereichte Vertraege**: Die letzten 5 eingereichten Vertraege mit Name und Eingangsdatum
-- **Heutige Auftragstermine**: Alle Termine fuer heute mit Mitarbeitername und Uhrzeit
-- **Ungelesene Chat-Nachrichten**: Anzahl ungelesener Nachrichten pro Konversation (gruppiert nach `contract_id`), die letzten 5
-
-## Technische Details
-
-### Datei: `src/pages/admin/AdminDashboard.tsx`
-- Komplett neu geschrieben
-- 5 `useQuery`-Hooks fuer die Statistik-Cards (aehnlich wie bereits in `AdminSidebar.tsx` fuer Badges)
-- 5 weitere `useQuery`-Hooks fuer die Detail-Listen
-- `useNavigate` aus react-router-dom fuer klickbare Cards
-- `format` aus date-fns fuer Datumsformatierung
-- Icons: `FileText`, `Calendar`, `FileCheck`, `CalendarClock`, `MessageCircle` (passend zur Sidebar)
-- Jede Detail-Liste wird in einer eigenen Card dargestellt mit Tabelle oder einfacher Liste
-- Loading-State mit Skeleton-Komponenten
-- Responsive: 1 Spalte auf Mobile, 2 Spalten auf Desktop fuer die Listen
-
-### Keine weiteren Dateien betroffen
-Alles findet in `AdminDashboard.tsx` statt. Die Supabase-Queries nutzen die bestehenden Tabellen und benoetigen keine Schema-Aenderungen.
+### 3. Select durch Combobox ersetzen (Zeilen 330-341)
+- Das `Select`-Element wird durch ein `Popover` mit `Command`-Suche ersetzt
+- Der Trigger-Button zeigt die ausgewaehlte Nationalitaet an
+- `CommandInput` ermoeglicht die Suche/Filterung
+- `CommandList` zeigt die gefilterten Ergebnisse
+- "Deutsch" wird in einer eigenen `CommandGroup` ganz oben angezeigt
+- Alle anderen Nationalitaeten folgen in einer zweiten Gruppe
+- Bei Auswahl schliesst das Popover und der Wert wird gesetzt
 
