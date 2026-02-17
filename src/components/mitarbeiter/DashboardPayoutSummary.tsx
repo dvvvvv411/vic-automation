@@ -12,7 +12,9 @@ interface Props {
 
 const DashboardPayoutSummary = ({ balance }: Props) => {
   const navigate = useNavigate();
-  const nextPayout = startOfMonth(addMonths(new Date(), 1));
+  const today = new Date();
+  const fifteenthThisMonth = new Date(today.getFullYear(), today.getMonth(), 15);
+  const nextPayout = today.getDate() < 15 ? fifteenthThisMonth : new Date(today.getFullYear(), today.getMonth() + 1, 15);
 
   return (
     <motion.div

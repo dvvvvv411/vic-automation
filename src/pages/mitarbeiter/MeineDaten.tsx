@@ -224,7 +224,7 @@ const MeineDaten = () => {
                 <div className="rounded-xl bg-muted/50 p-5 space-y-3">
                   <p className="text-xs text-muted-foreground">Anstehende Gehaltsauszahlung am</p>
                   <p className="text-lg font-bold text-foreground">
-                    {format(startOfMonth(addMonths(new Date(), 1)), "dd.MM.yyyy", { locale: de })}
+                    {(() => { const t = new Date(); const d = t.getDate() < 15 ? new Date(t.getFullYear(), t.getMonth(), 15) : new Date(t.getFullYear(), t.getMonth() + 1, 15); return format(d, "dd.MM.yyyy", { locale: de }); })()}
                   </p>
                   <div className="border-t border-border pt-3">
                     <p className="text-xs text-muted-foreground">Voraussichtlicher Betrag</p>
