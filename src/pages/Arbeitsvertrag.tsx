@@ -10,7 +10,52 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AlertCircle, CalendarIcon, CheckCircle2, ChevronLeft, ChevronRight, Upload, X } from "lucide-react";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { AlertCircle, CalendarIcon, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsUpDown, Upload, X } from "lucide-react";
+
+const NATIONALITIES = [
+  "Deutsch",
+  "Afghanisch", "Ägyptisch", "Albanisch", "Algerisch", "Amerikanisch", "Andorranisch", "Angolanisch",
+  "Argentinisch", "Armenisch", "Aserbaidschanisch", "Äthiopisch", "Australisch",
+  "Bahamesisch", "Bahrainisch", "Bangladeschisch", "Belgisch", "Beninisch", "Bhutanisch",
+  "Bolivianisch", "Bosnisch-herzegowinisch", "Botsuanisch", "Brasilianisch", "Britisch",
+  "Bruneiisch", "Bulgarisch", "Burkinisch", "Burundisch",
+  "Chilenisch", "Chinesisch", "Costa-ricanisch", "Dänisch", "Dominikanisch",
+  "Dschibutisch", "Ecuadorianisch", "Eritreisch", "Estnisch",
+  "Fidschi", "Finnisch", "Französisch",
+  "Gabunisch", "Gambisch", "Georgisch", "Ghanaisch", "Grenadisch", "Griechisch",
+  "Guatemaltekisch", "Guineisch", "Guyanisch",
+  "Haitianisch", "Honduranisch",
+  "Indisch", "Indonesisch", "Irakisch", "Iranisch", "Irisch", "Isländisch", "Israelisch",
+  "Italienisch", "Ivorisch",
+  "Jamaikanisch", "Japanisch", "Jemenitisch", "Jordanisch",
+  "Kambodschanisch", "Kamerunisch", "Kanadisch", "Kapverdisch", "Kasachisch", "Katarisch",
+  "Kenianisch", "Kirgisisch", "Kolumbianisch", "Komorisch", "Kongolesisch",
+  "Kosovarisch", "Kroatisch", "Kubanisch", "Kuwaitisch",
+  "Laotisch", "Lesothisch", "Lettisch", "Libanesisch", "Liberianisch", "Libysch",
+  "Liechtensteinisch", "Litauisch", "Luxemburgisch",
+  "Madagassisch", "Malawisch", "Malaysisch", "Maledivisch", "Malisch", "Maltesisch",
+  "Marokkanisch", "Mauretanisch", "Mauritisch", "Mexikanisch", "Moldauisch",
+  "Monegassisch", "Mongolisch", "Montenegrinisch", "Mosambikanisch", "Myanmarisch",
+  "Namibisch", "Nepalesisch", "Neuseeländisch", "Nicaraguanisch", "Niederländisch",
+  "Nigerianisch", "Nigrisch", "Nordkoreanisch", "Nordmazedonisch", "Norwegisch",
+  "Omanisch", "Österreichisch",
+  "Pakistanisch", "Palästinensisch", "Panamaisch", "Papua-neuguineisch", "Paraguayisch",
+  "Peruanisch", "Philippinisch", "Polnisch", "Portugiesisch",
+  "Ruandisch", "Rumänisch", "Russisch",
+  "Salvadorianisch", "Sambisch", "Samoanisch", "Saudi-arabisch", "Schwedisch",
+  "Schweizerisch", "Senegalesisch", "Serbisch", "Sierra-leonisch", "Simbabwisch",
+  "Singapurisch", "Slowakisch", "Slowenisch", "Somalisch", "Spanisch",
+  "Sri-lankisch", "Südafrikanisch", "Sudanesisch", "Südkoreanisch", "Surinamisch",
+  "Syrisch",
+  "Tadschikisch", "Taiwanesisch", "Tansanisch", "Thailändisch", "Togoisch",
+  "Tongaisch", "Tschadisch", "Tschechisch", "Tunesisch", "Türkisch",
+  "Turkmenisch", "Tuvaluisch",
+  "Ugandisch", "Ukrainisch", "Ungarisch", "Uruguayisch", "Usbekisch",
+  "Vanuatuisch", "Vatikanisch", "Venezolanisch", "Vietnamesisch",
+  "Weißrussisch",
+  "Zentralafrikanisch", "Zyprisch",
+];
 import { format, isBefore, startOfDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -46,6 +91,7 @@ export default function Arbeitsvertrag() {
   const [idBackFile, setIdBackFile] = useState<File | null>(null);
   const [idFrontPreview, setIdFrontPreview] = useState<string | null>(null);
   const [idBackPreview, setIdBackPreview] = useState<string | null>(null);
+  const [nationalityOpen, setNationalityOpen] = useState(false);
 
   // Load application + contract + branding
   const { data, isLoading, error } = useQuery({
@@ -329,15 +375,42 @@ export default function Arbeitsvertrag() {
                 </div>
                 <div className="space-y-2">
                   <Label>Nationalität <span className="text-destructive">*</span></Label>
-                  <Select value={form.nationality} onValueChange={v => updateForm("nationality", v)}>
-                    <SelectTrigger className={cn(form.nationality && "border-green-500")}><SelectValue placeholder="Bitte wählen" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Deutsch">Deutsch</SelectItem>
-                      <SelectItem value="Österreichisch">Österreichisch</SelectItem>
-                      <SelectItem value="Schweizerisch">Schweizerisch</SelectItem>
-                      <SelectItem value="Sonstige">Sonstige</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Popover open={nationalityOpen} onOpenChange={setNationalityOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={nationalityOpen}
+                        className={cn("w-full justify-between font-normal", form.nationality ? "border-green-500" : "text-muted-foreground")}
+                      >
+                        {form.nationality || "Nationalität wählen"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Nationalität suchen..." />
+                        <CommandList>
+                          <CommandEmpty>Keine Nationalität gefunden.</CommandEmpty>
+                          <CommandGroup>
+                            {NATIONALITIES.map((nat) => (
+                              <CommandItem
+                                key={nat}
+                                value={nat}
+                                onSelect={() => {
+                                  updateForm("nationality", nat);
+                                  setNationalityOpen(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", form.nationality === nat ? "opacity-100" : "opacity-0")} />
+                                {nat}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label>Straße & Hausnummer <span className="text-destructive">*</span></Label>
