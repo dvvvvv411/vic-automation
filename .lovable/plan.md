@@ -1,114 +1,62 @@
 
+# Bewerbungsgespraech-Seite im Attendflow-Stil modernisieren
 
-# Bewerbungsformular Edge Function + Lebenslauf-Upload
+## Ueberblick
 
-## Uebersicht
+Die `/bewerbungsgespraech/:id` Seite wird visuell aufgewertet -- moderner, polierter Look im Attendflow-Stil (helles Theme, cleane SaaS-Aesthetik), passend zum Rest des Panels.
 
-Drei Aufgaben:
-1. **Lebenslauf-Spalte** in der `applications`-Tabelle hinzufuegen + im Admin-Panel anzeigbar machen
-2. **Edge Function `submit-application`** erstellen, die von der externen Landingpage aufgerufen wird
-3. **Prompt fuer das Landingpage-Projekt** schreiben
+## Aenderungen an `src/pages/Bewerbungsgespraech.tsx`
 
----
+### Allgemeines Layout
+- Hintergrund von `bg-slate-50` zu einem subtilen Gradient (`bg-gradient-to-br from-slate-50 via-white to-blue-50/30`)
+- Card von `rounded-xl shadow-sm` zu `rounded-2xl shadow-md` (wie im Mitarbeiter-Panel)
+- Mehr Whitespace und grosszuegigere Padding-Werte
 
-## 1. Datenbank: Neue Spalte `resume_url`
+### Header-Bereich
+- Titel groesser und mit `tracking-tight` (bereits vorhanden, bleibt)
+- Bewerber-Info-Zeile: Badges/Pills statt einfacher Text-Spans -- jedes Info-Element (Name, Telefon, Anstellungsart) als dezente Pill mit hellem Hintergrund (`bg-slate-100 rounded-full px-3 py-1`)
 
-Migration:
-```sql
-ALTER TABLE public.applications ADD COLUMN resume_url text;
-```
+### Kalender-Bereich
+- Saubere Labels mit feinerem Styling
+- Kalender bleibt funktional gleich
 
-Die PDF wird im bestehenden Storage-Bucket `contract-documents` gespeichert (oder ein neuer Bucket `application-documents`). Die Edge Function laedt die Datei hoch und speichert die oeffentliche URL in `resume_url`.
+### Zeitslots
+- Von `rounded-md` zu `rounded-lg` mit weicherem Hover-Effekt
+- Leichte Schatten auf dem selektierten Slot (`shadow-sm`)
+- Sanftere Transitions (`transition-all duration-200`)
 
----
+### Buchungs-Button
+- `rounded-xl` statt `rounded-md`
+- Leichter Shadow (`shadow-md`) und Hover-Scale-Effekt via `hover:shadow-lg hover:scale-[1.01] transition-all`
 
-## 2. Storage: Neuer Bucket `application-documents`
+### Bestaetigungsseite
+- Gleiches Gradient-Background
+- Card `rounded-2xl shadow-md`
+- Checkmark-Icon groesser mit farbigem Hintergrund-Kreis
+- Termin-Info-Box mit dezenterem Border und hellem Hintergrund
 
-```sql
-INSERT INTO storage.buckets (id, name, public) VALUES ('application-documents', 'application-documents', true);
+### Powered-by Footer
+- Etwas mehr Abstand, dezenterer Text
 
-CREATE POLICY "Anyone can upload application documents"
-ON storage.objects FOR INSERT
-TO anon, authenticated
-WITH CHECK (bucket_id = 'application-documents');
-
-CREATE POLICY "Anyone can read application documents"
-ON storage.objects FOR SELECT
-TO anon, authenticated
-USING (bucket_id = 'application-documents');
-```
-
----
-
-## 3. Edge Function: `submit-application`
-
-Datei: `supabase/functions/submit-application/index.ts`
-
-- **Oeffentlich** (kein Auth noetig, wird von der Landingpage aufgerufen)
-- Empfaengt `multipart/form-data` mit:
-  - `first_name`, `last_name`, `email`, `phone`, `street`, `zip_code`, `city`, `employment_type`, `branding_id` (Text-Felder)
-  - `resume` (PDF-Datei)
-- Validierung der Pflichtfelder (first_name, last_name, email, employment_type)
-- Validierung dass `branding_id` (falls angegeben) existiert
-- PDF wird in den Storage-Bucket `application-documents` hochgeladen
-- Bewerbung wird in `applications`-Tabelle eingefuegt mit `resume_url`
-- Gibt `{ success: true, application_id }` zurueck
-
-Config-Ergaenzung in `supabase/config.toml`:
-```toml
-[functions.submit-application]
-verify_jwt = false
-```
-
----
-
-## 4. Admin-Panel: Lebenslauf anzeigen (AdminBewerbungen.tsx)
-
-- **Details-Dialog** hinzufuegen: Klick auf eine Tabellenzeile oeffnet ein Dialog-Popup mit allen Bewerbungsdaten
-- Im Dialog wird der Lebenslauf als PDF-Link angezeigt (Button "Lebenslauf ansehen" der die PDF in einem neuen Tab oeffnet)
-- In der Tabelle: neue Spalte "Lebenslauf" mit einem kleinen PDF-Icon/Link falls vorhanden
-
----
-
-## 5. Prompt fuer das Landingpage-Projekt
-
-Am Ende wird ein fertiger Copy-Paste-Prompt generiert, den du in deinem anderen Lovable-Projekt einfuegen kannst. Dieser beschreibt:
-- Die Formularfelder (Vorname, Nachname, Email, Telefon, Strasse, PLZ, Stadt, Anstellungsart, Lebenslauf-Upload)
-- Die `branding_id` als URL-Parameter oder Prop
-- Den `fetch`-Aufruf an die Edge Function mit `multipart/form-data`
-- Die exakte URL: `https://luorlnagxpsibarcygjm.supabase.co/functions/v1/submit-application`
-
----
+### Fehlerseite
+- Gleicher Gradient-Background und `rounded-2xl shadow-md`
 
 ## Technische Details
 
-### Edge Function Code-Struktur
+Nur eine Datei betroffen: `src/pages/Bewerbungsgespraech.tsx`
+
+Hauptsaechlich CSS-Klassen-Aenderungen:
 
 ```text
-1. Parse multipart/form-data
-2. Validiere Pflichtfelder
-3. Falls resume vorhanden:
-   a. Pruefe Dateityp (nur PDF)
-   b. Upload nach storage: application-documents/{uuid}.pdf
-   c. Generiere public URL
-4. Insert in applications-Tabelle
-5. Return { success: true, application_id }
+Vorher                          Nachher
+------                          -------
+bg-slate-50                     bg-gradient-to-br from-slate-50 via-white to-blue-50/30
+rounded-xl shadow-sm            rounded-2xl shadow-md
+border border-slate-200         border border-slate-200/80
+Bewerber-Info als Text-Spans    Bewerber-Info als Pills (bg-slate-100 rounded-full)
+Time-Slot rounded-md            rounded-lg + transition-all duration-200
+Book-Button (default)           rounded-xl shadow-md hover:shadow-lg
+CheckCircle h-10 w-10           h-12 w-12 mit bg-[brandColor]/10 Kreis-Wrapper
 ```
 
-### Admin-Panel Aenderungen
-
-```text
-AdminBewerbungen.tsx:
-- State fuer selectedApplication hinzufuegen
-- Details-Dialog mit allen Feldern
-- Lebenslauf-Button: <a href={resume_url} target="_blank">
-- Neue Tabellenspalte "CV" mit FileText-Icon
-```
-
-### Betroffene Dateien
-
-1. `supabase/functions/submit-application/index.ts` (NEU)
-2. `supabase/config.toml` (erweitern)
-3. `src/pages/admin/AdminBewerbungen.tsx` (Details-Dialog + CV-Spalte)
-4. Datenbank-Migration: `resume_url`-Spalte + Storage-Bucket
-
+Keine funktionalen Aenderungen, keine neuen Abhaengigkeiten, keine Datenbank-Aenderungen.
