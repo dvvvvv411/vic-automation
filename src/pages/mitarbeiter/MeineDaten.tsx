@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, MapPin, Star, ClipboardCheck, Euro, CreditCard, CalendarClock, History } from "lucide-react";
+import { User, Mail, Phone, MapPin, Star, ClipboardCheck, Euro, CreditCard, CalendarClock, History, FileDown } from "lucide-react";
 import { addMonths, startOfMonth, format, startOfDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ContextType {
-  contract: { id: string; first_name: string | null; application_id: string } | null;
+  contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null } | null;
   branding: { logo_url: string | null; company_name: string; brand_color: string | null } | null;
   loading: boolean;
 }
@@ -235,6 +236,35 @@ const MeineDaten = () => {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Contract Download */}
+      {contract?.signed_contract_pdf_url && (
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.35 }}>
+          <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <FileDown className="h-4 w-4 text-primary" />
+                Arbeitsvertrag
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-3">Ihr unterschriebener Arbeitsvertrag steht zum Download bereit.</p>
+              <a
+                href={contract.signed_contract_pdf_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+              >
+                <Button variant="outline" className="gap-2">
+                  <FileDown className="h-4 w-4" />
+                  Arbeitsvertrag herunterladen
+                </Button>
+              </a>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
 
       {/* Reward History */}
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.4 }}>

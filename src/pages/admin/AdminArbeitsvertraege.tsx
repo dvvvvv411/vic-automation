@@ -93,6 +93,8 @@ export default function AdminArbeitsvertraege() {
         return <Badge className="bg-yellow-500 text-white border-yellow-500">Daten eingereicht</Badge>;
       case "genehmigt":
         return <Badge className="bg-green-600 text-white border-green-600">Genehmigt</Badge>;
+      case "unterzeichnet":
+        return <Badge className="bg-blue-600 text-white border-blue-600">Unterzeichnet</Badge>;
       default:
         return <Badge variant="outline">Offen</Badge>;
     }
@@ -218,9 +220,11 @@ export default function AdminArbeitsvertraege() {
                   <InfoRow label="Nachname" value={selectedContract.last_name} />
                   <InfoRow label="E-Mail" value={selectedContract.email} />
                   <InfoRow label="Telefon" value={selectedContract.phone} />
-                  <InfoRow label="Geburtsdatum" value={selectedContract.birth_date} />
-                  <InfoRow label="Straße" value={selectedContract.street} />
-                  <InfoRow label="PLZ & Stadt" value={`${selectedContract.zip_code || ""} ${selectedContract.city || ""}`} />
+                   <InfoRow label="Geburtsdatum" value={selectedContract.birth_date} />
+                   <InfoRow label="Geburtsort" value={selectedContract.birth_place} />
+                   <InfoRow label="Nationalität" value={selectedContract.nationality} />
+                   <InfoRow label="Straße" value={selectedContract.street} />
+                   <InfoRow label="PLZ & Stadt" value={`${selectedContract.zip_code || ""} ${selectedContract.city || ""}`} />
                   <InfoRow label="Familienstand" value={selectedContract.marital_status} />
                   <InfoRow label="Art der Beschäftigung" value={selectedContract.employment_type} />
                   <InfoRow label="Gewünschtes Startdatum" value={selectedContract.desired_start_date} />

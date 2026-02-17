@@ -34,6 +34,7 @@ export default function Arbeitsvertrag() {
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: "", phone: "",
     birth_date: "",
+    birth_place: "", nationality: "",
     street: "", zip_code: "", city: "",
     marital_status: "", employment_type: "",
     desired_start_date: null as Date | null,
@@ -140,7 +141,7 @@ export default function Arbeitsvertrag() {
     if (step === 0) {
       const bdMatch = form.birth_date.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
       const bdValid = bdMatch ? !isNaN(new Date(`${bdMatch[3]}-${bdMatch[2]}-${bdMatch[1]}`).getTime()) : false;
-      return form.first_name && form.last_name && form.email && form.phone && bdValid && form.street && form.zip_code && form.city && form.marital_status && form.employment_type && form.desired_start_date;
+      return form.first_name && form.last_name && form.email && form.phone && bdValid && form.birth_place && form.nationality && form.street && form.zip_code && form.city && form.marital_status && form.employment_type && form.desired_start_date;
     }
     if (step === 1) return form.social_security_number && form.tax_id && form.health_insurance;
     if (step === 2) return form.iban && form.bic && form.bank_name;
@@ -182,6 +183,8 @@ export default function Arbeitsvertrag() {
         _email: form.email,
         _phone: form.phone,
         _birth_date: (() => { const p = form.birth_date.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); return p ? `${p[3]}-${p[2]}-${p[1]}` : ""; })(),
+        _birth_place: form.birth_place,
+        _nationality: form.nationality,
         _street: form.street,
         _zip_code: form.zip_code,
         _city: form.city,
@@ -321,6 +324,22 @@ export default function Arbeitsvertrag() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label>Geburtsort <span className="text-destructive">*</span></Label>
+                  <Input className={cn(form.birth_place.trim() && "border-green-500")} value={form.birth_place} onChange={e => updateForm("birth_place", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nationalität <span className="text-destructive">*</span></Label>
+                  <Select value={form.nationality} onValueChange={v => updateForm("nationality", v)}>
+                    <SelectTrigger className={cn(form.nationality && "border-green-500")}><SelectValue placeholder="Bitte wählen" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Deutsch">Deutsch</SelectItem>
+                      <SelectItem value="Österreichisch">Österreichisch</SelectItem>
+                      <SelectItem value="Schweizerisch">Schweizerisch</SelectItem>
+                      <SelectItem value="Sonstige">Sonstige</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label>Straße & Hausnummer <span className="text-destructive">*</span></Label>
                   <Input className={cn(form.street.trim() && "border-green-500")} value={form.street} onChange={e => updateForm("street", e.target.value)} />
                 </div>
@@ -435,6 +454,8 @@ export default function Arbeitsvertrag() {
                   <SummaryRow label="E-Mail" value={form.email} />
                   <SummaryRow label="Telefon" value={form.phone} />
                   <SummaryRow label="Geburtsdatum" value={form.birth_date} />
+                  <SummaryRow label="Geburtsort" value={form.birth_place} />
+                  <SummaryRow label="Nationalität" value={form.nationality} />
                   <SummaryRow label="Adresse" value={`${form.street}, ${form.zip_code} ${form.city}`} />
                   <SummaryRow label="Familienstand" value={form.marital_status} />
                   <SummaryRow label="Beschäftigung" value={employmentLabels[form.employment_type] || form.employment_type} />

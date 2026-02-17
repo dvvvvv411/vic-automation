@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { MitarbeiterSidebar } from "./MitarbeiterSidebar";
 import { ChatWidget } from "@/components/chat/ChatWidget";
+import { ContractSigningView } from "./ContractSigningView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -16,6 +17,9 @@ interface ContractData {
   id: string;
   first_name: string | null;
   application_id: string;
+  status: string;
+  contract_pdf_url: string | null;
+  signed_contract_pdf_url: string | null;
 }
 
 export default function MitarbeiterLayout() {
@@ -31,7 +35,7 @@ export default function MitarbeiterLayout() {
       // 1. Get employment contract
       const { data: contractData } = await supabase
         .from("employment_contracts")
-        .select("id, first_name, application_id")
+        .select("id, first_name, application_id, status, contract_pdf_url, signed_contract_pdf_url")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -95,9 +99,17 @@ export default function MitarbeiterLayout() {
               </div>
             </div>
           </header>
-          <main className="flex-1 p-6 lg:p-8 bg-slate-50">
-            <Outlet context={{ contract, branding, loading }} />
-          </main>
+          {contract?.status === "genehmigt" && contract?.contract_pdf_url ? (
+            <ContractSigningView
+              contractId={contract.id}
+              contractPdfUrl={contract.contract_pdf_url}
+              brandColor={branding?.brand_color}
+            />
+          ) : (
+            <main className="flex-1 p-6 lg:p-8 bg-slate-50">
+              <Outlet context={{ contract, branding, loading }} />
+            </main>
+          )}
         </div>
         <ChatWidget contractId={contract?.id ?? null} brandColor={branding?.brand_color} />
       </div>
