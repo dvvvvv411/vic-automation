@@ -82,6 +82,9 @@ export type Database = {
           logo_url: string | null
           managing_director: string | null
           register_court: string | null
+          resend_api_key: string | null
+          resend_from_email: string | null
+          resend_from_name: string | null
           street: string | null
           trade_register: string | null
           vat_id: string | null
@@ -98,6 +101,9 @@ export type Database = {
           logo_url?: string | null
           managing_director?: string | null
           register_court?: string | null
+          resend_api_key?: string | null
+          resend_from_email?: string | null
+          resend_from_name?: string | null
           street?: string | null
           trade_register?: string | null
           vat_id?: string | null
@@ -114,6 +120,9 @@ export type Database = {
           logo_url?: string | null
           managing_director?: string | null
           register_court?: string | null
+          resend_api_key?: string | null
+          resend_from_email?: string | null
+          resend_from_name?: string | null
           street?: string | null
           trade_register?: string | null
           vat_id?: string | null

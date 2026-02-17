@@ -36,6 +36,9 @@ const brandingSchema = z.object({
   domain: z.string().max(200).optional(),
   email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
   brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Ungültiger Hex-Farbcode"),
+  resend_from_email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
+  resend_from_name: z.string().max(200).optional(),
+  resend_api_key: z.string().max(200).optional(),
 });
 
 type BrandingForm = z.infer<typeof brandingSchema>;
@@ -52,6 +55,9 @@ const initialForm: BrandingForm = {
   domain: "",
   email: "",
   brand_color: "#3B82F6",
+  resend_from_email: "",
+  resend_from_name: "",
+  resend_api_key: "",
 };
 
 export default function AdminBrandings() {
@@ -142,6 +148,9 @@ export default function AdminBrandings() {
       domain: branding.domain || "",
       email: branding.email || "",
       brand_color: branding.brand_color || "#3B82F6",
+      resend_from_email: (branding as any).resend_from_email || "",
+      resend_from_name: (branding as any).resend_from_name || "",
+      resend_api_key: (branding as any).resend_api_key || "",
     });
     setOpen(true);
   };
@@ -305,6 +314,30 @@ export default function AdminBrandings() {
                 <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="info@example.com" />
                 {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
               </div>
+            </div>
+
+            {/* Resend E-Mail-Konfiguration */}
+            <div className="pt-2">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-sm font-medium text-muted-foreground">Resend E-Mail-Konfiguration</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Absender-E-Mail</Label>
+                <Input value={form.resend_from_email} onChange={(e) => updateField("resend_from_email", e.target.value)} placeholder="noreply@example.com" />
+                {errors.resend_from_email && <p className="text-xs text-destructive">{errors.resend_from_email}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label>Absendername</Label>
+                <Input value={form.resend_from_name} onChange={(e) => updateField("resend_from_name", e.target.value)} placeholder="Muster GmbH" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Resend API Key</Label>
+              <Input type="password" value={form.resend_api_key} onChange={(e) => updateField("resend_api_key", e.target.value)} placeholder="re_..." />
             </div>
 
             {/* Brand Color */}
