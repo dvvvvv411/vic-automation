@@ -22,8 +22,8 @@ export default function AdminMitarbeiter() {
     queryFn: async () => {
       const { data: contracts, error, count } = await supabase
         .from("employment_contracts")
-        .select("id, first_name, last_name, email, phone, temp_password, user_id, application_id, applications(brandings(company_name))", { count: "exact" })
-        .eq("status", "genehmigt")
+        .select("id, first_name, last_name, email, phone, temp_password, user_id, application_id, status, applications(brandings(company_name))", { count: "exact" })
+        .in("status", ["genehmigt", "unterzeichnet"])
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
@@ -112,9 +112,15 @@ export default function AdminMitarbeiter() {
                           {(item as any).applications?.brandings?.company_name || "–"}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-orange-600 border-orange-300">
-                            Nicht unterzeichnet
-                          </Badge>
+                          {item.status === "unterzeichnet" ? (
+                            <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
+                              Unterzeichnet
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50">
+                              Nicht unterzeichnet
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Button
