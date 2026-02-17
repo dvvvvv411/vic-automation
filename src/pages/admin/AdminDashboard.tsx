@@ -98,18 +98,21 @@ export default function AdminDashboard() {
   });
 
   const stats = [
-    { label: "Neue Bewerbungen", value: neuCount, loading: l1, icon: FileText, link: "/admin/bewerbungen" },
-    { label: "Gespräche heute", value: interviewTodayCount, loading: l2, icon: Calendar, link: "/admin/bewerbungsgespraeche" },
-    { label: "Offene Verträge", value: contractCount, loading: l3, icon: FileCheck, link: "/admin/arbeitsvertraege" },
-    { label: "Termine heute", value: appointmentTodayCount, loading: l4, icon: CalendarClock, link: "/admin/auftragstermine" },
-    { label: "Ungelesene Chats", value: unreadChatCount, loading: l5, icon: MessageCircle, link: "/admin/livechat" },
+    { label: "Neue Bewerbungen", value: neuCount, loading: l1, icon: FileText, link: "/admin/bewerbungen", accent: "text-blue-600 bg-blue-100" },
+    { label: "Gespräche heute", value: interviewTodayCount, loading: l2, icon: Calendar, link: "/admin/bewerbungsgespraeche", accent: "text-emerald-600 bg-emerald-100" },
+    { label: "Offene Verträge", value: contractCount, loading: l3, icon: FileCheck, link: "/admin/arbeitsvertraege", accent: "text-orange-600 bg-orange-100" },
+    { label: "Termine heute", value: appointmentTodayCount, loading: l4, icon: CalendarClock, link: "/admin/auftragstermine", accent: "text-violet-600 bg-violet-100" },
+    { label: "Ungelesene Chats", value: unreadChatCount, loading: l5, icon: MessageCircle, link: "/admin/livechat", accent: "text-rose-600 bg-rose-100" },
   ];
 
-  const statusMap: Record<string, string> = {
-    neu: "Neu",
-    eingeladen: "Eingeladen",
-    erfolgreich: "Erfolgreich",
-    abgelehnt: "Abgelehnt",
+  const statusConfig: Record<string, { label: string; className: string }> = {
+    neu: { label: "Neu", className: "border-blue-300 bg-blue-50 text-blue-700" },
+    eingeladen: { label: "Eingeladen", className: "border-amber-300 bg-amber-50 text-amber-700" },
+    bewerbungsgespraech: { label: "Bewerbungsgespräch", className: "border-yellow-300 bg-yellow-50 text-yellow-700" },
+    termin_gebucht: { label: "Termin gebucht", className: "border-emerald-300 bg-emerald-50 text-emerald-700" },
+    erfolgreich: { label: "Erfolgreich", className: "border-green-300 bg-green-50 text-green-700" },
+    abgelehnt: { label: "Abgelehnt", className: "border-red-300 bg-red-50 text-red-700" },
+    ausstehend: { label: "Ausstehend", className: "border-amber-300 bg-amber-50 text-amber-700" },
   };
 
   return (
@@ -129,8 +132,8 @@ export default function AdminDashboard() {
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
-                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10">
-                  <s.icon className="h-4 w-4 text-primary" />
+                <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${s.accent}`}>
+                  <s.icon className="h-4 w-4" />
                 </div>
               </CardHeader>
               <CardContent>
@@ -163,7 +166,7 @@ export default function AdminDashboard() {
                     <div key={a.id} className="flex items-center justify-between text-sm">
                       <span className="font-medium text-foreground">{a.first_name} {a.last_name}</span>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">{statusMap[a.status] ?? a.status}</Badge>
+                        <Badge variant="outline" className={`text-xs ${statusConfig[a.status]?.className ?? ""}`}>{statusConfig[a.status]?.label ?? a.status}</Badge>
                         <span className="text-muted-foreground text-xs">{format(new Date(a.created_at), "dd.MM.yy", { locale: de })}</span>
                       </div>
                     </div>
@@ -189,7 +192,7 @@ export default function AdminDashboard() {
                         {iv.applications?.first_name} {iv.applications?.last_name}
                       </span>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">{statusMap[iv.status] ?? iv.status}</Badge>
+                        <Badge variant="outline" className={`text-xs ${statusConfig[iv.status]?.className ?? ""}`}>{statusConfig[iv.status]?.label ?? iv.status}</Badge>
                         <span className="text-muted-foreground text-xs">{iv.appointment_time?.slice(0, 5)} Uhr</span>
                       </div>
                     </div>
