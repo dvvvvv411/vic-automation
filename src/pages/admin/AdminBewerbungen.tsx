@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, FileText, Trash2, Check, Copy, CalendarCheck } from "lucide-react";
+import { Plus, FileText, Trash2, Check, Copy, CalendarCheck, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { z } from "zod";
@@ -74,6 +74,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 
 export default function AdminBewerbungen() {
   const [open, setOpen] = useState(false);
+  const [detailApp, setDetailApp] = useState<any>(null);
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const queryClient = useQueryClient();
@@ -182,7 +183,7 @@ export default function AdminBewerbungen() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => acceptMutation.mutate(app.id)}
+            onClick={(e) => { e.stopPropagation(); acceptMutation.mutate(app.id); }}
             disabled={acceptMutation.isPending}
             className="text-xs"
           >
@@ -191,7 +192,7 @@ export default function AdminBewerbungen() {
           </Button>
         )}
         {status === "bewerbungsgespraech" && (
-          <Button variant="ghost" size="sm" onClick={() => copyLink(app.id)} className="text-xs">
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); copyLink(app.id); }} className="text-xs">
             <Copy className="h-4 w-4 mr-1" />
             Link kopieren
           </Button>
@@ -204,7 +205,7 @@ export default function AdminBewerbungen() {
             {app.interview_appointments[0].appointment_time?.slice(0, 5)} Uhr
           </span>
         )}
-        <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(app.id)}>
+        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(app.id); }}>
           <Trash2 className="h-4 w-4 text-muted-foreground" />
         </Button>
       </div>
@@ -307,6 +308,74 @@ export default function AdminBewerbungen() {
         </Dialog>
       </motion.div>
 
+      <Dialog open={!!detailApp} onOpenChange={(v) => { if (!v) setDetailApp(null); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Bewerbungsdetails</DialogTitle>
+          </DialogHeader>
+          {detailApp && (
+            <div className="grid gap-3 py-2 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-muted-foreground">Vorname</span>
+                  <p className="font-medium">{detailApp.first_name}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Nachname</span>
+                  <p className="font-medium">{detailApp.last_name}</p>
+                </div>
+              </div>
+              <div>
+                <span className="text-muted-foreground">E-Mail</span>
+                <p className="font-medium">{detailApp.email}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Telefon</span>
+                <p className="font-medium">{detailApp.phone || "–"}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Adresse</span>
+                <p className="font-medium">
+                  {detailApp.street || "–"}
+                  {(detailApp.zip_code || detailApp.city) && <br />}
+                  {`${detailApp.zip_code || ""} ${detailApp.city || ""}`.trim() || ""}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Anstellungsart</span>
+                <p className="font-medium">{employmentLabels[detailApp.employment_type] || detailApp.employment_type}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Branding</span>
+                <p className="font-medium">{detailApp.brandings?.company_name || "–"}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Status</span>
+                <p className="font-medium">{(statusConfig[detailApp.status] || statusConfig.neu).label}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Eingegangen</span>
+                <p className="font-medium">{new Date(detailApp.created_at).toLocaleDateString("de-DE")}</p>
+              </div>
+              {detailApp.resume_url && (
+                <div>
+                  <span className="text-muted-foreground">Lebenslauf</span>
+                  <div className="mt-1">
+                    <Button asChild variant="outline" size="sm">
+                      <a href={detailApp.resume_url} target="_blank" rel="noopener noreferrer">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Lebenslauf ansehen
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Laden...</div>
@@ -330,6 +399,7 @@ export default function AdminBewerbungen() {
                   <TableHead>Ort</TableHead>
                   <TableHead>Anstellungsart</TableHead>
                   <TableHead>Branding</TableHead>
+                  <TableHead>CV</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Eingegangen</TableHead>
                   <TableHead className="text-right">Aktionen</TableHead>
@@ -340,7 +410,7 @@ export default function AdminBewerbungen() {
                   const status = a.status || "neu";
                   const cfg = statusConfig[status] || statusConfig.neu;
                   return (
-                    <TableRow key={a.id}>
+                    <TableRow key={a.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetailApp(a)}>
                       <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
                       <TableCell className="text-muted-foreground">{a.email}</TableCell>
                       <TableCell className="text-muted-foreground">{a.phone || "–"}</TableCell>
@@ -352,6 +422,21 @@ export default function AdminBewerbungen() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {a.brandings?.company_name || "–"}
+                      </TableCell>
+                      <TableCell>
+                        {a.resume_url ? (
+                          <a
+                            href={a.resume_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-primary hover:text-primary/80"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">–</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={cfg.variant} className={cfg.className}>{cfg.label}</Badge>
