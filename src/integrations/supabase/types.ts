@@ -25,6 +25,7 @@ export type Database = {
           id: string
           last_name: string
           phone: string | null
+          resume_url: string | null
           status: string
           street: string | null
           zip_code: string | null
@@ -39,6 +40,7 @@ export type Database = {
           id?: string
           last_name: string
           phone?: string | null
+          resume_url?: string | null
           status?: string
           street?: string | null
           zip_code?: string | null
@@ -53,6 +55,7 @@ export type Database = {
           id?: string
           last_name?: string
           phone?: string | null
+          resume_url?: string | null
           status?: string
           street?: string | null
           zip_code?: string | null
