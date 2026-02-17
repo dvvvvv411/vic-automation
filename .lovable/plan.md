@@ -1,42 +1,48 @@
 
-# Startdatum-Bestaetigung vor Genehmigung
 
-## Uebersicht
-Beim Klick auf "Genehmigen" im Vertragsdaten-Popup soll sich ein weiteres Dialog-Fenster oeffnen, in dem das vom Bewerber gewuenschte Startdatum in einem Kalender vorausgewaehlt angezeigt wird. Der Admin kann das Datum bestaetigen oder aendern und erst dann wird der Vertrag genehmigt.
+# Admin Dashboard Badges aufwerten - Farbige Status-Badges
 
-## Ablauf
+## Problem
+Die Badges im Admin Dashboard (`/admin`) sind langweilig und farblos. Sie verwenden `variant="outline"` ohne jegliche Farbgestaltung. Waehrend andere Admin-Seiten (Bewerbungen, Bewertungen) bereits farbige Badges mit Hintergrund und passenden Rahmenfarben haben, fehlt das im Dashboard komplett.
 
-1. Admin klickt "Genehmigen" im Vertragsdaten-Dialog
-2. Statt sofort `handleApprove` aufzurufen, oeffnet sich ein neues Bestaetigungs-Dialog
-3. Der Kalender zeigt das `desired_start_date` des Vertrags vorausgewaehlt an
-4. Der Admin kann das Datum beibehalten oder ein anderes waehlen
-5. Klick auf "Genehmigen & Startdatum bestaetigen" fuehrt die eigentliche Genehmigung durch
-6. Das gewaehlte Startdatum wird vor dem Aufruf der Edge Function in der Datenbank aktualisiert
+## Betroffene Stellen
+
+1. **AdminDashboard.tsx** - `statusMap` hat nur Labels, keine Farbkonfiguration. Badges bei "Neueste Bewerbungen" und "Heutige Gespraeche" sind einfach grau/outline.
+
+2. **AdminMitarbeiter.tsx** - Status-Badge ist hardcoded auf eine orange "Nicht unterzeichnet"-Badge (wird separat im anderen Plan behandelt).
+
+## Loesung
+
+### AdminDashboard.tsx - Farbige Status-Badges
+
+Die `statusMap` wird zu einer `statusConfig` mit Farben umgebaut (gleiches Muster wie in AdminBewerbungen/AdminBewertungen):
+
+| Status | Farbe | Label |
+|--------|-------|-------|
+| neu | Blau (primary) | Neu |
+| eingeladen | Gelb/Amber | Eingeladen |
+| bewerbungsgespraech | Gelb | Bewerbungsgespraech |
+| termin_gebucht | Gruen | Termin gebucht |
+| erfolgreich | Gruen | Erfolgreich |
+| abgelehnt | Rot/Destructive | Abgelehnt |
+| ausstehend | Gelb/Amber | Ausstehend |
+
+Jede Badge bekommt:
+- Einen farbigen Rahmen (`border-{color}-300`)
+- Einen leichten farbigen Hintergrund (`bg-{color}-50`)
+- Passende Textfarbe (`text-{color}-600`)
+
+### Stat-Cards im Dashboard aufwerten
+- Jede Stat-Card bekommt eine individuelle Akzentfarbe statt einheitlich `primary`
+- Kleine farbige Indikator-Dots oder dezente farbige Akzente
 
 ## Technische Aenderungen
 
-**Datei:** `src/pages/admin/AdminArbeitsvertraege.tsx`
+**Datei:** `src/pages/admin/AdminDashboard.tsx`
 
-### 1. Neue State-Variablen
-- `startDateDialogOpen` (boolean) - steuert das Bestaetigungs-Dialog
-- `confirmedStartDate` (Date | undefined) - das ausgewaehlte Startdatum im Kalender
+1. `statusMap` (Zeile 108-113) wird durch eine `statusConfig` ersetzt mit `label`, `className` pro Status
+2. Badge-Rendering in "Neueste Bewerbungen" (Zeile 166) und "Heutige Gespraeche" (Zeile 192) wird aktualisiert, um die Farb-Klassen aus der Config zu verwenden
+3. Die Interview-Status-Badges ("Heutige Gespraeche") bekommen ebenfalls passende Farben
+4. Stat-Cards bekommen pro Karte eine individuelle Akzentfarbe (z.B. Blau fuer Bewerbungen, Gruen fuer Gespraeche, Orange fuer Vertraege, Lila fuer Termine, Rot fuer Chats)
 
-### 2. Neue Imports
-- `Calendar` aus `@/components/ui/calendar`
-- `format` aus `date-fns`
-- `de` Locale aus `date-fns/locale/de` fuer deutsche Kalenderanzeige
-
-### 3. Genehmigen-Button Logik aendern
-- Der "Genehmigen"-Button im Vertragsdaten-Dialog ruft nicht mehr direkt `handleApprove` auf
-- Stattdessen setzt er `confirmedStartDate` auf das `desired_start_date` des Vertrags (als Date-Objekt geparst) und oeffnet `startDateDialogOpen`
-
-### 4. Neuer Bestaetigungs-Dialog
-- Zeigt einen Kalender (`Calendar` Komponente im `single`-Modus)
-- Vorausgewaehlt ist das `desired_start_date` des Vertrags
-- Anzeige des aktuell gewaehlten Datums als Text ueber dem Kalender
-- Buttons: "Abbrechen" und "Genehmigen & Startdatum bestaetigen"
-
-### 5. handleApprove erweitern
-- Vor dem Edge-Function-Aufruf wird das `desired_start_date` in der Tabelle `employment_contracts` aktualisiert (falls vom Admin geaendert)
-- Danach wird wie bisher `create-employee-account` aufgerufen
-- Nach Erfolg werden beide Dialoge geschlossen
+Keine neuen Abhaengigkeiten oder Datenbankabfragen noetig - rein visuelles Upgrade.
