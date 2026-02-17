@@ -1,32 +1,28 @@
 
-
-# Nationalitaet-Dropdown erweitern mit Suchfunktion
+# Unterschriebenen Arbeitsvertrag in "Meine Daten" anzeigen
 
 ## Problem
-Aktuell stehen nur 4 Optionen zur Verfuegung: Deutsch, Oesterreichisch, Schweizerisch, Sonstige. Es sollen alle Nationalitaeten verfuegbar sein, mit einer Suchfunktion und "Deutsch" ganz oben.
+Der unterschriebene Vertrag von fabian@teilzeit.de ist in der Datenbank vorhanden (Status: "unterzeichnet", signed_contract_pdf_url gesetzt), aber die Seite "Meine Daten" zeigt keinen Bereich zum Ansehen oder Herunterladen des Vertrags an. Das `FileDown`-Icon ist bereits importiert, wird aber nicht verwendet.
 
 ## Loesung
-Das bestehende `Select`-Dropdown wird durch ein `Popover` + `Command` (cmdk) ersetzt - die bereits installierten Komponenten fuer durchsuchbare Auswahllisten (Combobox-Pattern).
+Ein neuer Abschnitt "Arbeitsvertrag" wird in der Seite MeineDaten eingefuegt, der den unterschriebenen Vertrag als Download-Button anbietet.
 
 ## Aenderungen
 
-**Datei:** `src/pages/Arbeitsvertrag.tsx`
+**Datei:** `src/pages/mitarbeiter/MeineDaten.tsx`
 
-### 1. Imports ergaenzen
-- `Popover`, `PopoverTrigger`, `PopoverContent` importieren
-- `Command`, `CommandInput`, `CommandList`, `CommandEmpty`, `CommandGroup`, `CommandItem` importieren
-- `Check`, `ChevronsUpDown` aus lucide-react importieren
+### 1. Vertragsdaten aus dem Context nutzen
+- Die Variable `contract` aus dem OutletContext enthaelt bereits `signed_contract_pdf_url`
+- Kein zusaetzlicher Datenbank-Aufruf noetig
 
-### 2. Nationalitaeten-Liste als Konstante
-- Eine vollstaendige Liste aller gaengigen Nationalitaeten (ca. 195 Eintraege) als Array definieren
-- "Deutsch" steht an erster Stelle, gefolgt von allen anderen alphabetisch sortiert
+### 2. Neuen Abschnitt "Arbeitsvertrag" einfuegen
+- Wird zwischen den persoenlichen Informationen und den Statistiken platziert
+- Card mit `FileDown`-Icon im Header (bereits importiert)
+- Zeigt den Vertragsstatus an ("Unterzeichnet")
+- Enthaelt einen Button "Vertrag herunterladen", der die `signed_contract_pdf_url` in einem neuen Tab oeffnet
+- Wird nur angezeigt, wenn `contract?.signed_contract_pdf_url` vorhanden ist
 
-### 3. Select durch Combobox ersetzen (Zeilen 330-341)
-- Das `Select`-Element wird durch ein `Popover` mit `Command`-Suche ersetzt
-- Der Trigger-Button zeigt die ausgewaehlte Nationalitaet an
-- `CommandInput` ermoeglicht die Suche/Filterung
-- `CommandList` zeigt die gefilterten Ergebnisse
-- "Deutsch" wird in einer eigenen `CommandGroup` ganz oben angezeigt
-- Alle anderen Nationalitaeten folgen in einer zweiten Gruppe
-- Bei Auswahl schliesst das Popover und der Wert wird gesetzt
-
+### Technische Details
+- Nur eine Datei betroffen: `src/pages/mitarbeiter/MeineDaten.tsx`
+- Keine neuen Imports noetig (`FileDown` ist bereits importiert)
+- Keine Datenbank- oder Schema-Aenderungen erforderlich
