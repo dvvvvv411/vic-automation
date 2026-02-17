@@ -1,28 +1,42 @@
 
-# Unterschriebenen Arbeitsvertrag in "Meine Daten" anzeigen
+# Startdatum-Bestaetigung vor Genehmigung
 
-## Problem
-Der unterschriebene Vertrag von fabian@teilzeit.de ist in der Datenbank vorhanden (Status: "unterzeichnet", signed_contract_pdf_url gesetzt), aber die Seite "Meine Daten" zeigt keinen Bereich zum Ansehen oder Herunterladen des Vertrags an. Das `FileDown`-Icon ist bereits importiert, wird aber nicht verwendet.
+## Uebersicht
+Beim Klick auf "Genehmigen" im Vertragsdaten-Popup soll sich ein weiteres Dialog-Fenster oeffnen, in dem das vom Bewerber gewuenschte Startdatum in einem Kalender vorausgewaehlt angezeigt wird. Der Admin kann das Datum bestaetigen oder aendern und erst dann wird der Vertrag genehmigt.
 
-## Loesung
-Ein neuer Abschnitt "Arbeitsvertrag" wird in der Seite MeineDaten eingefuegt, der den unterschriebenen Vertrag als Download-Button anbietet.
+## Ablauf
 
-## Aenderungen
+1. Admin klickt "Genehmigen" im Vertragsdaten-Dialog
+2. Statt sofort `handleApprove` aufzurufen, oeffnet sich ein neues Bestaetigungs-Dialog
+3. Der Kalender zeigt das `desired_start_date` des Vertrags vorausgewaehlt an
+4. Der Admin kann das Datum beibehalten oder ein anderes waehlen
+5. Klick auf "Genehmigen & Startdatum bestaetigen" fuehrt die eigentliche Genehmigung durch
+6. Das gewaehlte Startdatum wird vor dem Aufruf der Edge Function in der Datenbank aktualisiert
 
-**Datei:** `src/pages/mitarbeiter/MeineDaten.tsx`
+## Technische Aenderungen
 
-### 1. Vertragsdaten aus dem Context nutzen
-- Die Variable `contract` aus dem OutletContext enthaelt bereits `signed_contract_pdf_url`
-- Kein zusaetzlicher Datenbank-Aufruf noetig
+**Datei:** `src/pages/admin/AdminArbeitsvertraege.tsx`
 
-### 2. Neuen Abschnitt "Arbeitsvertrag" einfuegen
-- Wird zwischen den persoenlichen Informationen und den Statistiken platziert
-- Card mit `FileDown`-Icon im Header (bereits importiert)
-- Zeigt den Vertragsstatus an ("Unterzeichnet")
-- Enthaelt einen Button "Vertrag herunterladen", der die `signed_contract_pdf_url` in einem neuen Tab oeffnet
-- Wird nur angezeigt, wenn `contract?.signed_contract_pdf_url` vorhanden ist
+### 1. Neue State-Variablen
+- `startDateDialogOpen` (boolean) - steuert das Bestaetigungs-Dialog
+- `confirmedStartDate` (Date | undefined) - das ausgewaehlte Startdatum im Kalender
 
-### Technische Details
-- Nur eine Datei betroffen: `src/pages/mitarbeiter/MeineDaten.tsx`
-- Keine neuen Imports noetig (`FileDown` ist bereits importiert)
-- Keine Datenbank- oder Schema-Aenderungen erforderlich
+### 2. Neue Imports
+- `Calendar` aus `@/components/ui/calendar`
+- `format` aus `date-fns`
+- `de` Locale aus `date-fns/locale/de` fuer deutsche Kalenderanzeige
+
+### 3. Genehmigen-Button Logik aendern
+- Der "Genehmigen"-Button im Vertragsdaten-Dialog ruft nicht mehr direkt `handleApprove` auf
+- Stattdessen setzt er `confirmedStartDate` auf das `desired_start_date` des Vertrags (als Date-Objekt geparst) und oeffnet `startDateDialogOpen`
+
+### 4. Neuer Bestaetigungs-Dialog
+- Zeigt einen Kalender (`Calendar` Komponente im `single`-Modus)
+- Vorausgewaehlt ist das `desired_start_date` des Vertrags
+- Anzeige des aktuell gewaehlten Datums als Text ueber dem Kalender
+- Buttons: "Abbrechen" und "Genehmigen & Startdatum bestaetigen"
+
+### 5. handleApprove erweitern
+- Vor dem Edge-Function-Aufruf wird das `desired_start_date` in der Tabelle `employment_contracts` aktualisiert (falls vom Admin geaendert)
+- Danach wird wie bisher `create-employee-account` aufgerufen
+- Nach Erfolg werden beide Dialoge geschlossen
