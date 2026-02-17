@@ -161,7 +161,7 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
           <DialogHeader>
             <DialogTitle>Digital unterschreiben</DialogTitle>
             <DialogDescription>
-              Bitte schreiben Sie Ort, Datum und Ihre Unterschrift in das Feld unten.
+              Bitte setzen Sie Ihre Unterschrift in das Feld unten.
             </DialogDescription>
           </DialogHeader>
 
@@ -182,7 +182,7 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
               />
             </div>
             <p className="text-xs text-muted-foreground text-center">
-              Ort, Datum, Unterschrift
+              Unterschrift
             </p>
           </div>
 

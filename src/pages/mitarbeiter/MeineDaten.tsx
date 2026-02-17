@@ -237,35 +237,6 @@ const MeineDaten = () => {
         </Card>
       </motion.div>
 
-      {/* Contract Download */}
-      {contract?.signed_contract_pdf_url && (
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.35 }}>
-          <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <FileDown className="h-4 w-4 text-primary" />
-                Arbeitsvertrag
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-3">Ihr unterschriebener Arbeitsvertrag steht zum Download bereit.</p>
-              <a
-                href={contract.signed_contract_pdf_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
-              >
-                <Button variant="outline" className="gap-2">
-                  <FileDown className="h-4 w-4" />
-                  Arbeitsvertrag herunterladen
-                </Button>
-              </a>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-
       {/* Reward History */}
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.4 }}>
         <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
