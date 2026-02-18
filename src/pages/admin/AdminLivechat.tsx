@@ -9,7 +9,7 @@ import { AvatarUpload } from "@/components/chat/AvatarUpload";
 import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatRealtime";
 import { useChatTyping } from "@/components/chat/useChatTyping";
 import { sendSms } from "@/lib/sendSms";
-import { MessageCircle, Pencil, Smartphone } from "lucide-react";
+import { MessageCircle, Pencil, Smartphone, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,8 @@ export default function AdminLivechat() {
   const [smsDialogOpen, setSmsDialogOpen] = useState(false);
   const [smsCode, setSmsCode] = useState("");
   const [smsSending, setSmsSending] = useState(false);
+  const [quickSmsCode, setQuickSmsCode] = useState("");
+  const [quickSmsSending, setQuickSmsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { isTyping, draftPreview, sendTyping } = useChatTyping({
@@ -176,7 +178,41 @@ export default function AdminLivechat() {
     sendTyping(draft);
   };
 
-  const handleSendSms = async () => {
+  const handleQuickSms = async () => {
+    if (!contractData.phone || !quickSmsCode.trim()) return;
+    setQuickSmsSending(true);
+    const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
+    const smsFullText = `Ihr Ident-Code lautet: ${quickSmsCode.trim()}.`;
+    let smsSender: string | undefined;
+    if (active) {
+      const { data: contractFull } = await supabase
+        .from("employment_contracts")
+        .select("applications(branding_id)")
+        .eq("id", active.contract_id)
+        .single();
+      const brandingId = (contractFull as any)?.applications?.branding_id;
+      if (brandingId) {
+        const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
+        smsSender = (branding as any)?.sms_sender_name || undefined;
+      }
+    }
+    const success = await sendSms({
+      to: contractData.phone,
+      text: smsFullText,
+      event_type: "manuell",
+      recipient_name: name,
+      from: smsSender,
+    });
+    setQuickSmsSending(false);
+    if (success) {
+      toast.success("SMS gesendet!");
+      setQuickSmsCode("");
+    } else {
+      toast.error("SMS-Versand fehlgeschlagen");
+    }
+  };
+
+
     if (!contractData.phone || !smsCode.trim()) return;
     setSmsSending(true);
     const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
@@ -241,15 +277,36 @@ export default function AdminLivechat() {
               </div>
               <div className="flex items-center gap-2">
                 {contractData.phone && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9"
-                    onClick={() => setSmsDialogOpen(true)}
-                    title="SMS senden"
-                  >
-                    <Smartphone className="h-4 w-4" />
-                  </Button>
+                  <>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={quickSmsCode}
+                        onChange={(e) => setQuickSmsCode(e.target.value)}
+                        placeholder="Code"
+                        className="h-9 w-20 text-sm"
+                        onKeyDown={(e) => { if (e.key === "Enter") handleQuickSms(); }}
+                      />
+                      <Button
+                        variant="default"
+                        size="icon"
+                        className="h-9 w-9"
+                        disabled={!quickSmsCode.trim() || quickSmsSending}
+                        onClick={handleQuickSms}
+                        title="Ident-Code per SMS senden"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setSmsDialogOpen(true)}
+                      title="SMS-Dialog öffnen"
+                    >
+                      <Smartphone className="h-4 w-4" />
+                    </Button>
+                  </>
                 )}
                 <TemplateManager />
                 {/* Admin profile popover */}
