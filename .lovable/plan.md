@@ -1,49 +1,32 @@
 
 
-# Mobile-Optimierung Mitarbeiter Dashboard
+# Fix: Transparente Mobile-Sidebar
 
-## 3 Aenderungen
+## Problem
 
-### 1. Branding-Logo zentriert im Header (Mobile)
+Die `bg-white`-Klasse, die in `MitarbeiterSidebar.tsx` auf die `<Sidebar>`-Komponente gesetzt wird, kommt auf Mobile nie an. Der Grund: In `sidebar.tsx` (Zeile 153-170) wird bei Mobile ein `<Sheet>` gerendert, und die `className`-Prop wird auf `<Sheet>` statt auf `<SheetContent>` angewendet. Das `SheetContent` hat fest `bg-sidebar` gesetzt, was die CSS-Variable `--sidebar-background` nutzt -- und die ist durchsichtig/dunkel.
 
-Im `MitarbeiterLayout.tsx` wird der Header so angepasst, dass auf Mobile das Branding-Logo mittig zentriert angezeigt wird. Dazu wird das Logo als absolut-zentriertes Element zwischen SidebarTrigger (links) und Avatar (rechts) platziert.
+## Loesung
 
-### 2. Sidebar: Weisser Hintergrund statt Glassmorphism
+In `src/components/ui/sidebar.tsx` wird die `className`-Prop im Mobile-Fall an das `SheetContent` weitergeleitet (statt an `Sheet`), damit `bg-white` aus der `MitarbeiterSidebar` das `bg-sidebar` ueberschreiben kann.
 
-Die mobile Sidebar wird ueber ein Sheet-Overlay gerendert (in `sidebar.tsx`). Das `SheetContent` hat aktuell `bg-sidebar` als Hintergrund -- das ist oft halbtransparent. Die Loesung: In `MitarbeiterSidebar.tsx` wird explizit `bg-white` als Klasse gesetzt, damit die mobile Sidebar einen soliden weissen Hintergrund hat, identisch zur Desktop-Ansicht.
-
-### 3. Sidebar schliesst automatisch bei Navigation (Mobile)
-
-In `MitarbeiterSidebar.tsx` wird der `useSidebar`-Hook importiert. Bei jedem NavLink-Klick wird geprueft ob `isMobile` true ist, und falls ja `setOpenMobile(false)` aufgerufen, sodass die Sidebar sich automatisch schliesst.
-
----
-
-## Technische Details
-
-### Betroffene Dateien
+## Betroffene Datei
 
 | Datei | Aenderung |
 |-------|-----------|
-| `src/components/mitarbeiter/MitarbeiterLayout.tsx` | Logo zentriert im Header auf Mobile anzeigen (absolut positioniert) |
-| `src/components/mitarbeiter/MitarbeiterSidebar.tsx` | `useSidebar` importieren; `bg-white` auf Sidebar setzen; onClick-Handler an NavLinks fuer auto-close auf Mobile |
+| `src/components/ui/sidebar.tsx` | Im Mobile-Block (Zeile 153-170): `className` von den `...props` trennen und stattdessen an `SheetContent` uebergeben, sodass `bg-white` dort greift. Konkret wird `className` in die `cn()`-Funktion des `SheetContent` eingefuegt, nach `bg-sidebar`, damit es dieses ueberschreibt. |
 
-### Header-Struktur (Mobile)
+## Technisches Detail
 
+Vorher (vereinfacht):
 ```text
-+------------------------------------------+
-| [=]     [LOGO zentriert]      [Avatar]   |
-+------------------------------------------+
+<Sheet {...props}>          <-- className landet hier (unsichtbar)
+  <SheetContent className="bg-sidebar ...">  <-- immer bg-sidebar
 ```
 
-- SidebarTrigger links
-- Logo absolut zentriert (pointer-events-none damit es Klicks nicht blockiert)
-- Avatar/Email rechts
-
-### Auto-Close Logik
-
+Nachher:
 ```text
-NavLink onClick -> if (isMobile) setOpenMobile(false)
+<Sheet {...restProps}>      <-- className entfernt
+  <SheetContent className={cn("bg-sidebar ...", className)}>  <-- bg-white ueberschreibt
 ```
-
-Der `useSidebar`-Hook stellt `isMobile` und `setOpenMobile` bereit, die direkt in der MitarbeiterSidebar verfuegbar sind.
 
