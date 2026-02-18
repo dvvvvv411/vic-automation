@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { toast } from "sonner";
 import { Shield, CheckCircle, Building2 } from "lucide-react";
 
@@ -25,9 +25,6 @@ const Auth = () => {
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [regName, setRegName] = useState("");
-  const [regEmail, setRegEmail] = useState("");
-  const [regPassword, setRegPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
   const [brandingReady, setBrandingReady] = useState(false);
@@ -82,24 +79,6 @@ const Auth = () => {
     }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: regEmail,
-      password: regPassword,
-      options: {
-        data: { full_name: regName },
-        emailRedirectTo: window.location.origin,
-      },
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Registrierung erfolgreich! Bitte E-Mail bestätigen.");
-    }
-  };
 
   if (!brandingReady) {
     return <div className="min-h-screen bg-background" />;
@@ -180,93 +159,39 @@ const Auth = () => {
               Willkommen
             </h2>
             <p className="text-muted-foreground mt-1">
-              Melden Sie sich an oder erstellen Sie ein Konto.
+              Melden Sie sich an.
             </p>
           </div>
 
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Anmelden</TabsTrigger>
-              <TabsTrigger value="register">Registrieren</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">E-Mail</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-placeholder="ihre@email.de"
-                    className="h-12 rounded-lg"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Passwort</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="h-12 rounded-lg"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full h-12 rounded-lg text-base font-semibold" disabled={loading}>
-                  {loading ? "Wird angemeldet..." : "Anmelden"}
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="reg-name">Vollständiger Name</Label>
-                  <Input
-                    id="reg-name"
-                    type="text"
-                    placeholder="Max Mustermann"
-                    className="h-12 rounded-lg"
-                    value={regName}
-                    onChange={(e) => setRegName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-email">E-Mail</Label>
-                  <Input
-                    id="reg-email"
-                    type="email"
-placeholder="ihre@email.de"
-                    className="h-12 rounded-lg"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-password">Passwort</Label>
-                  <Input
-                    id="reg-password"
-                    type="password"
-                    placeholder="Mind. 6 Zeichen"
-                    className="h-12 rounded-lg"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                </div>
-                <Button type="submit" className="w-full h-12 rounded-lg text-base font-semibold" disabled={loading}>
-                  {loading ? "Wird registriert..." : "Registrieren"}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="login-email">E-Mail</Label>
+              <Input
+                id="login-email"
+                type="email"
+                placeholder="ihre@email.de"
+                className="h-12 rounded-lg"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="login-password">Passwort</Label>
+              <Input
+                id="login-password"
+                type="password"
+                placeholder="••••••••"
+                className="h-12 rounded-lg"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full h-12 rounded-lg text-base font-semibold" disabled={loading}>
+              {loading ? "Wird angemeldet..." : "Anmelden"}
+            </Button>
+          </form>
         </motion.div>
       </div>
     </div>
