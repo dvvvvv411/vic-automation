@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendEmail } from "@/lib/sendEmail";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -78,6 +79,10 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
   const saveMutation = useMutation({
     mutationFn: async () => {
       const col = mode === "order" ? "order_id" : "contract_id";
+      // Determine newly added items
+      const existingIds = new Set(existing?.map((a) => (mode === "order" ? a.contract_id : a.order_id)) ?? []);
+      const newlyAdded = Array.from(selected).filter((id) => !existingIds.has(id));
+
       // Delete old
       const { error: delErr } = await supabase
         .from("order_assignments")
@@ -96,6 +101,45 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           .from("order_assignments")
           .insert(rows);
         if (insErr) throw insErr;
+      }
+
+      // Send emails for newly assigned employees
+      if (mode === "order" && newlyAdded.length > 0) {
+        // Get order info
+        const { data: order } = await supabase
+          .from("orders")
+          .select("title, order_number, reward")
+          .eq("id", sourceId)
+          .single();
+
+        // Get employee info
+        const { data: contracts } = await supabase
+          .from("employment_contracts")
+          .select("id, email, first_name, last_name, applications(branding_id)")
+          .in("id", newlyAdded);
+
+        for (const c of contracts ?? []) {
+          if (c.email) {
+            const brandingId = (c as any)?.applications?.branding_id;
+            await sendEmail({
+              to: c.email,
+              recipient_name: `${c.first_name || ""} ${c.last_name || ""}`.trim(),
+              subject: "Neuer Auftrag zugewiesen",
+              body_title: "Sie haben einen neuen Auftrag erhalten",
+              body_lines: [
+                `Sehr geehrte/r ${c.first_name || ""} ${c.last_name || ""},`,
+                `Ihnen wurde der Auftrag "${order?.title || ""}" (Nr. ${order?.order_number || ""}) zugewiesen.`,
+                `Praemie: ${order?.reward || ""}`,
+                "Bitte loggen Sie sich in Ihr Mitarbeiterkonto ein, um die Details einzusehen.",
+              ],
+              button_text: "Zum Mitarbeiterportal",
+              button_url: `${window.location.origin}/mitarbeiter/auftraege`,
+              branding_id: brandingId || null,
+              event_type: "auftrag_zugewiesen",
+              metadata: { order_id: sourceId, contract_id: c.id },
+            });
+          }
+        }
       }
     },
     onSuccess: () => {

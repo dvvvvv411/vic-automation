@@ -156,6 +156,31 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Send confirmation email
+    try {
+      const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
+      await fetch(sendEmailUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+        body: JSON.stringify({
+          to: email,
+          recipient_name: `${first_name} ${last_name}`,
+          subject: "Ihre Bewerbung ist eingegangen",
+          body_title: "Vielen Dank fuer Ihre Bewerbung",
+          body_lines: [
+            `Sehr geehrte/r ${first_name} ${last_name},`,
+            "wir haben Ihre Bewerbung erhalten und werden diese sorgfaeltig pruefen.",
+            "Wir melden uns zeitnah bei Ihnen mit weiteren Informationen zum Bewerbungsprozess.",
+          ],
+          branding_id: branding_id || null,
+          event_type: "bewerbung_eingegangen",
+          metadata: { application_id: application.id },
+        }),
+      });
+    } catch (emailErr) {
+      console.error("send-email call failed:", emailErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true, application_id: application.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

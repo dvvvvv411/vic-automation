@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Star, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { sendEmail } from "@/lib/sendEmail";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -122,7 +123,6 @@ const AdminBewertungen = () => {
 
     const reward = parseReward(g.order_reward);
 
-    // Update assignment status
     const { error: statusErr } = await supabase
       .from("order_assignments")
       .update({ status: "erfolgreich" })
@@ -135,11 +135,10 @@ const AdminBewertungen = () => {
       return;
     }
 
-    // Add reward to balance
     if (reward > 0) {
       const { data: contract } = await supabase
         .from("employment_contracts")
-        .select("balance")
+        .select("balance, email, first_name, last_name, applications(branding_id)")
         .eq("id", g.contract_id)
         .single();
 
@@ -148,6 +147,25 @@ const AdminBewertungen = () => {
         .from("employment_contracts")
         .update({ balance: currentBalance + reward })
         .eq("id", g.contract_id);
+
+      // Send email
+      if (contract?.email) {
+        const brandingId = (contract as any)?.applications?.branding_id;
+        await sendEmail({
+          to: contract.email,
+          recipient_name: `${contract.first_name || ""} ${contract.last_name || ""}`.trim(),
+          subject: "Ihre Bewertung wurde genehmigt",
+          body_title: "Bewertung genehmigt",
+          body_lines: [
+            `Sehr geehrte/r ${contract.first_name || ""} ${contract.last_name || ""},`,
+            `Ihre Bewertung fuer den Auftrag "${g.order_title}" wurde genehmigt.`,
+            `Die Praemie von ${g.order_reward} wurde Ihrem Konto gutgeschrieben.`,
+          ],
+          branding_id: brandingId || null,
+          event_type: "bewertung_genehmigt",
+          metadata: { order_id: g.order_id, contract_id: g.contract_id },
+        });
+      }
     }
 
     toast.success("Bewertung genehmigt und Prämie gutgeschrieben!");
@@ -160,7 +178,6 @@ const AdminBewertungen = () => {
     const key = `${g.order_id}_${g.contract_id}`;
     setProcessing(key);
 
-    // Update assignment status
     const { error: statusErr } = await supabase
       .from("order_assignments")
       .update({ status: "fehlgeschlagen" })
@@ -173,18 +190,43 @@ const AdminBewertungen = () => {
       return;
     }
 
-    // Delete old reviews
     await supabase
       .from("order_reviews")
       .delete()
       .eq("order_id", g.order_id)
       .eq("contract_id", g.contract_id);
 
+    // Send email
+    const { data: contract } = await supabase
+      .from("employment_contracts")
+      .select("email, first_name, last_name, applications(branding_id)")
+      .eq("id", g.contract_id)
+      .single();
+
+    if (contract?.email) {
+      const brandingId = (contract as any)?.applications?.branding_id;
+      await sendEmail({
+        to: contract.email,
+        recipient_name: `${contract.first_name || ""} ${contract.last_name || ""}`.trim(),
+        subject: "Ihre Bewertung wurde abgelehnt",
+        body_title: "Bewertung abgelehnt",
+        body_lines: [
+          `Sehr geehrte/r ${contract.first_name || ""} ${contract.last_name || ""},`,
+          `Ihre Bewertung fuer den Auftrag "${g.order_title}" konnte leider nicht akzeptiert werden.`,
+          "Bitte fuehren Sie die Bewertung erneut durch und achten Sie auf die Vorgaben.",
+        ],
+        branding_id: brandingId || null,
+        event_type: "bewertung_abgelehnt",
+        metadata: { order_id: g.order_id, contract_id: g.contract_id },
+      });
+    }
+
     toast.success("Bewertung abgelehnt. Mitarbeiter kann erneut bewerten.");
     queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
     setProcessing(null);
     setSelected(null);
   };
+
 
   if (isLoading) {
     return (

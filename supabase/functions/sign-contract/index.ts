@@ -86,6 +86,43 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Send confirmation email
+    try {
+      // Get branding_id from contract -> application
+      const { data: contractForEmail } = await adminClient
+        .from("employment_contracts")
+        .select("email, first_name, last_name, applications(branding_id)")
+        .eq("id", contract_id)
+        .single();
+      const brandingId = (contractForEmail as any)?.applications?.branding_id;
+      const empEmail = contractForEmail?.email;
+      const empName = `${contractForEmail?.first_name || ""} ${contractForEmail?.last_name || ""}`.trim();
+
+      if (empEmail) {
+        const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
+        await fetch(sendEmailUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!}` },
+          body: JSON.stringify({
+            to: empEmail,
+            recipient_name: empName,
+            subject: "Arbeitsvertrag erfolgreich unterzeichnet",
+            body_title: "Vielen Dank fuer Ihre Unterschrift",
+            body_lines: [
+              `Sehr geehrte/r ${empName},`,
+              "Ihr Arbeitsvertrag wurde erfolgreich unterzeichnet. Eine Kopie steht Ihnen in Ihrem Mitarbeiterkonto zum Download bereit.",
+              "Wir freuen uns auf die Zusammenarbeit.",
+            ],
+            branding_id: brandingId || null,
+            event_type: "vertrag_unterzeichnet",
+            metadata: { contract_id },
+          }),
+        });
+      }
+    } catch (emailErr) {
+      console.error("send-email call failed:", emailErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true, pdf_url: result.pdf_url }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

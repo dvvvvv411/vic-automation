@@ -186,6 +186,53 @@ export type Database = {
         }
         Relationships: []
       }
+      email_logs: {
+        Row: {
+          branding_id: string | null
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          recipient_email: string
+          recipient_name: string | null
+          status: string
+          subject: string
+        }
+        Insert: {
+          branding_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          recipient_email: string
+          recipient_name?: string | null
+          status?: string
+          subject: string
+        }
+        Update: {
+          branding_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          recipient_email?: string
+          recipient_name?: string | null
+          status?: string
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employment_contracts: {
         Row: {
           application_id: string

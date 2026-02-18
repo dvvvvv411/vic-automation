@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
+import { sendEmail } from "@/lib/sendEmail";
 import { format, isWeekend, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -175,6 +176,33 @@ const AuftragDetails = () => {
     });
     if (chatError) {
       console.error("Systemnachricht konnte nicht gesendet werden:", chatError);
+    }
+
+    // Send confirmation email
+    const { data: contractData } = await supabase
+      .from("employment_contracts")
+      .select("email, first_name, last_name, applications(branding_id)")
+      .eq("id", contract.id)
+      .single();
+
+    if (contractData?.email) {
+      const brandingId = (contractData as any)?.applications?.branding_id;
+      await sendEmail({
+        to: contractData.email,
+        recipient_name: `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim(),
+        subject: "Auftragstermin bestaetigt",
+        body_title: "Ihr Auftragstermin wurde gebucht",
+        body_lines: [
+          `Sehr geehrte/r ${contractData.first_name || ""} ${contractData.last_name || ""},`,
+          `Ihr Termin fuer den Auftrag "${order.title}" wurde erfolgreich gebucht.`,
+          `Datum: ${formattedDate}`,
+          `Uhrzeit: ${selectedTime} Uhr`,
+          "Der Auftrag wird im Livechat durchgefuehrt. Bitte seien Sie zum vereinbarten Zeitpunkt erreichbar.",
+        ],
+        branding_id: brandingId || null,
+        event_type: "termin_gebucht",
+        metadata: { order_id: order.id, contract_id: contract.id },
+      });
     }
 
     setAppointment({

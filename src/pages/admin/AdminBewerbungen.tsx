@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendEmail } from "@/lib/sendEmail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, FileText, Trash2, Check, Copy, CalendarCheck, ExternalLink } from "lucide-react";
+import { Plus, FileText, Trash2, Check, X, Copy, CalendarCheck, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { z } from "zod";
@@ -70,6 +71,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   neu: { label: "Neu", variant: "secondary" },
   bewerbungsgespraech: { label: "Bewerbungsgespräch", variant: "outline", className: "border-yellow-500 text-yellow-700 bg-yellow-50" },
   termin_gebucht: { label: "Termin gebucht", variant: "outline", className: "border-green-500 text-green-700 bg-green-50" },
+  abgelehnt: { label: "Abgelehnt", variant: "destructive" },
 };
 
 export default function AdminBewerbungen() {
@@ -116,18 +118,65 @@ export default function AdminBewerbungen() {
   });
 
   const acceptMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (app: any) => {
       const { error } = await supabase
         .from("applications")
         .update({ status: "bewerbungsgespraech" })
-        .eq("id", id);
+        .eq("id", app.id);
       if (error) throw error;
+      const interviewLink = `${window.location.origin}/bewerbungsgespraech/${app.id}`;
+      await sendEmail({
+        to: app.email,
+        recipient_name: `${app.first_name} ${app.last_name}`,
+        subject: "Ihre Bewerbung wurde angenommen",
+        body_title: "Ihre Bewerbung wurde angenommen",
+        body_lines: [
+          `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
+          "wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung angenommen wurde.",
+          "Bitte buchen Sie nun einen Termin fuer Ihr Bewerbungsgespraech ueber den folgenden Link.",
+        ],
+        button_text: "Termin buchen",
+        button_url: interviewLink,
+        branding_id: app.branding_id || null,
+        event_type: "bewerbung_angenommen",
+        metadata: { application_id: app.id },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       toast.success("Bewerbung akzeptiert");
     },
     onError: () => toast.error("Fehler beim Akzeptieren"),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (app: any) => {
+      const { error } = await supabase
+        .from("applications")
+        .update({ status: "abgelehnt" })
+        .eq("id", app.id);
+      if (error) throw error;
+      await sendEmail({
+        to: app.email,
+        recipient_name: `${app.first_name} ${app.last_name}`,
+        subject: "Ihre Bewerbung",
+        body_title: "Rueckmeldung zu Ihrer Bewerbung",
+        body_lines: [
+          `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
+          "vielen Dank fuer Ihr Interesse und Ihre Bewerbung.",
+          "Leider muessen wir Ihnen mitteilen, dass wir uns fuer andere Kandidaten entschieden haben.",
+          "Wir wuenschen Ihnen fuer Ihren weiteren Weg alles Gute.",
+        ],
+        branding_id: app.branding_id || null,
+        event_type: "bewerbung_abgelehnt",
+        metadata: { application_id: app.id },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      toast.success("Bewerbung abgelehnt");
+    },
+    onError: () => toast.error("Fehler beim Ablehnen"),
   });
 
   const createMutation = useMutation({
@@ -180,16 +229,28 @@ export default function AdminBewerbungen() {
     return (
       <div className="flex items-center gap-1">
         {status === "neu" && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); acceptMutation.mutate(app.id); }}
-            disabled={acceptMutation.isPending}
-            className="text-xs"
-          >
-            <Check className="h-4 w-4 mr-1" />
-            Akzeptieren
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); acceptMutation.mutate(app); }}
+              disabled={acceptMutation.isPending}
+              className="text-xs"
+            >
+              <Check className="h-4 w-4 mr-1" />
+              Akzeptieren
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); rejectMutation.mutate(app); }}
+              disabled={rejectMutation.isPending}
+              className="text-xs text-destructive"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Ablehnen
+            </Button>
+          </>
         )}
         {status === "bewerbungsgespraech" && (
           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); copyLink(app.id); }} className="text-xs">
