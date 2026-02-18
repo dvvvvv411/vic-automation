@@ -1,63 +1,40 @@
 
-# E-Mail-Vorlagen Vorschau auf /admin/emails
 
-## Uebersicht
-Die Seite `/admin/emails` wird komplett umgebaut: Statt der versendeten E-Mail-Logs zeigt sie nun eine Vorschau aller 10 E-Mail-Templates mit Beispieldaten. Der Admin kann ein Branding auswaehlen und sieht sofort, wie die E-Mails im finalen Design aussehen werden -- bevor sie jemals versendet werden.
+# Umlaute korrigieren und Passwort-Hinweis entfernen
 
-## Aufbau der neuen Seite
+## Aenderungen in `src/pages/admin/AdminEmails.tsx`
 
-### Branding-Auswahl (oben)
-- Dropdown mit allen verfuegbaren Brandings (aus `brandings`-Tabelle geladen)
-- Beim Auswaehlen eines Brandings werden Logo, Farbe, Firmenname und Adresse fuer die Vorschau verwendet
-- Wenn kein Branding gewaehlt: Standard-Fallback (blau, "Unternehmen")
+### 1. Umlaute in allen Templates korrigieren
+Alle Vorkommen von `ae`, `oe`, `ue` werden durch echte Umlaute ersetzt:
 
-### Template-Liste (links / Tabs)
-Alle 10 Ereignisse als anklickbare Liste oder Tabs:
+- "fuer" → "für"
+- "pruefen" → "prüfen"
+- "Kuerze" → "Kürze"
+- "Gruessen" → "Grüßen"
+- "koennen" → "können"
+- "Gespraechstermin" → "Gesprächstermin"
+- "naechsten" → "nächsten"
+- "muessen" → "müssen"
+- "Rueckmeldung" → "Rückmeldung"
+- "Taetigkeit" → "Tätigkeit"
+- "Pruefung" → "Prüfung"
+- "wuenschen" → "wünschen"
+- "fuellen" → "füllen"
+- "Bestaetigung" → "Bestätigung"
+- "bestaetigt" → "bestätigt"
+- "Verfuegung" → "Verfügung"
+- "durchfuehren" → "durchführen"
+- "geprueft" → "geprüft"
+- "Praemie" → "Prämie"
+- "ausfuellen" → "ausfüllen"
+- "Gespraech" → "Gespräch" (im bodyTitle und in Labels)
 
-1. Bewerbung eingegangen
-2. Bewerbung angenommen
-3. Bewerbung abgelehnt
-4. Bewerbungsgespraech erfolgreich
-5. Arbeitsvertrag genehmigt
-6. Arbeitsvertrag unterzeichnet
-7. Neuer Auftrag zugewiesen
-8. Auftragstermin gebucht
-9. Bewertung genehmigt
-10. Bewertung abgelehnt
+### 2. Passwort-Hinweis entfernen
+Im Template "vertrag_genehmigt" (Index 4) die Zeile entfernen:
+> "Bitte aendern Sie Ihr Passwort nach dem ersten Login. ..."
 
-### E-Mail-Vorschau (rechts / Hauptbereich)
-- Zeigt das ausgewaehlte Template als gerenderten HTML-iframe (oder dangerouslySetInnerHTML in einem Container)
-- Verwendet die gleiche `buildEmailHtml`-Logik wie die Edge Function, aber clientseitig nachgebaut
-- Platzhalter-Daten fuer dynamische Felder (z.B. "Max Mustermann", "Auftrag #12345")
-- Betreff wird oberhalb der Vorschau angezeigt
-- Unter der Vorschau: Angabe welcher event_type verwendet wird
+Der verbleibende Text wird aufgeteilt, sodass die Zugangsdaten und der Hinweis auf den Arbeitsvertrag erhalten bleiben, aber ohne den Satz zum Passwort ändern.
 
-## Technische Umsetzung
+### Keine weiteren Dateien betroffen
+Nur `src/pages/admin/AdminEmails.tsx` wird geändert.
 
-### Datei: `src/pages/admin/AdminEmails.tsx` (komplett umgeschrieben)
-
-**Neue Hilfsfunktion `buildEmailHtml`** (clientseitige Kopie der Edge Function Template-Logik):
-- Nimmt `companyName`, `logoUrl`, `brandColor`, `bodyTitle`, `bodyLines`, `buttonText`, `buttonUrl`, `footerAddress` entgegen
-- Gibt den gleichen HTML-String zurueck wie die Edge Function
-- Logo wird als normale URL eingebettet (kein Base64 noetig fuer Vorschau)
-
-**Template-Definitionen als Array:**
-- Jedes Template hat: `eventType`, `label`, `subject`, `bodyTitle`, `bodyLines`, `buttonText?`, `buttonUrl?`
-- Verwendet realistische Beispieldaten (z.B. "Max Mustermann", Firma aus Branding)
-
-**State:**
-- `selectedBrandingId` -- gewaehlt aus Dropdown
-- `selectedTemplate` -- Index des aktiven Templates (default: 0)
-
-**Daten:**
-- Query auf `brandings` Tabelle fuer Dropdown (company_name, brand_color, logo_url, street, zip_code, city)
-- Kein Zugriff auf email_logs noetig
-
-**Rendering:**
-- Vorschau in einem `<iframe srcDoc={html} />` fuer saubere Isolation
-- Responsiver Aufbau: Links die Template-Liste, rechts die Vorschau
-
-### Keine Aenderungen an anderen Dateien
-- Edge Function bleibt unveraendert
-- Keine Datenbank-Migration noetig
-- E-Mail-Logs bleiben in der Datenbank, werden aber auf dieser Seite nicht mehr angezeigt
