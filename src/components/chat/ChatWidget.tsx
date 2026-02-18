@@ -9,6 +9,7 @@ import { useChatTyping } from "./useChatTyping";
 import { ChatBubble, TypingIndicator, DateSeparator, SystemMessage } from "./ChatBubble";
 import { AvatarUpload } from "./AvatarUpload";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ChatWidgetProps {
   contractId: string | null;
@@ -28,6 +29,7 @@ const isOnline = () => {
 
 export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
@@ -162,7 +164,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   if (!contractId) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className={cn("fixed z-50", isMobile && open ? "inset-0" : "bottom-6 right-6")}>
       <AnimatePresence>
         {open && (
           <motion.div
@@ -170,7 +172,12 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 350 }}
-            className="absolute bottom-16 right-0 w-[380px] h-[520px] bg-card rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden"
+            className={cn(
+              "bg-card shadow-2xl border border-border flex flex-col overflow-hidden",
+              isMobile
+                ? "fixed inset-0 w-full h-full rounded-none"
+                : "absolute bottom-16 right-0 w-[380px] h-[520px] rounded-2xl"
+            )}
           >
             {/* Header */}
             <div className="bg-primary px-5 py-4 flex items-center justify-between shrink-0">
@@ -266,21 +273,23 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
       </AnimatePresence>
 
       {/* FAB */}
-      <button
-        onClick={() => setOpen(!open)}
-        className={cn(
-          "h-14 w-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105",
-          "bg-primary text-primary-foreground",
-          !open && unreadCount > 0 && "animate-pulse"
-        )}
-      >
-        {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
-        {!open && unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-[20px] flex items-center justify-center px-1">
-            {unreadCount}
-          </span>
-        )}
-      </button>
+      {!(isMobile && open) && (
+        <button
+          onClick={() => setOpen(!open)}
+          className={cn(
+            "h-14 w-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105",
+            "bg-primary text-primary-foreground",
+            !open && unreadCount > 0 && "animate-pulse"
+          )}
+        >
+          {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+          {!open && unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-[20px] flex items-center justify-center px-1">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+      )}
     </div>
   );
 }
