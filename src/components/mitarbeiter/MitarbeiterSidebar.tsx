@@ -10,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,11 +33,16 @@ const navItems = [
 
 export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSidebarProps) {
   const { user, signOut } = useAuth();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const userInitial = user?.email?.charAt(0).toUpperCase() || "?";
 
+  const handleNavClick = () => {
+    if (isMobile) setOpenMobile(false);
+  };
+
   return (
-    <Sidebar className="border-r border-border/30 bg-background">
+    <Sidebar className="border-r border-border/30 bg-white">
       {/* Logo */}
       <div className="py-7 px-5 border-b border-border/30 flex justify-center items-center">
         {brandingLoading ? (
@@ -65,7 +71,8 @@ export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSid
                     <NavLink
                       to={item.url}
                       end
-                      className="relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-muted-foreground hover:bg-slate-100 hover:text-foreground transition-all duration-150"
+                      onClick={handleNavClick}
+                      className="relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
                       activeClassName="bg-primary text-white font-medium shadow-md"
                     >
                       <item.icon className="h-5 w-5" />
