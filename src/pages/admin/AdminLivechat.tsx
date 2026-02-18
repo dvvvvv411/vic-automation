@@ -211,8 +211,7 @@ export default function AdminLivechat() {
       toast.error("SMS-Versand fehlgeschlagen");
     }
   };
-
-
+  const handleSendSms = async () => {
     if (!contractData.phone || !smsCode.trim()) return;
     setSmsSending(true);
     const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
