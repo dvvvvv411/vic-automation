@@ -1,32 +1,51 @@
 
+# Livechat Fullscreen auf Mobile
 
-# Fix: Transparente Mobile-Sidebar
+## Aenderung
 
-## Problem
-
-Die `bg-white`-Klasse, die in `MitarbeiterSidebar.tsx` auf die `<Sidebar>`-Komponente gesetzt wird, kommt auf Mobile nie an. Der Grund: In `sidebar.tsx` (Zeile 153-170) wird bei Mobile ein `<Sheet>` gerendert, und die `className`-Prop wird auf `<Sheet>` statt auf `<SheetContent>` angewendet. Das `SheetContent` hat fest `bg-sidebar` gesetzt, was die CSS-Variable `--sidebar-background` nutzt -- und die ist durchsichtig/dunkel.
-
-## Loesung
-
-In `src/components/ui/sidebar.tsx` wird die `className`-Prop im Mobile-Fall an das `SheetContent` weitergeleitet (statt an `Sheet`), damit `bg-white` aus der `MitarbeiterSidebar` das `bg-sidebar` ueberschreiben kann.
+Auf Mobile (< 768px) wird das Chat-Popup als Fullscreen-Overlay angezeigt statt als kleines Popup. Die Desktop-Ansicht bleibt komplett unveraendert.
 
 ## Betroffene Datei
 
 | Datei | Aenderung |
 |-------|-----------|
-| `src/components/ui/sidebar.tsx` | Im Mobile-Block (Zeile 153-170): `className` von den `...props` trennen und stattdessen an `SheetContent` uebergeben, sodass `bg-white` dort greift. Konkret wird `className` in die `cn()`-Funktion des `SheetContent` eingefuegt, nach `bg-sidebar`, damit es dieses ueberschreibt. |
+| `src/components/chat/ChatWidget.tsx` | `useIsMobile` Hook importieren. Responsive Klassen auf den Container und das Chat-Fenster anwenden. |
 
-## Technisches Detail
+## Details
 
-Vorher (vereinfacht):
+### Container (`div` mit `fixed bottom-6 right-6`)
+- Mobile: `fixed inset-0` (gesamter Bildschirm) statt `bottom-6 right-6`
+- Desktop: unveraendert `fixed bottom-6 right-6`
+
+### Chat-Fenster (`motion.div`)
+- Mobile: `fixed inset-0 w-full h-full rounded-none` -- Fullscreen ohne Abrundung, nicht mehr absolut positioniert
+- Desktop: unveraendert `absolute bottom-16 right-0 w-[380px] h-[520px] rounded-2xl`
+
+### FAB-Button
+- Mobile bei geoeffnetem Chat: versteckt (`hidden`), da der Close-Button im Header genuegt
+- Desktop: unveraendert, immer sichtbar
+
+### Konkrete Klassen-Aenderungen
+
 ```text
-<Sheet {...props}>          <-- className landet hier (unsichtbar)
-  <SheetContent className="bg-sidebar ...">  <-- immer bg-sidebar
+// Container
+<div className={cn(
+  "fixed z-50",
+  isMobile && open ? "inset-0" : "bottom-6 right-6"
+)}>
+
+// Chat-Fenster
+<motion.div className={cn(
+  "bg-card shadow-2xl border border-border flex flex-col overflow-hidden",
+  isMobile
+    ? "fixed inset-0 w-full h-full rounded-none"
+    : "absolute bottom-16 right-0 w-[380px] h-[520px] rounded-2xl"
+)}>
+
+// FAB
+{!(isMobile && open) && (
+  <button ...>FAB</button>
+)}
 ```
 
-Nachher:
-```text
-<Sheet {...restProps}>      <-- className entfernt
-  <SheetContent className={cn("bg-sidebar ...", className)}>  <-- bg-white ueberschreibt
-```
-
+Die gesamte Logik (Nachrichten, Scroll, Sounds, Typing) bleibt identisch -- nur das Layout aendert sich auf Mobile.
