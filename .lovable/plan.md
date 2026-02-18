@@ -1,24 +1,35 @@
 
 
-# Fix: Schnelleingabe nicht sichtbar (Build-Fehler beheben)
+# Deployment-Ready: Titel, Beschreibung und Favicon
 
-## Problem
+## Aenderungen
 
-Beim letzten Edit wurde die Funktionsdeklaration `const handleSendSms = async () => {` versehentlich entfernt. Ab Zeile 216 beginnt ein Funktionskoerper ohne Deklaration, was einen TypeScript-Fehler verursacht (`TS1128: Declaration or statement expected`). Dadurch wird die gesamte Seite nicht gerendert -- deshalb ist auch die Schnelleingabe nicht sichtbar.
+### 1. `index.html` -- Titel und Meta-Tags aktualisieren
 
-## Loesung
+Alle generischen "Lovable App" / "Lovable Generated Project" Texte werden ersetzt:
 
-In Zeile 215 (die leere Zeile zwischen `handleQuickSms` und dem verwaisten Funktionskoerper) muss die fehlende Deklaration eingefuegt werden:
+| Meta-Tag | Neuer Wert |
+|----------|-----------|
+| `<title>` | Mitarbeiter Dashboard |
+| `meta description` | Das zentrale Dashboard fuer Mitarbeiter -- Auftraege, Bewertungen und mehr auf einen Blick. |
+| `og:title` | Mitarbeiter Dashboard |
+| `og:description` | Das zentrale Dashboard fuer Mitarbeiter -- Auftraege, Bewertungen und mehr auf einen Blick. |
+| `meta author` | entfernen (kein "Lovable" mehr) |
+| `og:image` / `twitter:image` | entfernen oder auf eigenes Bild setzen |
+| `twitter:site` | entfernen (kein @Lovable) |
 
-```
-const handleSendSms = async () => {
-```
+### 2. Favicon generieren
 
-Das ist ein Einzeiler-Fix. Danach kompiliert die Seite wieder und sowohl die Schnelleingabe als auch der SMS-Dialog sind sichtbar.
+Ein neues Favicon wird per AI-Bildgenerierung erstellt:
+- **Motiv**: Einfaches Dashboard-Icon (z.B. stilisiertes Grid/Layout-Symbol oder Tachometer)
+- **Farbe**: Schwarz auf transparentem Hintergrund
+- **Format**: PNG, wird als `public/favicon.png` gespeichert
+- **Einbindung**: `<link rel="icon" href="/favicon.png" type="image/png">` in `index.html`
 
-## Betroffene Datei
+### Betroffene Dateien
 
 | Datei | Aenderung |
 |-------|-----------|
-| `src/pages/admin/AdminLivechat.tsx` (Zeile 215) | Fehlende `const handleSendSms = async () => {` Deklaration einfuegen |
+| `index.html` | Titel, Meta-Tags, Favicon-Link aktualisieren |
+| `public/favicon.png` | Neues generiertes Favicon (schwarz auf transparent) |
 
