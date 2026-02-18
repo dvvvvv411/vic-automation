@@ -1,159 +1,84 @@
 
 
-# SMS-Benachrichtigungen via seven.io
+# SMS-Absendername aus Branding + Telefonnummer-Normalisierung
 
-## Übersicht
+## Uebersicht
 
-Integration von SMS-Benachrichtigungen ueber die seven.io REST API mit drei Bausteinen:
-1. Automatische SMS bei 6 Ereignissen
-2. Manueller SMS-Button im Admin-Livechat
-3. Neue Admin-Seite `/admin/sms` zum Bearbeiten der SMS-Vorlagen und Testen
-
-## Voraussetzung
-
-Ein seven.io API-Key muss als Supabase Secret `SEVEN_API_KEY` hinterlegt werden.
+Drei Aenderungen:
+1. Neues Feld `sms_sender_name` in der `brandings`-Tabelle (max. 11 Zeichen) -- wird im Branding-Dialog unter den Resend-Feldern angezeigt
+2. Branding-Auswahl beim Test-SMS auf `/admin/sms`, damit der Absendername dynamisch gesetzt wird
+3. Telefonnummer-Normalisierung in der Edge Function: deutsche Nummern mit `0` werden zu `+49`, Leerzeichen/Sonderzeichen werden entfernt
 
 ---
 
-## Datenbank-Aenderungen
+## 1. Datenbank: Neue Spalte `sms_sender_name`
 
-### Neue Tabelle: `sms_templates`
+Migration:
+```sql
+ALTER TABLE brandings ADD COLUMN sms_sender_name text;
+```
 
-| Spalte | Typ | Default |
-|--------|-----|---------|
-| id | uuid | gen_random_uuid() |
-| event_type | text (unique, not null) | -- |
-| label | text (not null) | -- |
-| message | text (not null) | -- |
-| updated_at | timestamptz | now() |
+Kein Default noetig -- Fallback bleibt "Vic" in der Edge Function.
 
-RLS: Nur Admins koennen SELECT, UPDATE, INSERT, DELETE.
+## 2. AdminBrandings.tsx -- Neues Eingabefeld
 
-Wird initial mit 6 Vorlagen befuellt (Platzhalter: `{name}`, `{auftrag}`, `{datum}`, `{uhrzeit}`, `{praemie}`, `{link}`):
+- `sms_sender_name` zum `brandingSchema` hinzufuegen (max. 11 Zeichen)
+- Neues Eingabefeld im Dialog nach den Resend-Feldern, unter einer Trennlinie "SMS-Konfiguration"
+- Hinweis: "Max. 11 Zeichen (alphanumerisch)"
+- Im `openEdit` und `initialForm` beruecksichtigen
 
-| event_type | label | Standard-Text |
-|------------|-------|---------------|
-| bewerbung_angenommen | Bewerbung angenommen | Hallo {name}, Ihre Bewerbung wurde angenommen! Bitte buchen Sie Ihren Termin: {link} |
-| vertrag_genehmigt | Vertrag genehmigt | Hallo {name}, Ihr Arbeitsvertrag wurde genehmigt. Loggen Sie sich ein: {link} |
-| auftrag_zugewiesen | Neuer Auftrag | Hallo {name}, Ihnen wurde ein neuer Auftrag zugewiesen: {auftrag}. Details im Mitarbeiterportal. |
-| termin_gebucht | Termin gebucht | Hallo {name}, Ihr Termin am {datum} um {uhrzeit} Uhr wurde bestaetigt. |
-| bewertung_genehmigt | Bewertung genehmigt | Hallo {name}, Ihre Bewertung fuer "{auftrag}" wurde genehmigt. Praemie: {praemie}. |
-| bewertung_abgelehnt | Bewertung abgelehnt | Hallo {name}, Ihre Bewertung fuer "{auftrag}" wurde leider abgelehnt. Bitte erneut bewerten. |
+## 3. send-sms Edge Function -- `from` + Telefonnummer-Normalisierung
 
-### Neue Tabelle: `sms_logs`
+**`from`-Parameter:**
+- Neues optionales Feld `from` aus dem Request-Body lesen
+- Fallback auf `"Vic"` wenn nicht angegeben
+- Auf 11 Zeichen kuerzen
 
-| Spalte | Typ | Default |
-|--------|-----|---------|
-| id | uuid | gen_random_uuid() |
-| created_at | timestamptz | now() |
-| recipient_phone | text (not null) | -- |
-| recipient_name | text (nullable) | -- |
-| message | text (not null) | -- |
-| event_type | text (not null) | -- |
-| status | text (not null) | 'sent' |
-| error_message | text (nullable) | -- |
+**Telefonnummer-Normalisierung** (vor dem Senden):
+- Alle Nicht-Ziffern entfernen (ausser fuehrendes `+`)
+- Wenn Nummer mit `0` beginnt: `0` durch `+49` ersetzen
+- Beispiele: `0176 742 19 23` wird zu `+491767421923`, `+49176123` bleibt `+49176123`
 
-RLS: Nur Admins koennen SELECT.
+## 4. sendSms Client-Helper -- `from` Parameter
 
----
+`SendSmsParams` um optionales `from?: string` erweitern und an die Edge Function weiterleiten.
 
-## Neue Edge Function: `send-sms`
+## 5. AdminSmsTemplates.tsx -- Branding-Dropdown beim Test-SMS
 
-**Datei:** `supabase/functions/send-sms/index.ts`
+- Brandings per `useQuery` laden (`id`, `company_name`, `sms_sender_name`)
+- Neues Select-Dropdown "Branding (Absender)" im Test-SMS-Bereich
+- State `testBrandingId`
+- Beim Senden: `sms_sender_name` des gewaehlten Brandings als `from`-Parameter mitgeben
+- Validierung: Branding muss ausgewaehlt sein
 
-- Empfaengt JSON: `{ to, text, event_type?, recipient_name? }`
-- Sendet via `POST https://gateway.seven.io/api/sms` mit Header `X-Api-Key`
-- Loggt Ergebnis in `sms_logs` (mit Service Role Key)
-- CORS-Headers, `verify_jwt = false` in config.toml
+## 6. Alle automatischen SMS-Aufrufe -- `from` mitgeben
 
----
+An allen Stellen, wo `sendSms()` aufgerufen wird, das Branding laden und `sms_sender_name` als `from` uebergeben:
 
-## Client-Hilfsfunktion
+| Datei | Branding-Zugang |
+|-------|-----------------|
+| `AdminBewerbungen.tsx` | `branding_id` der Application -> Branding laden |
+| `AssignmentDialog.tsx` | Branding ueber Application -> `branding_id` |
+| `AdminBewertungen.tsx` | Branding ueber Contract -> Application -> `branding_id` |
+| `AuftragDetails.tsx` | Branding ueber Contract -> Application -> `branding_id` |
+| `AdminLivechat.tsx` | Branding ueber Contract -> Application -> `branding_id` |
+| `create-employee-account/index.ts` | Branding bereits verfuegbar, `sms_sender_name` aus DB laden |
 
-**Neue Datei:** `src/lib/sendSms.ts`
+Falls kein `sms_sender_name` vorhanden: Fallback "Vic".
 
-Analog zu `sendEmail.ts` -- ruft `supabase.functions.invoke("send-sms", { body })` auf. Schlaegt still fehl (console.error), damit der Hauptprozess nicht blockiert wird.
-
----
-
-## Automatische SMS bei 6 Ereignissen
-
-An den Stellen, wo `sendEmail()` aufgerufen wird, wird zusaetzlich die SMS-Vorlage aus `sms_templates` geladen, Platzhalter ersetzt und `sendSms()` aufgerufen -- nur wenn eine Telefonnummer vorhanden ist.
-
-| Ereignis | Datei | Aenderung |
-|----------|-------|-----------|
-| Bewerbung angenommen | `AdminBewerbungen.tsx` | Nach `sendEmail()` in `acceptMutation`: SMS-Template laden, Platzhalter ersetzen, `sendSms()` aufrufen |
-| Vertrag genehmigt | `create-employee-account/index.ts` | Nach Email-Versand: SMS via seven.io direkt aus der Edge Function senden (Template aus DB laden) |
-| Neuer Auftrag | `AssignmentDialog.tsx` | Nach `sendEmail()` in `saveMutation`: SMS an neue Mitarbeiter senden |
-| Termin gebucht | `AuftragDetails.tsx` | Nach `sendEmail()` in `handleBookAppointment`: SMS senden |
-| Bewertung genehmigt | `AdminBewertungen.tsx` | Nach `sendEmail()` in `handleApprove`: SMS senden |
-| Bewertung abgelehnt | `AdminBewertungen.tsx` | Nach `sendEmail()` in `handleReject`: SMS senden |
-
----
-
-## Manueller SMS-Button im Livechat
-
-**Datei:** `src/pages/admin/AdminLivechat.tsx`
-
-- Neues `Smartphone`-Icon im Chat-Header (zwischen TemplateManager und Admin-Profil)
-- Klick oeffnet einen Dialog:
-  - Anzeige der Telefonnummer (aus `employment_contracts.phone` -- wird beim Laden der Contract-Daten mitgeladen)
-  - Textarea fuer freien SMS-Text
-  - "SMS senden"-Button
-- Ruft `sendSms()` auf mit `event_type: "manuell"`
-- Toast bei Erfolg/Fehler
-
----
-
-## Neue Admin-Seite: SMS-Vorlagen
-
-**Neue Datei:** `src/pages/admin/AdminSmsTemplates.tsx`
-
-- Route: `/admin/sms`
-- Laedt alle SMS-Templates aus `sms_templates`-Tabelle
-- Zeigt jedes Template als editierbare Karte:
-  - Label (nicht editierbar)
-  - Textarea fuer den SMS-Text
-  - Hinweis zu verfuegbaren Platzhaltern
-  - Zeichenzaehler
-  - Speichern-Button pro Template
-- **Test-SMS-Bereich** oben auf der Seite:
-  - Input fuer Telefonnummer
-  - Textarea fuer individuellen Text
-  - "Test-SMS senden"-Button
-  - Ruft `sendSms()` direkt auf mit `event_type: "test"`
-
-### Sidebar
-
-**Datei:** `src/components/admin/AdminSidebar.tsx`
-
-- Neuer Eintrag "SMS" in der Gruppe "Einstellungen" (unter "E-Mails")
-- Icon: `Smartphone` aus lucide-react
-- URL: `/admin/sms`
-
-### Routing
-
-**Datei:** `src/App.tsx`
-
-- Import + neue Route: `<Route path="sms" element={<AdminSmsTemplates />} />`
-
----
-
-## Zusammenfassung aller Datei-Aenderungen
+## Zusammenfassung der Dateiaenderungen
 
 | Datei | Aenderung |
 |-------|-----------|
-| Migration | 2 neue Tabellen + RLS + Seed-Daten |
-| `supabase/functions/send-sms/index.ts` | Neue Edge Function |
-| `supabase/config.toml` | + send-sms Eintrag |
-| `src/lib/sendSms.ts` | Neue Client-Hilfsfunktion |
-| `src/pages/admin/AdminSmsTemplates.tsx` | Neue Seite (Vorlagen + Test-SMS) |
-| `src/components/admin/AdminSidebar.tsx` | + SMS-Menueeintrag |
-| `src/App.tsx` | + Route /admin/sms |
-| `src/pages/admin/AdminBewerbungen.tsx` | + sendSms bei Annahme |
-| `src/components/admin/AssignmentDialog.tsx` | + sendSms bei Zuweisung |
-| `src/pages/admin/AdminBewertungen.tsx` | + sendSms bei Genehmigung/Ablehnung |
-| `src/pages/mitarbeiter/AuftragDetails.tsx` | + sendSms bei Terminbuchung |
-| `supabase/functions/create-employee-account/index.ts` | + SMS bei Vertragsgenehmigung |
-| `src/pages/admin/AdminLivechat.tsx` | + SMS-Dialog-Button |
+| Migration | `ALTER TABLE brandings ADD COLUMN sms_sender_name text` |
+| `src/pages/admin/AdminBrandings.tsx` | + Eingabefeld "SMS-Absendername" (max 11 Zeichen) |
+| `supabase/functions/send-sms/index.ts` | + `from`-Parameter + Telefonnummer-Normalisierung |
+| `src/lib/sendSms.ts` | + `from` in Interface |
+| `src/pages/admin/AdminSmsTemplates.tsx` | + Branding-Dropdown beim Test-SMS |
+| `src/pages/admin/AdminBewerbungen.tsx` | + `from` bei sendSms |
+| `src/components/admin/AssignmentDialog.tsx` | + `from` bei sendSms |
+| `src/pages/admin/AdminBewertungen.tsx` | + `from` bei sendSms |
+| `src/pages/mitarbeiter/AuftragDetails.tsx` | + `from` bei sendSms |
+| `src/pages/admin/AdminLivechat.tsx` | + `from` bei sendSms |
+| `supabase/functions/create-employee-account/index.ts` | + `from` aus Branding bei SMS |
 
