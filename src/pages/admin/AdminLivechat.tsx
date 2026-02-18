@@ -8,13 +8,24 @@ import { TemplateManager } from "@/components/chat/TemplateManager";
 import { AvatarUpload } from "@/components/chat/AvatarUpload";
 import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatRealtime";
 import { useChatTyping } from "@/components/chat/useChatTyping";
-import { MessageCircle, Pencil } from "lucide-react";
+import { sendSms } from "@/lib/sendSms";
+import { MessageCircle, Pencil, Smartphone } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export default function AdminLivechat() {
@@ -22,11 +33,14 @@ export default function AdminLivechat() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [active, setActive] = useState<Conversation | null>(null);
   const [search, setSearch] = useState("");
-  const [contractData, setContractData] = useState<{ first_name?: string | null; last_name?: string | null }>({});
+  const [contractData, setContractData] = useState<{ first_name?: string | null; last_name?: string | null; phone?: string | null }>({});
   const [adminAvatar, setAdminAvatar] = useState<string | null>(null);
   const [adminDisplayName, setAdminDisplayName] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
+  const [smsDialogOpen, setSmsDialogOpen] = useState(false);
+  const [smsText, setSmsText] = useState("");
+  const [smsSending, setSmsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { isTyping, draftPreview, sendTyping } = useChatTyping({
@@ -109,7 +123,7 @@ export default function AdminLivechat() {
     if (!active) return;
     supabase
       .from("employment_contracts")
-      .select("first_name, last_name, user_id")
+      .select("first_name, last_name, phone, user_id")
       .eq("id", active.contract_id)
       .maybeSingle()
       .then(({ data }: any) => {
@@ -162,6 +176,26 @@ export default function AdminLivechat() {
     sendTyping(draft);
   };
 
+  const handleSendSms = async () => {
+    if (!contractData.phone || !smsText.trim()) return;
+    setSmsSending(true);
+    const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
+    const success = await sendSms({
+      to: contractData.phone,
+      text: smsText.trim(),
+      event_type: "manuell",
+      recipient_name: name,
+    });
+    setSmsSending(false);
+    if (success) {
+      toast.success("SMS gesendet!");
+      setSmsText("");
+      setSmsDialogOpen(false);
+    } else {
+      toast.error("SMS-Versand fehlgeschlagen");
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-3.5rem)] flex rounded-2xl overflow-hidden border border-border bg-background shadow-sm">
       {/* Conversation list */}
@@ -190,7 +224,18 @@ export default function AdminLivechat() {
                   <p className="text-xs text-muted-foreground">Konversation</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {contractData.phone && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => setSmsDialogOpen(true)}
+                    title="SMS senden"
+                  >
+                    <Smartphone className="h-4 w-4" />
+                  </Button>
+                )}
                 <TemplateManager />
                 {/* Admin profile popover */}
                 <Popover>
@@ -287,6 +332,43 @@ export default function AdminLivechat() {
           </div>
         )}
       </div>
+
+      {/* SMS Dialog */}
+      <Dialog open={smsDialogOpen} onOpenChange={setSmsDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="h-4 w-4" />
+              SMS senden
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Empfänger</Label>
+              <p className="text-sm font-medium">{contractData.first_name} {contractData.last_name}</p>
+              <p className="text-xs text-muted-foreground">{contractData.phone}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Nachricht</Label>
+              <Textarea
+                value={smsText}
+                onChange={(e) => setSmsText(e.target.value)}
+                placeholder="SMS-Text eingeben..."
+                rows={3}
+              />
+              <p className={`text-xs ${smsText.length > 160 ? "text-destructive" : "text-muted-foreground"}`}>
+                {smsText.length}/160
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSmsDialogOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleSendSms} disabled={smsSending || !smsText.trim()}>
+              {smsSending ? "Wird gesendet..." : "SMS senden"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -182,6 +182,39 @@ Deno.serve(async (req) => {
       console.error("send-email call failed:", emailErr);
     }
 
+    // Send SMS
+    const phone = contract.phone || (contract as any).applications?.phone;
+    if (phone) {
+      try {
+        // Load SMS template
+        const { data: tpl } = await adminClient
+          .from("sms_templates")
+          .select("message")
+          .eq("event_type", "vertrag_genehmigt")
+          .single();
+
+        const loginUrl = `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/auth`;
+        const name = `${firstName} ${lastName}`;
+        const smsText = tpl?.message
+          ? (tpl.message as string).replace("{name}", name).replace("{link}", loginUrl)
+          : `Hallo ${name}, Ihr Arbeitsvertrag wurde genehmigt. Loggen Sie sich ein: ${loginUrl}`;
+
+        const sendSmsUrl = `${supabaseUrl}/functions/v1/send-sms`;
+        await fetch(sendSmsUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+          body: JSON.stringify({
+            to: phone,
+            text: smsText,
+            event_type: "vertrag_genehmigt",
+            recipient_name: name,
+          }),
+        });
+      } catch (smsErr) {
+        console.error("send-sms call failed:", smsErr);
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, temp_password: tempPassword, user_id: newUser.user.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

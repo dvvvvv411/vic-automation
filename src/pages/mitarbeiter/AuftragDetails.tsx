@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
+import { sendSms } from "@/lib/sendSms";
 import { format, isWeekend, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -181,7 +182,7 @@ const AuftragDetails = () => {
     // Send confirmation email
     const { data: contractData } = await supabase
       .from("employment_contracts")
-      .select("email, first_name, last_name, applications(branding_id)")
+      .select("email, first_name, last_name, phone, applications(branding_id)")
       .eq("id", contract.id)
       .single();
 
@@ -203,6 +204,16 @@ const AuftragDetails = () => {
         event_type: "termin_gebucht",
         metadata: { order_id: order.id, contract_id: contract.id },
       });
+    }
+
+    // SMS
+    if (contractData?.phone) {
+      const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
+      const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "termin_gebucht").single();
+      const smsText = (tpl as any)?.message
+        ? (tpl as any).message.replace("{name}", name).replace("{datum}", formattedDate).replace("{uhrzeit}", selectedTime)
+        : `Hallo ${name}, Ihr Termin am ${formattedDate} um ${selectedTime} Uhr wurde bestätigt.`;
+      await sendSms({ to: contractData.phone, text: smsText, event_type: "termin_gebucht", recipient_name: name });
     }
 
     setAppointment({

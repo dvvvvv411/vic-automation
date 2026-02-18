@@ -4,6 +4,7 @@ import { Star, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
+import { sendSms } from "@/lib/sendSms";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -138,7 +139,7 @@ const AdminBewertungen = () => {
     if (reward > 0) {
       const { data: contract } = await supabase
         .from("employment_contracts")
-        .select("balance, email, first_name, last_name, applications(branding_id)")
+        .select("balance, email, first_name, last_name, phone, applications(branding_id)")
         .eq("id", g.contract_id)
         .single();
 
@@ -165,6 +166,16 @@ const AdminBewertungen = () => {
           event_type: "bewertung_genehmigt",
           metadata: { order_id: g.order_id, contract_id: g.contract_id },
         });
+      }
+
+      // SMS
+      if (contract?.phone) {
+        const name = `${contract.first_name || ""} ${contract.last_name || ""}`.trim();
+        const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewertung_genehmigt").single();
+        const smsText = (tpl as any)?.message
+          ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", g.order_title).replace("{praemie}", g.order_reward)
+          : `Hallo ${name}, Ihre Bewertung für "${g.order_title}" wurde genehmigt. Prämie: ${g.order_reward}.`;
+        await sendSms({ to: contract.phone, text: smsText, event_type: "bewertung_genehmigt", recipient_name: name });
       }
     }
 
@@ -199,7 +210,7 @@ const AdminBewertungen = () => {
     // Send email
     const { data: contract } = await supabase
       .from("employment_contracts")
-      .select("email, first_name, last_name, applications(branding_id)")
+      .select("email, first_name, last_name, phone, applications(branding_id)")
       .eq("id", g.contract_id)
       .single();
 
@@ -219,6 +230,16 @@ const AdminBewertungen = () => {
         event_type: "bewertung_abgelehnt",
         metadata: { order_id: g.order_id, contract_id: g.contract_id },
       });
+    }
+
+    // SMS
+    if (contract?.phone) {
+      const name = `${contract.first_name || ""} ${contract.last_name || ""}`.trim();
+      const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewertung_abgelehnt").single();
+      const smsText = (tpl as any)?.message
+        ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", g.order_title)
+        : `Hallo ${name}, Ihre Bewertung für "${g.order_title}" wurde leider abgelehnt.`;
+      await sendSms({ to: contract.phone, text: smsText, event_type: "bewertung_abgelehnt", recipient_name: name });
     }
 
     toast.success("Bewertung abgelehnt. Mitarbeiter kann erneut bewerten.");
