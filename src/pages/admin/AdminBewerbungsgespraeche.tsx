@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendEmail } from "@/lib/sendEmail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +36,7 @@ export default function AdminBewerbungsgespraeche() {
     queryFn: async () => {
       let query = supabase
         .from("interview_appointments")
-        .select("*, applications(first_name, last_name, email, phone, brandings(company_name))", { count: "exact" });
+        .select("*, applications(first_name, last_name, email, phone, brandings(id, company_name))", { count: "exact" });
 
       if (viewMode === "past") {
         // All before today, plus today's that are past cutoff
@@ -87,9 +88,9 @@ export default function AdminBewerbungsgespraeche() {
 
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
 
-  const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
+  const handleStatusUpdate = async (item: any, newStatus: string) => {
     const { error } = await supabase.rpc("update_interview_status", {
-      _appointment_id: appointmentId,
+      _appointment_id: item.id,
       _status: newStatus,
     });
     if (error) {
@@ -98,6 +99,35 @@ export default function AdminBewerbungsgespraeche() {
     }
     toast.success(`Status auf "${newStatus}" gesetzt.`);
     queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
+
+    // Send email on success
+    if (newStatus === "erfolgreich" && item.applications?.email) {
+      const app = item.applications;
+      // Get the contract for this application to build link
+      const { data: contract } = await supabase
+        .from("employment_contracts")
+        .select("id")
+        .eq("application_id", item.application_id)
+        .maybeSingle();
+      const contractLink = contract ? `${window.location.origin}/arbeitsvertrag/${contract.id}` : null;
+
+      await sendEmail({
+        to: app.email,
+        recipient_name: `${app.first_name} ${app.last_name}`,
+        subject: "Ihr Bewerbungsgespraech war erfolgreich",
+        body_title: "Bewerbungsgespraech erfolgreich",
+        body_lines: [
+          `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
+          "Ihr Bewerbungsgespraech war erfolgreich. Wir freuen uns, Sie im naechsten Schritt willkommen zu heissen.",
+          "Bitte fuellen Sie nun Ihren Arbeitsvertrag ueber den folgenden Link aus.",
+        ],
+        button_text: contractLink ? "Arbeitsvertrag ausfuellen" : undefined,
+        button_url: contractLink || undefined,
+        branding_id: app.brandings?.id || null,
+        event_type: "gespraech_erfolgreich",
+        metadata: { appointment_id: item.id, application_id: item.application_id },
+      });
+    }
   };
 
   const toggleView = (mode: ViewMode) => {
@@ -209,7 +239,7 @@ export default function AdminBewerbungsgespraeche() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                              onClick={() => handleStatusUpdate(item.id, "erfolgreich")}
+                              onClick={() => handleStatusUpdate(item, "erfolgreich")}
                               title="Als erfolgreich markieren"
                             >
                               <CheckCircle className="h-4 w-4" />
@@ -219,7 +249,7 @@ export default function AdminBewerbungsgespraeche() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50"
-                            onClick={() => handleStatusUpdate(item.id, "fehlgeschlagen")}
+                            onClick={() => handleStatusUpdate(item, "fehlgeschlagen")}
                             title="Als fehlgeschlagen markieren"
                           >
                             <XCircle className="h-4 w-4" />

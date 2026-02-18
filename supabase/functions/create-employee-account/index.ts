@@ -152,6 +152,36 @@ Deno.serve(async (req) => {
       console.error("generate-contract call failed:", genErr);
     }
 
+    // Send email with credentials
+    try {
+      const brandingId = (contract as any).applications?.branding_id;
+      const loginUrl = `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/auth`;
+      const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
+      await fetch(sendEmailUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+        body: JSON.stringify({
+          to: email,
+          recipient_name: `${firstName} ${lastName}`,
+          subject: "Ihre Zugangsdaten und Arbeitsvertrag",
+          body_title: "Ihr Mitarbeiterkonto wurde erstellt",
+          body_lines: [
+            `Sehr geehrte/r ${firstName} ${lastName},`,
+            "Ihr Arbeitsvertrag wurde genehmigt und Ihr Mitarbeiterkonto wurde erfolgreich eingerichtet.",
+            `Ihre Zugangsdaten: E-Mail: ${email} / Passwort: ${tempPassword}`,
+            "Bitte loggen Sie sich ein und unterzeichnen Sie Ihren Arbeitsvertrag.",
+          ],
+          button_text: "Jetzt einloggen",
+          button_url: loginUrl,
+          branding_id: brandingId || null,
+          event_type: "vertrag_genehmigt",
+          metadata: { contract_id },
+        }),
+      });
+    } catch (emailErr) {
+      console.error("send-email call failed:", emailErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true, temp_password: tempPassword, user_id: newUser.user.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

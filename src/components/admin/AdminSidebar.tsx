@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -48,6 +48,7 @@ const navGroups = [
     label: "Einstellungen",
     items: [
       { title: "Brandings", url: "/admin/brandings", icon: Palette },
+      { title: "E-Mails", url: "/admin/emails", icon: Mail },
     ],
   },
 ];
