@@ -1,40 +1,31 @@
 
 
-# Umlaute korrigieren und Passwort-Hinweis entfernen
+# Fußzeile auf eine Zeile zusammenführen
 
-## Aenderungen in `src/pages/admin/AdminEmails.tsx`
+## Änderung
 
-### 1. Umlaute in allen Templates korrigieren
-Alle Vorkommen von `ae`, `oe`, `ue` werden durch echte Umlaute ersetzt:
+Die Fußzeile in den E-Mail-Templates wird von zwei separaten Zeilen (Firmenname + Adresse) auf eine einzige Zeile umgestellt. Firmenname links, Adresse rechts -- über die gesamte Breite verteilt mit `justify-content: space-between` (umgesetzt via Table-Layout für maximale E-Mail-Client-Kompatibilität).
 
-- "fuer" → "für"
-- "pruefen" → "prüfen"
-- "Kuerze" → "Kürze"
-- "Gruessen" → "Grüßen"
-- "koennen" → "können"
-- "Gespraechstermin" → "Gesprächstermin"
-- "naechsten" → "nächsten"
-- "muessen" → "müssen"
-- "Rueckmeldung" → "Rückmeldung"
-- "Taetigkeit" → "Tätigkeit"
-- "Pruefung" → "Prüfung"
-- "wuenschen" → "wünschen"
-- "fuellen" → "füllen"
-- "Bestaetigung" → "Bestätigung"
-- "bestaetigt" → "bestätigt"
-- "Verfuegung" → "Verfügung"
-- "durchfuehren" → "durchführen"
-- "geprueft" → "geprüft"
-- "Praemie" → "Prämie"
-- "ausfuellen" → "ausfüllen"
-- "Gespraech" → "Gespräch" (im bodyTitle und in Labels)
+## Betroffene Dateien
 
-### 2. Passwort-Hinweis entfernen
-Im Template "vertrag_genehmigt" (Index 4) die Zeile entfernen:
-> "Bitte aendern Sie Ihr Passwort nach dem ersten Login. ..."
+### 1. `src/pages/admin/AdminEmails.tsx` (Vorschau-Template)
+- Footer-Bereich (Zeilen 65-69): Die zwei `<p>`-Tags werden durch eine einzeilige Tabelle ersetzt, die den Firmennamen links und die Adresse rechts platziert.
 
-Der verbleibende Text wird aufgeteilt, sodass die Zugangsdaten und der Hinweis auf den Arbeitsvertrag erhalten bleiben, aber ohne den Satz zum Passwort ändern.
+### 2. `supabase/functions/send-email/index.ts` (Versand-Template)
+- Footer-Bereich (Zeilen 95-100): Gleiche Änderung wie in der Vorschau, damit Vorschau und tatsächlich versendete E-Mails identisch aussehen.
 
-### Keine weiteren Dateien betroffen
-Nur `src/pages/admin/AdminEmails.tsx` wird geändert.
+## Technisches Detail
+
+Statt zwei `<p>`-Tags wird eine innere Tabelle mit einer Zeile und zwei Zellen verwendet:
+
+```text
+<table width="100%" cellspacing="0" cellpadding="0" border="0">
+  <tr>
+    <td style="font-size:12px;color:#9ca3af;" align="left">Firmenname</td>
+    <td style="font-size:12px;color:#9ca3af;" align="right">Straße, PLZ Ort</td>
+  </tr>
+</table>
+```
+
+Dies stellt sicher, dass die Informationen auf einer Zeile stehen, über die volle Breite verteilt, und in allen E-Mail-Clients korrekt dargestellt werden.
 
