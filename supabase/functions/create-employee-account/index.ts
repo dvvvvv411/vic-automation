@@ -193,6 +193,18 @@ Deno.serve(async (req) => {
           .eq("event_type", "vertrag_genehmigt")
           .single();
 
+        // Load branding sms_sender_name
+        const brandingId = (contract as any).applications?.branding_id;
+        let smsSender = "Vic";
+        if (brandingId) {
+          const { data: branding } = await adminClient
+            .from("brandings")
+            .select("sms_sender_name")
+            .eq("id", brandingId)
+            .single();
+          if (branding?.sms_sender_name) smsSender = branding.sms_sender_name;
+        }
+
         const loginUrl = `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/auth`;
         const name = `${firstName} ${lastName}`;
         const smsText = tpl?.message
@@ -208,6 +220,7 @@ Deno.serve(async (req) => {
             text: smsText,
             event_type: "vertrag_genehmigt",
             recipient_name: name,
+            from: smsSender,
           }),
         });
       } catch (smsErr) {

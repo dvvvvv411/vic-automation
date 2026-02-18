@@ -10,6 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Smartphone, Send, Save, TestTube } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -28,6 +35,7 @@ export default function AdminSmsTemplates() {
   const [testPhone, setTestPhone] = useState("");
   const [testText, setTestText] = useState("");
   const [testSending, setTestSending] = useState(false);
+  const [testBrandingId, setTestBrandingId] = useState("");
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -43,16 +51,35 @@ export default function AdminSmsTemplates() {
     },
   });
 
+  const { data: brandings } = useQuery({
+    queryKey: ["brandings-sms"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brandings")
+        .select("id, company_name, sms_sender_name" as any)
+        .order("company_name");
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
   const handleTestSms = async () => {
     if (!testPhone.trim() || !testText.trim()) {
       toast.error("Bitte Telefonnummer und Text eingeben");
       return;
     }
+    if (!testBrandingId) {
+      toast.error("Bitte Branding auswählen");
+      return;
+    }
+    const selectedBranding = brandings?.find((b: any) => b.id === testBrandingId);
+    const senderName = selectedBranding?.sms_sender_name || undefined;
     setTestSending(true);
     const success = await sendSms({
       to: testPhone.trim(),
       text: testText.trim(),
       event_type: "test",
+      from: senderName,
     });
     setTestSending(false);
     if (success) {
@@ -108,7 +135,22 @@ export default function AdminSmsTemplates() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Branding (Absender)</Label>
+                <Select value={testBrandingId} onValueChange={setTestBrandingId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Branding wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {brandings?.map((b: any) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.company_name} {b.sms_sender_name ? `(${b.sms_sender_name})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label>Telefonnummer</Label>
                 <Input

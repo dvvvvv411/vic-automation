@@ -213,7 +213,14 @@ const AuftragDetails = () => {
       const smsText = (tpl as any)?.message
         ? (tpl as any).message.replace("{name}", name).replace("{datum}", formattedDate).replace("{uhrzeit}", selectedTime)
         : `Hallo ${name}, Ihr Termin am ${formattedDate} um ${selectedTime} Uhr wurde bestätigt.`;
-      await sendSms({ to: contractData.phone, text: smsText, event_type: "termin_gebucht", recipient_name: name });
+      // Get branding sms_sender_name
+      let smsSender: string | undefined;
+      const brandingId = (contractData as any)?.applications?.branding_id;
+      if (brandingId) {
+        const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
+        smsSender = (branding as any)?.sms_sender_name || undefined;
+      }
+      await sendSms({ to: contractData.phone, text: smsText, event_type: "termin_gebucht", recipient_name: name, from: smsSender });
     }
 
     setAppointment({

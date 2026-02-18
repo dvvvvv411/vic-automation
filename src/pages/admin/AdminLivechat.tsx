@@ -180,11 +180,26 @@ export default function AdminLivechat() {
     if (!contractData.phone || !smsText.trim()) return;
     setSmsSending(true);
     const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
+    // Get branding sms_sender_name via contract -> application -> branding
+    let smsSender: string | undefined;
+    if (active) {
+      const { data: contractFull } = await supabase
+        .from("employment_contracts")
+        .select("applications(branding_id)")
+        .eq("id", active.contract_id)
+        .single();
+      const brandingId = (contractFull as any)?.applications?.branding_id;
+      if (brandingId) {
+        const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
+        smsSender = (branding as any)?.sms_sender_name || undefined;
+      }
+    }
     const success = await sendSms({
       to: contractData.phone,
       text: smsText.trim(),
       event_type: "manuell",
       recipient_name: name,
+      from: smsSender,
     });
     setSmsSending(false);
     if (success) {

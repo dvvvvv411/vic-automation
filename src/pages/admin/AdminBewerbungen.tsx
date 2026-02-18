@@ -149,7 +149,13 @@ export default function AdminBewerbungen() {
         const smsText = (tpl as any)?.message
           ? (tpl as any).message.replace("{name}", `${app.first_name} ${app.last_name}`).replace("{link}", interviewLink)
           : `Hallo ${app.first_name}, Ihre Bewerbung wurde angenommen! Termin buchen: ${interviewLink}`;
-        await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen", recipient_name: `${app.first_name} ${app.last_name}` });
+        // Get branding sms_sender_name
+        let smsSender: string | undefined;
+        if (app.branding_id) {
+          const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single();
+          smsSender = (branding as any)?.sms_sender_name || undefined;
+        }
+        await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen", recipient_name: `${app.first_name} ${app.last_name}`, from: smsSender });
       }
     },
     onSuccess: () => {
