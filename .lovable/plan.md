@@ -1,54 +1,22 @@
 
-# Links auf Branding-Domain umstellen + SMS-Variablen pruefen
 
-## Befund: SMS-Variablen
+# SMS-Dialog im Livechat: Vorgefertigter Text mit Code-Eingabe
 
-Alle 6 SMS-Vorlagen ersetzen ihre Platzhalter korrekt:
-- bewerbung_angenommen: `{name}`, `{link}` -- ersetzt in AdminBewerbungen.tsx
-- vertrag_genehmigt: `{name}`, `{link}` -- ersetzt in create-employee-account
-- auftrag_zugewiesen: `{name}`, `{auftrag}` -- ersetzt in AssignmentDialog.tsx
-- termin_gebucht: `{name}`, `{datum}`, `{uhrzeit}` -- ersetzt in AuftragDetails.tsx
-- bewertung_genehmigt: `{name}`, `{auftrag}`, `{praemie}` -- ersetzt in AdminBewertungen.tsx
-- bewertung_abgelehnt: `{name}`, `{auftrag}` -- ersetzt in AdminBewertungen.tsx
+## Aenderung
 
-Hier besteht kein Handlungsbedarf.
+Der SMS-Dialog im Admin-Livechat wird umgebaut: Statt einem freien Textfeld gibt es nur noch ein Eingabefeld fuer den Ident-Code. Der SMS-Text wird automatisch aus der Vorlage `Ihr Ident-Code lautet: {CODE}.` generiert.
 
----
+## Betroffene Datei
 
-## Aenderung: Links auf `web.{domain}` umstellen
+`src/pages/admin/AdminLivechat.tsx`
 
-Aktuell werden Links mit `window.location.origin` (Lovable-Preview-URL) oder einer Supabase-URL-Ableitung erzeugt. Stattdessen soll die Domain aus dem Branding (`brandings.domain`) verwendet werden, mit `web.` als Subdomain-Prefix.
+### Aenderungen im Detail
 
-**Beispiel:** Statt `https://id-preview--abc.lovable.app/bewerbungsgespraech/123` wird `https://web.47-skys.de/bewerbungsgespraech/123` verwendet.
+1. **State umbenennen**: `smsText` wird zu `smsCode` (kurzer Code-String statt Freitext)
+2. **Dialog-Inhalt anpassen**:
+   - Textarea wird durch ein normales Input-Feld ersetzt (Label: "Ident-Code")
+   - Darunter eine Vorschau des fertigen SMS-Textes: `Ihr Ident-Code lautet: {eingegebener Code}.`
+   - Zeichenzaehler entfaellt (Code ist immer kurz)
+3. **Sende-Logik anpassen**: Beim Klick auf "SMS senden" wird der Text `Ihr Ident-Code lautet: ${smsCode}.` zusammengesetzt und an `sendSms()` uebergeben
+4. **Validierung**: Button bleibt deaktiviert wenn kein Code eingegeben wurde
 
-### Neue Hilfsfunktion: `src/lib/buildBrandingUrl.ts`
-
-```
-async function buildBrandingUrl(brandingId: string | null, path: string): Promise<string>
-```
-
-- Laedt `domain` aus der `brandings`-Tabelle fuer die gegebene `branding_id`
-- Gibt `https://web.{domain}{path}` zurueck
-- Fallback auf `window.location.origin + path` wenn kein Branding oder keine Domain vorhanden
-
-### Betroffene Dateien (Client-seitig)
-
-| Datei | Aktuelle Link-Erzeugung | Aenderung |
-|-------|------------------------|-----------|
-| `AdminBewerbungen.tsx` (L129) | `window.location.origin + /bewerbungsgespraech/{id}` | `await buildBrandingUrl(app.branding_id, /bewerbungsgespraech/{id})` |
-| `AssignmentDialog.tsx` (L140) | `window.location.origin + /mitarbeiter/auftraege` | `await buildBrandingUrl(brandingId, /mitarbeiter/auftraege)` |
-
-### Betroffene Dateien (Edge Function)
-
-| Datei | Aktuelle Link-Erzeugung | Aenderung |
-|-------|------------------------|-----------|
-| `create-employee-account/index.ts` (L158 + L208) | `supabaseUrl.replace(...)` | Branding-Domain aus DB laden, `https://web.{domain}/auth` verwenden. Fallback auf bisherige Logik. |
-
-### Zusammenfassung der Dateiaenderungen
-
-| Datei | Aenderung |
-|-------|-----------|
-| `src/lib/buildBrandingUrl.ts` | Neue Hilfsfunktion |
-| `src/pages/admin/AdminBewerbungen.tsx` | Link ueber `buildBrandingUrl` statt `window.location.origin` |
-| `src/components/admin/AssignmentDialog.tsx` | Link ueber `buildBrandingUrl` statt `window.location.origin` |
-| `supabase/functions/create-employee-account/index.ts` | Domain aus Branding laden, `https://web.{domain}/auth` verwenden |
