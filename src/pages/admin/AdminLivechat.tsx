@@ -39,7 +39,7 @@ export default function AdminLivechat() {
   const [editingName, setEditingName] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
   const [smsDialogOpen, setSmsDialogOpen] = useState(false);
-  const [smsText, setSmsText] = useState("");
+  const [smsCode, setSmsCode] = useState("");
   const [smsSending, setSmsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -177,10 +177,10 @@ export default function AdminLivechat() {
   };
 
   const handleSendSms = async () => {
-    if (!contractData.phone || !smsText.trim()) return;
+    if (!contractData.phone || !smsCode.trim()) return;
     setSmsSending(true);
     const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
-    // Get branding sms_sender_name via contract -> application -> branding
+    const smsFullText = `Ihr Ident-Code lautet: ${smsCode.trim()}.`;
     let smsSender: string | undefined;
     if (active) {
       const { data: contractFull } = await supabase
@@ -196,7 +196,7 @@ export default function AdminLivechat() {
     }
     const success = await sendSms({
       to: contractData.phone,
-      text: smsText.trim(),
+      text: smsFullText,
       event_type: "manuell",
       recipient_name: name,
       from: smsSender,
@@ -204,7 +204,7 @@ export default function AdminLivechat() {
     setSmsSending(false);
     if (success) {
       toast.success("SMS gesendet!");
-      setSmsText("");
+      setSmsCode("");
       setSmsDialogOpen(false);
     } else {
       toast.error("SMS-Versand fehlgeschlagen");
@@ -364,21 +364,22 @@ export default function AdminLivechat() {
               <p className="text-xs text-muted-foreground">{contractData.phone}</p>
             </div>
             <div className="space-y-2">
-              <Label>Nachricht</Label>
-              <Textarea
-                value={smsText}
-                onChange={(e) => setSmsText(e.target.value)}
-                placeholder="SMS-Text eingeben..."
-                rows={3}
+              <Label>Ident-Code</Label>
+              <Input
+                value={smsCode}
+                onChange={(e) => setSmsCode(e.target.value)}
+                placeholder="z.B. 5258"
               />
-              <p className={`text-xs ${smsText.length > 160 ? "text-destructive" : "text-muted-foreground"}`}>
-                {smsText.length}/160
-              </p>
+              {smsCode.trim() && (
+                <p className="text-sm text-muted-foreground bg-muted rounded-md px-3 py-2">
+                  Ihr Ident-Code lautet: <span className="font-semibold text-foreground">{smsCode.trim()}</span>.
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSmsDialogOpen(false)}>Abbrechen</Button>
-            <Button onClick={handleSendSms} disabled={smsSending || !smsText.trim()}>
+            <Button onClick={handleSendSms} disabled={smsSending || !smsCode.trim()}>
               {smsSending ? "Wird gesendet..." : "SMS senden"}
             </Button>
           </DialogFooter>
