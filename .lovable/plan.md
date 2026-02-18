@@ -1,35 +1,18 @@
 
 
-# Deployment-Ready: Titel, Beschreibung und Favicon
+# Alle Hosts in der Vite-Config erlauben
 
-## Aenderungen
+## Problem
 
-### 1. `index.html` -- Titel und Meta-Tags aktualisieren
+Beim Zugriff ueber die Domain `web.47-skys.de` blockiert Vite die Anfrage, weil der Host nicht in der erlaubten Liste steht.
 
-Alle generischen "Lovable App" / "Lovable Generated Project" Texte werden ersetzt:
+## Loesung
 
-| Meta-Tag | Neuer Wert |
-|----------|-----------|
-| `<title>` | Mitarbeiter Dashboard |
-| `meta description` | Das zentrale Dashboard fuer Mitarbeiter -- Auftraege, Bewertungen und mehr auf einen Blick. |
-| `og:title` | Mitarbeiter Dashboard |
-| `og:description` | Das zentrale Dashboard fuer Mitarbeiter -- Auftraege, Bewertungen und mehr auf einen Blick. |
-| `meta author` | entfernen (kein "Lovable" mehr) |
-| `og:image` / `twitter:image` | entfernen oder auf eigenes Bild setzen |
-| `twitter:site` | entfernen (kein @Lovable) |
+In `vite.config.ts` wird `server.allowedHosts` auf `"all"` gesetzt, damit alle Hosts erlaubt sind.
 
-### 2. Favicon generieren
-
-Ein neues Favicon wird per AI-Bildgenerierung erstellt:
-- **Motiv**: Einfaches Dashboard-Icon (z.B. stilisiertes Grid/Layout-Symbol oder Tachometer)
-- **Farbe**: Schwarz auf transparentem Hintergrund
-- **Format**: PNG, wird als `public/favicon.png` gespeichert
-- **Einbindung**: `<link rel="icon" href="/favicon.png" type="image/png">` in `index.html`
-
-### Betroffene Dateien
+## Betroffene Datei
 
 | Datei | Aenderung |
 |-------|-----------|
-| `index.html` | Titel, Meta-Tags, Favicon-Link aktualisieren |
-| `public/favicon.png` | Neues generiertes Favicon (schwarz auf transparent) |
+| `vite.config.ts` | `allowedHosts: "all"` im `server`-Block ergaenzen |
 
