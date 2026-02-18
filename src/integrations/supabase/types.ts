@@ -85,6 +85,7 @@ export type Database = {
           resend_api_key: string | null
           resend_from_email: string | null
           resend_from_name: string | null
+          sms_sender_name: string | null
           street: string | null
           trade_register: string | null
           vat_id: string | null
@@ -104,6 +105,7 @@ export type Database = {
           resend_api_key?: string | null
           resend_from_email?: string | null
           resend_from_name?: string | null
+          sms_sender_name?: string | null
           street?: string | null
           trade_register?: string | null
           vat_id?: string | null
@@ -123,6 +125,7 @@ export type Database = {
           resend_api_key?: string | null
           resend_from_email?: string | null
           resend_from_name?: string | null
+          sms_sender_name?: string | null
           street?: string | null
           trade_register?: string | null
           vat_id?: string | null

@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { to, text, event_type, recipient_name } = await req.json();
+    const { to, text, event_type, recipient_name, from } = await req.json();
 
     if (!to || !text) {
       return new Response(
@@ -20,6 +20,23 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Normalize phone number
+    function normalizePhone(phone: string): string {
+      // Remove all non-digit characters except leading +
+      let cleaned = phone.replace(/(?!^\+)\D/g, "");
+      // If starts with 0, replace with +49
+      if (cleaned.startsWith("0")) {
+        cleaned = "+49" + cleaned.slice(1);
+      }
+      // Ensure + prefix if starts with 49 and no +
+      if (cleaned.startsWith("49") && !cleaned.startsWith("+")) {
+        cleaned = "+" + cleaned;
+      }
+      return cleaned;
+    }
+
+    const normalizedTo = normalizePhone(to);
 
     const apiKey = Deno.env.get("SEVEN_API_KEY");
     if (!apiKey) {
@@ -33,6 +50,9 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Determine sender name (max 11 alphanumeric chars for seven.io)
+    const sender = from ? from.substring(0, 11) : "Vic";
+
     // Send SMS via seven.io
     const smsResponse = await fetch("https://gateway.seven.io/api/sms", {
       method: "POST",
@@ -41,9 +61,9 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        to,
+        to: normalizedTo,
         text,
-        from: "Vic",
+        from: sender,
       }),
     });
 
@@ -52,7 +72,7 @@ Deno.serve(async (req) => {
 
     // Log to sms_logs
     await adminClient.from("sms_logs").insert({
-      recipient_phone: to,
+      recipient_phone: normalizedTo,
       recipient_name: recipient_name || null,
       message: text,
       event_type: event_type || "manuell",

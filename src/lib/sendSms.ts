@@ -5,6 +5,7 @@ interface SendSmsParams {
   text: string;
   event_type?: string;
   recipient_name?: string;
+  from?: string;
 }
 
 export async function sendSms(params: SendSmsParams): Promise<boolean> {

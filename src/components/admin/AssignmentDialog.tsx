@@ -149,7 +149,14 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
             const smsText = (tpl as any)?.message
               ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", order?.title || "")
               : `Hallo ${name}, Ihnen wurde ein neuer Auftrag zugewiesen: ${order?.title || ""}`;
-            await sendSms({ to: c.phone, text: smsText, event_type: "auftrag_zugewiesen", recipient_name: name });
+            // Get branding sms_sender_name
+            let smsSender: string | undefined;
+            const brandingId = (c as any)?.applications?.branding_id;
+            if (brandingId) {
+              const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
+              smsSender = (branding as any)?.sms_sender_name || undefined;
+            }
+            await sendSms({ to: c.phone, text: smsText, event_type: "auftrag_zugewiesen", recipient_name: name, from: smsSender });
           }
         }
       }

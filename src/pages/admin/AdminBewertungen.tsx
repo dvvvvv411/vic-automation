@@ -149,9 +149,16 @@ const AdminBewertungen = () => {
         .update({ balance: currentBalance + reward })
         .eq("id", g.contract_id);
 
+      // Get branding sms_sender_name
+      let smsSender: string | undefined;
+      const brandingId = (contract as any)?.applications?.branding_id;
+      if (brandingId) {
+        const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
+        smsSender = (branding as any)?.sms_sender_name || undefined;
+      }
+
       // Send email
       if (contract?.email) {
-        const brandingId = (contract as any)?.applications?.branding_id;
         await sendEmail({
           to: contract.email,
           recipient_name: `${contract.first_name || ""} ${contract.last_name || ""}`.trim(),
@@ -175,7 +182,7 @@ const AdminBewertungen = () => {
         const smsText = (tpl as any)?.message
           ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", g.order_title).replace("{praemie}", g.order_reward)
           : `Hallo ${name}, Ihre Bewertung für "${g.order_title}" wurde genehmigt. Prämie: ${g.order_reward}.`;
-        await sendSms({ to: contract.phone, text: smsText, event_type: "bewertung_genehmigt", recipient_name: name });
+        await sendSms({ to: contract.phone, text: smsText, event_type: "bewertung_genehmigt", recipient_name: name, from: smsSender });
       }
     }
 
@@ -214,8 +221,15 @@ const AdminBewertungen = () => {
       .eq("id", g.contract_id)
       .single();
 
+    // Get branding sms_sender_name
+    let smsSender: string | undefined;
+    const brandingId = (contract as any)?.applications?.branding_id;
+    if (brandingId) {
+      const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
+      smsSender = (branding as any)?.sms_sender_name || undefined;
+    }
+
     if (contract?.email) {
-      const brandingId = (contract as any)?.applications?.branding_id;
       await sendEmail({
         to: contract.email,
         recipient_name: `${contract.first_name || ""} ${contract.last_name || ""}`.trim(),
@@ -239,7 +253,7 @@ const AdminBewertungen = () => {
       const smsText = (tpl as any)?.message
         ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", g.order_title)
         : `Hallo ${name}, Ihre Bewertung für "${g.order_title}" wurde leider abgelehnt.`;
-      await sendSms({ to: contract.phone, text: smsText, event_type: "bewertung_abgelehnt", recipient_name: name });
+      await sendSms({ to: contract.phone, text: smsText, event_type: "bewertung_abgelehnt", recipient_name: name, from: smsSender });
     }
 
     toast.success("Bewertung abgelehnt. Mitarbeiter kann erneut bewerten.");

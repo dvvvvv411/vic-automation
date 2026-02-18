@@ -39,6 +39,7 @@ const brandingSchema = z.object({
   resend_from_email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
   resend_from_name: z.string().max(200).optional(),
   resend_api_key: z.string().max(200).optional(),
+  sms_sender_name: z.string().max(11, "Max. 11 Zeichen").optional(),
 });
 
 type BrandingForm = z.infer<typeof brandingSchema>;
@@ -58,6 +59,7 @@ const initialForm: BrandingForm = {
   resend_from_email: "",
   resend_from_name: "",
   resend_api_key: "",
+  sms_sender_name: "",
 };
 
 export default function AdminBrandings() {
@@ -151,6 +153,7 @@ export default function AdminBrandings() {
       resend_from_email: (branding as any).resend_from_email || "",
       resend_from_name: (branding as any).resend_from_name || "",
       resend_api_key: (branding as any).resend_api_key || "",
+      sms_sender_name: (branding as any).sms_sender_name || "",
     });
     setOpen(true);
   };
@@ -338,6 +341,26 @@ export default function AdminBrandings() {
             <div className="space-y-2">
               <Label>Resend API Key</Label>
               <Input type="password" value={form.resend_api_key} onChange={(e) => updateField("resend_api_key", e.target.value)} placeholder="re_..." />
+            </div>
+
+            {/* SMS-Konfiguration */}
+            <div className="pt-2">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-sm font-medium text-muted-foreground">SMS-Konfiguration</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>SMS-Absendername</Label>
+              <Input
+                value={form.sms_sender_name}
+                onChange={(e) => updateField("sms_sender_name", e.target.value)}
+                placeholder="MusterGmbH"
+                maxLength={11}
+              />
+              <p className="text-xs text-muted-foreground">Max. 11 Zeichen (alphanumerisch). Wird als Absender bei SMS angezeigt.</p>
+              {errors.sms_sender_name && <p className="text-xs text-destructive">{errors.sms_sender_name}</p>}
             </div>
 
             {/* Brand Color */}

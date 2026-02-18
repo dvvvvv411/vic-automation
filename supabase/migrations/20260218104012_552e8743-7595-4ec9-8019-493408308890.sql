@@ -1,0 +1,1 @@
+ALTER TABLE public.brandings ADD COLUMN sms_sender_name text;
