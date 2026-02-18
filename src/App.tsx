@@ -18,6 +18,7 @@ import AdminLivechat from "./pages/admin/AdminLivechat";
 import AdminBewertungen from "./pages/admin/AdminBewertungen";
 import AdminAuftragstermine from "./pages/admin/AdminAuftragstermine";
 import AdminEmails from "./pages/admin/AdminEmails";
+import AdminSmsTemplates from "./pages/admin/AdminSmsTemplates";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
 import MitarbeiterLayout from "./components/mitarbeiter/MitarbeiterLayout";
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="livechat" element={<AdminLivechat />} />
               <Route path="bewertungen" element={<AdminBewertungen />} />
               <Route path="emails" element={<AdminEmails />} />
+              <Route path="sms" element={<AdminSmsTemplates />} />
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
             <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />

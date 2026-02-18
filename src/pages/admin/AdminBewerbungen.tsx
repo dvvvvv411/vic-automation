@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
+import { sendSms } from "@/lib/sendSms";
+import { supabase as supabaseClient } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -141,6 +143,14 @@ export default function AdminBewerbungen() {
         event_type: "bewerbung_angenommen",
         metadata: { application_id: app.id },
       });
+      // SMS
+      if (app.phone) {
+        const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewerbung_angenommen").single();
+        const smsText = (tpl as any)?.message
+          ? (tpl as any).message.replace("{name}", `${app.first_name} ${app.last_name}`).replace("{link}", interviewLink)
+          : `Hallo ${app.first_name}, Ihre Bewerbung wurde angenommen! Termin buchen: ${interviewLink}`;
+        await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen", recipient_name: `${app.first_name} ${app.last_name}` });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });

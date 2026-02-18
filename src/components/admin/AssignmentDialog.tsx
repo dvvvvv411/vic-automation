@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
+import { sendSms } from "@/lib/sendSms";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -115,8 +116,11 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
         // Get employee info
         const { data: contracts } = await supabase
           .from("employment_contracts")
-          .select("id, email, first_name, last_name, applications(branding_id)")
+          .select("id, email, first_name, last_name, phone, applications(branding_id)")
           .in("id", newlyAdded);
+
+        // Load SMS template
+        const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "auftrag_zugewiesen").single();
 
         for (const c of contracts ?? []) {
           if (c.email) {
@@ -138,6 +142,14 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
               event_type: "auftrag_zugewiesen",
               metadata: { order_id: sourceId, contract_id: c.id },
             });
+          }
+          // SMS
+          if (c.phone) {
+            const name = `${c.first_name || ""} ${c.last_name || ""}`.trim();
+            const smsText = (tpl as any)?.message
+              ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", order?.title || "")
+              : `Hallo ${name}, Ihnen wurde ein neuer Auftrag zugewiesen: ${order?.title || ""}`;
+            await sendSms({ to: c.phone, text: smsText, event_type: "auftrag_zugewiesen", recipient_name: name });
           }
         }
       }

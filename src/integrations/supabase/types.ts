@@ -576,6 +576,63 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          message: string
+          recipient_name: string | null
+          recipient_phone: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          message: string
+          recipient_name?: string | null
+          recipient_phone: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          message?: string
+          recipient_name?: string | null
+          recipient_phone?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      sms_templates: {
+        Row: {
+          event_type: string
+          id: string
+          label: string
+          message: string
+          updated_at: string
+        }
+        Insert: {
+          event_type: string
+          id?: string
+          label: string
+          message: string
+          updated_at?: string
+        }
+        Update: {
+          event_type?: string
+          id?: string
+          label?: string
+          message?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
