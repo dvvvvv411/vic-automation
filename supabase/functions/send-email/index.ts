@@ -94,8 +94,12 @@ function buildEmailHtml(opts: {
 <!-- Footer -->
 <tr>
   <td style="background-color:#f9fafb;padding:20px 32px;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
-    <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">${companyName}</p>
-    ${footerAddress ? `<p style="margin:4px 0 0 0;font-size:12px;color:#9ca3af;line-height:1.5;">${footerAddress}</p>` : ""}
+    <table width="100%" cellspacing="0" cellpadding="0" border="0">
+      <tr>
+        <td style="font-size:12px;color:#9ca3af;line-height:1.5;" align="left">${companyName}</td>
+        ${footerAddress ? `<td style="font-size:12px;color:#9ca3af;line-height:1.5;" align="right">${footerAddress}</td>` : ""}
+      </tr>
+    </table>
   </td>
 </tr>
 
