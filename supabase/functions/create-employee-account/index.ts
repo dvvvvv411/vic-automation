@@ -155,7 +155,14 @@ Deno.serve(async (req) => {
     // Send email with credentials
     try {
       const brandingId = (contract as any).applications?.branding_id;
-      const loginUrl = `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/auth`;
+      let loginUrl = `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/auth`;
+      if (brandingId) {
+        const { data: brandingData } = await adminClient.from("brandings").select("domain").eq("id", brandingId).single();
+        if (brandingData?.domain) {
+          const domain = (brandingData.domain as string).replace(/^https?:\/\//, "").replace(/\/$/, "");
+          loginUrl = `https://web.${domain}/auth`;
+        }
+      }
       const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
       await fetch(sendEmailUrl, {
         method: "POST",
@@ -205,7 +212,7 @@ Deno.serve(async (req) => {
           if (branding?.sms_sender_name) smsSender = branding.sms_sender_name;
         }
 
-        const loginUrl = `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/auth`;
+        // loginUrl already uses branding domain from above
         const name = `${firstName} ${lastName}`;
         const smsText = tpl?.message
           ? (tpl.message as string).replace("{name}", name).replace("{link}", loginUrl)

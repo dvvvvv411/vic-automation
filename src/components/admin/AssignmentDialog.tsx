@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
+import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -137,7 +138,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                 "Bitte loggen Sie sich in Ihr Mitarbeiterkonto ein, um die Details einzusehen.",
               ],
               button_text: "Zum Mitarbeiterportal",
-              button_url: `${window.location.origin}/mitarbeiter/auftraege`,
+              button_url: await buildBrandingUrl(brandingId, "/mitarbeiter/auftraege"),
               branding_id: brandingId || null,
               event_type: "auftrag_zugewiesen",
               metadata: { order_id: sourceId, contract_id: c.id },

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
-import { supabase as supabaseClient } from "@/integrations/supabase/client";
+import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,7 +126,7 @@ export default function AdminBewerbungen() {
         .update({ status: "bewerbungsgespraech" })
         .eq("id", app.id);
       if (error) throw error;
-      const interviewLink = `${window.location.origin}/bewerbungsgespraech/${app.id}`;
+      const interviewLink = await buildBrandingUrl(app.branding_id, `/bewerbungsgespraech/${app.id}`);
       await sendEmail({
         to: app.email,
         recipient_name: `${app.first_name} ${app.last_name}`,
@@ -235,6 +235,7 @@ export default function AdminBewerbungen() {
 
   const copyLink = (id: string) => {
     const link = `${window.location.origin}/bewerbungsgespraech/${id}`;
+    // Note: copyLink uses current origin for admin convenience
     navigator.clipboard.writeText(link);
     toast.success("Link kopiert!");
   };
