@@ -1,10 +1,9 @@
 
-
-# SMS-Dialog im Livechat: Vorgefertigter Text mit Code-Eingabe
+# Schnelleingabe fuer Ident-Code im Livechat-Header
 
 ## Aenderung
 
-Der SMS-Dialog im Admin-Livechat wird umgebaut: Statt einem freien Textfeld gibt es nur noch ein Eingabefeld fuer den Ident-Code. Der SMS-Text wird automatisch aus der Vorlage `Ihr Ident-Code lautet: {CODE}.` generiert.
+Neben dem bestehenden SMS-Button im Chat-Header wird ein kompaktes Inline-Eingabefeld mit Haken-Button eingefuegt. Der Admin kann dort direkt einen Ident-Code eingeben und mit einem Klick auf den Haken absenden -- ohne den Dialog oeffnen zu muessen. Der Dialog bleibt weiterhin ueber den Smartphone-Button erreichbar.
 
 ## Betroffene Datei
 
@@ -12,11 +11,21 @@ Der SMS-Dialog im Admin-Livechat wird umgebaut: Statt einem freien Textfeld gibt
 
 ### Aenderungen im Detail
 
-1. **State umbenennen**: `smsText` wird zu `smsCode` (kurzer Code-String statt Freitext)
-2. **Dialog-Inhalt anpassen**:
-   - Textarea wird durch ein normales Input-Feld ersetzt (Label: "Ident-Code")
-   - Darunter eine Vorschau des fertigen SMS-Textes: `Ihr Ident-Code lautet: {eingegebener Code}.`
-   - Zeichenzaehler entfaellt (Code ist immer kurz)
-3. **Sende-Logik anpassen**: Beim Klick auf "SMS senden" wird der Text `Ihr Ident-Code lautet: ${smsCode}.` zusammengesetzt und an `sendSms()` uebergeben
-4. **Validierung**: Button bleibt deaktiviert wenn kein Code eingegeben wurde
+1. **Neuer State**: `quickSmsCode` (String) fuer das Inline-Eingabefeld
+2. **UI im Header** (Zeile 243-253): Nach dem SMS-Button wird ein kleines Input-Feld (ca. 80px breit, Placeholder "Code") und ein Check-Button (Lucide `Check`-Icon) eingefuegt, beides nur sichtbar wenn `contractData.phone` vorhanden ist
+3. **Neue Funktion `handleQuickSms`**: 
+   - Nutzt dieselbe Logik wie `handleSendSms` (Branding laden, `sms_sender_name` holen)
+   - Setzt den Text auf `Ihr Ident-Code lautet: ${quickSmsCode.trim()}.`
+   - Sendet die SMS, zeigt Toast, leert das Feld bei Erfolg
+4. **Layout**: Die Elemente werden in einer `flex items-center gap-1` Gruppe angeordnet:
+   - SMS-Button (Smartphone-Icon, oeffnet Dialog)
+   - Input-Feld (schmal, h-9)
+   - Check-Button (h-9 w-9, primary-Farbe, disabled wenn leer oder beim Senden)
 
+### Visuelles Layout im Header
+
+```text
+[Mitarbeiter-Avatar + Name]          [Input: Code] [✓] [📱] [Templates] [Admin-Avatar]
+```
+
+Das Input + Haken steht direkt vor dem bestehenden SMS-Dialog-Button.
