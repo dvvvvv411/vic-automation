@@ -36,7 +36,7 @@ export default function AdminBewerbungsgespraeche() {
     queryFn: async () => {
       let query = supabase
         .from("interview_appointments")
-        .select("*, applications(first_name, last_name, email, phone, brandings(id, company_name))", { count: "exact" });
+        .select("*, applications(first_name, last_name, email, phone, employment_type, brandings(id, company_name))", { count: "exact" });
 
       if (viewMode === "past") {
         // All before today, plus today's that are past cutoff
@@ -201,6 +201,7 @@ export default function AdminBewerbungsgespraeche() {
                     <TableHead>Telefon</TableHead>
                     <TableHead>E-Mail</TableHead>
                     <TableHead>Branding</TableHead>
+                    <TableHead>Anstellungsart</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Aktionen</TableHead>
                   </TableRow>
@@ -230,6 +231,9 @@ export default function AdminBewerbungsgespraeche() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {item.applications?.brandings?.company_name || "–"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {item.applications?.employment_type || "–"}
                       </TableCell>
                       <TableCell>{statusBadge(item.status)}</TableCell>
                       <TableCell>
