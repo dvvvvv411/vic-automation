@@ -100,11 +100,11 @@ export default function AdminTelegram() {
   const testMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.functions.invoke("send-telegram", {
-        body: { event_type: "test", message: "🔔 Test-Nachricht von Vic Admin" },
+        body: { event_type: "_test", message: "🔔 Test-Nachricht von Vic Admin" },
       });
       if (error) throw error;
     },
-    onSuccess: () => toast.success("Testnachricht gesendet (an Chats mit 'test'-Event)"),
+    onSuccess: () => toast.success("Testnachricht an alle Chat-IDs gesendet"),
     onError: () => toast.error("Fehler beim Senden"),
   });
 
