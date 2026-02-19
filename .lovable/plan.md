@@ -1,55 +1,35 @@
 
 
-# Fix: seven.io SMS-Antwort korrekt auswerten
+# Fix: seven.io Response "100" korrekt erkennen
 
 ## Problem
 
-Die Edge Function `send-sms` prueft nur den HTTP-Statuscode (`smsResponse.ok`). seven.io gibt aber **immer HTTP 200** zurueck -- der tatsaechliche Erfolg/Fehler steht im Response-Body als numerischer Code (z.B. `100` = Erfolg, `900` = Authentifizierungsfehler, `402` = kein Guthaben).
-
-Deshalb wird die SMS als "sent" geloggt, obwohl sie nicht zugestellt wurde.
+`JSON.parse("100")` wirft keinen Fehler -- es gibt die Zahl `100` zurueck. Daher wird der catch-Block nie erreicht, und `parsed.success` ist `undefined`, weil `100` kein Objekt ist.
 
 ## Loesung
 
-Die Edge Function anpassen, um den seven.io Response-Body korrekt auszuwerten:
+In `supabase/functions/send-sms/index.ts` die Erfolgs-Pruefung anpassen (Zeilen 74-82):
 
-### Datei: `supabase/functions/send-sms/index.ts`
-
-**Zeilen 70-71 anpassen:**
-
-Vorher:
-```text
-const smsResult = await smsResponse.text();
-const success = smsResponse.ok;
-```
-
-Nachher:
-```text
-const smsResult = await smsResponse.text();
-console.log("seven.io raw response:", smsResult);
-
-// seven.io returns "100" for success, other codes are errors
-// The response can be JSON or a plain status code
+```typescript
 let success = false;
 try {
   const parsed = JSON.parse(smsResult);
-  // JSON response: check success field or status code 100
-  success = parsed.success === "100" || parsed.success === 100
-    || (parsed.messages && parsed.messages.length > 0);
+  if (typeof parsed === "number") {
+    success = parsed === 100;
+  } else if (typeof parsed === "object" && parsed !== null) {
+    success = parsed.success === "100" || parsed.success === 100
+      || (parsed.messages && parsed.messages.length > 0);
+  }
 } catch {
-  // Plain text response: "100" means success
   success = smsResult.trim().startsWith("100");
 }
 ```
 
-Zusaetzlich wird der Response-Body jetzt immer geloggt (`console.log`), damit wir bei zukuenftigen Problemen sofort den seven.io-Fehlercode sehen koennen.
+Die Aenderung prueft zuerst ob `parsed` eine Zahl ist (seven.io gibt oft einfach `100` zurueck). Nur wenn es ein Objekt ist, werden `success` und `messages` geprueft.
 
-### Warum nur eine Datei?
+## Betroffene Datei
 
-- Das Frontend (`AdminBewerbungen.tsx`) und die `sendSms`-Hilfsfunktion sind korrekt
-- Der Short-Link wird erfolgreich erstellt
-- Der SMS-Text wird korrekt zusammengebaut
-- Einzig die Erfolgsauswertung in der Edge Function ist fehlerhaft
+| Datei | Aenderung |
+|-------|-----------|
+| `supabase/functions/send-sms/index.ts` | typeof-Pruefung fuer parsed Response |
 
-### Testen
-
-Nach dem Fix: Bewerbung von "Max Indeed" erneut auf "neu" setzen und nochmal akzeptieren, um zu pruefen ob die SMS jetzt ankommt.
