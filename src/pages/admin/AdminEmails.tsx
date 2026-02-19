@@ -53,20 +53,11 @@ function buildEmailHtml(opts: {
   </td>
 </tr>
 <tr>
-  <td style="background-color:#ffffff;padding:36px 32px 28px 32px;">
+  <td style="background-color:#ffffff;padding:36px 32px 28px 32px;border-radius:0 0 8px 8px;">
     <h1 style="margin:0 0 20px 0;font-size:20px;font-weight:700;color:#111827;line-height:1.3;">${bodyTitle}</h1>
     ${linesHtml}
     ${buttonHtml}
-  </td>
-</tr>
-<tr>
-  <td style="background-color:#f9fafb;padding:20px 32px;border-radius:0 0 8px 8px;border-top:1px solid #e5e7eb;">
-    <table width="100%" cellspacing="0" cellpadding="0" border="0">
-      <tr>
-        <td style="font-size:12px;color:#9ca3af;line-height:1.5;" align="left">${companyName}</td>
-        ${footerAddress ? `<td style="font-size:12px;color:#9ca3af;line-height:1.5;" align="right">${footerAddress}</td>` : ""}
-      </tr>
-    </table>
+    <p style="margin:32px 0 0 0;padding:20px 0 0 0;font-size:14px;line-height:1.5;color:#6b7280;">${companyName}${footerAddress ? ` · ${footerAddress}` : ""}</p>
   </td>
 </tr>
 </table>
