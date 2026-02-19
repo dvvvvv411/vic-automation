@@ -266,11 +266,11 @@ export default function AdminLivechat() {
 
       {/* Chat area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {active ? (
-          <>
-            {/* Header */}
-            <div className="border-b border-border px-6 py-4 flex items-center justify-between bg-card shrink-0">
-              <div className="flex items-center gap-3">
+        {/* Permanent header – always visible */}
+        <div className="border-b border-border px-6 py-4 flex items-center justify-between bg-card shrink-0">
+          <div className="flex items-center gap-3">
+            {active ? (
+              <>
                 <AvatarUpload avatarUrl={employeeProfile.avatar_url} name={active.first_name} size={36} />
                 <div>
                   <h2 className="font-semibold text-foreground">
@@ -278,81 +278,87 @@ export default function AdminLivechat() {
                   </h2>
                   <p className="text-xs text-muted-foreground">Konversation</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {contractData.phone && (
-                  <>
-                    <div className="flex items-center gap-1">
-                      <Input
-                        value={quickSmsCode}
-                        onChange={(e) => setQuickSmsCode(e.target.value)}
-                        placeholder="Code"
-                        className="h-9 w-20 text-sm"
-                        onKeyDown={(e) => { if (e.key === "Enter") handleQuickSms(); }}
-                      />
-                      <Button
-                        variant="default"
-                        size="icon"
-                        className="h-9 w-9"
-                        disabled={!quickSmsCode.trim() || quickSmsSending}
-                        onClick={handleQuickSms}
-                        title="Ident-Code per SMS senden"
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9"
-                      onClick={() => setSmsDialogOpen(true)}
-                      title="SMS-Dialog öffnen"
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">Kein Chat ausgewählt</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {active && contractData.phone && (
+              <>
+                <div className="flex items-center gap-1">
+                  <Input
+                    value={quickSmsCode}
+                    onChange={(e) => setQuickSmsCode(e.target.value)}
+                    placeholder="Code"
+                    className="h-9 w-20 text-sm"
+                    onKeyDown={(e) => { if (e.key === "Enter") handleQuickSms(); }}
+                  />
+                  <Button
+                    variant="default"
+                    size="icon"
+                    className="h-9 w-9"
+                    disabled={!quickSmsCode.trim() || quickSmsSending}
+                    onClick={handleQuickSms}
+                    title="Ident-Code per SMS senden"
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={() => setSmsDialogOpen(true)}
+                  title="SMS-Dialog öffnen"
+                >
+                  <Smartphone className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+            {active && <TemplateManager />}
+            {/* Admin profile popover – always visible */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <div className="cursor-pointer">
+                  <AvatarUpload avatarUrl={adminAvatar} name={adminDisplayName || "Admin"} size={36} />
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-4" align="end">
+                <p className="text-xs text-muted-foreground mb-3">Admin-Profil</p>
+                <div className="flex justify-center mb-3">
+                  <AvatarUpload
+                    avatarUrl={adminAvatar}
+                    name={adminDisplayName || "Admin"}
+                    size={56}
+                    editable
+                    onUploaded={(url) => setAdminAvatar(url)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-foreground">Anzeigename</label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={adminDisplayName}
+                      onChange={(e) => setAdminDisplayName(e.target.value)}
+                      placeholder="Dein Name..."
+                      className="h-8 text-sm"
+                    />
+                    <button
+                      onClick={saveDisplayName}
+                      className="shrink-0 h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
                     >
-                      <Smartphone className="h-4 w-4" />
-                    </Button>
-                  </>
-                )}
-                <TemplateManager />
-                {/* Admin profile popover */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <div className="cursor-pointer">
-                      <AvatarUpload avatarUrl={adminAvatar} name={adminDisplayName || "Admin"} size={36} />
-                    </div>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-4" align="end">
-                    <p className="text-xs text-muted-foreground mb-3">Admin-Profil</p>
-                    <div className="flex justify-center mb-3">
-                      <AvatarUpload
-                        avatarUrl={adminAvatar}
-                        name={adminDisplayName || "Admin"}
-                        size={56}
-                        editable
-                        onUploaded={(url) => setAdminAvatar(url)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-foreground">Anzeigename</label>
-                      <div className="flex gap-2">
-                        <Input
-                          value={adminDisplayName}
-                          onChange={(e) => setAdminDisplayName(e.target.value)}
-                          placeholder="Dein Name..."
-                          className="h-8 text-sm"
-                        />
-                        <button
-                          onClick={saveDisplayName}
-                          className="shrink-0 h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
-                        >
-                          OK
-                        </button>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
+                      OK
+                    </button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
 
+        {active ? (
+          <>
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-1">
               {loading ? (
