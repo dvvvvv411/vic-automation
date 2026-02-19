@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { AlertCircle, Briefcase, Check, CheckCircle2, Pencil, Phone, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { format, isWeekend, isBefore, startOfDay, isToday } from "date-fns";
+import { format, isSunday, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
 import { AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -282,7 +282,7 @@ export default function Bewerbungsgespraech() {
                   setSelectedTime(null);
                 }}
                 disabled={(date) =>
-                  isWeekend(date) || isBefore(date, startOfDay(new Date()))
+                  isSunday(date) || isBefore(date, startOfDay(new Date()))
                 }
                 locale={de}
                 className="pointer-events-auto"
