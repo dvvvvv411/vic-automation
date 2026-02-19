@@ -606,6 +606,57 @@ export type Database = {
         }
         Relationships: []
       }
+      schedule_blocked_slots: {
+        Row: {
+          blocked_date: string
+          blocked_time: string
+          created_at: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_date: string
+          blocked_time: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_date?: string
+          blocked_time?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      schedule_settings: {
+        Row: {
+          available_days: number[]
+          created_at: string
+          end_time: string
+          id: string
+          slot_interval_minutes: number
+          start_time: string
+        }
+        Insert: {
+          available_days?: number[]
+          created_at?: string
+          end_time?: string
+          id?: string
+          slot_interval_minutes?: number
+          start_time?: string
+        }
+        Update: {
+          available_days?: number[]
+          created_at?: string
+          end_time?: string
+          id?: string
+          slot_interval_minutes?: number
+          start_time?: string
+        }
+        Relationships: []
+      }
       short_links: {
         Row: {
           code: string

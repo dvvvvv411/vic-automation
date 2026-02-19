@@ -14,16 +14,24 @@ import {
 } from "@/components/ui/dialog";
 import { AlertCircle, Briefcase, Check, CheckCircle2, Pencil, Phone, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { format, isSunday, isBefore, startOfDay, isToday } from "date-fns";
+import { format, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
 import { AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-const TIME_SLOTS = Array.from({ length: 20 }, (_, i) => {
-  const hour = Math.floor(i / 2) + 8;
-  const min = i % 2 === 0 ? "00" : "30";
-  return `${String(hour).padStart(2, "0")}:${min}`;
-});
+function generateTimeSlots(start: string, end: string, interval: number) {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const startMin = sh * 60 + sm;
+  const endMin = eh * 60 + em;
+  const slots: string[] = [];
+  for (let m = startMin; m < endMin; m += interval) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    slots.push(`${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`);
+  }
+  return slots;
+}
 
 export default function Bewerbungsgespraech() {
   const { id } = useParams<{ id: string }>();
@@ -62,6 +70,42 @@ export default function Bewerbungsgespraech() {
     },
   });
 
+  // Load schedule settings
+  const { data: scheduleSettings } = useQuery({
+    queryKey: ["schedule-settings-public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("schedule_settings")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Load blocked slots
+  const { data: blockedSlotsData } = useQuery({
+    queryKey: ["schedule-blocked-slots-public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("schedule_blocked_slots")
+        .select("blocked_date, blocked_time");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const scheduleStart = scheduleSettings?.start_time?.slice(0, 5) ?? "08:00";
+  const scheduleEnd = scheduleSettings?.end_time?.slice(0, 5) ?? "18:00";
+  const scheduleInterval = scheduleSettings?.slot_interval_minutes ?? 30;
+  const availableDays = scheduleSettings?.available_days ?? [1, 2, 3, 4, 5, 6];
+
+  const TIME_SLOTS = useMemo(
+    () => generateTimeSlots(scheduleStart, scheduleEnd, scheduleInterval),
+    [scheduleStart, scheduleEnd, scheduleInterval]
+  );
+
   const brandColor = application?.brandings?.brand_color || "#3B82F6";
   const logoUrl = application?.brandings?.logo_url;
   const companyName = application?.brandings?.company_name;
@@ -86,17 +130,19 @@ export default function Bewerbungsgespraech() {
       const [h, m] = time.split(":").map(Number);
       return h * 60 + m > currentMinutes;
     });
-  }, [selectedDate]);
+  }, [selectedDate, TIME_SLOTS]);
 
   const bookedTimesForDate = useMemo(() => {
-    if (!selectedDate || !bookedSlots) return new Set<string>();
+    if (!selectedDate) return new Set<string>();
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    return new Set(
-      bookedSlots
-        .filter((s: any) => s.appointment_date === dateStr)
-        .map((s: any) => s.appointment_time?.slice(0, 5))
-    );
-  }, [selectedDate, bookedSlots]);
+    const booked = (bookedSlots || [])
+      .filter((s: any) => s.appointment_date === dateStr)
+      .map((s: any) => s.appointment_time?.slice(0, 5));
+    const blocked = (blockedSlotsData || [])
+      .filter((s: any) => s.blocked_date === dateStr)
+      .map((s: any) => s.blocked_time?.slice(0, 5));
+    return new Set([...booked, ...blocked]);
+  }, [selectedDate, bookedSlots, blockedSlotsData]);
 
   const bookMutation = useMutation({
     mutationFn: async () => {
@@ -286,9 +332,12 @@ export default function Bewerbungsgespraech() {
                   setSelectedDate(d);
                   setSelectedTime(null);
                 }}
-                disabled={(date) =>
-                  isSunday(date) || isBefore(date, startOfDay(new Date()))
-                }
+                disabled={(date) => {
+                  // date-fns getDay: 0=Sun, 1=Mon... convert to 1=Mon, 7=Sun
+                  const dow = date.getDay();
+                  const isoDay = dow === 0 ? 7 : dow;
+                  return !availableDays.includes(isoDay) || isBefore(date, startOfDay(new Date()));
+                }}
                 locale={de}
                 className="pointer-events-auto"
                 classNames={{
