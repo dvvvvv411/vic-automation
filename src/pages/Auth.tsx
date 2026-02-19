@@ -105,7 +105,7 @@ const Auth = () => {
             <img
               src={brandingLogoUrl}
               alt="Logo"
-              className="max-h-16 w-auto object-contain brightness-0 invert"
+              className="max-h-16 w-auto object-contain"
             />
           ) : (
             <h1 className="text-4xl font-bold tracking-tight mb-2">Mitarbeiterportal</h1>
