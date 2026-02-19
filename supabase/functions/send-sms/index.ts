@@ -75,8 +75,12 @@ Deno.serve(async (req) => {
     let success = false;
     try {
       const parsed = JSON.parse(smsResult);
-      success = parsed.success === "100" || parsed.success === 100
-        || (parsed.messages && parsed.messages.length > 0);
+      if (typeof parsed === "number") {
+        success = parsed === 100;
+      } else if (typeof parsed === "object" && parsed !== null) {
+        success = parsed.success === "100" || parsed.success === 100
+          || (parsed.messages && parsed.messages.length > 0);
+      }
     } catch {
       success = smsResult.trim().startsWith("100");
     }
