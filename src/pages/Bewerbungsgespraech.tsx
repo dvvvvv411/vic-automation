@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendTelegram } from "@/lib/sendTelegram";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import {
@@ -109,6 +110,10 @@ export default function Bewerbungsgespraech() {
         _application_id: id!, _status: "termin_gebucht",
       });
       if (rpcError) throw rpcError;
+
+      // Telegram notification
+      const formattedDate = format(selectedDate!, "dd.MM.yyyy");
+      sendTelegram("gespraech_gebucht", `📅 Bewerbungsgespräch gebucht\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`);
     },
     onSuccess: () => {
       setBookedDate(format(selectedDate!, "dd. MMMM yyyy", { locale: de }));

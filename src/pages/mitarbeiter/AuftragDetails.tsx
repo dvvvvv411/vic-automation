@@ -11,6 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
+import { sendTelegram } from "@/lib/sendTelegram";
 import { format, isWeekend, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -222,6 +223,10 @@ const AuftragDetails = () => {
       }
       await sendSms({ to: contractData.phone, text: smsText, event_type: "termin_gebucht", recipient_name: name, from: smsSender });
     }
+
+    // Telegram notification
+    const empName = contract.first_name || "Mitarbeiter";
+    sendTelegram("auftragstermin_gebucht", `📅 Auftragstermin gebucht\n\nMitarbeiter: ${empName}\nAuftrag: ${order.title}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`);
 
     setAppointment({
       id: "new",

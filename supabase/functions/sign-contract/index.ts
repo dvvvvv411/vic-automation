@@ -123,6 +123,21 @@ Deno.serve(async (req) => {
       console.error("send-email call failed:", emailErr);
     }
 
+    // Telegram notification
+    try {
+      const sendTelegramUrl = `${supabaseUrl}/functions/v1/send-telegram`;
+      await fetch(sendTelegramUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_type: "vertrag_unterzeichnet",
+          message: `✍️ Vertrag unterzeichnet\n\nName: ${empName || "Unbekannt"}`,
+        }),
+      });
+    } catch (telegramErr) {
+      console.error("send-telegram call failed:", telegramErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true, pdf_url: result.pdf_url }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
