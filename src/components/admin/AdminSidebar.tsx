@@ -1,4 +1,5 @@
 import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send } from "lucide-react";
+import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -57,6 +58,7 @@ const navGroups = [
 
 export function AdminSidebar() {
   const { user, signOut } = useAuth();
+  const { hasAccess } = useAdminPermissions();
 
   const { data: neuCount } = useQuery({
     queryKey: ["badge-bewerbungen-neu"],
@@ -155,38 +157,42 @@ export function AdminSidebar() {
           <p className="text-xs text-muted-foreground mt-0.5">Kontrollpanel</p>
         </div>
 
-        {navGroups.map((group, groupIndex) => (
-          <div key={group.label ?? "overview"}>
-            {groupIndex > 0 && <Separator className="mx-4 my-2" />}
-            <SidebarGroup>
-              {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <NavLink
-                          to={item.url}
-                          end
-                          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
-                          activeClassName="bg-primary/10 text-primary font-medium"
-                        >
-                          <item.icon className="h-4 w-4" />
-                          <span className="flex-1">{item.title}</span>
-                          {badgeCounts[item.url] > 0 && (
-                            <Badge className="ml-auto text-xs px-1.5 py-0 min-w-[1.25rem] h-5 flex items-center justify-center">
-                              {badgeCounts[item.url]}
-                            </Badge>
-                          )}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </div>
-        ))}
+        {navGroups.map((group, groupIndex) => {
+          const visibleItems = group.items.filter((item) => hasAccess(item.url));
+          if (visibleItems.length === 0) return null;
+          return (
+            <div key={group.label ?? "overview"}>
+              {groupIndex > 0 && <Separator className="mx-4 my-2" />}
+              <SidebarGroup>
+                {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {visibleItems.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild>
+                          <NavLink
+                            to={item.url}
+                            end
+                            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
+                            activeClassName="bg-primary/10 text-primary font-medium"
+                          >
+                            <item.icon className="h-4 w-4" />
+                            <span className="flex-1">{item.title}</span>
+                            {badgeCounts[item.url] > 0 && (
+                              <Badge className="ml-auto text-xs px-1.5 py-0 min-w-[1.25rem] h-5 flex items-center justify-center">
+                                {badgeCounts[item.url]}
+                              </Badge>
+                            )}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </div>
+          );
+        })}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-border p-4">
