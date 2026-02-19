@@ -42,7 +42,8 @@ export const useAdminPermissions = (): AdminPermissions => {
   }, [user]);
 
   const hasAccess = (path: string): boolean => {
-    if (allowedPaths === null) return true; // full access
+    if (loading) return false;
+    if (allowedPaths === null) return true;
     return allowedPaths.includes(path);
   };
 

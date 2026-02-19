@@ -58,7 +58,7 @@ const navGroups = [
 
 export function AdminSidebar() {
   const { user, signOut } = useAuth();
-  const { hasAccess } = useAdminPermissions();
+  const { hasAccess, loading: permissionsLoading } = useAdminPermissions();
 
   const { data: neuCount } = useQuery({
     queryKey: ["badge-bewerbungen-neu"],
@@ -157,7 +157,7 @@ export function AdminSidebar() {
           <p className="text-xs text-muted-foreground mt-0.5">Kontrollpanel</p>
         </div>
 
-        {navGroups.map((group, groupIndex) => {
+        {!permissionsLoading && navGroups.map((group, groupIndex) => {
           const visibleItems = group.items.filter((item) => hasAccess(item.url));
           if (visibleItems.length === 0) return null;
           return (
