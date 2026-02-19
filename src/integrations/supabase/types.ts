@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_permissions: {
+        Row: {
+          allowed_path: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          allowed_path: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          allowed_path?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       applications: {
         Row: {
           branding_id: string | null
