@@ -68,7 +68,18 @@ Deno.serve(async (req) => {
     });
 
     const smsResult = await smsResponse.text();
-    const success = smsResponse.ok;
+    console.log("seven.io raw response:", smsResult);
+
+    // seven.io returns "100" for success, other codes are errors
+    // The response can be JSON or a plain status code
+    let success = false;
+    try {
+      const parsed = JSON.parse(smsResult);
+      success = parsed.success === "100" || parsed.success === 100
+        || (parsed.messages && parsed.messages.length > 0);
+    } catch {
+      success = smsResult.trim().startsWith("100");
+    }
 
     // Log to sms_logs
     await adminClient.from("sms_logs").insert({
