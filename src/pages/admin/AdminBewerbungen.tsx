@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, FileText, Trash2, Check, X, Copy, CalendarCheck, ExternalLink } from "lucide-react";
+import { Plus, FileText, Trash2, Check, X, Copy, CalendarCheck, ExternalLink, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { z } from "zod";
@@ -98,12 +99,48 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   abgelehnt: { label: "Abgelehnt", variant: "destructive" },
 };
 
+type ParsedApplicant = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+};
+
+function parseMassImportLine(line: string): ParsedApplicant | string {
+  const trimmed = line.trim();
+  if (!trimmed) return "Leere Zeile";
+
+  // Find email (word containing @)
+  const emailMatch = trimmed.match(/\S+@\S+\.\S+/);
+  if (!emailMatch) return "Keine E-Mail erkannt";
+
+  const email = emailMatch[0];
+  const emailIndex = trimmed.indexOf(email);
+
+  const namePart = trimmed.substring(0, emailIndex).trim();
+  const phonePart = trimmed.substring(emailIndex + email.length).trim();
+
+  if (!namePart) return "Kein Name erkannt";
+  if (!phonePart) return "Keine Telefonnummer erkannt";
+
+  const nameWords = namePart.split(/\s+/);
+  if (nameWords.length < 2) return "Vor- und Nachname erforderlich";
+
+  const lastName = nameWords[nameWords.length - 1];
+  const firstName = nameWords.slice(0, -1).join(" ");
+
+  return { first_name: firstName, last_name: lastName, email, phone: phonePart };
+}
+
 export default function AdminBewerbungen() {
   const [open, setOpen] = useState(false);
   const [detailApp, setDetailApp] = useState<any>(null);
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isIndeed, setIsIndeed] = useState(false);
+  const [isMassImport, setIsMassImport] = useState(false);
+  const [massImportText, setMassImportText] = useState("");
+  const [massImportErrors, setMassImportErrors] = useState<string[]>([]);
   const queryClient = useQueryClient();
 
   const { data: applications, isLoading } = useQuery({
@@ -293,7 +330,65 @@ export default function AdminBewerbungen() {
     onError: () => toast.error("Fehler beim Erstellen"),
   });
 
+  const massImportMutation = useMutation({
+    mutationFn: async (applicants: ParsedApplicant[]) => {
+      const rows = applicants.map((a) => ({
+        first_name: a.first_name,
+        last_name: a.last_name,
+        email: a.email,
+        phone: a.phone,
+        branding_id: form.branding_id,
+        is_indeed: true,
+      }));
+      const { error } = await supabase.from("applications").insert(rows as any);
+      if (error) throw error;
+      return rows.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      setOpen(false);
+      setForm(initialForm);
+      setErrors({});
+      setIsIndeed(false);
+      setIsMassImport(false);
+      setMassImportText("");
+      setMassImportErrors([]);
+      toast.success(`${count} Bewerbungen importiert`);
+    },
+    onError: () => toast.error("Fehler beim Importieren"),
+  });
+
   const handleSubmit = () => {
+    if (isIndeed && isMassImport) {
+      // Mass import
+      const lines = massImportText.split("\n").filter((l) => l.trim());
+      if (!lines.length) {
+        setMassImportErrors(["Keine Einträge eingegeben"]);
+        return;
+      }
+      if (!form.branding_id) {
+        setErrors({ branding_id: "Branding erforderlich" });
+        return;
+      }
+      const parsed: ParsedApplicant[] = [];
+      const errs: string[] = [];
+      lines.forEach((line, i) => {
+        const result = parseMassImportLine(line);
+        if (typeof result === "string") {
+          errs.push(`Zeile ${i + 1}: ${result}`);
+        } else {
+          parsed.push(result);
+        }
+      });
+      if (errs.length) {
+        setMassImportErrors(errs);
+        return;
+      }
+      setMassImportErrors([]);
+      massImportMutation.mutate(parsed);
+      return;
+    }
+
     if (isIndeed) {
       const result = indeedSchema.safeParse({
         first_name: form.first_name,
@@ -407,7 +502,7 @@ export default function AdminBewerbungen() {
           <h2 className="text-3xl font-bold tracking-tight text-foreground">Bewerbungen</h2>
           <p className="text-muted-foreground mt-1">Alle eingegangenen Bewerbungen im Überblick.</p>
         </div>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); } }}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -421,64 +516,100 @@ export default function AdminBewerbungen() {
             <div className="grid gap-4 py-4">
               {/* Indeed Toggle */}
               <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
-                <Switch checked={isIndeed} onCheckedChange={(v) => { setIsIndeed(v); setErrors({}); }} />
+                <Switch checked={isIndeed} onCheckedChange={(v) => { setIsIndeed(v); if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
                 <Label className="cursor-pointer font-medium">Indeed Bewerbung</Label>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Vorname *</Label>
-                  <Input value={form.first_name} onChange={(e) => updateField("first_name", e.target.value)} placeholder="Max" />
-                  {errors.first_name && <p className="text-xs text-destructive">{errors.first_name}</p>}
+              {/* Mass Import Toggle - only when Indeed is active */}
+              {isIndeed && (
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                  <Switch checked={isMassImport} onCheckedChange={(v) => { setIsMassImport(v); setMassImportErrors([]); setErrors({}); }} />
+                  <div className="flex items-center gap-2">
+                    <Upload className="h-4 w-4 text-muted-foreground" />
+                    <Label className="cursor-pointer font-medium">Mass Import</Label>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Nachname *</Label>
-                  <Input value={form.last_name} onChange={(e) => updateField("last_name", e.target.value)} placeholder="Mustermann" />
-                  {errors.last_name && <p className="text-xs text-destructive">{errors.last_name}</p>}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>E-Mail *</Label>
-                  <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="max@example.com" />
-                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label>Telefon {isIndeed ? "*" : ""}</Label>
-                  <Input value={form.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="+49 123 456789" />
-                  {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
-                </div>
-              </div>
-              {!isIndeed && (
+              )}
+
+              {/* Mass Import Textarea */}
+              {isIndeed && isMassImport ? (
                 <>
                   <div className="space-y-2">
-                    <Label>Straße & Hausnummer</Label>
-                    <Input value={form.street} onChange={(e) => updateField("street", e.target.value)} placeholder="Musterstr. 1" />
+                    <Label>Bewerber (eine Zeile pro Person)</Label>
+                    <Textarea
+                      value={massImportText}
+                      onChange={(e) => { setMassImportText(e.target.value); setMassImportErrors([]); }}
+                      placeholder={"Michael Rajski rajski.michael@yahoo.com +4917641871779\nSvenja Böttner TFAVct@t-online.de +4917670561418\nAnna Maria Schmidt anna@test.de +491234567"}
+                      className="min-h-[200px] font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">Format: Vorname [weitere Vornamen] Nachname email@beispiel.de +49...</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  {massImportErrors.length > 0 && (
+                    <div className="p-3 rounded-lg border border-destructive bg-destructive/10 space-y-1">
+                      {massImportErrors.map((err, i) => (
+                        <p key={i} className="text-xs text-destructive">{err}</p>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>PLZ</Label>
-                      <Input value={form.zip_code} onChange={(e) => updateField("zip_code", e.target.value)} placeholder="93047" />
+                      <Label>Vorname *</Label>
+                      <Input value={form.first_name} onChange={(e) => updateField("first_name", e.target.value)} placeholder="Max" />
+                      {errors.first_name && <p className="text-xs text-destructive">{errors.first_name}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label>Stadt</Label>
-                      <Input value={form.city} onChange={(e) => updateField("city", e.target.value)} placeholder="Regensburg" />
+                      <Label>Nachname *</Label>
+                      <Input value={form.last_name} onChange={(e) => updateField("last_name", e.target.value)} placeholder="Mustermann" />
+                      {errors.last_name && <p className="text-xs text-destructive">{errors.last_name}</p>}
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Anstellungsart *</Label>
-                    <Select value={form.employment_type} onValueChange={(v) => updateField("employment_type", v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Anstellungsart wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="minijob">Minijob</SelectItem>
-                        <SelectItem value="teilzeit">Teilzeit</SelectItem>
-                        <SelectItem value="vollzeit">Vollzeit</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {errors.employment_type && <p className="text-xs text-destructive">{errors.employment_type}</p>}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>E-Mail *</Label>
+                      <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="max@example.com" />
+                      {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Telefon {isIndeed ? "*" : ""}</Label>
+                      <Input value={form.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="+49 123 456789" />
+                      {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+                    </div>
                   </div>
+                  {!isIndeed && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Straße & Hausnummer</Label>
+                        <Input value={form.street} onChange={(e) => updateField("street", e.target.value)} placeholder="Musterstr. 1" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>PLZ</Label>
+                          <Input value={form.zip_code} onChange={(e) => updateField("zip_code", e.target.value)} placeholder="93047" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Stadt</Label>
+                          <Input value={form.city} onChange={(e) => updateField("city", e.target.value)} placeholder="Regensburg" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Anstellungsart *</Label>
+                        <Select value={form.employment_type} onValueChange={(v) => updateField("employment_type", v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Anstellungsart wählen" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="minijob">Minijob</SelectItem>
+                            <SelectItem value="teilzeit">Teilzeit</SelectItem>
+                            <SelectItem value="vollzeit">Vollzeit</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {errors.employment_type && <p className="text-xs text-destructive">{errors.employment_type}</p>}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
               <div className="space-y-2">
@@ -495,8 +626,14 @@ export default function AdminBewerbungen() {
                 </Select>
                 {errors.branding_id && <p className="text-xs text-destructive">{errors.branding_id}</p>}
               </div>
-              <Button onClick={handleSubmit} disabled={createMutation.isPending} className="w-full mt-2">
-                {createMutation.isPending ? "Wird hinzugefügt..." : "Bewerbung hinzufügen"}
+              <Button onClick={handleSubmit} disabled={createMutation.isPending || massImportMutation.isPending} className="w-full mt-2">
+                {isIndeed && isMassImport
+                  ? massImportMutation.isPending
+                    ? "Wird importiert..."
+                    : `${massImportText.split("\n").filter((l) => l.trim()).length} Bewerbungen importieren`
+                  : createMutation.isPending
+                    ? "Wird hinzugefügt..."
+                    : "Bewerbung hinzufügen"}
               </Button>
             </div>
           </DialogContent>
