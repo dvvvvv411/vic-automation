@@ -1,89 +1,53 @@
 
-# Admin-Berechtigungen: Eingeschraenkter Zugriff fuer bestimmten User
 
-## Uebersicht
+# Zwei Aenderungen: Sidebar-Flicker fixen und Registrierung entfernen
 
-Der User `7f509e3d-d5ab-459e-819c-c7ed6d392eef` soll im Admin-Panel **nur** den Reiter "Bewerbungsgespraeche" sehen und nutzen koennen. Alle anderen Reiter werden ausgeblendet und die Routen gesperrt. Die Berechtigungsdaten kommen aus der Datenbank und werden sofort beim Laden verfuegbar gemacht.
+## 1. Admin-Sidebar: Keine Reiter anzeigen waehrend Berechtigungen laden
 
-## Schritt 1: Neue Tabelle `admin_permissions`
+### Problem
+Der Hook `useAdminPermissions` startet mit `allowedPaths = null` (= voller Zugriff) und `loading = true`. Die Sidebar prueft aber `loading` nicht und zeigt sofort alle Reiter an. Erst nach dem DB-Fetch werden die nicht erlaubten Reiter ausgeblendet -- das verursacht das kurze Aufblitzen.
 
-Eine neue Tabelle speichert, welche Admin-Routen ein User sehen darf. Wenn ein Admin **keinen** Eintrag in dieser Tabelle hat, hat er vollen Zugriff (Rueckwaertskompatibilitaet). Nur wenn Eintraege existieren, wird gefiltert.
+### Loesung
+In `src/components/admin/AdminSidebar.tsx`:
+- Den `loading`-State aus `useAdminPermissions` mit auslesen
+- Waehrend `loading === true` die gesamte Navigation ausblenden (nur Header und Footer der Sidebar anzeigen)
 
-```sql
-CREATE TABLE public.admin_permissions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  allowed_path text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (user_id, allowed_path)
-);
-
-ALTER TABLE public.admin_permissions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can read own permissions"
-  ON public.admin_permissions FOR SELECT
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Admins can manage all permissions"
-  ON public.admin_permissions FOR ALL
-  USING (public.has_role(auth.uid(), 'admin'));
-```
-
-## Schritt 2: Berechtigungsdaten einfuegen
-
-```sql
-INSERT INTO admin_permissions (user_id, allowed_path)
-VALUES ('7f509e3d-d5ab-459e-819c-c7ed6d392eef', '/admin/bewerbungsgespraeche');
-```
-
-## Schritt 3: Neuer Hook `useAdminPermissions`
-
-Erstellt in `src/hooks/useAdminPermissions.ts`. Laedt die erlaubten Pfade aus `admin_permissions`. Gibt zurueck:
-- `allowedPaths`: Array der erlaubten Pfade (oder `null` fuer vollen Zugriff)
-- `loading`: Ladezustand
-- `hasAccess(path)`: Hilfsfunktion die prueft ob ein Pfad erlaubt ist
+In `src/hooks/useAdminPermissions.ts`:
+- Die `hasAccess`-Funktion so aendern, dass sie waehrend des Ladens **immer `false`** zurueckgibt statt `true`
 
 ```typescript
-// Logik:
-// 1. Lade alle Eintraege fuer den aktuellen User
-// 2. Wenn KEINE Eintraege -> allowedPaths = null (voller Zugriff)
-// 3. Wenn Eintraege -> allowedPaths = ["/admin/bewerbungsgespraeche"]
-// 4. hasAccess prueft ob der Pfad in der Liste ist (oder null = alles erlaubt)
+// useAdminPermissions.ts - hasAccess aendern:
+const hasAccess = (path: string): boolean => {
+  if (loading) return false;           // NEU: waehrend Laden nichts anzeigen
+  if (allowedPaths === null) return true;
+  return allowedPaths.includes(path);
+};
 ```
 
-## Schritt 4: AdminSidebar filtern
+```typescript
+// AdminSidebar.tsx - loading auslesen:
+const { hasAccess, loading } = useAdminPermissions();
 
-In `src/components/admin/AdminSidebar.tsx`:
-- `useAdminPermissions` importieren
-- Nur die Nav-Items anzeigen, fuer die `hasAccess(item.url)` true zurueckgibt
-- Leere Gruppen (wo alle Items gefiltert wurden) komplett ausblenden
-- Badge-Queries nur fuer sichtbare Items ausfuehren
+// Im Render: Navigation erst nach Laden anzeigen
+{!loading && navGroups.map((group, groupIndex) => {
+  // ... bestehende Logik
+})}
+```
 
-## Schritt 5: AdminLayout schuetzen
+## 2. Registrierung aus /auth entfernen
 
-In `src/components/admin/AdminLayout.tsx`:
-- `useAdminPermissions` importieren
-- Den aktuellen Pfad pruefen
-- Wenn kein Zugriff: Redirect zum ersten erlaubten Pfad
-- Waehrend des Ladens: Spinner anzeigen (damit nichts kurz aufblitzt)
+### Loesung
+In `src/pages/Auth.tsx`:
+- Den `isRegister`-State und alle Register-States entfernen
+- Die `handleRegister`-Funktion entfernen
+- Das Registrierungsformular entfernen
+- Den Umschalt-Link unten entfernen
+- Ueberschrift fest auf "Willkommen" / "Melden Sie sich an." setzen
 
-## Schritt 6: Redirect fuer `/admin` (Index-Route)
-
-Wenn der User auf `/admin` landet und keinen Zugriff auf das Dashboard hat, wird er automatisch zum ersten erlaubten Pfad weitergeleitet (z.B. `/admin/bewerbungsgespraeche`).
-
-## Ergebnis fuer den User
-
-Der User `7f509e3d-...` sieht nach dem Login:
-- Sidebar: Nur "Bewerbungsgespraeche"
-- Wird automatisch zu `/admin/bewerbungsgespraeche` weitergeleitet
-- Alle anderen Routen sind gesperrt
-
-Alle anderen Admins behalten vollen Zugriff (keine Eintraege = voller Zugriff).
+Die Seite zeigt dann nur noch das Login-Formular.
 
 | Datei | Aenderung |
 |-------|----------|
-| Migration | Neue Tabelle `admin_permissions` mit RLS |
-| Daten-Insert | Eintrag fuer User mit Pfad `/admin/bewerbungsgespraeche` |
-| `src/hooks/useAdminPermissions.ts` | Neuer Hook zum Laden der Berechtigungen |
-| `src/components/admin/AdminSidebar.tsx` | Nav-Items nach Berechtigung filtern |
-| `src/components/admin/AdminLayout.tsx` | Routen-Schutz und Redirect-Logik |
+| `src/hooks/useAdminPermissions.ts` | `hasAccess` gibt waehrend Laden `false` zurueck |
+| `src/components/admin/AdminSidebar.tsx` | `loading` auslesen, Navigation erst nach Laden rendern |
+| `src/pages/Auth.tsx` | Registrierungsformular, States und Umschalt-Link entfernen |
