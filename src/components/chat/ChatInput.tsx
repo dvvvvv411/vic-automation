@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
-import { Send } from "lucide-react";
+import { useState, useRef } from "react";
+import { Send, Plus, X, FileText } from "lucide-react";
 import { TemplateDropdown } from "./TemplateDropdown";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
-  onSend: (text: string) => void;
+  onSend: (text: string, file?: File) => void;
   showTemplates?: boolean;
   contractData?: { first_name?: string | null; last_name?: string | null };
   onTyping?: (draft: string) => void;
@@ -14,6 +14,8 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
   const [input, setInput] = useState("");
   const [templateSearch, setTemplateSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (val: string) => {
     setInput(val);
@@ -38,9 +40,10 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
   };
 
   const handleSend = () => {
-    if (!input.trim()) return;
-    onSend(input.trim());
+    if (!input.trim() && !selectedFile) return;
+    onSend(input.trim(), selectedFile ?? undefined);
     setInput("");
+    setSelectedFile(null);
     setShowDropdown(false);
     onTyping?.("");
   };
@@ -52,6 +55,14 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setSelectedFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const isImage = selectedFile && selectedFile.type.startsWith("image/");
+
   return (
     <div className="relative border-t border-border p-3">
       {showTemplates && (
@@ -61,7 +72,48 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
           visible={showDropdown}
         />
       )}
+
+      {/* File preview */}
+      {selectedFile && (
+        <div className="flex items-center gap-2 mb-2 px-1">
+          <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-1.5 text-sm max-w-[80%]">
+            {isImage ? (
+              <img
+                src={URL.createObjectURL(selectedFile)}
+                alt="preview"
+                className="h-8 w-8 rounded object-cover"
+              />
+            ) : (
+              <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+            )}
+            <span className="truncate text-foreground">{selectedFile.name}</span>
+            <button
+              onClick={() => setSelectedFile(null)}
+              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-end gap-2">
+        {/* Attachment button */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="shrink-0 h-10 w-10 rounded-xl flex items-center justify-center bg-muted text-muted-foreground hover:text-foreground transition-colors"
+          title="Anhang hinzufügen"
+        >
+          <Plus className="h-5 w-5" />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+          onChange={handleFileSelect}
+        />
+
         <textarea
           value={input}
           onChange={(e) => handleChange(e.target.value)}
@@ -72,10 +124,10 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
         />
         <button
           onClick={handleSend}
-          disabled={!input.trim()}
+          disabled={!input.trim() && !selectedFile}
           className={cn(
             "shrink-0 h-10 w-10 rounded-xl flex items-center justify-center transition-all",
-            input.trim()
+            input.trim() || selectedFile
               ? "bg-primary text-primary-foreground hover:opacity-90"
               : "bg-muted text-muted-foreground"
           )}

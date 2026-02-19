@@ -135,6 +135,7 @@ export type Database = {
       }
       chat_messages: {
         Row: {
+          attachment_url: string | null
           content: string
           contract_id: string
           created_at: string
@@ -143,6 +144,7 @@ export type Database = {
           sender_role: string
         }
         Insert: {
+          attachment_url?: string | null
           content: string
           contract_id: string
           created_at?: string
@@ -151,6 +153,7 @@ export type Database = {
           sender_role: string
         }
         Update: {
+          attachment_url?: string | null
           content?: string
           contract_id?: string
           created_at?: string
