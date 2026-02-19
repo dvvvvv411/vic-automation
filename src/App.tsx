@@ -29,6 +29,7 @@ import MitarbeiterAuftraege from "./pages/mitarbeiter/MitarbeiterAuftraege";
 import MitarbeiterBewertungen from "./pages/mitarbeiter/MitarbeiterBewertungen";
 import MeineDaten from "./pages/mitarbeiter/MeineDaten";
 import NotFound from "./pages/NotFound";
+import ShortRedirect from "./pages/ShortRedirect";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => (
               <Route path="bewertungen" element={<MitarbeiterBewertungen />} />
               <Route path="meine-daten" element={<MeineDaten />} />
             </Route>
+            <Route path="/r/:code" element={<ShortRedirect />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
