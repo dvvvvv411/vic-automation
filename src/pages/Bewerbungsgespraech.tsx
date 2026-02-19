@@ -113,7 +113,7 @@ export default function Bewerbungsgespraech() {
 
       // Telegram notification
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
-      sendTelegram("gespraech_gebucht", `📅 Bewerbungsgespräch gebucht\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`);
+      await sendTelegram("gespraech_gebucht", `📅 Bewerbungsgespräch gebucht\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`);
     },
     onSuccess: () => {
       setBookedDate(format(selectedDate!, "dd. MMMM yyyy", { locale: de }));
