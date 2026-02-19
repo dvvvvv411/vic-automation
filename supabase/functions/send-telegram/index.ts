@@ -33,11 +33,12 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Get all chat IDs subscribed to this event
-    const { data: chats, error: dbError } = await adminClient
-      .from("telegram_chats")
-      .select("chat_id")
-      .contains("events", [event_type]);
+    // Get chat IDs – for _test send to ALL, otherwise filter by event
+    let query = adminClient.from("telegram_chats").select("chat_id");
+    if (event_type !== "_test") {
+      query = query.contains("events", [event_type]);
+    }
+    const { data: chats, error: dbError } = await query;
 
     if (dbError) {
       console.error("DB error:", dbError);
