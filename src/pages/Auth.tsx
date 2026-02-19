@@ -23,8 +23,12 @@ const Auth = () => {
   const { user } = useAuth();
   const { role } = useUserRole();
 
+  const [isRegister, setIsRegister] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerConfirm, setRegisterConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
   const [brandingReady, setBrandingReady] = useState(false);
@@ -79,6 +83,28 @@ const Auth = () => {
     }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (registerPassword !== registerConfirm) {
+      toast.error("Passwörter stimmen nicht überein");
+      return;
+    }
+    if (registerPassword.length < 6) {
+      toast.error("Passwort muss mindestens 6 Zeichen lang sein");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: registerEmail,
+      password: registerPassword,
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Registrierung erfolgreich! Bitte prüfen Sie Ihre E-Mails.");
+    }
+  };
 
   if (!brandingReady) {
     return <div className="min-h-screen bg-background" />;
@@ -156,42 +182,96 @@ const Auth = () => {
 
           <div className="mb-8">
             <h2 className="text-2xl font-bold tracking-tight text-foreground">
-              Willkommen
+              {isRegister ? "Konto erstellen" : "Willkommen"}
             </h2>
             <p className="text-muted-foreground mt-1">
-              Melden Sie sich an.
+              {isRegister ? "Registrieren Sie sich." : "Melden Sie sich an."}
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="login-email">E-Mail</Label>
-              <Input
-                id="login-email"
-                type="email"
-                placeholder="ihre@email.de"
-                className="h-12 rounded-lg"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="login-password">Passwort</Label>
-              <Input
-                id="login-password"
-                type="password"
-                placeholder="••••••••"
-                className="h-12 rounded-lg"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full h-12 rounded-lg text-base font-semibold" disabled={loading}>
-              {loading ? "Wird angemeldet..." : "Anmelden"}
-            </Button>
-          </form>
+          {!isRegister ? (
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="login-email">E-Mail</Label>
+                <Input
+                  id="login-email"
+                  type="email"
+                  placeholder="ihre@email.de"
+                  className="h-12 rounded-lg"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="login-password">Passwort</Label>
+                <Input
+                  id="login-password"
+                  type="password"
+                  placeholder="••••••••"
+                  className="h-12 rounded-lg"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full h-12 rounded-lg text-base font-semibold" disabled={loading}>
+                {loading ? "Wird angemeldet..." : "Anmelden"}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="register-email">E-Mail</Label>
+                <Input
+                  id="register-email"
+                  type="email"
+                  placeholder="ihre@email.de"
+                  className="h-12 rounded-lg"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="register-password">Passwort</Label>
+                <Input
+                  id="register-password"
+                  type="password"
+                  placeholder="••••••••"
+                  className="h-12 rounded-lg"
+                  value={registerPassword}
+                  onChange={(e) => setRegisterPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="register-confirm">Passwort bestätigen</Label>
+                <Input
+                  id="register-confirm"
+                  type="password"
+                  placeholder="••••••••"
+                  className="h-12 rounded-lg"
+                  value={registerConfirm}
+                  onChange={(e) => setRegisterConfirm(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+              <Button type="submit" className="w-full h-12 rounded-lg text-base font-semibold" disabled={loading}>
+                {loading ? "Wird registriert..." : "Registrieren"}
+              </Button>
+            </form>
+          )}
+
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            {isRegister ? (
+              <>Bereits ein Konto?{" "}<button type="button" onClick={() => setIsRegister(false)} className="text-primary hover:underline font-medium">Anmelden</button></>
+            ) : (
+              <>Noch kein Konto?{" "}<button type="button" onClick={() => setIsRegister(true)} className="text-primary hover:underline font-medium">Registrieren</button></>
+            )}
+          </p>
         </motion.div>
       </div>
     </div>
