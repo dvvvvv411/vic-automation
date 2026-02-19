@@ -1,42 +1,40 @@
 
-# Indeed Badge in CV-Spalte & E-Mail normal anzeigen
+# Fix: Test-Nachricht sendet an alle konfigurierten Chats
 
-## Aenderungen in `src/pages/admin/AdminBewerbungen.tsx`
+## Problem
 
-### 1. E-Mail-Spalte (Zeile 610)
-Aktuell zeigt die E-Mail-Spalte bei Indeed-Bewerbern das "Indeed"-Badge statt der E-Mail. Das wird geaendert, sodass immer die E-Mail angezeigt wird:
+Der Test-Button sendet `event_type: "test"`, aber keine Chat-ID hat das Event `"test"` abonniert. Die Edge Function filtert mit `contains("events", ["test"])` und findet 0 Treffer.
 
-```
-// Vorher
-{a.is_indeed ? <Badge>Indeed</Badge> : (a.email || "–")}
+## Loesung
 
-// Nachher
-{a.email || "–"}
-```
+Den Test-Button so aendern, dass er an **alle** konfigurierten Chats sendet, unabhaengig von deren Event-Abonnements. Dazu wird ein spezieller Event-Typ `"_test"` verwendet und die Edge Function angepasst.
 
-### 2. CV-Spalte (Zeilen 625-639)
-Das Indeed-Badge wird in die CV-Spalte verschoben. Wenn ein Bewerber von Indeed kommt (`is_indeed`), wird dort das Badge angezeigt. Hat der Bewerber einen Lebenslauf hochgeladen, wird weiterhin das PDF-Icon angezeigt. Beides kann gleichzeitig erscheinen:
+### 1. Edge Function (`supabase/functions/send-telegram/index.ts`)
 
-```
-// Nachher
-{a.is_indeed && <Badge variant="outline" className="text-[10px]">Indeed</Badge>}
-{a.resume_url && <a href={...}><FileText /></a>}
-{!a.is_indeed && !a.resume_url && "–"}
+Vor dem Datenbankabfrage pruefen, ob `event_type === "_test"`. Wenn ja, alle Chats laden (ohne Event-Filter):
+
+```typescript
+let query = adminClient.from("telegram_chats").select("chat_id");
+if (event_type === "_test") {
+  // Alle Chats, unabhaengig von abonnierten Events
+} else {
+  query = query.contains("events", [event_type]);
+}
 ```
 
-### 3. Detail-Dialog (Zeile 525)
-Im Detail-Dialog wird ebenfalls die echte E-Mail angezeigt statt "Indeed":
+### 2. AdminTelegram.tsx (Zeile 103)
 
-```
-// Vorher
-{detailApp.is_indeed ? "Indeed" : (detailApp.email || "–")}
+Event-Typ von `"test"` auf `"_test"` aendern und Erfolgsmeldung anpassen:
 
-// Nachher
-{detailApp.email || "–"}
+```typescript
+body: { event_type: "_test", message: "..." }
 ```
 
-## Betroffene Datei
+Erfolgsmeldung: "Testnachricht an alle Chat-IDs gesendet"
+
+## Betroffene Dateien
 
 | Datei | Aenderung |
 |-------|-----------|
-| `src/pages/admin/AdminBewerbungen.tsx` | E-Mail-Spalte, CV-Spalte, Detail-Dialog |
+| `supabase/functions/send-telegram/index.ts` | Test-Event Sonderbehandlung |
+| `src/pages/admin/AdminTelegram.tsx` | Event-Typ und Toast-Text |
