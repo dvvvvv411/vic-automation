@@ -19,27 +19,9 @@ interface EmailRequest {
   metadata?: Record<string, unknown>;
 }
 
-async function fetchLogo(url: string): Promise<{ base64: string; contentType: string } | null> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const buf = await res.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
-    const contentType = res.headers.get("content-type") || "image/png";
-    return { base64, contentType };
-  } catch {
-    return null;
-  }
-}
 
 function buildEmailHtml(opts: {
   companyName: string;
-  hasLogo: boolean;
   brandColor: string;
   bodyTitle: string;
   bodyLines: string[];
@@ -47,7 +29,7 @@ function buildEmailHtml(opts: {
   buttonUrl?: string;
   footerAddress: string;
 }): string {
-  const { companyName, hasLogo, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerAddress } = opts;
+  const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerAddress } = opts;
 
   const linesHtml = bodyLines
     .map((line) => `<p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#374151;">${line}</p>`)
@@ -63,9 +45,7 @@ function buildEmailHtml(opts: {
       </table>`
     : "";
 
-  const logoHtml = hasLogo
-    ? `<img src="cid:logo" alt="${companyName}" style="max-height:48px;max-width:180px;" />`
-    : `<span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${companyName}</span>`;
+  const logoHtml = `<span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${companyName}</span>`;
 
   return `<!DOCTYPE html>
 <html lang="de">
@@ -166,15 +146,8 @@ Deno.serve(async (req) => {
     const footerParts = [branding?.street, `${branding?.zip_code || ""} ${branding?.city || ""}`.trim()].filter(Boolean);
     const footerAddress = footerParts.join(", ");
 
-    // Fetch logo
-    let logoData: { base64: string; contentType: string } | null = null;
-    if (branding?.logo_url) {
-      logoData = await fetchLogo(branding.logo_url);
-    }
-
     const html = buildEmailHtml({
       companyName,
-      hasLogo: !!logoData,
       brandColor,
       bodyTitle: body_title,
       bodyLines: body_lines || [],
@@ -190,14 +163,6 @@ Deno.serve(async (req) => {
       subject,
       html,
     };
-
-    if (logoData) {
-      resendPayload.attachments = [{
-        content: logoData.base64,
-        filename: "logo.png",
-        content_type: logoData.contentType,
-      }];
-    }
 
     // Send via Resend
     const resendRes = await fetch("https://api.resend.com/emails", {
