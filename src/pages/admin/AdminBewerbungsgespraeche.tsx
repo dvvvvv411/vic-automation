@@ -110,7 +110,7 @@ export default function AdminBewerbungsgespraeche() {
         .select("id")
         .eq("application_id", item.application_id)
         .maybeSingle();
-      const contractLink = contract ? await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${contract.id}`) : null;
+      const contractLink = contract ? await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`) : null;
 
       await sendEmail({
         to: app.email,
