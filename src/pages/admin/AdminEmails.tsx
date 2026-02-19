@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils";
 
 function buildEmailHtml(opts: {
   companyName: string;
-  logoUrl: string | null;
   brandColor: string;
   bodyTitle: string;
   bodyLines: string[];
@@ -23,7 +22,7 @@ function buildEmailHtml(opts: {
   buttonUrl?: string;
   footerAddress: string;
 }): string {
-  const { companyName, logoUrl, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerAddress } = opts;
+  const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerAddress } = opts;
 
   const linesHtml = bodyLines
     .map((line) => `<p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#374151;">${line}</p>`)
@@ -39,9 +38,7 @@ function buildEmailHtml(opts: {
       </table>`
     : "";
 
-  const logoHtml = logoUrl
-    ? `<img src="${logoUrl}" alt="${companyName}" style="max-height:48px;max-width:180px;" />`
-    : `<span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${companyName}</span>`;
+  const logoHtml = `<span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${companyName}</span>`;
 
   return `<!DOCTYPE html>
 <html lang="de">
@@ -249,7 +246,6 @@ export default function AdminEmails() {
   const branding = brandings?.find((b) => b.id === selectedBrandingId);
   const companyName = branding?.company_name || "Unternehmen";
   const brandColor = branding?.brand_color || "#3B82F6";
-  const logoUrl = branding?.logo_url || null;
   const footerParts = [branding?.street, `${branding?.zip_code || ""} ${branding?.city || ""}`.trim()].filter(Boolean);
   const footerAddress = footerParts.join(", ");
 
@@ -259,7 +255,6 @@ export default function AdminEmails() {
     () =>
       buildEmailHtml({
         companyName,
-        logoUrl,
         brandColor,
         bodyTitle: tpl.bodyTitle,
         bodyLines: tpl.bodyLines(companyName),
@@ -267,7 +262,7 @@ export default function AdminEmails() {
         buttonUrl: tpl.buttonUrl,
         footerAddress,
       }),
-    [companyName, logoUrl, brandColor, tpl, footerAddress],
+    [companyName, brandColor, tpl, footerAddress],
   );
 
   return (
