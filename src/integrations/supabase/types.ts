@@ -663,6 +663,30 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_chats: {
+        Row: {
+          chat_id: string
+          created_at: string
+          events: string[]
+          id: string
+          label: string
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          events?: string[]
+          id?: string
+          label?: string
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          events?: string[]
+          id?: string
+          label?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
