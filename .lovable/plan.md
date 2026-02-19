@@ -1,71 +1,92 @@
 
 
-# Fix: Gmail versteckt gesamten E-Mail-Inhalt
+# Fix: Telegram-Benachrichtigung bei Bewerbungsgespraech-Buchung
 
 ## Problem
 
-Gmail's Signatur-Erkennung stuft die gesamte E-Mail als "zitiert/Signatur" ein und klappt den kompletten Inhalt ein. Man sieht nur "..." und muss klicken. Ursache: Der Footer mit separatem Hintergrund, Trennlinie und kleinem grauem Text signalisiert Gmail "ab hier ist Signatur" -- und da die E-Mail insgesamt kurz ist, wird alles eingeklappt.
+Die `sendTelegram`-Funktion wird in `Bewerbungsgespraech.tsx` **ohne `await`** aufgerufen (Zeile 116). Das bedeutet:
+
+1. Die Buchung wird in die Datenbank geschrieben
+2. `sendTelegram` wird als "Fire-and-Forget" gestartet (kein `await`)
+3. Die `mutationFn` kehrt sofort zurueck
+4. `onSuccess` wird ausgefuehrt, aendert den State (`setBooked(true)`)
+5. Die Komponente rendert die Erfolgsseite -- der laufende Fetch-Request fuer Telegram wird moeglicherweise abgebrochen
+
+Dasselbe Problem betrifft auch **alle anderen Stellen**, wo `sendTelegram` ohne `await` aufgerufen wird:
+- `Arbeitsvertrag.tsx` (Vertrag eingereicht)
+- `AuftragDetails.tsx` (Auftragstermin gebucht)
+- `Bewertung.tsx` (Bewertung eingereicht)
+- `useChatRealtime.ts` (Chat-Nachricht)
 
 ## Loesung
 
-Mehrere Massnahmen gleichzeitig, um Gmails Signatur-Erkennung zu umgehen:
+`sendTelegram` in allen Dateien mit `await` aufrufen, damit der Request abgeschlossen wird bevor die Mutation als fertig gilt.
 
-1. **Footer in den Body integrieren** -- gleicher weisser Hintergrund, keine Trennlinie, keine separate Tabellenzeile
-2. **Footer-Text groesser machen** (14px statt 12px) und dunklere Farbe (#6b7280 statt #9ca3af)
-3. **Sichtbaren Abschluss-Text hinzufuegen** nach dem Footer (z.B. Leerzeile oder unsichtbarer Inhalt), damit Gmail den Footer nicht als "Ende-Signatur" erkennt
-4. **Footer direkt in die Body-Zelle verschieben** statt als eigene Tabellenzeile -- so gibt es keinen visuellen "Block-Bruch"
+## Aenderungen
 
-## Technische Aenderungen
+### 1. `src/pages/Bewerbungsgespraech.tsx` (Zeile 116)
 
-### `supabase/functions/send-email/index.ts`
+```typescript
+// Vorher:
+sendTelegram("gespraech_gebucht", ...);
 
-Die HTML-Struktur aendern: Statt drei separate Tabellenzeilen (Header, Body, Footer) wird der Footer **in die Body-Zelle integriert** als normaler Absatz am Ende:
-
-```
-Vorher (3 Zeilen):
-[Header: Branding-Farbe + Firmenname]
-[Body: weisser Hintergrund + Inhalt]
-[Footer: grauer Hintergrund + Trennlinie + kleiner Text]  <-- Gmail denkt: Signatur!
-
-Nachher (2 Zeilen):
-[Header: Branding-Farbe + Firmenname]
-[Body: weisser Hintergrund + Inhalt + Footer-Text integriert]
+// Nachher:
+await sendTelegram("gespraech_gebucht", ...);
 ```
 
-Konkretes neues HTML fuer Body + Footer kombiniert:
+### 2. `src/pages/Arbeitsvertrag.tsx` (Zeile ~254)
 
-```html
-<tr>
-  <td style="background-color:#ffffff;padding:36px 32px 28px 32px;border-radius:0 0 8px 8px;">
-    <h1 style="...">Titel</h1>
-    <p>Inhalt...</p>
-    <!-- Button falls vorhanden -->
-    
-    <!-- Footer integriert, kein separater Block -->
-    <p style="margin:32px 0 0 0;padding:20px 0 0 0;font-size:14px;line-height:1.5;color:#6b7280;">
-      Firmenname | Strasse, PLZ Stadt
-    </p>
-  </td>
-</tr>
+```typescript
+// Vorher:
+sendTelegram("vertrag_eingereicht", ...);
+
+// Nachher:
+await sendTelegram("vertrag_eingereicht", ...);
 ```
 
-### `src/pages/admin/AdminEmails.tsx`
+### 3. `src/pages/mitarbeiter/AuftragDetails.tsx` (Zeile ~229)
 
-Gleiche Struktur-Aenderung in der Client-seitigen Vorschau-Kopie, damit die Admin-Vorschau das tatsaechliche E-Mail-Layout widerspiegelt.
+```typescript
+// Vorher:
+sendTelegram("auftragstermin_gebucht", ...);
+
+// Nachher:
+await sendTelegram("auftragstermin_gebucht", ...);
+```
+
+### 4. `src/pages/mitarbeiter/Bewertung.tsx` (Zeile ~143)
+
+```typescript
+// Vorher:
+sendTelegram("bewertung_eingereicht", ...);
+
+// Nachher:
+await sendTelegram("bewertung_eingereicht", ...);
+```
+
+### 5. `src/components/chat/useChatRealtime.ts` (Zeile ~84)
+
+```typescript
+// Vorher:
+sendTelegram("chat_nachricht", ...);
+
+// Nachher:
+await sendTelegram("chat_nachricht", ...);
+```
 
 ## Betroffene Dateien
 
 | Datei | Aenderung |
 |-------|----------|
-| `supabase/functions/send-email/index.ts` | Footer-Zeile entfernen, in Body integrieren |
-| `src/pages/admin/AdminEmails.tsx` | Gleiche Aenderung in der Vorschau |
+| `src/pages/Bewerbungsgespraech.tsx` | `await` vor `sendTelegram` |
+| `src/pages/Arbeitsvertrag.tsx` | `await` vor `sendTelegram` |
+| `src/pages/mitarbeiter/AuftragDetails.tsx` | `await` vor `sendTelegram` |
+| `src/pages/mitarbeiter/Bewertung.tsx` | `await` vor `sendTelegram` |
+| `src/components/chat/useChatRealtime.ts` | `await` vor `sendTelegram` |
 
-## Warum das funktioniert
+## Warum das das Problem loest
 
-Gmail erkennt Signaturen anhand von Mustern:
-- Separater Block mit anderem Hintergrund am Ende
-- Trennlinie (`border-top`) vor kurzem Text
-- Sehr kleiner, heller Text als letztes Element
-- Separate Tabellenzeile mit wenig Inhalt
+Durch `await` wird sichergestellt, dass der HTTP-Request an die Edge Function vollstaendig abgeschlossen ist, **bevor** die Mutation als erledigt gilt und die UI sich aendert. Der Request kann nicht mehr durch einen Re-Render oder Navigation abgebrochen werden.
 
-Durch die Integration in den Body faellt keines dieser Muster mehr zu. Der Footer-Text sieht fuer Gmail wie normaler E-Mail-Inhalt aus.
+Da `sendTelegram` intern einen `try/catch` hat, blockiert ein Fehler bei der Telegram-Zustellung niemals die eigentliche Aktion (Buchung, Vertragseinreichung etc.) -- es wird nur gewartet bis der Versuch abgeschlossen ist.
+
