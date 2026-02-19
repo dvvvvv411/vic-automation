@@ -81,7 +81,7 @@ export function useChatRealtime({ contractId, onNewMessage }: UseChatRealtimeOpt
       // Telegram notification for user messages
       if (senderRole === "user") {
         const truncated = content.trim().length > 100 ? content.trim().slice(0, 100) + "…" : content.trim();
-        sendTelegram("chat_nachricht", `💬 Neue Chat-Nachricht\n\n${truncated}`);
+        await sendTelegram("chat_nachricht", `💬 Neue Chat-Nachricht\n\n${truncated}`);
       }
     },
     [contractId]

@@ -226,7 +226,7 @@ const AuftragDetails = () => {
 
     // Telegram notification
     const empName = contract.first_name || "Mitarbeiter";
-    sendTelegram("auftragstermin_gebucht", `📅 Auftragstermin gebucht\n\nMitarbeiter: ${empName}\nAuftrag: ${order.title}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`);
+    await sendTelegram("auftragstermin_gebucht", `📅 Auftragstermin gebucht\n\nMitarbeiter: ${empName}\nAuftrag: ${order.title}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`);
 
     setAppointment({
       id: "new",

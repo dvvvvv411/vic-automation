@@ -251,7 +251,7 @@ export default function Arbeitsvertrag() {
       if (rpcError) throw rpcError;
 
       // Telegram notification
-      sendTelegram("vertrag_eingereicht", `📋 Arbeitsvertrag eingereicht\n\nName: ${form.first_name} ${form.last_name}`);
+      await sendTelegram("vertrag_eingereicht", `📋 Arbeitsvertrag eingereicht\n\nName: ${form.first_name} ${form.last_name}`);
 
       setSubmitted(true);
     } catch (err: any) {

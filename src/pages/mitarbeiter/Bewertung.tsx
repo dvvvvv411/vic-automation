@@ -140,7 +140,7 @@ const Bewertung = () => {
 
     // Telegram notification
     const empName = contract.first_name || "Mitarbeiter";
-    sendTelegram("bewertung_eingereicht", `⭐ Bewertung eingereicht\n\nMitarbeiter: ${empName}\nAuftrag: ${order.title}`);
+    await sendTelegram("bewertung_eingereicht", `⭐ Bewertung eingereicht\n\nMitarbeiter: ${empName}\nAuftrag: ${order.title}`);
 
     toast.success("Bewertung erfolgreich abgeschickt!");
     navigate("/mitarbeiter");
