@@ -192,14 +192,14 @@ const AuftragDetails = () => {
       await sendEmail({
         to: contractData.email,
         recipient_name: `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim(),
-        subject: "Auftragstermin bestaetigt",
+        subject: "Auftragstermin bestätigt",
         body_title: "Ihr Auftragstermin wurde gebucht",
         body_lines: [
           `Sehr geehrte/r ${contractData.first_name || ""} ${contractData.last_name || ""},`,
-          `Ihr Termin fuer den Auftrag "${order.title}" wurde erfolgreich gebucht.`,
+          `Ihr Termin für den Auftrag "${order.title}" wurde erfolgreich gebucht.`,
           `Datum: ${formattedDate}`,
           `Uhrzeit: ${selectedTime} Uhr`,
-          "Der Auftrag wird im Livechat durchgefuehrt. Bitte seien Sie zum vereinbarten Zeitpunkt erreichbar.",
+          "Der Auftrag wird im Livechat durchgeführt. Bitte seien Sie zum vereinbarten Zeitpunkt erreichbar.",
         ],
         branding_id: brandingId || null,
         event_type: "termin_gebucht",

@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
             to: empEmail,
             recipient_name: empName,
             subject: "Arbeitsvertrag erfolgreich unterzeichnet",
-            body_title: "Vielen Dank fuer Ihre Unterschrift",
+            body_title: "Vielen Dank für Ihre Unterschrift",
             body_lines: [
               `Sehr geehrte/r ${empName},`,
               "Ihr Arbeitsvertrag wurde erfolgreich unterzeichnet. Eine Kopie steht Ihnen in Ihrem Mitarbeiterkonto zum Download bereit.",

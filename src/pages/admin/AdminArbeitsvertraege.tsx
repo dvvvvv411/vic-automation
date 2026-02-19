@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +35,7 @@ export default function AdminArbeitsvertraege() {
       // Get successful interviews with application data
       const { data: appointments, error, count } = await supabase
         .from("interview_appointments")
-        .select("*, applications(id, first_name, last_name, email, phone, brandings(company_name))", { count: "exact" })
+        .select("*, applications(id, first_name, last_name, email, phone, branding_id, brandings(id, company_name))", { count: "exact" })
         .eq("status", "erfolgreich")
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -182,8 +183,9 @@ export default function AdminArbeitsvertraege() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => {
-                            const url = `${window.location.origin}/arbeitsvertrag/${item.applications?.id}`;
+                          onClick={async () => {
+                            const brandingId = item.applications?.brandings?.id;
+                            const url = await buildBrandingUrl(brandingId, `/arbeitsvertrag/${item.applications?.id}`);
                             navigator.clipboard.writeText(url);
                             toast.success("Link kopiert!");
                           }}

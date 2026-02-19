@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
     // Send email with credentials
     try {
       const brandingId = (contract as any).applications?.branding_id;
-      let loginUrl = `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/auth`;
+      let loginUrl = "";
       if (brandingId) {
         const { data: brandingData } = await adminClient.from("brandings").select("domain").eq("id", brandingId).single();
         if (brandingData?.domain) {
