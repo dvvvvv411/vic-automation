@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { sendTelegram } from "@/lib/sendTelegram";
 import { toast } from "sonner";
 
 interface ContextType {
@@ -136,6 +137,10 @@ const Bewertung = () => {
       .update({ status: "in_pruefung" })
       .eq("order_id", order.id)
       .eq("contract_id", contract.id);
+
+    // Telegram notification
+    const empName = contract.first_name || "Mitarbeiter";
+    sendTelegram("bewertung_eingereicht", `⭐ Bewertung eingereicht\n\nMitarbeiter: ${empName}\nAuftrag: ${order.title}`);
 
     toast.success("Bewertung erfolgreich abgeschickt!");
     navigate("/mitarbeiter");

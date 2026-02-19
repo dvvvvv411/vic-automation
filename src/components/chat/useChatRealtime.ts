@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { sendTelegram } from "@/lib/sendTelegram";
 
 export interface ChatMessage {
   id: string;
@@ -76,6 +77,12 @@ export function useChatRealtime({ contractId, onNewMessage }: UseChatRealtimeOpt
         content: content.trim(),
         attachment_url: attachmentUrl ?? null,
       } as any);
+
+      // Telegram notification for user messages
+      if (senderRole === "user") {
+        const truncated = content.trim().length > 100 ? content.trim().slice(0, 100) + "…" : content.trim();
+        sendTelegram("chat_nachricht", `💬 Neue Chat-Nachricht\n\n${truncated}`);
+      }
     },
     [contractId]
   );

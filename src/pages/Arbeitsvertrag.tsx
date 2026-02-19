@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendTelegram } from "@/lib/sendTelegram";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -248,6 +249,10 @@ export default function Arbeitsvertrag() {
       } as any);
 
       if (rpcError) throw rpcError;
+
+      // Telegram notification
+      sendTelegram("vertrag_eingereicht", `📋 Arbeitsvertrag eingereicht\n\nName: ${form.first_name} ${form.last_name}`);
+
       setSubmitted(true);
     } catch (err: any) {
       toast.error("Fehler beim Einreichen: " + (err.message || "Unbekannter Fehler"));
