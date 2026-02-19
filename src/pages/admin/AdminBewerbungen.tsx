@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
+import { createShortLink } from "@/lib/createShortLink";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -49,7 +51,26 @@ const applicationSchema = z.object({
   branding_id: z.string().uuid().optional().or(z.literal("")),
 });
 
-type ApplicationForm = z.infer<typeof applicationSchema>;
+const indeedSchema = z.object({
+  first_name: z.string().trim().min(1, "Vorname erforderlich").max(100),
+  last_name: z.string().trim().min(1, "Nachname erforderlich").max(100),
+  phone: z.string().trim().min(1, "Telefon erforderlich").max(50),
+  branding_id: z.string().uuid("Branding erforderlich"),
+});
+
+type ApplicationForm = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  street: string;
+  zip_code: string;
+  city: string;
+  employment_type: string;
+  branding_id: string;
+};
+
+const DEFAULT_BRANDING_ID = "47ef07da-e9ef-4433-9633-549d25e743ce";
 
 const initialForm: ApplicationForm = {
   first_name: "",
@@ -60,7 +81,7 @@ const initialForm: ApplicationForm = {
   zip_code: "",
   city: "",
   employment_type: "vollzeit",
-  branding_id: "",
+  branding_id: DEFAULT_BRANDING_ID,
 };
 
 const employmentLabels: Record<string, string> = {
@@ -81,6 +102,7 @@ export default function AdminBewerbungen() {
   const [detailApp, setDetailApp] = useState<any>(null);
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isIndeed, setIsIndeed] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: applications, isLoading } = useQuery({
@@ -88,7 +110,7 @@ export default function AdminBewerbungen() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, brandings(company_name), interview_appointments(appointment_date, appointment_time)")
+        .select("*, brandings(company_name, sms_sender_name), interview_appointments(appointment_date, appointment_time)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -126,36 +148,71 @@ export default function AdminBewerbungen() {
         .update({ status: "bewerbungsgespraech" })
         .eq("id", app.id);
       if (error) throw error;
+
       const interviewLink = await buildBrandingUrl(app.branding_id, `/bewerbungsgespraech/${app.id}`);
-      await sendEmail({
-        to: app.email,
-        recipient_name: `${app.first_name} ${app.last_name}`,
-        subject: "Ihre Bewerbung wurde angenommen",
-        body_title: "Ihre Bewerbung wurde angenommen",
-        body_lines: [
-          `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
-          "wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung angenommen wurde.",
-          "Bitte buchen Sie nun einen Termin fuer Ihr Bewerbungsgespraech ueber den folgenden Link.",
-        ],
-        button_text: "Termin buchen",
-        button_url: interviewLink,
-        branding_id: app.branding_id || null,
-        event_type: "bewerbung_angenommen",
-        metadata: { application_id: app.id },
-      });
-      // SMS
-      if (app.phone) {
-        const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewerbung_angenommen").single();
+      const shortLink = await createShortLink(interviewLink, app.branding_id);
+      const fullName = `${app.first_name} ${app.last_name}`;
+
+      if (app.is_indeed) {
+        // Indeed: SMS only, no email
+        const { data: tpl } = await supabase
+          .from("sms_templates" as any)
+          .select("message")
+          .eq("event_type", "indeed_bewerbung_angenommen")
+          .single();
+        const { data: brandingData } = await supabase
+          .from("brandings")
+          .select("company_name, sms_sender_name")
+          .eq("id", app.branding_id)
+          .single();
+        const companyName = brandingData?.company_name || "";
         const smsText = (tpl as any)?.message
-          ? (tpl as any).message.replace("{name}", `${app.first_name} ${app.last_name}`).replace("{link}", interviewLink)
-          : `Hallo ${app.first_name}, Ihre Bewerbung wurde angenommen! Termin buchen: ${interviewLink}`;
-        // Get branding sms_sender_name
-        let smsSender: string | undefined;
-        if (app.branding_id) {
-          const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single();
-          smsSender = (branding as any)?.sms_sender_name || undefined;
+          ? (tpl as any).message
+              .replace("{name}", fullName)
+              .replace("{unternehmen}", companyName)
+              .replace("{link}", shortLink)
+          : `Hallo ${fullName}, vielen Dank fuer Ihre Bewerbung bei ${companyName}, bitte buchen Sie ein Bewerbungsgespraech unter ${shortLink}.`;
+        await sendSms({
+          to: app.phone,
+          text: smsText,
+          event_type: "indeed_bewerbung_angenommen",
+          recipient_name: fullName,
+          from: (brandingData as any)?.sms_sender_name || undefined,
+        });
+      } else {
+        // Normal: Email + SMS with short link
+        await sendEmail({
+          to: app.email,
+          recipient_name: fullName,
+          subject: "Ihre Bewerbung wurde angenommen",
+          body_title: "Ihre Bewerbung wurde angenommen",
+          body_lines: [
+            `Sehr geehrte/r ${fullName},`,
+            "wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung angenommen wurde.",
+            "Bitte buchen Sie nun einen Termin fuer Ihr Bewerbungsgespraech ueber den folgenden Link.",
+          ],
+          button_text: "Termin buchen",
+          button_url: interviewLink,
+          branding_id: app.branding_id || null,
+          event_type: "bewerbung_angenommen",
+          metadata: { application_id: app.id },
+        });
+        if (app.phone) {
+          const { data: tpl } = await supabase
+            .from("sms_templates" as any)
+            .select("message")
+            .eq("event_type", "bewerbung_angenommen")
+            .single();
+          const smsText = (tpl as any)?.message
+            ? (tpl as any).message.replace("{name}", fullName).replace("{link}", shortLink)
+            : `Hallo ${app.first_name}, Ihre Bewerbung wurde angenommen! Termin buchen: ${shortLink}`;
+          let smsSender: string | undefined;
+          if (app.branding_id) {
+            const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single();
+            smsSender = (branding as any)?.sms_sender_name || undefined;
+          }
+          await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen", recipient_name: fullName, from: smsSender });
         }
-        await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen", recipient_name: `${app.first_name} ${app.last_name}`, from: smsSender });
       }
     },
     onSuccess: () => {
@@ -172,21 +229,23 @@ export default function AdminBewerbungen() {
         .update({ status: "abgelehnt" })
         .eq("id", app.id);
       if (error) throw error;
-      await sendEmail({
-        to: app.email,
-        recipient_name: `${app.first_name} ${app.last_name}`,
-        subject: "Ihre Bewerbung",
-        body_title: "Rueckmeldung zu Ihrer Bewerbung",
-        body_lines: [
-          `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
-          "vielen Dank fuer Ihr Interesse und Ihre Bewerbung.",
-          "Leider muessen wir Ihnen mitteilen, dass wir uns fuer andere Kandidaten entschieden haben.",
-          "Wir wuenschen Ihnen fuer Ihren weiteren Weg alles Gute.",
-        ],
-        branding_id: app.branding_id || null,
-        event_type: "bewerbung_abgelehnt",
-        metadata: { application_id: app.id },
-      });
+      if (!app.is_indeed && app.email) {
+        await sendEmail({
+          to: app.email,
+          recipient_name: `${app.first_name} ${app.last_name}`,
+          subject: "Ihre Bewerbung",
+          body_title: "Rueckmeldung zu Ihrer Bewerbung",
+          body_lines: [
+            `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
+            "vielen Dank fuer Ihr Interesse und Ihre Bewerbung.",
+            "Leider muessen wir Ihnen mitteilen, dass wir uns fuer andere Kandidaten entschieden haben.",
+            "Wir wuenschen Ihnen fuer Ihren weiteren Weg alles Gute.",
+          ],
+          branding_id: app.branding_id || null,
+          event_type: "bewerbung_abgelehnt",
+          metadata: { application_id: app.id },
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
@@ -196,10 +255,10 @@ export default function AdminBewerbungen() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: ApplicationForm) => {
-      const payload: Record<string, string | null> = {};
+    mutationFn: async (data: Record<string, any>) => {
+      const payload: Record<string, any> = {};
       Object.entries(data).forEach(([key, value]) => {
-        payload[key] = value === "" ? null : (value as string);
+        payload[key] = value === "" ? null : value;
       });
       const { error } = await supabase.from("applications").insert(payload as any);
       if (error) throw error;
@@ -209,23 +268,49 @@ export default function AdminBewerbungen() {
       setOpen(false);
       setForm(initialForm);
       setErrors({});
+      setIsIndeed(false);
       toast.success("Bewerbung hinzugefügt");
     },
     onError: () => toast.error("Fehler beim Erstellen"),
   });
 
   const handleSubmit = () => {
-    const result = applicationSchema.safeParse(form);
-    if (!result.success) {
-      const fieldErrors: Record<string, string> = {};
-      result.error.errors.forEach((e) => {
-        if (e.path[0]) fieldErrors[e.path[0] as string] = e.message;
+    if (isIndeed) {
+      const result = indeedSchema.safeParse({
+        first_name: form.first_name,
+        last_name: form.last_name,
+        phone: form.phone,
+        branding_id: form.branding_id,
       });
-      setErrors(fieldErrors);
-      return;
+      if (!result.success) {
+        const fieldErrors: Record<string, string> = {};
+        result.error.errors.forEach((e) => {
+          if (e.path[0]) fieldErrors[e.path[0] as string] = e.message;
+        });
+        setErrors(fieldErrors);
+        return;
+      }
+      setErrors({});
+      createMutation.mutate({
+        first_name: form.first_name,
+        last_name: form.last_name,
+        phone: form.phone,
+        branding_id: form.branding_id,
+        is_indeed: true,
+      });
+    } else {
+      const result = applicationSchema.safeParse(form);
+      if (!result.success) {
+        const fieldErrors: Record<string, string> = {};
+        result.error.errors.forEach((e) => {
+          if (e.path[0]) fieldErrors[e.path[0] as string] = e.message;
+        });
+        setErrors(fieldErrors);
+        return;
+      }
+      setErrors({});
+      createMutation.mutate({ ...result.data, is_indeed: false });
     }
-    setErrors({});
-    createMutation.mutate(result.data);
   };
 
   const updateField = (key: keyof ApplicationForm, value: string) => {
@@ -235,7 +320,6 @@ export default function AdminBewerbungen() {
 
   const copyLink = (id: string) => {
     const link = `${window.location.origin}/bewerbungsgespraech/${id}`;
-    // Note: copyLink uses current origin for admin convenience
     navigator.clipboard.writeText(link);
     toast.success("Link kopiert!");
   };
@@ -302,7 +386,7 @@ export default function AdminBewerbungen() {
           <h2 className="text-3xl font-bold tracking-tight text-foreground">Bewerbungen</h2>
           <p className="text-muted-foreground mt-1">Alle eingegangenen Bewerbungen im Überblick.</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); } }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -314,6 +398,12 @@ export default function AdminBewerbungen() {
               <DialogTitle>Neue Bewerbung hinzufügen</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {/* Indeed Toggle */}
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                <Switch checked={isIndeed} onCheckedChange={(v) => { setIsIndeed(v); setErrors({}); }} />
+                <Label className="cursor-pointer font-medium">Indeed Bewerbung</Label>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Vorname *</Label>
@@ -327,49 +417,56 @@ export default function AdminBewerbungen() {
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {!isIndeed && (
+                  <div className="space-y-2">
+                    <Label>E-Mail *</Label>
+                    <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="max@example.com" />
+                    {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                  </div>
+                )}
                 <div className="space-y-2">
-                  <Label>E-Mail *</Label>
-                  <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="max@example.com" />
-                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label>Telefon</Label>
+                  <Label>Telefon {isIndeed ? "*" : ""}</Label>
                   <Input value={form.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="+49 123 456789" />
+                  {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                 </div>
               </div>
+              {!isIndeed && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Straße & Hausnummer</Label>
+                    <Input value={form.street} onChange={(e) => updateField("street", e.target.value)} placeholder="Musterstr. 1" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>PLZ</Label>
+                      <Input value={form.zip_code} onChange={(e) => updateField("zip_code", e.target.value)} placeholder="93047" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Stadt</Label>
+                      <Input value={form.city} onChange={(e) => updateField("city", e.target.value)} placeholder="Regensburg" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Anstellungsart *</Label>
+                    <Select value={form.employment_type} onValueChange={(v) => updateField("employment_type", v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Anstellungsart wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="minijob">Minijob</SelectItem>
+                        <SelectItem value="teilzeit">Teilzeit</SelectItem>
+                        <SelectItem value="vollzeit">Vollzeit</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.employment_type && <p className="text-xs text-destructive">{errors.employment_type}</p>}
+                  </div>
+                </>
+              )}
               <div className="space-y-2">
-                <Label>Straße & Hausnummer</Label>
-                <Input value={form.street} onChange={(e) => updateField("street", e.target.value)} placeholder="Musterstr. 1" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>PLZ</Label>
-                  <Input value={form.zip_code} onChange={(e) => updateField("zip_code", e.target.value)} placeholder="93047" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Stadt</Label>
-                  <Input value={form.city} onChange={(e) => updateField("city", e.target.value)} placeholder="Regensburg" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Anstellungsart *</Label>
-                <Select value={form.employment_type} onValueChange={(v) => updateField("employment_type", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Anstellungsart wählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="minijob">Minijob</SelectItem>
-                    <SelectItem value="teilzeit">Teilzeit</SelectItem>
-                    <SelectItem value="vollzeit">Vollzeit</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.employment_type && <p className="text-xs text-destructive">{errors.employment_type}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Branding</Label>
+                <Label>Branding {isIndeed ? "*" : ""}</Label>
                 <Select value={form.branding_id} onValueChange={(v) => updateField("branding_id", v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Branding wählen (optional)" />
+                    <SelectValue placeholder="Branding wählen" />
                   </SelectTrigger>
                   <SelectContent>
                     {brandings?.map((b) => (
@@ -377,6 +474,7 @@ export default function AdminBewerbungen() {
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.branding_id && <p className="text-xs text-destructive">{errors.branding_id}</p>}
               </div>
               <Button onClick={handleSubmit} disabled={createMutation.isPending} className="w-full mt-2">
                 {createMutation.isPending ? "Wird hinzugefügt..." : "Bewerbung hinzufügen"}
@@ -405,7 +503,7 @@ export default function AdminBewerbungen() {
               </div>
               <div>
                 <span className="text-muted-foreground">E-Mail</span>
-                <p className="font-medium">{detailApp.email}</p>
+                <p className="font-medium">{detailApp.is_indeed ? "Indeed" : (detailApp.email || "–")}</p>
               </div>
               <div>
                 <span className="text-muted-foreground">Telefon</span>
@@ -421,7 +519,7 @@ export default function AdminBewerbungen() {
               </div>
               <div>
                 <span className="text-muted-foreground">Anstellungsart</span>
-                <p className="font-medium">{employmentLabels[detailApp.employment_type] || detailApp.employment_type}</p>
+                <p className="font-medium">{detailApp.employment_type ? (employmentLabels[detailApp.employment_type] || detailApp.employment_type) : "–"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground">Branding</span>
@@ -490,13 +588,17 @@ export default function AdminBewerbungen() {
                   return (
                     <TableRow key={a.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetailApp(a)}>
                       <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
-                      <TableCell className="text-muted-foreground">{a.email}</TableCell>
+                      <TableCell className="text-muted-foreground">{a.is_indeed ? <Badge variant="outline" className="text-[10px]">Indeed</Badge> : (a.email || "–")}</TableCell>
                       <TableCell className="text-muted-foreground">{a.phone || "–"}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {a.zip_code || a.city ? `${a.zip_code || ""} ${a.city || ""}`.trim() : "–"}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{employmentLabels[a.employment_type] || a.employment_type}</Badge>
+                        {a.employment_type ? (
+                          <Badge variant="secondary">{employmentLabels[a.employment_type] || a.employment_type}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">–</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {a.brandings?.company_name || "–"}

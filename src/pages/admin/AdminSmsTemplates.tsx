@@ -23,6 +23,7 @@ import { motion } from "framer-motion";
 
 const PLACEHOLDER_INFO: Record<string, string[]> = {
   bewerbung_angenommen: ["{name}", "{link}"],
+  indeed_bewerbung_angenommen: ["{name}", "{unternehmen}", "{link}"],
   vertrag_genehmigt: ["{name}", "{link}"],
   auftrag_zugewiesen: ["{name}", "{auftrag}"],
   termin_gebucht: ["{name}", "{datum}", "{uhrzeit}"],
