@@ -1,36 +1,72 @@
 
-# E-Mail-Text bei Vertragsgenehmigung anpassen
 
-## Änderung
+# Registrierungsfunktion auf /auth hinzufuegen
 
-### `supabase/functions/create-employee-account/index.ts`
+## Uebersicht
 
-Die `body_lines` (Zeilen 175-180) werden wie folgt geändert:
+Auf der `/auth`-Seite wird ein Tab-Wechsel zwischen "Anmelden" und "Registrieren" hinzugefuegt. Neue Nutzer koennen sich mit E-Mail und Passwort registrieren. Nach der Registrierung wird automatisch die Rolle "user" zugewiesen (durch den bestehenden Trigger `handle_new_user_role`).
 
+## Aenderungen
+
+### `src/pages/Auth.tsx`
+
+1. **Neuer State** fuer den aktiven Tab (`login` / `register`) und die Registrierungsfelder (E-Mail, Passwort, Passwort bestaetigen)
+
+2. **Tab-Umschalter** oberhalb des Formulars -- zwei Buttons/Links zum Wechseln zwischen Anmelden und Registrieren
+
+3. **Registrierungsformular** mit:
+   - E-Mail-Feld
+   - Passwort-Feld (min. 6 Zeichen)
+   - Passwort bestaetigen-Feld
+   - Registrieren-Button
+
+4. **handleRegister-Funktion**:
+   - Prueft ob Passwoerter uebereinstimmen
+   - Ruft `supabase.auth.signUp()` auf
+   - Zeigt Erfolgs- oder Fehlermeldung via `toast`
+
+5. **Ueberschrift und Beschreibung** passen sich dynamisch an den aktiven Tab an:
+   - Login: "Willkommen" / "Melden Sie sich an."
+   - Register: "Konto erstellen" / "Registrieren Sie sich."
+
+6. **Link unter dem Formular** zum Wechseln ("Noch kein Konto? Registrieren" / "Bereits ein Konto? Anmelden")
+
+## Technische Details
+
+```typescript
+// Neuer State
+const [isRegister, setIsRegister] = useState(false);
+const [registerEmail, setRegisterEmail] = useState("");
+const [registerPassword, setRegisterPassword] = useState("");
+const [registerConfirm, setRegisterConfirm] = useState("");
+
+// Registrierung
+const handleRegister = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (registerPassword !== registerConfirm) {
+    toast.error("Passwoerter stimmen nicht ueberein");
+    return;
+  }
+  if (registerPassword.length < 6) {
+    toast.error("Passwort muss mindestens 6 Zeichen lang sein");
+    return;
+  }
+  setLoading(true);
+  const { error } = await supabase.auth.signUp({
+    email: registerEmail,
+    password: registerPassword,
+  });
+  setLoading(false);
+  if (error) {
+    toast.error(error.message);
+  } else {
+    toast.success("Registrierung erfolgreich! Bitte pruefen Sie Ihre E-Mails.");
+  }
+};
 ```
-// Vorher:
-body_lines: [
-  `Sehr geehrte/r ${firstName} ${lastName},`,
-  "Ihr Arbeitsvertrag wurde genehmigt und Ihr Mitarbeiterkonto wurde erfolgreich eingerichtet.",
-  `Ihre Zugangsdaten: E-Mail: ${email} / Passwort: ${tempPassword}`,
-  "Bitte loggen Sie sich ein und unterzeichnen Sie Ihren Arbeitsvertrag.",
-],
 
-// Nachher:
-body_lines: [
-  `Sehr geehrte/r ${firstName} ${lastName},`,
-  "Ihre eingereichten Daten für den Arbeitsvertrag wurden genehmigt und Ihr Mitarbeiterkonto wurde erfolgreich eingerichtet.",
-  `E-Mail: ${email}`,
-  `Passwort: ${tempPassword}`,
-  "Bitte loggen Sie sich ein und unterzeichnen Sie Ihren Arbeitsvertrag.",
-],
-```
+Das bestehende Design (Split-Screen, Glassmorphism, Animationen) bleibt vollstaendig erhalten. Es wird lediglich das rechte Formular-Panel um die Umschaltmoeglichkeit und das Registrierungsformular erweitert.
 
-Konkrete Änderungen:
-- Satz 2: Neuer Wortlaut "Ihre eingereichten Daten für den Arbeitsvertrag wurden genehmigt..."
-- Zugangsdaten auf zwei separate Zeilen aufgeteilt (E-Mail und Passwort jeweils eigene Zeile)
-- Rest der E-Mail bleibt unverändert
-
-| Datei | Änderung |
+| Datei | Aenderung |
 |-------|----------|
-| `supabase/functions/create-employee-account/index.ts` | E-Mail-Text und Zugangsdaten-Formatierung anpassen |
+| `src/pages/Auth.tsx` | Tab-Umschalter, Registrierungsformular und handleRegister hinzufuegen |
