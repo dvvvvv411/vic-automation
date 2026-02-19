@@ -1,51 +1,89 @@
 
-# Livechat Fullscreen auf Mobile
+# Chat-Anhaenge (Dateien & Bilder) im Livechat
 
-## Aenderung
+## Uebersicht
 
-Auf Mobile (< 768px) wird das Chat-Popup als Fullscreen-Overlay angezeigt statt als kleines Popup. Die Desktop-Ansicht bleibt komplett unveraendert.
+Beide Chat-Ansichten (Admin-Livechat und Mitarbeiter-ChatWidget) erhalten einen "+" Button im Eingabefeld, ueber den Dateien (Bilder, PDFs etc.) ausgewaehlt und versendet werden koennen. Anhaenge werden im Supabase Storage Bucket gespeichert und als URL in der Nachricht hinterlegt.
 
-## Betroffene Datei
+## Aenderungen
+
+### 1. Datenbank: Neue Spalte `attachment_url` in `chat_messages`
+
+Eine neue nullable Spalte `attachment_url` (text) wird zur Tabelle `chat_messages` hinzugefuegt, um die URL der hochgeladenen Datei zu speichern.
+
+### 2. Storage: Neuer Bucket `chat-attachments`
+
+Ein neuer oeffentlicher Storage-Bucket `chat-attachments` wird erstellt mit passenden RLS-Policies:
+- Admins koennen Dateien hochladen und lesen
+- User koennen Dateien fuer eigene Contracts hochladen und alle lesen
+
+### 3. ChatInput Komponente erweitern
+
+Die `ChatInput`-Komponente bekommt:
+- Einen "+" Button links neben dem Textfeld
+- Ein verstecktes `<input type="file">` Element
+- State fuer die ausgewaehlte Datei mit Vorschau (Dateiname + X zum Entfernen)
+- Die `onSend`-Callback-Signatur wird erweitert um eine optionale Datei: `onSend(text, file?)`
+
+### 4. ChatBubble erweitern
+
+Die `ChatBubble`-Komponente zeigt Anhaenge an:
+- Bilder (jpg, png, webp, gif): Inline als klickbares Vorschaubild
+- PDFs/andere Dateien: Als Download-Link mit Dateiname und Icon
+
+### 5. useChatRealtime erweitern
+
+- `ChatMessage`-Interface bekommt `attachment_url?: string | null`
+- `sendMessage` bekommt einen optionalen Parameter `attachmentUrl`
+
+### 6. ChatWidget (Mitarbeiter) anpassen
+
+- Upload-Logik: Datei in `chat-attachments/{contract_id}/{uuid}_{filename}` hochladen
+- `handleSend` erweitern um Datei-Upload vor dem Senden der Nachricht
+- "+" Button im Eingabebereich integrieren (eigenes inline Input, kein ChatInput-Komponente da ChatWidget eigenes Eingabefeld hat)
+
+### 7. AdminLivechat anpassen
+
+- `handleSend` erweitern um Datei-Upload
+- ChatInput-Komponente uebergibt Datei via erweitertem Callback
+
+---
+
+## Technische Details
+
+### Betroffene Dateien
 
 | Datei | Aenderung |
 |-------|-----------|
-| `src/components/chat/ChatWidget.tsx` | `useIsMobile` Hook importieren. Responsive Klassen auf den Container und das Chat-Fenster anwenden. |
+| Migration (SQL) | `attachment_url` Spalte + `chat-attachments` Bucket + Storage-Policies |
+| `src/components/chat/useChatRealtime.ts` | `attachment_url` in Interface + `sendMessage` erweitern |
+| `src/components/chat/ChatInput.tsx` | "+" Button, File-Input, Datei-Vorschau, erweiterte `onSend` Signatur |
+| `src/components/chat/ChatBubble.tsx` | Anhang-Anzeige (Bild-Vorschau oder Download-Link) |
+| `src/components/chat/ChatWidget.tsx` | Upload-Logik + erweiterter Send-Handler |
+| `src/pages/admin/AdminLivechat.tsx` | Upload-Logik + erweiterter Send-Handler |
 
-## Details
-
-### Container (`div` mit `fixed bottom-6 right-6`)
-- Mobile: `fixed inset-0` (gesamter Bildschirm) statt `bottom-6 right-6`
-- Desktop: unveraendert `fixed bottom-6 right-6`
-
-### Chat-Fenster (`motion.div`)
-- Mobile: `fixed inset-0 w-full h-full rounded-none` -- Fullscreen ohne Abrundung, nicht mehr absolut positioniert
-- Desktop: unveraendert `absolute bottom-16 right-0 w-[380px] h-[520px] rounded-2xl`
-
-### FAB-Button
-- Mobile bei geoeffnetem Chat: versteckt (`hidden`), da der Close-Button im Header genuegt
-- Desktop: unveraendert, immer sichtbar
-
-### Konkrete Klassen-Aenderungen
+### Upload-Pfad im Storage
 
 ```text
-// Container
-<div className={cn(
-  "fixed z-50",
-  isMobile && open ? "inset-0" : "bottom-6 right-6"
-)}>
-
-// Chat-Fenster
-<motion.div className={cn(
-  "bg-card shadow-2xl border border-border flex flex-col overflow-hidden",
-  isMobile
-    ? "fixed inset-0 w-full h-full rounded-none"
-    : "absolute bottom-16 right-0 w-[380px] h-[520px] rounded-2xl"
-)}>
-
-// FAB
-{!(isMobile && open) && (
-  <button ...>FAB</button>
-)}
+chat-attachments/{contract_id}/{uuid}_{original_filename}
 ```
 
-Die gesamte Logik (Nachrichten, Scroll, Sounds, Typing) bleibt identisch -- nur das Layout aendert sich auf Mobile.
+### Eingabefeld-Layout
+
+```text
++-----------------------------------------------+
+| [+]  [Nachricht schreiben...        ]  [Send] |
++-----------------------------------------------+
+
+Bei ausgewaehlter Datei:
++-----------------------------------------------+
+| [bild.pdf  X]                                  |
+| [+]  [Nachricht schreiben...        ]  [Send] |
++-----------------------------------------------+
+```
+
+### Anhang-Darstellung in ChatBubble
+
+- Bilder: `<img>` mit max-width, klickbar (oeffnet in neuem Tab)
+- Andere Dateien: Icon + Dateiname als Link
+- Anhang wird oberhalb des Text-Contents angezeigt
