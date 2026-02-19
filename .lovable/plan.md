@@ -1,40 +1,77 @@
 
-# Fix: Test-Nachricht sendet an alle konfigurierten Chats
+
+# Fix: Logo als CID-Inline-Attachment in E-Mails einbetten
 
 ## Problem
 
-Der Test-Button sendet `event_type: "test"`, aber keine Chat-ID hat das Event `"test"` abonniert. Die Edge Function filtert mit `contains("events", ["test"])` und findet 0 Treffer.
+Das Logo wird aktuell als `data:image/png;base64,...` Data-URI direkt im HTML eingebettet. E-Mail-Clients (Gmail, Outlook, etc.) blockieren Data-URIs aus Sicherheitsgruenden. Im Browser funktioniert es, in echten E-Mails nicht.
 
-## Loesung
+## Loesung: CID-Embedding (Content-ID)
 
-Den Test-Button so aendern, dass er an **alle** konfigurierten Chats sendet, unabhaengig von deren Event-Abonnements. Dazu wird ein spezieller Event-Typ `"_test"` verwendet und die Edge Function angepasst.
+Der branchenuebliche Ansatz fuer Bilder in E-Mails: Das Bild wird als **Inline-Attachment** an die E-Mail angehaengt und im HTML ueber `src="cid:logo"` referenziert. Resend unterstuetzt das ueber die `attachments`-API.
 
-### 1. Edge Function (`supabase/functions/send-telegram/index.ts`)
+## Aenderungen in `supabase/functions/send-email/index.ts`
 
-Vor dem Datenbankabfrage pruefen, ob `event_type === "_test"`. Wenn ja, alle Chats laden (ohne Event-Filter):
+### 1. `fetchLogoAsBase64` anpassen (Zeilen 22-38)
+
+Statt eine Data-URI zurueckzugeben, werden **rohe Base64-Daten** und der **Content-Type** separat zurueckgegeben:
 
 ```typescript
-let query = adminClient.from("telegram_chats").select("chat_id");
-if (event_type === "_test") {
-  // Alle Chats, unabhaengig von abonnierten Events
-} else {
-  query = query.contains("events", [event_type]);
+async function fetchLogo(url: string): Promise<{ base64: string; contentType: string } | null> {
+  // ... fetch, konvertieren ...
+  return { base64, contentType };
 }
 ```
 
-### 2. AdminTelegram.tsx (Zeile 103)
+### 2. `buildEmailHtml` anpassen (Zeile 66-68)
 
-Event-Typ von `"test"` auf `"_test"` aendern und Erfolgsmeldung anpassen:
+Das Logo-`<img>` verwendet jetzt `cid:logo` statt der Data-URI:
 
-```typescript
-body: { event_type: "_test", message: "..." }
+```html
+<img src="cid:logo" alt="Firmenname" style="max-height:48px;max-width:180px;" />
 ```
 
-Erfolgsmeldung: "Testnachricht an alle Chat-IDs gesendet"
+Der Parameter `logoDataUri` wird zu `hasLogo: boolean`.
 
-## Betroffene Dateien
+### 3. Resend API-Aufruf erweitern (Zeilen 188-200)
+
+Das Logo wird als Inline-Attachment mitgeschickt. Resend erwartet dafuer ein `attachments`-Array mit `content` (Base64-String ohne Praefix) und `filename`:
+
+```typescript
+const payload: any = {
+  from: `${fromName} <${fromEmail}>`,
+  to: [to],
+  subject,
+  html,
+};
+
+if (logoData) {
+  payload.attachments = [{
+    content: logoData.base64,
+    filename: "logo.png",
+    content_type: logoData.contentType,
+  }];
+  payload.headers = {
+    ...payload.headers,
+  };
+}
+```
+
+Hinweis: Resend unterstuetzt CID-Referenzen automatisch, wenn der `filename` im Attachment dem `cid:`-Wert im HTML entspricht.
+
+### 4. Zwischenergebnis speichern
+
+Statt `logoDataUri` wird das Ergebnis von `fetchLogo()` als Objekt gespeichert und sowohl an `buildEmailHtml` (fuer das `cid:`-Tag) als auch an den Resend-API-Aufruf (fuer das Attachment) weitergegeben.
+
+## Betroffene Datei
 
 | Datei | Aenderung |
 |-------|-----------|
-| `supabase/functions/send-telegram/index.ts` | Test-Event Sonderbehandlung |
-| `src/pages/admin/AdminTelegram.tsx` | Event-Typ und Toast-Text |
+| `supabase/functions/send-email/index.ts` | fetchLogo-Rueckgabe, CID im HTML, Resend-Attachment |
+
+## Ergebnis
+
+- Logos werden in allen E-Mail-Clients korrekt angezeigt
+- Keine externe URL sichtbar (kein Supabase-Link)
+- Branchenueblicher Ansatz (CID-Embedding)
+
