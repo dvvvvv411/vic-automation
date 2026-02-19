@@ -1,79 +1,68 @@
 
-# Neuer Reiter "Zeitplan" unter Einstellungen + Integration in Buchungsseite
+
+# Mass-Import fuer Indeed-Bewerbungen
 
 ## Uebersicht
 
-Ein neuer Admin-Bereich unter `/admin/zeitplan` (Einstellungen-Gruppe) zum Konfigurieren der verfuegbaren Zeitspanne fuer Bewerbungsgespraeche und zum manuellen Blockieren einzelner Zeitfenster. Die oeffentliche Buchungsseite `/bewerbungsgespraech/:id` prueft diese Einstellungen.
+Im "Neue Bewerbung hinzufuegen"-Dialog wird ein zweiter Toggle "Mass Import" angezeigt, sobald "Indeed Bewerbung" aktiv ist. Wenn aktiviert, verschwinden alle Einzelfelder und werden durch ein grosses Textfeld ersetzt. Nur das Branding-Dropdown bleibt.
 
-## Datenbank-Aenderungen
+## Aenderungen in `src/pages/admin/AdminBewerbungen.tsx`
 
-### Neue Tabelle: `schedule_settings`
+### Neue States
 
-Speichert die globale Zeitspanne (Start- und Enduhrzeit) sowie die verfuegbaren Wochentage.
+- `isMassImport` (boolean) -- nur sichtbar wenn `isIndeed` aktiv
+- `massImportText` (string) -- Inhalt des Textfeldes
+- `massImportErrors` (string[]) -- Fehlermeldungen pro Zeile
 
-| Spalte | Typ | Default | Beschreibung |
-|--------|-----|---------|-------------|
-| id | uuid | gen_random_uuid() | PK |
-| start_time | time | 08:00 | Frueheste buchbare Uhrzeit |
-| end_time | time | 18:00 | Spaeteste buchbare Uhrzeit |
-| slot_interval_minutes | integer | 30 | Intervall zwischen Slots |
-| available_days | integer[] | {1,2,3,4,5,6} | Wochentage (1=Mo, 7=So) |
-| created_at | timestamptz | now() | Erstellungsdatum |
+### UI-Aenderungen im Dialog
 
-RLS: Admins koennen lesen/schreiben, Anon kann lesen (fuer Buchungsseite).
+1. Unterhalb des Indeed-Toggles: neuer "Mass Import" Switch (nur wenn `isIndeed === true`)
+2. Wenn `isMassImport` aktiv:
+   - Alle Einzelfelder (Vorname, Nachname, E-Mail, Telefon) werden ausgeblendet
+   - Grosses Textarea mit Placeholder-Beispiel erscheint
+   - Branding-Dropdown bleibt sichtbar
+   - Button-Text aendert sich zu "X Bewerbungen importieren"
+3. Wenn `isMassImport` deaktiviert oder `isIndeed` deaktiviert: zurueck zum Einzelformular
 
-### Neue Tabelle: `schedule_blocked_slots`
+### Parsing-Logik
 
-Speichert manuell blockierte Zeitfenster (z.B. "Am 25.02.2026 von 10:00-12:00 bin ich nicht da").
+Fuer jede nicht-leere Zeile:
 
-| Spalte | Typ | Default | Beschreibung |
-|--------|-----|---------|-------------|
-| id | uuid | gen_random_uuid() | PK |
-| blocked_date | date | -- | Das blockierte Datum |
-| blocked_time | time | -- | Die blockierte Uhrzeit |
-| reason | text | null | Optionaler Grund |
-| created_at | timestamptz | now() | Erstellungsdatum |
+```text
+Eingabe: "Svenja Böttner TFAVct@t-online.de +4917670561418"
 
-RLS: Admins koennen lesen/schreiben/loeschen, Anon kann lesen (fuer Buchungsseite).
+1. E-Mail per Regex finden (das Wort mit @)
+2. Alles VOR der E-Mail = Name-Teil
+3. Alles NACH der E-Mail = Telefon
+4. Name-Teil: letztes Wort = Nachname, alles davor = Vorname(n)
 
-## Neue Admin-Seite: `/admin/zeitplan`
+Ergebnis: Vorname="Svenja", Nachname="Böttner", Email="TFAVct@t-online.de", Telefon="+4917670561418"
+```
 
-Die Seite hat zwei Bereiche:
+Beispiel mit mehreren Vornamen:
 
-### Bereich 1: Allgemeine Zeiteinstellungen
+```text
+Eingabe: "Anna Maria Schmidt anna@test.de +491234567"
+Ergebnis: Vorname="Anna Maria", Nachname="Schmidt", ...
+```
 
-- Startzeit (z.B. 08:00) und Endzeit (z.B. 18:00) als Select-Felder
-- Intervall (30 Min fest oder konfigurierbar)
-- Wochentage als Checkboxen (Mo-So), standardmaessig Mo-Sa aktiv
-- Speichern-Button
+Wichtig: Namen werden 1:1 uebernommen, Umlaute (oe, ae, ue, ss) werden NICHT veraendert. Der Text wird exakt so gespeichert wie eingegeben.
 
-### Bereich 2: Zeiten blockieren
+### Submit-Logik
 
-- Kalender-Ansicht zum Auswaehlen eines Datums
-- Nach Datumsauswahl: Zeitslots anzeigen (basierend auf den allgemeinen Einstellungen)
-- Einzelne Slots per Klick blockieren/freigeben (Toggle)
-- Optionaler Grund-Text beim Blockieren
-- Liste der aktuell blockierten Slots mit Loeschen-Button
+1. Alle Zeilen parsen und validieren
+2. Bei Fehlern: Fehlermeldungen anzeigen, kein Import
+3. Bei Erfolg: Alle Bewerber einzeln als `applications`-Rows einfuegen mit `is_indeed: true` und gewaehltem Branding
+4. Nach erfolgreichem Import: Dialog schliessen, Toast mit Anzahl importierter Bewerbungen
 
-## Aenderungen an bestehenden Dateien
+### Fehlerbehandlung
 
-### `src/App.tsx`
-- Neue Route `/admin/zeitplan` mit der neuen Seite
+- Zeilen ohne erkennbare E-Mail werden als Fehler markiert
+- Zeilen ohne Telefonnummer werden als Fehler markiert (Indeed-Pflichtfeld)
+- Zeilen ohne Namen werden als Fehler markiert
+- Fehlerhafte Zeilen werden mit Zeilennummer angezeigt
 
-### `src/components/admin/AdminSidebar.tsx`
-- Neuer Eintrag "Zeitplan" in der Einstellungen-Gruppe mit `Clock`-Icon
+## Keine Datenbank-Aenderungen
 
-### `src/pages/Bewerbungsgespraech.tsx`
-- `TIME_SLOTS` nicht mehr hardcoded, sondern aus `schedule_settings` laden
-- Zusaetzlich `schedule_blocked_slots` laden und diese Slots als nicht buchbar markieren (wie bereits gebuchte Termine)
-- `available_days` aus den Settings pruefen statt nur `isSunday`
+Es werden keine neuen Tabellen oder Spalten benoetigt. Die bestehende `applications`-Tabelle wird wie beim Einzelimport verwendet.
 
-## Dateien
-
-| Datei | Aenderung |
-|-------|----------|
-| Migration SQL | Neue Tabellen `schedule_settings` und `schedule_blocked_slots` mit RLS |
-| `src/pages/admin/AdminZeitplan.tsx` | Neue Seite (Zeiteinstellungen + Blockierungen) |
-| `src/App.tsx` | Route `/admin/zeitplan` hinzufuegen |
-| `src/components/admin/AdminSidebar.tsx` | "Zeitplan" in Einstellungen-Gruppe |
-| `src/pages/Bewerbungsgespraech.tsx` | Dynamische Slots aus DB laden, blockierte Slots beruecksichtigen |
