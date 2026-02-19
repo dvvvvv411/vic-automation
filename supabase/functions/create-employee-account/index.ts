@@ -174,8 +174,9 @@ Deno.serve(async (req) => {
           body_title: "Ihr Mitarbeiterkonto wurde erstellt",
           body_lines: [
             `Sehr geehrte/r ${firstName} ${lastName},`,
-            "Ihr Arbeitsvertrag wurde genehmigt und Ihr Mitarbeiterkonto wurde erfolgreich eingerichtet.",
-            `Ihre Zugangsdaten: E-Mail: ${email} / Passwort: ${tempPassword}`,
+            "Ihre eingereichten Daten für den Arbeitsvertrag wurden genehmigt und Ihr Mitarbeiterkonto wurde erfolgreich eingerichtet.",
+            `E-Mail: ${email}`,
+            `Passwort: ${tempPassword}`,
             "Bitte loggen Sie sich ein und unterzeichnen Sie Ihren Arbeitsvertrag.",
           ],
           button_text: "Jetzt einloggen",
