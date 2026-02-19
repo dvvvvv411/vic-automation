@@ -8,6 +8,7 @@ export interface ChatMessage {
   content: string;
   created_at: string;
   read: boolean;
+  attachment_url?: string | null;
 }
 
 interface UseChatRealtimeOptions {
@@ -67,13 +68,14 @@ export function useChatRealtime({ contractId, onNewMessage }: UseChatRealtimeOpt
   }, [contractId]);
 
   const sendMessage = useCallback(
-    async (content: string, senderRole: "admin" | "user" | "system") => {
-      if (!contractId || !content.trim()) return;
+    async (content: string, senderRole: "admin" | "user" | "system", attachmentUrl?: string | null) => {
+      if (!contractId || (!content.trim() && !attachmentUrl)) return;
       await supabase.from("chat_messages").insert({
         contract_id: contractId,
         sender_role: senderRole,
         content: content.trim(),
-      });
+        attachment_url: attachmentUrl ?? null,
+      } as any);
     },
     [contractId]
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import { MessageCircle, X, Send } from "lucide-react";
+import { MessageCircle, X, Send, Plus, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +8,7 @@ import { useChatSounds } from "./useChatSounds";
 import { useChatTyping } from "./useChatTyping";
 import { ChatBubble, TypingIndicator, DateSeparator, SystemMessage } from "./ChatBubble";
 import { AvatarUpload } from "./AvatarUpload";
+import { uploadChatAttachment } from "./uploadChatAttachment";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -33,8 +34,11 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [adminProfile, setAdminProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { playNotification, playSend } = useChatSounds();
   const openRef = useRef(open);
   openRef.current = open;
@@ -146,12 +150,21 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || !contractId) return;
+    if ((!input.trim() && !selectedFile) || !contractId) return;
     const text = input;
+    const file = selectedFile;
     setInput("");
+    setSelectedFile(null);
     sendTyping("");
     playSend();
-    await sendMessage(text, "user");
+
+    let attachmentUrl: string | null = null;
+    if (file) {
+      setUploading(true);
+      attachmentUrl = await uploadChatAttachment(contractId, file);
+      setUploading(false);
+    }
+    await sendMessage(text, "user", attachmentUrl);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -234,6 +247,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
                           isOwnMessage={msg.sender_role === "user"}
                           avatarUrl={msg.sender_role === "admin" ? adminProfile.avatar_url : undefined}
                           senderName={msg.sender_role === "admin" ? (adminProfile.display_name || "Admin") : undefined}
+                          attachmentUrl={msg.attachment_url}
                         />
                       )}
                     </div>
@@ -245,7 +259,41 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
 
             {/* Input */}
             <div className="border-t border-border p-3 shrink-0">
+              {/* File preview */}
+              {selectedFile && (
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-1.5 text-sm max-w-[80%]">
+                    {selectedFile.type.startsWith("image/") ? (
+                      <img src={URL.createObjectURL(selectedFile)} alt="preview" className="h-8 w-8 rounded object-cover" />
+                    ) : (
+                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                    )}
+                    <span className="truncate text-foreground">{selectedFile.name}</span>
+                    <button onClick={() => setSelectedFile(null)} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="flex items-end gap-2">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="shrink-0 h-10 w-10 rounded-xl flex items-center justify-center bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  title="Anhang hinzufügen"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setSelectedFile(file);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                />
                 <textarea
                   value={input}
                   onChange={(e) => handleInputChange(e.target.value)}
@@ -256,10 +304,10 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
                 />
                 <button
                   onClick={handleSend}
-                  disabled={!input.trim()}
+                  disabled={(!input.trim() && !selectedFile) || uploading}
                   className={cn(
                     "shrink-0 h-10 w-10 rounded-xl flex items-center justify-center transition-all",
-                    input.trim()
+                    input.trim() || selectedFile
                       ? "bg-primary text-primary-foreground hover:opacity-90"
                       : "bg-muted text-muted-foreground"
                   )}

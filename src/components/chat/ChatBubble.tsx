@@ -2,7 +2,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { AvatarUpload } from "./AvatarUpload";
-import { CalendarCheck } from "lucide-react";
+import { CalendarCheck, FileText, Download } from "lucide-react";
 
 interface ChatBubbleProps {
   content: string;
@@ -11,9 +11,58 @@ interface ChatBubbleProps {
   isOwnMessage: boolean;
   avatarUrl?: string | null;
   senderName?: string | null;
+  attachmentUrl?: string | null;
 }
 
-export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, senderName }: ChatBubbleProps) {
+function getFileName(url: string) {
+  try {
+    const parts = url.split("/");
+    const last = decodeURIComponent(parts[parts.length - 1]);
+    // Remove uuid prefix: uuid_filename -> filename
+    const match = last.match(/^[a-f0-9-]{36}_(.+)$/i);
+    return match ? match[1] : last;
+  } catch {
+    return "Datei";
+  }
+}
+
+function isImageUrl(url: string) {
+  return /\.(jpg|jpeg|png|webp|gif|bmp|svg)(\?.*)?$/i.test(url);
+}
+
+function AttachmentDisplay({ url, isOwn }: { url: string; isOwn: boolean }) {
+  const fileName = getFileName(url);
+
+  if (isImageUrl(url)) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block mb-1.5">
+        <img
+          src={url}
+          alt={fileName}
+          className="max-w-[220px] max-h-[200px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+        />
+      </a>
+    );
+  }
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        "flex items-center gap-2 mb-1.5 px-3 py-2 rounded-lg text-xs hover:opacity-80 transition-opacity",
+        isOwn ? "bg-primary-foreground/10" : "bg-background/60"
+      )}
+    >
+      <FileText className="h-4 w-4 shrink-0" />
+      <span className="truncate flex-1">{fileName}</span>
+      <Download className="h-3.5 w-3.5 shrink-0 opacity-60" />
+    </a>
+  );
+}
+
+export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, senderName, attachmentUrl }: ChatBubbleProps) {
   return (
     <div className={cn("flex w-full mb-3 gap-2", isOwnMessage ? "justify-end" : "justify-start")}>
       {!isOwnMessage && (
@@ -31,7 +80,8 @@ export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, sender
               : "bg-muted text-foreground rounded-bl-md"
           )}
         >
-          <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{content}</p>
+          {attachmentUrl && <AttachmentDisplay url={attachmentUrl} isOwn={isOwnMessage} />}
+          {content && <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{content}</p>}
           <p
             className={cn(
               "text-[10px] mt-1.5 opacity-60",

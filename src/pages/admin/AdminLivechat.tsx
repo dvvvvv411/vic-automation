@@ -9,6 +9,7 @@ import { AvatarUpload } from "@/components/chat/AvatarUpload";
 import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatRealtime";
 import { useChatTyping } from "@/components/chat/useChatTyping";
 import { sendSms } from "@/lib/sendSms";
+import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
 import { MessageCircle, Pencil, Smartphone, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -169,9 +170,13 @@ export default function AdminLivechat() {
       .then(() => loadConversations());
   }, [active?.contract_id, messages.length]);
 
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, file?: File) => {
     if (!active) return;
-    await sendMessage(text, "admin");
+    let attachmentUrl: string | null = null;
+    if (file) {
+      attachmentUrl = await uploadChatAttachment(active.contract_id, file);
+    }
+    await sendMessage(text, "admin", attachmentUrl);
   };
 
   const handleTyping = (draft: string) => {
@@ -374,6 +379,7 @@ export default function AdminLivechat() {
                           isOwnMessage={msg.sender_role === "admin"}
                           avatarUrl={msg.sender_role === "user" ? employeeProfile.avatar_url : undefined}
                           senderName={msg.sender_role === "user" ? (employeeProfile.display_name || `${active.first_name} ${active.last_name}`) : undefined}
+                          attachmentUrl={msg.attachment_url}
                         />
                       )}
                     </div>
