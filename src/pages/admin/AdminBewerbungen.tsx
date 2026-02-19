@@ -54,6 +54,7 @@ const applicationSchema = z.object({
 const indeedSchema = z.object({
   first_name: z.string().trim().min(1, "Vorname erforderlich").max(100),
   last_name: z.string().trim().min(1, "Nachname erforderlich").max(100),
+  email: z.string().trim().email("Ungültige E-Mail").max(255),
   phone: z.string().trim().min(1, "Telefon erforderlich").max(50),
   branding_id: z.string().uuid("Branding erforderlich"),
 });
@@ -154,7 +155,25 @@ export default function AdminBewerbungen() {
       const fullName = `${app.first_name} ${app.last_name}`;
 
       if (app.is_indeed) {
-        // Indeed: SMS only, no email
+        // Indeed: Email + SMS
+        if (app.email) {
+          await sendEmail({
+            to: app.email,
+            recipient_name: fullName,
+            subject: "Ihre Bewerbung wurde angenommen",
+            body_title: "Ihre Bewerbung wurde angenommen",
+            body_lines: [
+              `Sehr geehrte/r ${fullName},`,
+              "wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung angenommen wurde.",
+              "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch.",
+            ],
+            button_text: "Termin buchen",
+            button_url: interviewLink,
+            branding_id: app.branding_id || null,
+            event_type: "bewerbung_angenommen",
+            metadata: { application_id: app.id },
+          });
+        }
         const { data: tpl } = await supabase
           .from("sms_templates" as any)
           .select("message")
@@ -279,6 +298,7 @@ export default function AdminBewerbungen() {
       const result = indeedSchema.safeParse({
         first_name: form.first_name,
         last_name: form.last_name,
+        email: form.email,
         phone: form.phone,
         branding_id: form.branding_id,
       });
@@ -294,6 +314,7 @@ export default function AdminBewerbungen() {
       createMutation.mutate({
         first_name: form.first_name,
         last_name: form.last_name,
+        email: form.email,
         phone: form.phone,
         branding_id: form.branding_id,
         is_indeed: true,
@@ -417,13 +438,11 @@ export default function AdminBewerbungen() {
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {!isIndeed && (
-                  <div className="space-y-2">
-                    <Label>E-Mail *</Label>
-                    <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="max@example.com" />
-                    {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label>E-Mail *</Label>
+                  <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="max@example.com" />
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                </div>
                 <div className="space-y-2">
                   <Label>Telefon {isIndeed ? "*" : ""}</Label>
                   <Input value={form.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="+49 123 456789" />
