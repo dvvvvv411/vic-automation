@@ -1,35 +1,74 @@
 
 
-# Fix: seven.io Response "100" korrekt erkennen
+# Indeed-Bewerbungen: E-Mail-Pflichtfeld + E-Mail-Versand bei Annahme
 
-## Problem
+## Aenderungen
 
-`JSON.parse("100")` wirft keinen Fehler -- es gibt die Zahl `100` zurueck. Daher wird der catch-Block nie erreicht, und `parsed.success` ist `undefined`, weil `100` kein Objekt ist.
+### 1. Validierung (`indeedSchema`) - E-Mail hinzufuegen
 
-## Loesung
-
-In `supabase/functions/send-sms/index.ts` die Erfolgs-Pruefung anpassen (Zeilen 74-82):
+Das `indeedSchema` (Zeile 54-59) wird um ein Pflichtfeld `email` erweitert:
 
 ```typescript
-let success = false;
-try {
-  const parsed = JSON.parse(smsResult);
-  if (typeof parsed === "number") {
-    success = parsed === 100;
-  } else if (typeof parsed === "object" && parsed !== null) {
-    success = parsed.success === "100" || parsed.success === 100
-      || (parsed.messages && parsed.messages.length > 0);
-  }
-} catch {
-  success = smsResult.trim().startsWith("100");
-}
+const indeedSchema = z.object({
+  first_name: z.string().trim().min(1, "Vorname erforderlich").max(100),
+  last_name: z.string().trim().min(1, "Nachname erforderlich").max(100),
+  email: z.string().trim().email("Ungueltige E-Mail").max(255),
+  phone: z.string().trim().min(1, "Telefon erforderlich").max(50),
+  branding_id: z.string().uuid("Branding erforderlich"),
+});
 ```
 
-Die Aenderung prueft zuerst ob `parsed` eine Zahl ist (seven.io gibt oft einfach `100` zurueck). Nur wenn es ein Objekt ist, werden `success` und `messages` geprueft.
+### 2. Formular-UI - E-Mail-Feld auch bei Indeed anzeigen
+
+Das E-Mail-Feld (Zeile 420-426) wird nicht mehr durch `!isIndeed` ausgeblendet -- es wird immer angezeigt und ist immer Pflicht.
+
+### 3. Submit-Handler - E-Mail bei Indeed mitsenden
+
+Im `handleSubmit` (Zeile 294-300) wird `email` zum Indeed-Payload hinzugefuegt:
+
+```typescript
+createMutation.mutate({
+  first_name: form.first_name,
+  last_name: form.last_name,
+  email: form.email,
+  phone: form.phone,
+  branding_id: form.branding_id,
+  is_indeed: true,
+});
+```
+
+### 4. Accept-Mutation - Indeed sendet jetzt Email UND SMS
+
+Im `acceptMutation` (Zeile 156-181) wird der Indeed-Block erweitert, sodass zusaetzlich zur SMS auch eine E-Mail verschickt wird:
+
+```typescript
+if (app.is_indeed) {
+  // Email senden (neu)
+  await sendEmail({
+    to: app.email,
+    recipient_name: fullName,
+    subject: "Ihre Bewerbung wurde angenommen",
+    body_title: "Ihre Bewerbung wurde angenommen",
+    body_lines: [
+      `Sehr geehrte/r ${fullName},`,
+      "wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung angenommen wurde.",
+      "Bitte buchen Sie nun einen Termin fuer Ihr Bewerbungsgespraech.",
+    ],
+    button_text: "Termin buchen",
+    button_url: interviewLink,
+    branding_id: app.branding_id || null,
+    event_type: "bewerbung_angenommen",
+    metadata: { application_id: app.id },
+  });
+
+  // SMS senden (bestehend, unveraendert)
+  // ... existing SMS logic ...
+}
+```
 
 ## Betroffene Datei
 
 | Datei | Aenderung |
 |-------|-----------|
-| `supabase/functions/send-sms/index.ts` | typeof-Pruefung fuer parsed Response |
+| `src/pages/admin/AdminBewerbungen.tsx` | Schema, UI, Submit-Payload, Accept-Mutation |
 
