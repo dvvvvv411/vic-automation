@@ -1,26 +1,33 @@
 
-
-# Logo auf der Auth-Seite normal anzeigen
+# Fix: Ungültige Arbeitsvertrag-Links
 
 ## Problem
 
-Auf der `/auth`-Seite wird das Branding-Logo im linken Panel durch den CSS-Filter `brightness-0 invert` komplett weiß eingefärbt. Das soll entfernt werden, damit das Logo in seinen Originalfarben angezeigt wird.
+Die Seite `/arbeitsvertrag/:id` erwartet eine **Application-ID** als URL-Parameter (sie sucht in der `applications`-Tabelle nach dieser ID). Aber in `AdminBewerbungsgespraeche.tsx` wird beim Markieren eines Gesprächs als "erfolgreich" die **Contract-ID** in den Link eingesetzt. Dadurch findet die Seite keinen passenden Eintrag und zeigt "Ungültiger Link".
+
+Konkretes Beispiel:
+- URL: `/arbeitsvertrag/16fe174d-...` (= Contract-ID)
+- Die Seite sucht nach `applications.id = 16fe174d-...` -> nicht gefunden
+- Korrekt wäre: `/arbeitsvertrag/1ba66aaa-...` (= Application-ID)
 
 ## Änderung
 
-### `src/pages/Auth.tsx`
+### `src/pages/admin/AdminBewerbungsgespraeche.tsx`
 
-In Zeile 97 den CSS-Filter `brightness-0 invert` entfernen:
+Zeile 113 ändern: `contract.id` durch `item.application_id` ersetzen.
 
 ```
 // Vorher:
-className="max-h-16 w-auto object-contain brightness-0 invert"
+const contractLink = contract
+  ? await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${contract.id}`)
+  : null;
 
 // Nachher:
-className="max-h-16 w-auto object-contain"
+const contractLink = contract
+  ? await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`)
+  : null;
 ```
 
 | Datei | Änderung |
 |-------|----------|
-| `src/pages/Auth.tsx` | `brightness-0 invert` aus Logo-Klasse entfernen |
-
+| `src/pages/admin/AdminBewerbungsgespraeche.tsx` | `contract.id` -> `item.application_id` im Link |
