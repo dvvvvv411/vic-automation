@@ -166,8 +166,8 @@ const AdminBewertungen = () => {
           body_title: "Bewertung genehmigt",
           body_lines: [
             `Sehr geehrte/r ${contract.first_name || ""} ${contract.last_name || ""},`,
-            `Ihre Bewertung fuer den Auftrag "${g.order_title}" wurde genehmigt.`,
-            `Die Praemie von ${g.order_reward} wurde Ihrem Konto gutgeschrieben.`,
+            `Ihre Bewertung für den Auftrag "${g.order_title}" wurde genehmigt.`,
+            `Die Prämie von ${g.order_reward} wurde Ihrem Konto gutgeschrieben.`,
           ],
           branding_id: brandingId || null,
           event_type: "bewertung_genehmigt",
@@ -237,8 +237,8 @@ const AdminBewertungen = () => {
         body_title: "Bewertung abgelehnt",
         body_lines: [
           `Sehr geehrte/r ${contract.first_name || ""} ${contract.last_name || ""},`,
-          `Ihre Bewertung fuer den Auftrag "${g.order_title}" konnte leider nicht akzeptiert werden.`,
-          "Bitte fuehren Sie die Bewertung erneut durch und achten Sie auf die Vorgaben.",
+          `Ihre Bewertung für den Auftrag "${g.order_title}" konnte leider nicht akzeptiert werden.`,
+          "Bitte führen Sie die Bewertung erneut durch und achten Sie auf die Vorgaben.",
         ],
         branding_id: brandingId || null,
         event_type: "bewertung_abgelehnt",

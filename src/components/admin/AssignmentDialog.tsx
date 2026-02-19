@@ -134,7 +134,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
               body_lines: [
                 `Sehr geehrte/r ${c.first_name || ""} ${c.last_name || ""},`,
                 `Ihnen wurde der Auftrag "${order?.title || ""}" (Nr. ${order?.order_number || ""}) zugewiesen.`,
-                `Praemie: ${order?.reward || ""}`,
+                `Prämie: ${order?.reward || ""}`,
                 "Bitte loggen Sie sich in Ihr Mitarbeiterkonto ein, um die Details einzusehen.",
               ],
               button_text: "Zum Mitarbeiterportal",

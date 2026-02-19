@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
@@ -109,19 +110,19 @@ export default function AdminBewerbungsgespraeche() {
         .select("id")
         .eq("application_id", item.application_id)
         .maybeSingle();
-      const contractLink = contract ? `${window.location.origin}/arbeitsvertrag/${contract.id}` : null;
+      const contractLink = contract ? await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${contract.id}`) : null;
 
       await sendEmail({
         to: app.email,
         recipient_name: `${app.first_name} ${app.last_name}`,
-        subject: "Ihr Bewerbungsgespraech war erfolgreich",
-        body_title: "Bewerbungsgespraech erfolgreich",
+        subject: "Ihr Bewerbungsgespräch war erfolgreich",
+        body_title: "Bewerbungsgespräch erfolgreich",
         body_lines: [
           `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
-          "Ihr Bewerbungsgespraech war erfolgreich. Wir freuen uns, Sie im naechsten Schritt willkommen zu heissen.",
-          "Bitte fuellen Sie nun Ihren Arbeitsvertrag ueber den folgenden Link aus.",
+          "Ihr Bewerbungsgespräch war erfolgreich. Wir freuen uns, Sie im nächsten Schritt willkommen zu heißen.",
+          "Bitte füllen Sie nun Ihren Arbeitsvertrag über den folgenden Link aus.",
         ],
-        button_text: contractLink ? "Arbeitsvertrag ausfuellen" : undefined,
+        button_text: contractLink ? "Arbeitsvertrag ausfüllen" : undefined,
         button_url: contractLink || undefined,
         branding_id: app.brandings?.id || null,
         event_type: "gespraech_erfolgreich",

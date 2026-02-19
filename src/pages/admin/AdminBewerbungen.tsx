@@ -190,7 +190,7 @@ export default function AdminBewerbungen() {
               .replace("{name}", fullName)
               .replace("{unternehmen}", companyName)
               .replace("{link}", shortLink)
-          : `Hallo ${fullName}, vielen Dank fuer Ihre Bewerbung bei ${companyName}, bitte buchen Sie ein Bewerbungsgespraech unter ${shortLink}.`;
+          : `Hallo ${fullName}, vielen Dank für Ihre Bewerbung bei ${companyName}, bitte buchen Sie ein Bewerbungsgespräch unter ${shortLink}.`;
         await sendSms({
           to: app.phone,
           text: smsText,
@@ -208,7 +208,7 @@ export default function AdminBewerbungen() {
           body_lines: [
             `Sehr geehrte/r ${fullName},`,
             "wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung angenommen wurde.",
-            "Bitte buchen Sie nun einen Termin fuer Ihr Bewerbungsgespraech ueber den folgenden Link.",
+            "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch über den folgenden Link.",
           ],
           button_text: "Termin buchen",
           button_url: interviewLink,
@@ -253,12 +253,12 @@ export default function AdminBewerbungen() {
           to: app.email,
           recipient_name: `${app.first_name} ${app.last_name}`,
           subject: "Ihre Bewerbung",
-          body_title: "Rueckmeldung zu Ihrer Bewerbung",
-          body_lines: [
-            `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
-            "vielen Dank fuer Ihr Interesse und Ihre Bewerbung.",
-            "Leider muessen wir Ihnen mitteilen, dass wir uns fuer andere Kandidaten entschieden haben.",
-            "Wir wuenschen Ihnen fuer Ihren weiteren Weg alles Gute.",
+           body_title: "Rückmeldung zu Ihrer Bewerbung",
+           body_lines: [
+             `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
+             "vielen Dank für Ihr Interesse und Ihre Bewerbung.",
+             "Leider müssen wir Ihnen mitteilen, dass wir uns für andere Kandidaten entschieden haben.",
+             "Wir wünschen Ihnen für Ihren weiteren Weg alles Gute.",
           ],
           branding_id: app.branding_id || null,
           event_type: "bewerbung_abgelehnt",
@@ -339,8 +339,8 @@ export default function AdminBewerbungen() {
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
   };
 
-  const copyLink = (id: string) => {
-    const link = `${window.location.origin}/bewerbungsgespraech/${id}`;
+  const copyLink = async (app: any) => {
+    const link = await buildBrandingUrl(app.branding_id, `/bewerbungsgespraech/${app.id}`);
     navigator.clipboard.writeText(link);
     toast.success("Link kopiert!");
   };
@@ -375,7 +375,7 @@ export default function AdminBewerbungen() {
           </>
         )}
         {status === "bewerbungsgespraech" && (
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); copyLink(app.id); }} className="text-xs">
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); copyLink(app); }} className="text-xs">
             <Copy className="h-4 w-4 mr-1" />
             Link kopieren
           </Button>

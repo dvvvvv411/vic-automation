@@ -166,10 +166,10 @@ Deno.serve(async (req) => {
           to: email,
           recipient_name: `${first_name} ${last_name}`,
           subject: "Ihre Bewerbung ist eingegangen",
-          body_title: "Vielen Dank fuer Ihre Bewerbung",
+          body_title: "Vielen Dank für Ihre Bewerbung",
           body_lines: [
             `Sehr geehrte/r ${first_name} ${last_name},`,
-            "wir haben Ihre Bewerbung erhalten und werden diese sorgfaeltig pruefen.",
+            "wir haben Ihre Bewerbung erhalten und werden diese sorgfältig prüfen.",
             "Wir melden uns zeitnah bei Ihnen mit weiteren Informationen zum Bewerbungsprozess.",
           ],
           branding_id: branding_id || null,
