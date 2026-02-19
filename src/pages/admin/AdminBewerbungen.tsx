@@ -522,7 +522,7 @@ export default function AdminBewerbungen() {
               </div>
               <div>
                 <span className="text-muted-foreground">E-Mail</span>
-                <p className="font-medium">{detailApp.is_indeed ? "Indeed" : (detailApp.email || "–")}</p>
+                <p className="font-medium">{detailApp.email || "–"}</p>
               </div>
               <div>
                 <span className="text-muted-foreground">Telefon</span>
@@ -607,7 +607,7 @@ export default function AdminBewerbungen() {
                   return (
                     <TableRow key={a.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetailApp(a)}>
                       <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
-                      <TableCell className="text-muted-foreground">{a.is_indeed ? <Badge variant="outline" className="text-[10px]">Indeed</Badge> : (a.email || "–")}</TableCell>
+                      <TableCell className="text-muted-foreground">{a.email || "–"}</TableCell>
                       <TableCell className="text-muted-foreground">{a.phone || "–"}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {a.zip_code || a.city ? `${a.zip_code || ""} ${a.city || ""}`.trim() : "–"}
@@ -623,19 +623,21 @@ export default function AdminBewerbungen() {
                         {a.brandings?.company_name || "–"}
                       </TableCell>
                       <TableCell>
-                        {a.resume_url ? (
-                          <a
-                            href={a.resume_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-primary hover:text-primary/80"
-                          >
-                            <FileText className="h-4 w-4" />
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground">–</span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {a.is_indeed && <Badge variant="outline" className="text-[10px]">Indeed</Badge>}
+                          {a.resume_url && (
+                            <a
+                              href={a.resume_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-primary hover:text-primary/80"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </a>
+                          )}
+                          {!a.is_indeed && !a.resume_url && <span className="text-muted-foreground">–</span>}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={cfg.variant} className={cfg.className}>{cfg.label}</Badge>
