@@ -144,6 +144,8 @@ const templates: TemplateDefinition[] = [
       "E-Mail: max.mustermann@example.com",
       "Passwort: Temp1234!",
       "Ihr Arbeitsvertrag muss noch unterzeichnet werden.",
+      "Ihr Startdatum ist der 15. März 2026.",
+      "Am Morgen Ihres Startdatums finden Sie Ihren ersten Auftrag in Ihrem Dashboard.",
     ],
     buttonText: "Jetzt einloggen",
     buttonUrl: "https://example.com/auth",
