@@ -1,52 +1,40 @@
 
-# Erinnerungs-SMS und E-Mail bei Bewerbungsgespraechen + Branding-Telefonnummer
+# Cutoff auf 3 Stunden aendern + Bestaetigungs-Popup fuer SMS
 
 ## Uebersicht
 
-Neuer Aktions-Button (SMS-Symbol) in der Bewerbungsgespraeche-Tabelle, der eine Erinnerungs-SMS und -E-Mail an nicht erreichbare Bewerber sendet. Zusaetzlich wird ein Telefonnummer-Feld im Branding hinterlegt, das in der Nachricht verwendet wird.
+Zwei Aenderungen in `src/pages/admin/AdminBewerbungsgespraeche.tsx`:
 
-## Aenderungen
+1. **Cutoff von 1 auf 3 Stunden**: Ein Termin gilt erst als "vergangen", wenn er 3 Stunden alt ist (statt bisher 1 Stunde).
+2. **Bestaetigungs-Dialog vor SMS-Versand**: Beim Klick auf das SMS-Symbol oeffnet sich ein Dialog, der den SMS-Text anzeigt. Erst nach Bestaetigung wird die SMS + E-Mail gesendet.
 
-### 1. Datenbank: Neue Spalte `phone` in `brandings`
+## Aenderungen in `src/pages/admin/AdminBewerbungsgespraeche.tsx`
 
-Migration: `ALTER TABLE public.brandings ADD COLUMN phone text;`
+### 1. Cutoff aendern
 
-### 2. Neue SMS-Vorlage in `sms_templates`
+Zeile 35 aendern von `subHours(now, 1)` auf `subHours(now, 3)`.
 
-INSERT mit:
-- `event_type`: `gespraech_erinnerung`
-- `label`: `Bewerbungsgespräch Erinnerung`
-- `message`: `Hallo {name}, Sie hatten einen Termin bei uns, waren aber leider nicht erreichbar. Bitte rufen Sie uns an: {telefon}.`
-- Platzhalter: `{name}`, `{telefon}`
-- Max. 160 Zeichen
+### 2. Bestaetigungs-Dialog
 
-### 3. Branding-Formular erweitern (`src/pages/admin/AdminBrandings.tsx`)
+- Neue States: `reminderPreview` (speichert das Item + den vorbereiteten SMS-Text) 
+- Beim Klick auf den SMS-Button: Branding und Template laden, SMS-Text zusammenbauen, dann `reminderPreview` setzen (Dialog oeffnet sich)
+- Dialog zeigt: Empfaenger-Name, Telefonnummer und den fertigen SMS-Text an
+- "Senden"-Button im Dialog fuehrt den eigentlichen Versand durch (SMS + E-Mail)
+- "Abbrechen" schliesst den Dialog
+- Imports: `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogFooter` hinzufuegen
 
-- Neues Feld `phone` im Schema (optional, max 20 Zeichen)
-- Input-Feld "Telefonnummer" im Branding-Dialog (bei den Firmendaten, z.B. neben Domain/E-Mail)
-- Im `initialForm` und `openEdit` beruecksichtigen
+### Ablauf
 
-### 4. SMS-Vorlagen-Seite erweitern (`src/pages/admin/AdminSmsTemplates.tsx`)
+```text
+Klick auf SMS-Icon
+  -> Branding + Template laden
+  -> SMS-Text mit Platzhaltern befuellen
+  -> Dialog oeffnen mit Vorschau
+  -> User klickt "Senden"
+  -> sendSms() + sendEmail() ausfuehren
+  -> Toast + Dialog schliessen
+```
 
-- `PLACEHOLDER_INFO` um `gespraech_erinnerung: ["{name}", "{telefon}"]` ergaenzen
+## Keine Datenbank-Aenderungen
 
-### 5. Neuer Button in Bewerbungsgespraeche (`src/pages/admin/AdminBewerbungsgespraeche.tsx`)
-
-- Neuer Button mit `MessageSquare`-Icon neben den bestehenden Status-Buttons
-- Bei Klick:
-  1. Branding des Bewerbers laden (inkl. `phone` und `sms_sender_name`)
-  2. SMS-Vorlage `gespraech_erinnerung` aus `sms_templates` laden
-  3. Platzhalter `{name}` und `{telefon}` ersetzen
-  4. `sendSms()` aufrufen mit Bewerber-Telefonnummer
-  5. `sendEmail()` aufrufen mit gleichem Text (Betreff: "Erinnerung an Ihr Bewerbungsgespräch")
-  6. Toast-Meldung bei Erfolg/Fehler
-- Der Button ist nur aktiv wenn der Bewerber eine Telefonnummer hat
-
-### Dateien
-
-| Datei | Aenderung |
-|-------|----------|
-| Migration SQL | `phone`-Spalte in `brandings` + neue SMS-Vorlage |
-| `src/pages/admin/AdminBrandings.tsx` | Telefonnummer-Feld im Formular |
-| `src/pages/admin/AdminSmsTemplates.tsx` | Platzhalter-Info fuer neues Template |
-| `src/pages/admin/AdminBewerbungsgespraeche.tsx` | SMS-Button + Sende-Logik (SMS + E-Mail) |
+Nur Frontend-Aenderungen in einer einzigen Datei.
