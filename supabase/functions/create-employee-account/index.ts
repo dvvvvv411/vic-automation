@@ -6,6 +6,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const GERMAN_MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+function formatDateDE(iso: string): string {
+  const d = new Date(iso + "T00:00:00");
+  return `${d.getDate()}. ${GERMAN_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 function generatePassword(length = 6): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
   let password = "";
@@ -178,6 +184,12 @@ Deno.serve(async (req) => {
             `E-Mail: ${email}`,
             `Passwort: ${tempPassword}`,
             "Bitte loggen Sie sich ein und unterzeichnen Sie Ihren Arbeitsvertrag.",
+            ...(contract.desired_start_date
+              ? [
+                  `Ihr Startdatum ist der ${formatDateDE(contract.desired_start_date)}.`,
+                  "Am Morgen Ihres Startdatums finden Sie Ihren ersten Auftrag in Ihrem Dashboard.",
+                ]
+              : []),
           ],
           button_text: "Jetzt einloggen",
           button_url: loginUrl,
