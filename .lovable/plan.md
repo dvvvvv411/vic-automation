@@ -1,38 +1,33 @@
 
 
-# Intervallwechsel ab einem bestimmten Datum
+# Stefan Hofmann Termin auf 10:40 umstellen
 
 ## Uebersicht
 
-Zwei neue Spalten in der `schedule_settings`-Tabelle ermoeglichen es, ab einem Stichtag (z.B. 02.03.2026) ein anderes Zeitintervall zu verwenden. Vor dem Stichtag gilt das bisherige Intervall, danach das neue.
+Der Termin von Stefan Hofmann am 04.03.2026 steht aktuell auf 10:30 Uhr. Da ab dem 02.03.2026 das neue 20-Minuten-Intervall gilt, existiert der Slot 10:30 nicht mehr (die Slots sind dann 10:00, 10:20, 10:40, 11:00, ...). Der Termin wird auf 10:40 Uhr umgestellt und der Slot blockiert.
 
-## Datenbank-Aenderung
+## Aenderungen (direkt in der Datenbank)
 
-Neue Spalten in `schedule_settings`:
-- `new_slot_interval_minutes` (integer, nullable) -- das neue Intervall ab dem Stichtag
-- `interval_change_date` (date, nullable) -- der Stichtag
+### 1. Termin-Uhrzeit aendern
 
-## Aenderungen in `src/pages/admin/AdminZeitplan.tsx`
+Das `interview_appointments`-Record (ID: `87610176-d3d1-4f45-ad70-6bad59347693`) wird von `10:30:00` auf `10:40:00` aktualisiert:
 
-Neue Eingabefelder im Bereich "Allgemeine Zeiteinstellungen":
-- **Datepicker oder Datumsfeld** fuer den Stichtag ("Intervall aendern ab")
-- **Select** fuer das neue Intervall (15 / 20 / 30 / 60 Min)
+```sql
+UPDATE interview_appointments
+SET appointment_time = '10:40:00'
+WHERE id = '87610176-d3d1-4f45-ad70-6bad59347693';
+```
 
-Die `generateTimeSlots`-Logik beruecksichtigt beim Blockieren von Slots das ausgewaehlte Kalenderdatum: Liegt das Datum vor dem Stichtag, wird das alte Intervall verwendet; ab dem Stichtag das neue.
+### 2. Slot blockieren
 
-Beim Speichern werden `new_slot_interval_minutes` und `interval_change_date` mitgespeichert.
+Ein neuer Eintrag in `schedule_blocked_slots` fuer den 04.03.2026 um 10:40 wird erstellt, damit kein weiterer Bewerber diesen Slot buchen kann:
 
-## Aenderungen in `src/pages/Bewerbungsgespraech.tsx`
+```sql
+INSERT INTO schedule_blocked_slots (blocked_date, blocked_time, reason)
+VALUES ('2026-03-04', '10:40:00', 'Bewerbungsgespräch Stefan Hofmann');
+```
 
-Die oeffentliche Buchungsseite liest ebenfalls die neuen Felder und waehlt das passende Intervall basierend auf dem ausgewaehlten Buchungsdatum.
+## Keine Code-Aenderungen
 
-## Zusammenfassung
-
-| Wo | Was |
-|---|---|
-| Datenbank | 2 neue nullable Spalten in `schedule_settings` |
-| AdminZeitplan.tsx | Neue Eingabefelder + datumabhaengige Slot-Berechnung |
-| Bewerbungsgespraech.tsx | Datumabhaengiges Intervall bei Buchung |
-
-Nach dem Speichern mit Stichtag 02.03.2026 und neuem Intervall 20 Minuten werden alle Termine ab diesem Datum im 20-Minuten-Takt angezeigt, davor weiterhin im bisherigen Takt.
+Nur zwei SQL-Statements in der Datenbank.
 
