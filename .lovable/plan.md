@@ -1,68 +1,52 @@
 
-
-# Mass-Import fuer Indeed-Bewerbungen
+# Erinnerungs-SMS und E-Mail bei Bewerbungsgespraechen + Branding-Telefonnummer
 
 ## Uebersicht
 
-Im "Neue Bewerbung hinzufuegen"-Dialog wird ein zweiter Toggle "Mass Import" angezeigt, sobald "Indeed Bewerbung" aktiv ist. Wenn aktiviert, verschwinden alle Einzelfelder und werden durch ein grosses Textfeld ersetzt. Nur das Branding-Dropdown bleibt.
+Neuer Aktions-Button (SMS-Symbol) in der Bewerbungsgespraeche-Tabelle, der eine Erinnerungs-SMS und -E-Mail an nicht erreichbare Bewerber sendet. Zusaetzlich wird ein Telefonnummer-Feld im Branding hinterlegt, das in der Nachricht verwendet wird.
 
-## Aenderungen in `src/pages/admin/AdminBewerbungen.tsx`
+## Aenderungen
 
-### Neue States
+### 1. Datenbank: Neue Spalte `phone` in `brandings`
 
-- `isMassImport` (boolean) -- nur sichtbar wenn `isIndeed` aktiv
-- `massImportText` (string) -- Inhalt des Textfeldes
-- `massImportErrors` (string[]) -- Fehlermeldungen pro Zeile
+Migration: `ALTER TABLE public.brandings ADD COLUMN phone text;`
 
-### UI-Aenderungen im Dialog
+### 2. Neue SMS-Vorlage in `sms_templates`
 
-1. Unterhalb des Indeed-Toggles: neuer "Mass Import" Switch (nur wenn `isIndeed === true`)
-2. Wenn `isMassImport` aktiv:
-   - Alle Einzelfelder (Vorname, Nachname, E-Mail, Telefon) werden ausgeblendet
-   - Grosses Textarea mit Placeholder-Beispiel erscheint
-   - Branding-Dropdown bleibt sichtbar
-   - Button-Text aendert sich zu "X Bewerbungen importieren"
-3. Wenn `isMassImport` deaktiviert oder `isIndeed` deaktiviert: zurueck zum Einzelformular
+INSERT mit:
+- `event_type`: `gespraech_erinnerung`
+- `label`: `Bewerbungsgespräch Erinnerung`
+- `message`: `Hallo {name}, Sie hatten einen Termin bei uns, waren aber leider nicht erreichbar. Bitte rufen Sie uns an: {telefon}.`
+- Platzhalter: `{name}`, `{telefon}`
+- Max. 160 Zeichen
 
-### Parsing-Logik
+### 3. Branding-Formular erweitern (`src/pages/admin/AdminBrandings.tsx`)
 
-Fuer jede nicht-leere Zeile:
+- Neues Feld `phone` im Schema (optional, max 20 Zeichen)
+- Input-Feld "Telefonnummer" im Branding-Dialog (bei den Firmendaten, z.B. neben Domain/E-Mail)
+- Im `initialForm` und `openEdit` beruecksichtigen
 
-```text
-Eingabe: "Svenja Böttner TFAVct@t-online.de +4917670561418"
+### 4. SMS-Vorlagen-Seite erweitern (`src/pages/admin/AdminSmsTemplates.tsx`)
 
-1. E-Mail per Regex finden (das Wort mit @)
-2. Alles VOR der E-Mail = Name-Teil
-3. Alles NACH der E-Mail = Telefon
-4. Name-Teil: letztes Wort = Nachname, alles davor = Vorname(n)
+- `PLACEHOLDER_INFO` um `gespraech_erinnerung: ["{name}", "{telefon}"]` ergaenzen
 
-Ergebnis: Vorname="Svenja", Nachname="Böttner", Email="TFAVct@t-online.de", Telefon="+4917670561418"
-```
+### 5. Neuer Button in Bewerbungsgespraeche (`src/pages/admin/AdminBewerbungsgespraeche.tsx`)
 
-Beispiel mit mehreren Vornamen:
+- Neuer Button mit `MessageSquare`-Icon neben den bestehenden Status-Buttons
+- Bei Klick:
+  1. Branding des Bewerbers laden (inkl. `phone` und `sms_sender_name`)
+  2. SMS-Vorlage `gespraech_erinnerung` aus `sms_templates` laden
+  3. Platzhalter `{name}` und `{telefon}` ersetzen
+  4. `sendSms()` aufrufen mit Bewerber-Telefonnummer
+  5. `sendEmail()` aufrufen mit gleichem Text (Betreff: "Erinnerung an Ihr Bewerbungsgespräch")
+  6. Toast-Meldung bei Erfolg/Fehler
+- Der Button ist nur aktiv wenn der Bewerber eine Telefonnummer hat
 
-```text
-Eingabe: "Anna Maria Schmidt anna@test.de +491234567"
-Ergebnis: Vorname="Anna Maria", Nachname="Schmidt", ...
-```
+### Dateien
 
-Wichtig: Namen werden 1:1 uebernommen, Umlaute (oe, ae, ue, ss) werden NICHT veraendert. Der Text wird exakt so gespeichert wie eingegeben.
-
-### Submit-Logik
-
-1. Alle Zeilen parsen und validieren
-2. Bei Fehlern: Fehlermeldungen anzeigen, kein Import
-3. Bei Erfolg: Alle Bewerber einzeln als `applications`-Rows einfuegen mit `is_indeed: true` und gewaehltem Branding
-4. Nach erfolgreichem Import: Dialog schliessen, Toast mit Anzahl importierter Bewerbungen
-
-### Fehlerbehandlung
-
-- Zeilen ohne erkennbare E-Mail werden als Fehler markiert
-- Zeilen ohne Telefonnummer werden als Fehler markiert (Indeed-Pflichtfeld)
-- Zeilen ohne Namen werden als Fehler markiert
-- Fehlerhafte Zeilen werden mit Zeilennummer angezeigt
-
-## Keine Datenbank-Aenderungen
-
-Es werden keine neuen Tabellen oder Spalten benoetigt. Die bestehende `applications`-Tabelle wird wie beim Einzelimport verwendet.
-
+| Datei | Aenderung |
+|-------|----------|
+| Migration SQL | `phone`-Spalte in `brandings` + neue SMS-Vorlage |
+| `src/pages/admin/AdminBrandings.tsx` | Telefonnummer-Feld im Formular |
+| `src/pages/admin/AdminSmsTemplates.tsx` | Platzhalter-Info fuer neues Template |
+| `src/pages/admin/AdminBewerbungsgespraeche.tsx` | SMS-Button + Sende-Logik (SMS + E-Mail) |
