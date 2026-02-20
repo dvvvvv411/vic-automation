@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
+import { sendSms } from "@/lib/sendSms";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
 import { toast } from "sonner";
@@ -25,6 +26,7 @@ type ViewMode = "default" | "past" | "future";
 export default function AdminBewerbungsgespraeche() {
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("default");
+  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const now = new Date();
@@ -128,6 +130,77 @@ export default function AdminBewerbungsgespraeche() {
         event_type: "gespraech_erfolgreich",
         metadata: { appointment_id: item.id, application_id: item.application_id },
       });
+    }
+  };
+
+  const handleSendReminder = async (item: any) => {
+    const app = item.applications;
+    if (!app?.phone) {
+      toast.error("Keine Telefonnummer vorhanden");
+      return;
+    }
+    setSendingReminder(item.id);
+    try {
+      // Load branding with phone + sms_sender_name
+      const brandingId = app.brandings?.id;
+      let brandingPhone = "";
+      let senderName: string | undefined;
+      if (brandingId) {
+        const { data: branding } = await supabase
+          .from("brandings")
+          .select("phone, sms_sender_name" as any)
+          .eq("id", brandingId)
+          .maybeSingle();
+        brandingPhone = (branding as any)?.phone || "";
+        senderName = (branding as any)?.sms_sender_name || undefined;
+      }
+
+      // Load SMS template
+      const { data: template } = await supabase
+        .from("sms_templates" as any)
+        .select("message")
+        .eq("event_type", "gespraech_erinnerung")
+        .maybeSingle();
+
+      const name = `${app.first_name} ${app.last_name}`;
+      const smsText = ((template as any)?.message || "Hallo {name}, Sie hatten einen Termin bei uns, waren aber leider nicht erreichbar. Bitte rufen Sie uns an: {telefon}.")
+        .replace(/\{name\}/g, name)
+        .replace(/\{telefon\}/g, brandingPhone);
+
+      // Send SMS
+      const smsOk = await sendSms({
+        to: app.phone,
+        text: smsText,
+        event_type: "gespraech_erinnerung",
+        recipient_name: name,
+        from: senderName,
+      });
+
+      // Send Email
+      await sendEmail({
+        to: app.email,
+        recipient_name: name,
+        subject: "Erinnerung an Ihr Bewerbungsgespräch",
+        body_title: "Erinnerung an Ihr Bewerbungsgespräch",
+        body_lines: [
+          `Sehr geehrte/r ${name},`,
+          smsText,
+        ],
+        branding_id: brandingId || null,
+        event_type: "gespraech_erinnerung",
+        metadata: { appointment_id: item.id, application_id: item.application_id },
+      });
+
+      if (smsOk) {
+        toast.success("Erinnerung (SMS + E-Mail) gesendet!");
+      } else {
+        toast.warning("E-Mail gesendet, SMS fehlgeschlagen");
+      }
+    } catch (err) {
+      console.error("Reminder error:", err);
+      toast.error("Fehler beim Senden der Erinnerung");
+    } finally {
+      setSendingReminder(null);
     }
   };
 
@@ -238,7 +311,19 @@ export default function AdminBewerbungsgespraeche() {
                       </TableCell>
                       <TableCell>{statusBadge(item.status)}</TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
+                      <div className="flex gap-1">
+                          {item.applications?.phone && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                              onClick={() => handleSendReminder(item)}
+                              disabled={sendingReminder === item.id}
+                              title="Erinnerungs-SMS & E-Mail senden"
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                            </Button>
+                          )}
                           {item.status !== "erfolgreich" && (
                             <Button
                               variant="ghost"
