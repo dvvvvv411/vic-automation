@@ -106,11 +106,23 @@ type ParsedApplicant = {
   phone: string;
 };
 
+function formatPhone(raw: string): string {
+  let cleaned = raw.replace(/[^0-9+]/g, "");
+  if (cleaned.startsWith("0")) {
+    cleaned = "+49" + cleaned.substring(1);
+  }
+  return cleaned;
+}
+
+function formatName(name: string): string {
+  if (name !== name.toUpperCase()) return name;
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+}
+
 function parseMassImportLine(line: string): ParsedApplicant | string {
   const trimmed = line.trim();
   if (!trimmed) return "Leere Zeile";
 
-  // Find email (word containing @)
   const emailMatch = trimmed.match(/\S+@\S+\.\S+/);
   if (!emailMatch) return "Keine E-Mail erkannt";
 
@@ -126,10 +138,11 @@ function parseMassImportLine(line: string): ParsedApplicant | string {
   const nameWords = namePart.split(/\s+/);
   if (nameWords.length < 2) return "Vor- und Nachname erforderlich";
 
-  const lastName = nameWords[nameWords.length - 1];
-  const firstName = nameWords.slice(0, -1).join(" ");
+  const firstName = nameWords.slice(0, -1).map(w => formatName(w)).join(" ");
+  const lastName = formatName(nameWords[nameWords.length - 1]);
+  const phone = formatPhone(phonePart);
 
-  return { first_name: firstName, last_name: lastName, email, phone: phonePart };
+  return { first_name: firstName, last_name: lastName, email, phone };
 }
 
 export default function AdminBewerbungen() {
@@ -407,10 +420,10 @@ export default function AdminBewerbungen() {
       }
       setErrors({});
       createMutation.mutate({
-        first_name: form.first_name,
-        last_name: form.last_name,
+        first_name: formatName(form.first_name),
+        last_name: formatName(form.last_name),
         email: form.email,
-        phone: form.phone,
+        phone: formatPhone(form.phone),
         branding_id: form.branding_id,
         is_indeed: true,
       });
@@ -425,7 +438,14 @@ export default function AdminBewerbungen() {
         return;
       }
       setErrors({});
-      createMutation.mutate({ ...result.data, is_indeed: false });
+      const formatted = {
+        ...result.data,
+        first_name: formatName(result.data.first_name),
+        last_name: formatName(result.data.last_name),
+        phone: result.data.phone ? formatPhone(result.data.phone) : undefined,
+        is_indeed: false,
+      };
+      createMutation.mutate(formatted);
     }
   };
 
