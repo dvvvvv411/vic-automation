@@ -639,6 +639,8 @@ export type Database = {
           created_at: string
           end_time: string
           id: string
+          interval_change_date: string | null
+          new_slot_interval_minutes: number | null
           slot_interval_minutes: number
           start_time: string
         }
@@ -647,6 +649,8 @@ export type Database = {
           created_at?: string
           end_time?: string
           id?: string
+          interval_change_date?: string | null
+          new_slot_interval_minutes?: number | null
           slot_interval_minutes?: number
           start_time?: string
         }
@@ -655,6 +659,8 @@ export type Database = {
           created_at?: string
           end_time?: string
           id?: string
+          interval_change_date?: string | null
+          new_slot_interval_minutes?: number | null
           slot_interval_minutes?: number
           start_time?: string
         }
