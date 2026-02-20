@@ -18,6 +18,13 @@ import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, 
 import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const PAGE_SIZE = 20;
 
@@ -27,12 +34,13 @@ export default function AdminBewerbungsgespraeche() {
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("default");
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [reminderPreview, setReminderPreview] = useState<{ item: any; message: string; name: string; phone: string; brandingId?: string; senderName?: string } | null>(null);
   const queryClient = useQueryClient();
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
   const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
-  const cutoffTime = format(subHours(now, 1), "HH:mm:ss");
+  const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
   const { data, isLoading } = useQuery({
     queryKey: ["interview-appointments", page, viewMode],
@@ -133,7 +141,7 @@ export default function AdminBewerbungsgespraeche() {
     }
   };
 
-  const handleSendReminder = async (item: any) => {
+  const handlePrepareReminder = async (item: any) => {
     const app = item.applications;
     if (!app?.phone) {
       toast.error("Keine Telefonnummer vorhanden");
@@ -141,7 +149,6 @@ export default function AdminBewerbungsgespraeche() {
     }
     setSendingReminder(item.id);
     try {
-      // Load branding with phone + sms_sender_name
       const brandingId = app.brandings?.id;
       let brandingPhone = "";
       let senderName: string | undefined;
@@ -155,7 +162,6 @@ export default function AdminBewerbungsgespraeche() {
         senderName = (branding as any)?.sms_sender_name || undefined;
       }
 
-      // Load SMS template
       const { data: template } = await supabase
         .from("sms_templates" as any)
         .select("message")
@@ -167,25 +173,35 @@ export default function AdminBewerbungsgespraeche() {
         .replace(/\{name\}/g, name)
         .replace(/\{telefon\}/g, brandingPhone);
 
-      // Send SMS
+      setReminderPreview({ item, message: smsText, name, phone: app.phone, brandingId, senderName });
+    } catch (err) {
+      console.error("Reminder prepare error:", err);
+      toast.error("Fehler beim Laden der Vorlage");
+    } finally {
+      setSendingReminder(null);
+    }
+  };
+
+  const handleConfirmReminder = async () => {
+    if (!reminderPreview) return;
+    const { item, message, name, brandingId, senderName } = reminderPreview;
+    const app = item.applications;
+    setSendingReminder(item.id);
+    try {
       const smsOk = await sendSms({
         to: app.phone,
-        text: smsText,
+        text: message,
         event_type: "gespraech_erinnerung",
         recipient_name: name,
         from: senderName,
       });
 
-      // Send Email
       await sendEmail({
         to: app.email,
         recipient_name: name,
         subject: "Erinnerung an Ihr Bewerbungsgespräch",
         body_title: "Erinnerung an Ihr Bewerbungsgespräch",
-        body_lines: [
-          `Sehr geehrte/r ${name},`,
-          smsText,
-        ],
+        body_lines: [`Sehr geehrte/r ${name},`, message],
         branding_id: brandingId || null,
         event_type: "gespraech_erinnerung",
         metadata: { appointment_id: item.id, application_id: item.application_id },
@@ -201,6 +217,7 @@ export default function AdminBewerbungsgespraeche() {
       toast.error("Fehler beim Senden der Erinnerung");
     } finally {
       setSendingReminder(null);
+      setReminderPreview(null);
     }
   };
 
@@ -317,7 +334,7 @@ export default function AdminBewerbungsgespraeche() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                              onClick={() => handleSendReminder(item)}
+                              onClick={() => handlePrepareReminder(item)}
                               disabled={sendingReminder === item.id}
                               title="Erinnerungs-SMS & E-Mail senden"
                             >
@@ -382,6 +399,34 @@ export default function AdminBewerbungsgespraeche() {
           </>
         )}
       </motion.div>
+
+      <Dialog open={!!reminderPreview} onOpenChange={(open) => !open && setReminderPreview(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Erinnerung senden</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm">
+              <span className="text-muted-foreground">Empfänger:</span>{" "}
+              <span className="font-medium">{reminderPreview?.name}</span>
+            </div>
+            <div className="text-sm">
+              <span className="text-muted-foreground">Telefon:</span>{" "}
+              <span className="font-medium">{reminderPreview?.phone}</span>
+            </div>
+            <div className="rounded-md border border-border bg-muted/50 p-3 text-sm whitespace-pre-wrap">
+              {reminderPreview?.message}
+            </div>
+            <p className="text-xs text-muted-foreground">SMS + E-Mail werden gesendet.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReminderPreview(null)}>Abbrechen</Button>
+            <Button onClick={handleConfirmReminder} disabled={sendingReminder === reminderPreview?.item?.id}>
+              Senden
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
