@@ -1,18 +1,30 @@
 
-
-# Startdatum-Spalte in Arbeitsvertraege-Tabelle
+# Startdatum und Hinweis zum ersten Auftrag in der Genehmigungs-E-Mail
 
 ## Uebersicht
 
-Neue Spalte "Startdatum" in der Tabelle auf `/admin/arbeitsvertraege`, die das gewuenschte Startdatum aus dem eingereichten Vertrag anzeigt.
+In der E-Mail "Ihr Mitarbeiterkonto wurde erstellt" (event_type `vertrag_genehmigt`) werden zwei neue Zeilen nach "Bitte loggen Sie sich ein und unterzeichnen Sie Ihren Arbeitsvertrag." eingefuegt:
 
-## Aenderung in `src/pages/admin/AdminArbeitsvertraege.tsx`
+1. Das Startdatum des Mitarbeiters
+2. Ein Hinweis, dass am Morgen des Startdatums der erste Auftrag im Dashboard bereitsteht
 
-1. **Neuen TableHead** "Startdatum" zwischen "Vertragsstatus" und "Aktionen" einfuegen.
-2. **Neues TableCell** das `item.contract?.desired_start_date` anzeigt, formatiert mit `format()` und deutscher Locale (z.B. "15. März 2026"). Wenn kein Datum vorhanden: "–".
+## Aenderungen
 
-### Technisch
+### 1. Edge Function `supabase/functions/create-employee-account/index.ts`
 
-- Keine neuen Imports noetig (`format` und `de` sind bereits importiert)
-- Keine Datenbank-Aenderungen (das Feld `desired_start_date` existiert bereits in `employment_contracts` und wird schon abgefragt)
+In den `body_lines` (Zeile 175-181) nach der Zeile "Bitte loggen Sie sich ein und unterzeichnen Sie Ihren Arbeitsvertrag." zwei neue Zeilen einfuegen:
 
+```
+"Ihr Startdatum ist der 15. Maerz 2026."
+"Am Morgen Ihres Startdatums finden Sie Ihren ersten Auftrag in Ihrem Dashboard."
+```
+
+Das Datum wird aus `contract.desired_start_date` gelesen und mit deutschem Format dargestellt. Dafuer wird das Datum manuell formatiert (kein date-fns in Deno verfuegbar, daher einfache Formatierung mit deutschem Monatsnamen).
+
+### 2. Vorschau-Template `src/pages/admin/AdminEmails.tsx`
+
+Das Template fuer `vertrag_genehmigt` (Zeile 137-152) bekommt die gleichen zwei neuen Zeilen in `bodyLines`, damit die Vorschau uebereinstimmt.
+
+## Keine Datenbank-Aenderungen
+
+Nur Aenderungen in der Edge Function und der Vorschau-Seite.
