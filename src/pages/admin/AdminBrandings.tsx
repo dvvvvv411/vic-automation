@@ -40,6 +40,7 @@ const brandingSchema = z.object({
   resend_from_name: z.string().max(200).optional(),
   resend_api_key: z.string().max(200).optional(),
   sms_sender_name: z.string().max(11, "Max. 11 Zeichen").optional(),
+  phone: z.string().max(20, "Max. 20 Zeichen").optional(),
 });
 
 type BrandingForm = z.infer<typeof brandingSchema>;
@@ -60,6 +61,7 @@ const initialForm: BrandingForm = {
   resend_from_name: "",
   resend_api_key: "",
   sms_sender_name: "",
+  phone: "",
 };
 
 export default function AdminBrandings() {
@@ -154,6 +156,7 @@ export default function AdminBrandings() {
       resend_from_name: (branding as any).resend_from_name || "",
       resend_api_key: (branding as any).resend_api_key || "",
       sms_sender_name: (branding as any).sms_sender_name || "",
+      phone: (branding as any).phone || "",
     });
     setOpen(true);
   };
@@ -361,6 +364,17 @@ export default function AdminBrandings() {
               />
               <p className="text-xs text-muted-foreground">Max. 11 Zeichen (alphanumerisch). Wird als Absender bei SMS angezeigt.</p>
               {errors.sms_sender_name && <p className="text-xs text-destructive">{errors.sms_sender_name}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label>Telefonnummer</Label>
+              <Input
+                value={form.phone}
+                onChange={(e) => updateField("phone", e.target.value)}
+                placeholder="+49 123 456789"
+                maxLength={20}
+              />
+              <p className="text-xs text-muted-foreground">Wird in SMS-Erinnerungen als Rückrufnummer verwendet.</p>
+              {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
             </div>
 
             {/* Brand Color */}

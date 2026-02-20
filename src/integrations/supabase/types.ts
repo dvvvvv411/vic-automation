@@ -105,6 +105,7 @@ export type Database = {
           id: string
           logo_url: string | null
           managing_director: string | null
+          phone: string | null
           register_court: string | null
           resend_api_key: string | null
           resend_from_email: string | null
@@ -125,6 +126,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           managing_director?: string | null
+          phone?: string | null
           register_court?: string | null
           resend_api_key?: string | null
           resend_from_email?: string | null
@@ -145,6 +147,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           managing_director?: string | null
+          phone?: string | null
           register_court?: string | null
           resend_api_key?: string | null
           resend_from_email?: string | null
