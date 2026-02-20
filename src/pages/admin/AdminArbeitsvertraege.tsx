@@ -166,6 +166,7 @@ export default function AdminArbeitsvertraege() {
                     <TableHead>Branding</TableHead>
                     <TableHead>Link</TableHead>
                     <TableHead>Vertragsstatus</TableHead>
+                    <TableHead>Startdatum</TableHead>
                     <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -194,6 +195,11 @@ export default function AdminArbeitsvertraege() {
                         </Button>
                       </TableCell>
                       <TableCell>{statusBadge(item.contract)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {item.contract?.desired_start_date
+                          ? format(new Date(item.contract.desired_start_date + "T00:00:00"), "dd. MMMM yyyy", { locale: de })
+                          : "–"}
+                      </TableCell>
                       <TableCell>
                         {item.contract?.status === "eingereicht" || item.contract?.status === "genehmigt" ? (
                           <Button variant="outline" size="sm" onClick={() => openDetails(item.contract)}>
