@@ -100,10 +100,20 @@ export default function Bewerbungsgespraech() {
   const scheduleEnd = scheduleSettings?.end_time?.slice(0, 5) ?? "18:00";
   const scheduleInterval = scheduleSettings?.slot_interval_minutes ?? 30;
   const availableDays = scheduleSettings?.available_days ?? [1, 2, 3, 4, 5, 6];
+  const newIntervalMinutes = (scheduleSettings as any)?.new_slot_interval_minutes as number | null;
+  const intervalChangeDate = (scheduleSettings as any)?.interval_change_date as string | null;
+
+  const getIntervalForDate = (date: Date | undefined) => {
+    if (!date || !intervalChangeDate || !newIntervalMinutes) return scheduleInterval;
+    const changeDateObj = new Date(intervalChangeDate + "T00:00:00");
+    return date >= changeDateObj ? newIntervalMinutes : scheduleInterval;
+  };
+
+  const activeInterval = getIntervalForDate(selectedDate);
 
   const TIME_SLOTS = useMemo(
-    () => generateTimeSlots(scheduleStart, scheduleEnd, scheduleInterval),
-    [scheduleStart, scheduleEnd, scheduleInterval]
+    () => generateTimeSlots(scheduleStart, scheduleEnd, activeInterval),
+    [scheduleStart, scheduleEnd, activeInterval]
   );
 
   const brandColor = application?.brandings?.brand_color || "#3B82F6";

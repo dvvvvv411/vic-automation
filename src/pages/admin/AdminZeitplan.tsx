@@ -13,7 +13,8 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Trash2, Ban, Check } from "lucide-react";
+import { Trash2, Ban, Check, CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const WEEKDAYS = [
   { value: 1, label: "Mo" },
@@ -68,11 +69,21 @@ export default function AdminZeitplan() {
   const [endTime, setEndTime] = useState<string | null>(null);
   const [interval, setIntervalVal] = useState<number | null>(null);
   const [days, setDays] = useState<number[] | null>(null);
+  const [newInterval, setNewInterval] = useState<number | null>(null);
+  const [changeDate, setChangeDate] = useState<Date | null>(null);
 
   const effectiveStart = startTime ?? settings?.start_time?.slice(0, 5) ?? "08:00";
   const effectiveEnd = endTime ?? settings?.end_time?.slice(0, 5) ?? "18:00";
   const effectiveInterval = interval ?? settings?.slot_interval_minutes ?? 30;
   const effectiveDays = days ?? settings?.available_days ?? [1, 2, 3, 4, 5, 6];
+  const effectiveNewInterval = newInterval ?? (settings as any)?.new_slot_interval_minutes ?? null;
+  const effectiveChangeDate = changeDate ?? ((settings as any)?.interval_change_date ? new Date((settings as any).interval_change_date + "T00:00:00") : null);
+
+  // Determine the interval to use for a given date
+  const getIntervalForDate = (date: Date | undefined) => {
+    if (!date || !effectiveChangeDate || !effectiveNewInterval) return effectiveInterval;
+    return date >= effectiveChangeDate ? effectiveNewInterval : effectiveInterval;
+  };
 
   // Load blocked slots
   const { data: blockedSlots } = useQuery({
@@ -98,7 +109,9 @@ export default function AdminZeitplan() {
           end_time: effectiveEnd + ":00",
           slot_interval_minutes: effectiveInterval,
           available_days: effectiveDays,
-        })
+          new_slot_interval_minutes: effectiveNewInterval,
+          interval_change_date: effectiveChangeDate ? format(effectiveChangeDate, "yyyy-MM-dd") : null,
+        } as any)
         .eq("id", settings.id);
       if (error) throw error;
     },
@@ -109,6 +122,8 @@ export default function AdminZeitplan() {
       setEndTime(null);
       setIntervalVal(null);
       setDays(null);
+      setNewInterval(null);
+      setChangeDate(null);
     },
     onError: () => toast({ title: "Fehler beim Speichern", variant: "destructive" }),
   });
@@ -144,9 +159,10 @@ export default function AdminZeitplan() {
   });
 
   // Time slots for selected date
+  const dateInterval = getIntervalForDate(selectedDate);
   const timeSlots = useMemo(
-    () => generateTimeSlots(effectiveStart, effectiveEnd, effectiveInterval),
-    [effectiveStart, effectiveEnd, effectiveInterval]
+    () => generateTimeSlots(effectiveStart, effectiveEnd, dateInterval),
+    [effectiveStart, effectiveEnd, dateInterval]
   );
 
   // Blocked times for selected date
@@ -234,6 +250,60 @@ export default function AdminZeitplan() {
                   <SelectItem value="60">60 Min</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="border-t pt-4 space-y-4">
+            <Label className="text-base font-semibold">Intervallwechsel ab Stichtag</Label>
+            <p className="text-sm text-muted-foreground">Optional: Ab einem bestimmten Datum ein anderes Intervall verwenden.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Stichtag</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !effectiveChangeDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {effectiveChangeDate ? format(effectiveChangeDate, "dd.MM.yyyy") : "Datum wählen"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={effectiveChangeDate ?? undefined}
+                      onSelect={(d) => setChangeDate(d ?? null)}
+                      locale={de}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {effectiveChangeDate && (
+                  <Button variant="ghost" size="sm" onClick={() => { setChangeDate(null as any); setNewInterval(null); }}>
+                    Stichtag entfernen
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Neues Intervall</Label>
+                <Select
+                  value={effectiveNewInterval ? String(effectiveNewInterval) : ""}
+                  onValueChange={(v) => setNewInterval(Number(v))}
+                  disabled={!effectiveChangeDate}
+                >
+                  <SelectTrigger><SelectValue placeholder="Intervall wählen" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 Min</SelectItem>
+                    <SelectItem value="20">20 Min</SelectItem>
+                    <SelectItem value="30">30 Min</SelectItem>
+                    <SelectItem value="60">60 Min</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
