@@ -1,30 +1,38 @@
 
-# Startdatum und Hinweis zum ersten Auftrag in der Genehmigungs-E-Mail
+
+# Intervallwechsel ab einem bestimmten Datum
 
 ## Uebersicht
 
-In der E-Mail "Ihr Mitarbeiterkonto wurde erstellt" (event_type `vertrag_genehmigt`) werden zwei neue Zeilen nach "Bitte loggen Sie sich ein und unterzeichnen Sie Ihren Arbeitsvertrag." eingefuegt:
+Zwei neue Spalten in der `schedule_settings`-Tabelle ermoeglichen es, ab einem Stichtag (z.B. 02.03.2026) ein anderes Zeitintervall zu verwenden. Vor dem Stichtag gilt das bisherige Intervall, danach das neue.
 
-1. Das Startdatum des Mitarbeiters
-2. Ein Hinweis, dass am Morgen des Startdatums der erste Auftrag im Dashboard bereitsteht
+## Datenbank-Aenderung
 
-## Aenderungen
+Neue Spalten in `schedule_settings`:
+- `new_slot_interval_minutes` (integer, nullable) -- das neue Intervall ab dem Stichtag
+- `interval_change_date` (date, nullable) -- der Stichtag
 
-### 1. Edge Function `supabase/functions/create-employee-account/index.ts`
+## Aenderungen in `src/pages/admin/AdminZeitplan.tsx`
 
-In den `body_lines` (Zeile 175-181) nach der Zeile "Bitte loggen Sie sich ein und unterzeichnen Sie Ihren Arbeitsvertrag." zwei neue Zeilen einfuegen:
+Neue Eingabefelder im Bereich "Allgemeine Zeiteinstellungen":
+- **Datepicker oder Datumsfeld** fuer den Stichtag ("Intervall aendern ab")
+- **Select** fuer das neue Intervall (15 / 20 / 30 / 60 Min)
 
-```
-"Ihr Startdatum ist der 15. Maerz 2026."
-"Am Morgen Ihres Startdatums finden Sie Ihren ersten Auftrag in Ihrem Dashboard."
-```
+Die `generateTimeSlots`-Logik beruecksichtigt beim Blockieren von Slots das ausgewaehlte Kalenderdatum: Liegt das Datum vor dem Stichtag, wird das alte Intervall verwendet; ab dem Stichtag das neue.
 
-Das Datum wird aus `contract.desired_start_date` gelesen und mit deutschem Format dargestellt. Dafuer wird das Datum manuell formatiert (kein date-fns in Deno verfuegbar, daher einfache Formatierung mit deutschem Monatsnamen).
+Beim Speichern werden `new_slot_interval_minutes` und `interval_change_date` mitgespeichert.
 
-### 2. Vorschau-Template `src/pages/admin/AdminEmails.tsx`
+## Aenderungen in `src/pages/Bewerbungsgespraech.tsx`
 
-Das Template fuer `vertrag_genehmigt` (Zeile 137-152) bekommt die gleichen zwei neuen Zeilen in `bodyLines`, damit die Vorschau uebereinstimmt.
+Die oeffentliche Buchungsseite liest ebenfalls die neuen Felder und waehlt das passende Intervall basierend auf dem ausgewaehlten Buchungsdatum.
 
-## Keine Datenbank-Aenderungen
+## Zusammenfassung
 
-Nur Aenderungen in der Edge Function und der Vorschau-Seite.
+| Wo | Was |
+|---|---|
+| Datenbank | 2 neue nullable Spalten in `schedule_settings` |
+| AdminZeitplan.tsx | Neue Eingabefelder + datumabhaengige Slot-Berechnung |
+| Bewerbungsgespraech.tsx | Datumabhaengiges Intervall bei Buchung |
+
+Nach dem Speichern mit Stichtag 02.03.2026 und neuem Intervall 20 Minuten werden alle Termine ab diesem Datum im 20-Minuten-Takt angezeigt, davor weiterhin im bisherigen Takt.
+
