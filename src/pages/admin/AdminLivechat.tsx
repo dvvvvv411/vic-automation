@@ -10,7 +10,8 @@ import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatReal
 import { useChatTyping } from "@/components/chat/useChatTyping";
 import { sendSms } from "@/lib/sendSms";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
-import { MessageCircle, Pencil, Smartphone, Check, Plus, Bell } from "lucide-react";
+import { MessageCircle, Pencil, Smartphone, Check, Plus, Bell, PencilLine, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,9 @@ export default function AdminLivechat() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [active, setActive] = useState<Conversation | null>(null);
   const [search, setSearch] = useState("");
-  const [contractData, setContractData] = useState<{ first_name?: string | null; last_name?: string | null; phone?: string | null }>({});
+  const [contractData, setContractData] = useState<{ first_name?: string | null; last_name?: string | null; phone?: string | null; employment_type?: string | null }>({});
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingMessageText, setEditingMessageText] = useState("");
   const [adminAvatar, setAdminAvatar] = useState<string | null>(null);
   const [adminDisplayName, setAdminDisplayName] = useState("");
   const [editingName, setEditingName] = useState(false);
@@ -132,7 +135,7 @@ export default function AdminLivechat() {
     if (!active) return;
     supabase
       .from("employment_contracts")
-      .select("first_name, last_name, phone, user_id")
+      .select("first_name, last_name, phone, user_id, employment_type")
       .eq("id", active.contract_id)
       .maybeSingle()
       .then(({ data }: any) => {
@@ -353,9 +356,16 @@ export default function AdminLivechat() {
               <>
                 <AvatarUpload avatarUrl={employeeProfile.avatar_url} name={active.first_name} size={36} />
                 <div>
-                  <h2 className="font-semibold text-foreground">
-                    {active.first_name} {active.last_name}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-semibold text-foreground">
+                      {active.first_name} {active.last_name}
+                    </h2>
+                    {contractData.employment_type && (
+                      <Badge variant="secondary" className="text-[10px] px-2 py-0">
+                        {contractData.employment_type}
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">Konversation</p>
                 </div>
               </>
@@ -492,6 +502,16 @@ export default function AdminLivechat() {
                           avatarUrl={msg.sender_role === "user" ? employeeProfile.avatar_url : undefined}
                           senderName={msg.sender_role === "user" ? (employeeProfile.display_name || `${active.first_name} ${active.last_name}`) : undefined}
                           attachmentUrl={msg.attachment_url}
+                          messageId={msg.id}
+                          onEdit={msg.sender_role === "admin" ? (id) => { setEditingMessageId(id); setEditingMessageText(msg.content); } : undefined}
+                          isEditing={editingMessageId === msg.id}
+                          editText={editingMessageId === msg.id ? editingMessageText : undefined}
+                          onEditChange={editingMessageId === msg.id ? setEditingMessageText : undefined}
+                          onEditSave={editingMessageId === msg.id ? async () => {
+                            await supabase.from("chat_messages").update({ content: editingMessageText.trim() } as any).eq("id", msg.id);
+                            setEditingMessageId(null);
+                          } : undefined}
+                          onEditCancel={editingMessageId === msg.id ? () => setEditingMessageId(null) : undefined}
                         />
                       )}
                     </div>

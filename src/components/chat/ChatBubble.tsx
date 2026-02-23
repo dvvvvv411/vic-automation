@@ -2,7 +2,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { AvatarUpload } from "./AvatarUpload";
-import { CalendarCheck, FileText, Download } from "lucide-react";
+import { CalendarCheck, FileText, Download, PencilLine, Check, X } from "lucide-react";
 
 interface ChatBubbleProps {
   content: string;
@@ -12,6 +12,13 @@ interface ChatBubbleProps {
   avatarUrl?: string | null;
   senderName?: string | null;
   attachmentUrl?: string | null;
+  messageId?: string;
+  onEdit?: (messageId: string) => void;
+  isEditing?: boolean;
+  editText?: string;
+  onEditChange?: (text: string) => void;
+  onEditSave?: () => void;
+  onEditCancel?: () => void;
 }
 
 function getFileName(url: string) {
@@ -62,9 +69,9 @@ function AttachmentDisplay({ url, isOwn }: { url: string; isOwn: boolean }) {
   );
 }
 
-export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, senderName, attachmentUrl }: ChatBubbleProps) {
+export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, senderName, attachmentUrl, messageId, onEdit, isEditing, editText, onEditChange, onEditSave, onEditCancel }: ChatBubbleProps) {
   return (
-    <div className={cn("flex w-full mb-3 gap-2", isOwnMessage ? "justify-end" : "justify-start")}>
+    <div className={cn("flex w-full mb-3 gap-2 group", isOwnMessage ? "justify-end" : "justify-start")}>
       {!isOwnMessage && (
         <AvatarUpload avatarUrl={avatarUrl} name={senderName} size={24} className="mt-1" />
       )}
@@ -72,24 +79,58 @@ export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, sender
         {!isOwnMessage && senderName && (
           <span className="text-[11px] text-muted-foreground mb-0.5 ml-1">{senderName}</span>
         )}
-        <div
-          className={cn(
-            "px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm overflow-hidden",
-            isOwnMessage
-              ? "bg-primary text-primary-foreground rounded-br-md"
-              : "bg-muted text-foreground rounded-bl-md"
+        <div className="relative">
+          {onEdit && messageId && !isEditing && (
+            <button
+              onClick={() => onEdit(messageId)}
+              className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-muted"
+              title="Bearbeiten"
+            >
+              <PencilLine className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
           )}
-        >
-          {attachmentUrl && <AttachmentDisplay url={attachmentUrl} isOwn={isOwnMessage} />}
-          {content && <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{content}</p>}
-          <p
+          <div
             className={cn(
-              "text-[10px] mt-1.5 opacity-60",
-              isOwnMessage ? "text-primary-foreground" : "text-muted-foreground"
+              "px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm overflow-hidden",
+              isOwnMessage
+                ? "bg-primary text-primary-foreground rounded-br-md"
+                : "bg-muted text-foreground rounded-bl-md"
             )}
           >
-            {format(new Date(createdAt), "HH:mm")}
-          </p>
+            {attachmentUrl && <AttachmentDisplay url={attachmentUrl} isOwn={isOwnMessage} />}
+            {isEditing ? (
+              <div className="space-y-2">
+                <textarea
+                  value={editText}
+                  onChange={(e) => onEditChange?.(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onEditSave?.(); }
+                    if (e.key === "Escape") onEditCancel?.();
+                  }}
+                  className="w-full bg-transparent border border-primary-foreground/30 rounded-lg px-2 py-1 text-sm resize-none focus:outline-none min-h-[40px]"
+                  autoFocus
+                />
+                <div className="flex gap-1 justify-end">
+                  <button onClick={onEditCancel} className="p-1 rounded hover:bg-primary-foreground/20 transition-colors">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={onEditSave} className="p-1 rounded hover:bg-primary-foreground/20 transition-colors">
+                    <Check className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              content && <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{content}</p>
+            )}
+            <p
+              className={cn(
+                "text-[10px] mt-1.5 opacity-60",
+                isOwnMessage ? "text-primary-foreground" : "text-muted-foreground"
+              )}
+            >
+              {format(new Date(createdAt), "HH:mm")}
+            </p>
+          </div>
         </div>
       </div>
     </div>
