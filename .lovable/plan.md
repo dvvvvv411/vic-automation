@@ -1,49 +1,33 @@
 
-# SMS-Benachrichtigung per Glocken-Button im Livechat
+# Euro-Zeichen bei Praemie im Livechat-Auftragsangebot
 
-## Uebersicht
+## Problem
 
-Im Admin-Livechat-Header wird ein neuer Button mit Glocken-Icon hinzugefuegt. Beim Klick oeffnet sich ein Dialog mit einer vorausgefuellten SMS-Nachricht, die der Admin vor dem Versand bearbeiten kann. Erst nach Bestaetigung im Dialog wird die SMS verschickt.
+Beim Zuweisen eines Auftrags im Livechat wird die Praemie ohne Euro-Zeichen angezeigt (z.B. "Praemie: 25" statt "Praemie: 25 EUR").
 
-## Aenderungen (nur `src/pages/admin/AdminLivechat.tsx`)
+## Aenderungen
 
-### 1. Neuer Import
-
-- `Bell` Icon aus `lucide-react` importieren
-
-### 2. Neue State-Variablen
-
-- `notifySmsDialogOpen` (boolean) – steuert ob der Dialog offen ist
-- `notifySmsText` (string) – der bearbeitbare SMS-Text
-- `notifySmsSending` (boolean) – Ladezustand waehrend des Versands
-
-### 3. Glocken-Button im Header
-
-Neben dem bestehenden "+ Auftrag"-Button wird ein neuer Icon-Button eingefuegt:
+Drei Stellen muessen angepasst werden, alle nutzen das bereits vorhandene Muster aus dem restlichen Projekt:
 
 ```
-[Code] [Check] [Smartphone] [+ Auftrag] [Glocke] [Templates] [Avatar]
+reward + (reward.includes("€") ? "" : " €")
 ```
 
-Der Button ist nur sichtbar, wenn ein Chat aktiv ist UND eine Telefonnummer vorliegt.
+### 1. `src/pages/admin/AdminLivechat.tsx` – Systemnachricht-Text (Zeile 287)
 
-### 4. Dialog mit bearbeitbarer Nachricht
+Vorher: `Prämie: ${order.reward}`
+Nachher: `Prämie: ${order.reward}${order.reward.includes("€") ? "" : " €"}`
 
-- Oeffnet sich beim Klick auf die Glocke
-- Textarea mit vorausgefuelltem Text: `"Sie haben eine neue Nachricht im Livechat. Bitte lesen Sie diese."`
-- Der Admin kann den Text frei bearbeiten
-- "Senden"-Button verschickt die SMS ueber die bestehende `sendSms`-Funktion
-- Der Absendername wird wie bei den anderen SMS-Funktionen aus dem Branding ermittelt
+### 2. `src/pages/admin/AdminLivechat.tsx` – Auftragsliste im Dialog (Zeile 587)
 
-### 5. Versandlogik
+Vorher: `Prämie: {order.reward}`
+Nachher: `Prämie: {order.reward}{order.reward.includes("€") ? "" : " €"}`
 
-Nutzt die bestehende `sendSms`-Funktion mit:
-- `to`: Telefonnummer des Mitarbeiters
-- `text`: Der (ggf. bearbeitete) Text aus dem Dialog
-- `event_type`: `"livechat_benachrichtigung"`
-- `recipient_name`: Name des Mitarbeiters
-- `from`: Branding-Absendername (wie bei Ident-Code SMS)
+### 3. `src/components/chat/ChatBubble.tsx` – Auftrags-Karte (Zeile 129)
+
+Vorher: `Prämie: {metadata.reward}`
+Nachher: `Prämie: {metadata.reward}{String(metadata.reward || "").includes("€") ? "" : " €"}`
 
 ## Keine weiteren Aenderungen
 
-Keine Datenbank-Aenderungen. Nur UI-Erweiterung in einer Datei.
+Nur Textformatierung, keine Logik- oder Datenbank-Aenderungen.
