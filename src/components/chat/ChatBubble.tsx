@@ -126,7 +126,7 @@ export function SystemMessage({ content, metadata, onAcceptOrder }: { content: s
             <span className="text-sm font-medium text-foreground">Neuer Auftrag</span>
           </div>
           <p className="text-sm text-foreground">{metadata.order_title} ({metadata.order_number})</p>
-          <p className="text-xs text-muted-foreground">Prämie: {metadata.reward}</p>
+          <p className="text-xs text-muted-foreground">Prämie: {metadata.reward}{String(metadata.reward || "").includes("€") ? "" : " €"}</p>
           {isAccepted ? (
             <div className="flex items-center gap-1.5 text-xs text-green-600 font-medium pt-1">
               <CalendarCheck className="h-3.5 w-3.5" />
