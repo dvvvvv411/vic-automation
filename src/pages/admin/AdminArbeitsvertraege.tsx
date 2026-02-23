@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
@@ -61,6 +61,41 @@ export default function AdminArbeitsvertraege() {
       return { items, total: count || 0 };
     },
   });
+
+  const sortedItems = useMemo(() => {
+    if (!data?.items) return [];
+    const statusOrder: Record<string, number> = {
+      unterzeichnet: 0,
+      genehmigt: 1,
+      eingereicht: 2,
+    };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return [...data.items].sort((a, b) => {
+      const rankA = statusOrder[a.contract?.status] ?? 3;
+      const rankB = statusOrder[b.contract?.status] ?? 3;
+      if (rankA !== rankB) return rankA - rankB;
+
+      const dateA = a.contract?.desired_start_date
+        ? new Date(a.contract.desired_start_date + "T00:00:00")
+        : null;
+      const dateB = b.contract?.desired_start_date
+        ? new Date(b.contract.desired_start_date + "T00:00:00")
+        : null;
+
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+
+      const futureA = dateA >= today;
+      const futureB = dateB >= today;
+      if (futureA && !futureB) return -1;
+      if (!futureA && futureB) return 1;
+      if (futureA && futureB) return dateA.getTime() - dateB.getTime();
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [data?.items]);
 
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
 
@@ -171,7 +206,7 @@ export default function AdminArbeitsvertraege() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.items.map((item: any) => (
+                  {sortedItems.map((item: any) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
                         {item.applications?.first_name} {item.applications?.last_name}
