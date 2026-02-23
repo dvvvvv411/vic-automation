@@ -10,6 +10,7 @@ export interface ChatMessage {
   created_at: string;
   read: boolean;
   attachment_url?: string | null;
+  metadata?: Record<string, any> | null;
 }
 
 interface UseChatRealtimeOptions {
@@ -63,19 +64,33 @@ export function useChatRealtime({ contractId, onNewMessage }: UseChatRealtimeOpt
           callbackRef.current?.(newMsg);
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "chat_messages",
+          filter: `contract_id=eq.${contractId}`,
+        },
+        (payload) => {
+          const updated = payload.new as ChatMessage;
+          setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+        }
+      )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [contractId]);
 
   const sendMessage = useCallback(
-    async (content: string, senderRole: "admin" | "user" | "system", attachmentUrl?: string | null) => {
+    async (content: string, senderRole: "admin" | "user" | "system", attachmentUrl?: string | null, metadata?: Record<string, any> | null) => {
       if (!contractId || (!content.trim() && !attachmentUrl)) return;
       await supabase.from("chat_messages").insert({
         contract_id: contractId,
         sender_role: senderRole,
         content: content.trim(),
         attachment_url: attachmentUrl ?? null,
+        metadata: metadata ?? null,
       } as any);
 
       // Telegram notification for user messages

@@ -1,5 +1,6 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { MessageCircle, X, Send, Plus, FileText } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,6 +31,7 @@ const isOnline = () => {
 
 export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -174,6 +176,63 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
     }
   };
 
+  const handleAcceptOrder = useCallback(async (metadata: Record<string, any>) => {
+    if (!contractId) return;
+    const orderId = metadata.order_id;
+    const isPlaceholder = metadata.is_placeholder;
+
+    try {
+      // Create order assignment
+      await supabase.from("order_assignments").insert({
+        order_id: orderId,
+        contract_id: contractId,
+        status: "offen",
+      } as any);
+
+      // For non-placeholder orders, auto-book appointment at current time
+      if (!isPlaceholder) {
+        const now = new Date();
+        const appointmentDate = now.toISOString().split("T")[0];
+        // Format time as HH:MM:SS
+        const hours = String(now.getHours()).padStart(2, "0");
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        const appointmentTime = `${hours}:${minutes}:00`;
+
+        await supabase.from("order_appointments").insert({
+          order_id: orderId,
+          contract_id: contractId,
+          appointment_date: appointmentDate,
+          appointment_time: appointmentTime,
+        } as any);
+      }
+
+      // Mark the offer message as accepted by updating metadata
+      // Find the message with this order_offer
+      const { data: offerMsgs } = await supabase
+        .from("chat_messages")
+        .select("id, metadata")
+        .eq("contract_id", contractId)
+        .eq("sender_role", "system")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      const offerMsg = (offerMsgs ?? []).find((m: any) => m.metadata?.type === "order_offer" && m.metadata?.order_id === orderId);
+      if (offerMsg) {
+        await supabase.from("chat_messages").update({
+          metadata: { ...(offerMsg.metadata as any), accepted: true },
+        } as any).eq("id", offerMsg.id);
+      }
+
+      // Send confirmation system message
+      await sendMessage(`✅ Auftrag "${metadata.order_title}" wurde angenommen.`, "system");
+
+      // Navigate to order details
+      navigate(`/mitarbeiter/auftragdetails/${orderId}`);
+    } catch (err) {
+      console.error("Error accepting order:", err);
+    }
+  }, [contractId, sendMessage, navigate]);
+
   if (!contractId) return null;
 
   return (
@@ -238,7 +297,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
                     <div key={msg.id}>
                       {showDate && <DateSeparator date={msg.created_at} />}
                       {msg.sender_role === "system" ? (
-                        <SystemMessage content={msg.content} />
+                        <SystemMessage content={msg.content} metadata={msg.metadata} onAcceptOrder={handleAcceptOrder} />
                       ) : (
                         <ChatBubble
                           content={msg.content}

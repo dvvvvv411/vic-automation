@@ -167,6 +167,7 @@ export type Database = {
           contract_id: string
           created_at: string
           id: string
+          metadata: Json | null
           read: boolean
           sender_role: string
         }
@@ -176,6 +177,7 @@ export type Database = {
           contract_id: string
           created_at?: string
           id?: string
+          metadata?: Json | null
           read?: boolean
           sender_role: string
         }
@@ -185,6 +187,7 @@ export type Database = {
           contract_id?: string
           created_at?: string
           id?: string
+          metadata?: Json | null
           read?: boolean
           sender_role?: string
         }

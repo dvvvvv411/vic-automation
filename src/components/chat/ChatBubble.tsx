@@ -113,7 +113,38 @@ export function DateSeparator({ date }: { date: string }) {
   );
 }
 
-export function SystemMessage({ content }: { content: string }) {
+export function SystemMessage({ content, metadata, onAcceptOrder }: { content: string; metadata?: Record<string, any> | null; onAcceptOrder?: (metadata: Record<string, any>) => void }) {
+  const isOrderOffer = metadata?.type === "order_offer";
+  const isAccepted = metadata?.accepted === true;
+
+  if (isOrderOffer) {
+    return (
+      <div className="flex items-center justify-center my-4">
+        <div className="bg-muted/60 rounded-xl px-5 py-4 max-w-[85%] space-y-2">
+          <div className="flex items-center gap-2">
+            <CalendarCheck className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-sm font-medium text-foreground">Neuer Auftrag</span>
+          </div>
+          <p className="text-sm text-foreground">{metadata.order_title} ({metadata.order_number})</p>
+          <p className="text-xs text-muted-foreground">Prämie: {metadata.reward}</p>
+          {isAccepted ? (
+            <div className="flex items-center gap-1.5 text-xs text-green-600 font-medium pt-1">
+              <CalendarCheck className="h-3.5 w-3.5" />
+              Angenommen
+            </div>
+          ) : onAcceptOrder ? (
+            <button
+              onClick={() => onAcceptOrder(metadata)}
+              className="mt-1 px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
+            >
+              Annehmen
+            </button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center justify-center gap-2 my-4">
       <div className="inline-flex items-center gap-2 bg-muted/60 rounded-full px-4 py-2 max-w-[85%]">
