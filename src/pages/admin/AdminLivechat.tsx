@@ -10,7 +10,7 @@ import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatReal
 import { useChatTyping } from "@/components/chat/useChatTyping";
 import { sendSms } from "@/lib/sendSms";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
-import { MessageCircle, Pencil, Smartphone, Check, Plus } from "lucide-react";
+import { MessageCircle, Pencil, Smartphone, Check, Plus, Bell } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,9 @@ export default function AdminLivechat() {
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
+  const [notifySmsDialogOpen, setNotifySmsDialogOpen] = useState(false);
+  const [notifySmsText, setNotifySmsText] = useState("Sie haben eine neue Nachricht im Livechat. Bitte lesen Sie diese.");
+  const [notifySmsSending, setNotifySmsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { isTyping, draftPreview, sendTyping } = useChatTyping({
@@ -295,6 +298,39 @@ export default function AdminLivechat() {
     toast.success("Auftragsangebot gesendet");
   };
 
+  const handleSendNotifySms = async () => {
+    if (!contractData.phone || !notifySmsText.trim()) return;
+    setNotifySmsSending(true);
+    const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
+    let smsSender: string | undefined;
+    if (active) {
+      const { data: contractFull } = await supabase
+        .from("employment_contracts")
+        .select("applications(branding_id)")
+        .eq("id", active.contract_id)
+        .single();
+      const brandingId = (contractFull as any)?.applications?.branding_id;
+      if (brandingId) {
+        const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
+        smsSender = (branding as any)?.sms_sender_name || undefined;
+      }
+    }
+    const success = await sendSms({
+      to: contractData.phone,
+      text: notifySmsText.trim(),
+      event_type: "livechat_benachrichtigung",
+      recipient_name: name,
+      from: smsSender,
+    });
+    setNotifySmsSending(false);
+    if (success) {
+      toast.success("Benachrichtigungs-SMS gesendet!");
+      setNotifySmsDialogOpen(false);
+    } else {
+      toast.error("SMS-Versand fehlgeschlagen");
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-3.5rem)] flex rounded-2xl overflow-hidden border border-border bg-background shadow-sm">
       {/* Conversation list */}
@@ -370,6 +406,20 @@ export default function AdminLivechat() {
                 >
                   <Plus className="h-4 w-4" />
                   Auftrag
+                </Button>
+              )}
+              {active && contractData.phone && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={() => {
+                    setNotifySmsText("Sie haben eine neue Nachricht im Livechat. Bitte lesen Sie diese.");
+                    setNotifySmsDialogOpen(true);
+                  }}
+                  title="Livechat-Benachrichtigung per SMS"
+                >
+                  <Bell className="h-4 w-4" />
                 </Button>
               )}
               {active && <TemplateManager />}
@@ -544,6 +594,39 @@ export default function AdminLivechat() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOrderDialogOpen(false)}>Abbrechen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Notify SMS Dialog */}
+      <Dialog open={notifySmsDialogOpen} onOpenChange={setNotifySmsDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Livechat-Benachrichtigung
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Empfänger</Label>
+              <p className="text-sm font-medium">{contractData.first_name} {contractData.last_name}</p>
+              <p className="text-xs text-muted-foreground">{contractData.phone}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Nachricht</Label>
+              <Textarea
+                value={notifySmsText}
+                onChange={(e) => setNotifySmsText(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNotifySmsDialogOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleSendNotifySms} disabled={notifySmsSending || !notifySmsText.trim()}>
+              {notifySmsSending ? "Wird gesendet..." : "SMS senden"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
