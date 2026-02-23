@@ -417,6 +417,30 @@ export type Database = {
           },
         ]
       }
+      order_appointment_blocked_slots: {
+        Row: {
+          blocked_date: string
+          blocked_time: string
+          created_at: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_date: string
+          blocked_time: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_date?: string
+          blocked_time?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       order_appointments: {
         Row: {
           appointment_date: string
