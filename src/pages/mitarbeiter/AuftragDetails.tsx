@@ -43,7 +43,7 @@ interface Appointment {
   appointment_time: string;
 }
 
-const TIME_SLOTS = Array.from({ length: 20 }, (_, i) => {
+const TIME_SLOTS = Array.from({ length: 21 }, (_, i) => {
   const hour = Math.floor(i / 2) + 8;
   const min = i % 2 === 0 ? "00" : "30";
   return `${String(hour).padStart(2, "0")}:${min}`;

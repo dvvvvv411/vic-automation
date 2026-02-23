@@ -12,7 +12,7 @@ import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Trash2, Ban, Check } from "lucide-react";
 
-const ORDER_TIME_SLOTS = Array.from({ length: 20 }, (_, i) => {
+const ORDER_TIME_SLOTS = Array.from({ length: 21 }, (_, i) => {
   const hour = Math.floor(i / 2) + 8;
   const min = i % 2 === 0 ? "00" : "30";
   return `${String(hour).padStart(2, "0")}:${min}`;
