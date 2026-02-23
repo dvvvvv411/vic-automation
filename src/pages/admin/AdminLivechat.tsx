@@ -10,7 +10,7 @@ import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatReal
 import { useChatTyping } from "@/components/chat/useChatTyping";
 import { sendSms } from "@/lib/sendSms";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
-import { MessageCircle, Pencil, Smartphone, Check } from "lucide-react";
+import { MessageCircle, Pencil, Smartphone, Check, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,9 @@ export default function AdminLivechat() {
   const [smsSending, setSmsSending] = useState(false);
   const [quickSmsCode, setQuickSmsCode] = useState("");
   const [quickSmsSending, setQuickSmsSending] = useState(false);
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [availableOrders, setAvailableOrders] = useState<any[]>([]);
+  const [orderLoading, setOrderLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { isTyping, draftPreview, sendTyping } = useChatTyping({
@@ -251,6 +254,47 @@ export default function AdminLivechat() {
     }
   };
 
+  const loadAvailableOrders = useCallback(async () => {
+    if (!active) return;
+    setOrderLoading(true);
+    // Get already assigned order IDs for this contract
+    const { data: existing } = await supabase
+      .from("order_assignments")
+      .select("order_id")
+      .eq("contract_id", active.contract_id);
+    const assignedIds = (existing ?? []).map((e: any) => e.order_id);
+
+    // Get all orders
+    const { data: allOrders } = await supabase
+      .from("orders")
+      .select("id, title, order_number, reward, is_placeholder")
+      .order("created_at", { ascending: false });
+
+    setAvailableOrders((allOrders ?? []).filter((o: any) => !assignedIds.includes(o.id)));
+    setOrderLoading(false);
+  }, [active?.contract_id]);
+
+  const handleOpenOrderDialog = () => {
+    loadAvailableOrders();
+    setOrderDialogOpen(true);
+  };
+
+  const handleAssignOrder = async (order: any) => {
+    if (!active) return;
+    const text = `📋 Neuer Auftrag: ${order.title} (${order.order_number}) – Prämie: ${order.reward}`;
+    const metadata = {
+      type: "order_offer",
+      order_id: order.id,
+      order_title: order.title,
+      order_number: order.order_number,
+      reward: order.reward,
+      is_placeholder: order.is_placeholder,
+    };
+    await sendMessage(text, "system", null, metadata);
+    setOrderDialogOpen(false);
+    toast.success("Auftragsangebot gesendet");
+  };
+
   return (
     <div className="h-[calc(100vh-3.5rem)] flex rounded-2xl overflow-hidden border border-border bg-background shadow-sm">
       {/* Conversation list */}
@@ -316,7 +360,19 @@ export default function AdminLivechat() {
                 </Button>
               </>
             )}
-            {active && <TemplateManager />}
+            {active && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 gap-1.5"
+                  onClick={handleOpenOrderDialog}
+                  title="Auftrag zuweisen"
+                >
+                  <Plus className="h-4 w-4" />
+                  Auftrag
+                </Button>
+              )}
+              {active && <TemplateManager />}
             {/* Admin profile popover – always visible */}
             <Popover>
               <PopoverTrigger asChild>
@@ -376,7 +432,7 @@ export default function AdminLivechat() {
                     <div key={msg.id}>
                       {showDate && <DateSeparator date={msg.created_at} />}
                       {msg.sender_role === "system" ? (
-                        <SystemMessage content={msg.content} />
+                        <SystemMessage content={msg.content} metadata={msg.metadata} />
                       ) : (
                         <ChatBubble
                           content={msg.content}
@@ -450,6 +506,44 @@ export default function AdminLivechat() {
             <Button onClick={handleSendSms} disabled={smsSending || !smsCode.trim()}>
               {smsSending ? "Wird gesendet..." : "SMS senden"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Assignment Dialog */}
+      <Dialog open={orderDialogOpen} onOpenChange={setOrderDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Auftrag zuweisen
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto space-y-2 py-2">
+            {orderLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+              </div>
+            ) : availableOrders.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Keine verfügbaren Aufträge</p>
+            ) : (
+              availableOrders.map((order) => (
+                <button
+                  key={order.id}
+                  onClick={() => handleAssignOrder(order)}
+                  className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors space-y-1"
+                >
+                  <p className="text-sm font-medium text-foreground">{order.title}</p>
+                  <p className="text-xs text-muted-foreground">{order.order_number} · Prämie: {order.reward}</p>
+                  {!order.is_placeholder && (
+                    <span className="inline-block text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">Termin wird automatisch gebucht</span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOrderDialogOpen(false)}>Abbrechen</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
