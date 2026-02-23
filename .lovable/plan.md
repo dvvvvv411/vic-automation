@@ -1,46 +1,54 @@
 
-# Badge mit Anstellungsart + Nachricht bearbeiten im Admin Livechat
 
-## 1. Badge mit Anstellungsart im Chat-Header
+# Emoji-Picker im Chat-Eingabefeld
 
-Hinter dem Namen des Mitarbeiters wird ein farbiges Badge mit der Anstellungsart angezeigt (z.B. "Minijob", "Teilzeit", "Vollzeit").
+## Uebersicht
 
-### Aenderungen in `src/pages/admin/AdminLivechat.tsx`:
-- `employment_type` zum Contract-Data-Fetch hinzufuegen (Zeile 135: `select("first_name, last_name, phone, user_id")` erweiternn um `employment_type`)
-- `employment_type` im State-Typ ergaenzen
-- Badge-Komponente aus `@/components/ui/badge` importieren
-- Badge hinter dem Namen im Header einbauen (Zeile 356-360)
+Ein Emoji-Button wird im Eingabebereich des Livechats hinzugefuegt (zwischen Anhang-Button und Textarea). Beim Klick oeffnet sich ein Popover mit einer durchsuchbaren Emoji-Auswahl. Funktioniert fuer Admin und Mitarbeiter gleichermassen, da beide die gleiche `ChatInput`-Komponente nutzen.
 
-## 2. Nachrichten bearbeiten (nur Admin)
+## Technischer Ansatz
 
-Admin kann eigene Nachrichten per Doppelklick oder Kontextmenue bearbeiten. Die Nachricht wird still aktualisiert -- der Mitarbeiter sieht nur den neuen Text, ohne Hinweis auf Aenderung.
+Statt einer externen Library wird eine eigene, leichtgewichtige Emoji-Auswahl gebaut, die die nativen Unicode-Emojis des Betriebssystems nutzt. Die Emojis werden in Kategorien gruppiert (Smileys, Gesten, Herzen, Tiere, Essen, Reisen, Objekte, Symbole) und sind per Suchfeld filterbar.
 
-### Aenderungen in `src/pages/admin/AdminLivechat.tsx`:
-- Neue States: `editingMessageId` (string | null) und `editingMessageText` (string)
-- Beim Hover ueber eine Admin-Nachricht ein kleines Stift-Icon anzeigen
-- Beim Klick auf das Stift-Icon: `editingMessageId` und `editingMessageText` setzen
-- Inline-Edit-Modus: Die Blase wird durch eine Textarea mit Speichern/Abbrechen ersetzt
-- Beim Speichern: `supabase.from("chat_messages").update({ content: newText }).eq("id", msgId)` ausfuehren
-- Die Realtime-Subscription in `useChatRealtime.ts` lauscht bereits auf UPDATE-Events (Zeile 67-79), daher aktualisiert sich die Nachricht automatisch auf beiden Seiten
-- Kein "bearbeitet"-Hinweis, kein Verlauf, keine Benachrichtigung
+## Aenderungen
 
-### Aenderungen in `src/components/chat/ChatBubble.tsx`:
-- Neue optionale Props: `onEdit`, `messageId`, `isEditing`, `editText`, `onEditChange`, `onEditSave`, `onEditCancel`
-- Wenn `onEdit` vorhanden und `isOwnMessage`: Stift-Icon bei Hover einblenden
-- Wenn `isEditing`: Textarea + Buttons statt normalem Text rendern
+### 1. Neue Komponente: `src/components/chat/EmojiPicker.tsx`
 
-### Technische Details
+- Nutzt `Popover` + `PopoverTrigger` + `PopoverContent` aus `@/components/ui/popover`
+- Smiley-Icon (`Smile` aus lucide-react) als Trigger-Button
+- Suchfeld oben im Popover zum Filtern
+- Kategorien als Tabs oder Abschnitte (Smileys, Gesten, Herzen, Tiere, Essen, Reisen, Objekte, Symbole)
+- Jedes Emoji ist ein Button, der beim Klick `onSelect(emoji)` aufruft
+- Statische Emoji-Liste als konstantes Array mit Unicode-Zeichen und Suchbegriffen
+- ScrollArea fuer die Emoji-Liste
+
+### 2. Aenderung: `src/components/chat/ChatInput.tsx`
+
+- Import der neuen `EmojiPicker`-Komponente
+- Emoji-Picker zwischen Anhang-Button und Textarea platzieren
+- `onSelect`-Handler: Fuegt das gewaehlte Emoji an der aktuellen Cursor-Position im Textarea ein (oder am Ende)
+- Textarea-Ref hinzufuegen um Cursor-Position zu tracken
+
+### Layout der Eingabezeile
 
 ```text
-Header-Layout mit Badge:
-[Avatar] [Name] [Badge: Minijob] | [Code-Input] [SMS] [+Auftrag] [Glocke] [Templates] [Profil]
-
-Nachricht bearbeiten:
-  - Hover ueber Admin-Blase -> Stift-Icon erscheint
-  - Klick -> Blase wird zur Textarea
-  - Enter (ohne Shift) oder Speichern-Button -> Update via Supabase
-  - Escape oder Abbrechen -> Zurueck zur normalen Anzeige
-  - Update geschieht leise (kein Toast, kein "bearbeitet"-Label)
+[+Anhang] [Emoji] [____Textarea____] [Senden]
 ```
 
-Keine Datenbank-Aenderungen noetig. Die bestehende RLS-Policy erlaubt Admins bereits Updates auf `chat_messages`.
+### Emoji-Daten (Auszug der Kategorien)
+
+- Smileys: 😀😃😄😁😆🥹😅🤣😂🙂😊😇🥰😍🤩😘😗😚😙🥲😋😛😜🤪😝...
+- Gesten: 👍👎👋🤚✋🖐🏻🤏✌🏻🤞🤟🤘🤙👈👉👆👇☝🏻👏🤝🙏...
+- Herzen: ❤🧡💛💚💙💜🖤🤍🤎💔❤‍🔥💕💞💓💗💖💘💝...
+- Tiere: 🐶🐱🐭🐹🐰🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵...
+- Essen: 🍏🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍...
+- Reisen: 🚗🚕🚙🚌🚎🏎🚓🚑🚒✈🚀🚁⛵🚢🏠...
+- Objekte: 📱💻⌨🖥🖨📷📹🎥📺📻⏰💡🔋🔌...
+- Symbole: ❗❓❕❔‼⁉💯🔥⭐💫✨🎉🎊...
+
+Ca. 200-300 der gaengigsten Emojis, gruppiert und mit deutschen Suchbegriffen versehen.
+
+## Keine Datenbank-Aenderungen
+
+Emojis sind einfache Unicode-Zeichen im Nachrichtentext -- es sind keine Backend-Aenderungen noetig.
+
