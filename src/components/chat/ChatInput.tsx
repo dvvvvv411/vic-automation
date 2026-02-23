@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Send, Plus, X, FileText } from "lucide-react";
 import { TemplateDropdown } from "./TemplateDropdown";
+import { EmojiPicker } from "./EmojiPicker";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
@@ -16,6 +17,7 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleChange = (val: string) => {
     setInput(val);
@@ -62,6 +64,20 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
   };
 
   const isImage = selectedFile && selectedFile.type.startsWith("image/");
+
+  const handleEmojiSelect = (emoji: string) => {
+    const ta = textareaRef.current;
+    const start = ta?.selectionStart ?? input.length;
+    const end = ta?.selectionEnd ?? input.length;
+    const newVal = input.substring(0, start) + emoji + input.substring(end);
+    handleChange(newVal);
+    // restore cursor after emoji
+    requestAnimationFrame(() => {
+      ta?.focus();
+      const pos = start + emoji.length;
+      ta?.setSelectionRange(pos, pos);
+    });
+  };
 
   return (
     <div className="relative border-t border-border p-3">
@@ -114,7 +130,10 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
           onChange={handleFileSelect}
         />
 
+        <EmojiPicker onSelect={handleEmojiSelect} />
+
         <textarea
+          ref={textareaRef}
           value={input}
           onChange={(e) => handleChange(e.target.value)}
           onKeyDown={handleKeyDown}
