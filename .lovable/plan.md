@@ -1,41 +1,46 @@
 
+# Badge mit Anstellungsart + Nachricht bearbeiten im Admin Livechat
 
-# Fix: Mitarbeiter kann Auftrag nicht annehmen (fehlende RLS-Berechtigung)
+## 1. Badge mit Anstellungsart im Chat-Header
 
-## Problem
+Hinter dem Namen des Mitarbeiters wird ein farbiges Badge mit der Anstellungsart angezeigt (z.B. "Minijob", "Teilzeit", "Vollzeit").
 
-Wenn der Mitarbeiter im Livechat auf "Annehmen" klickt, versucht der Code einen Eintrag in `order_assignments` zu erstellen. Die RLS-Policy erlaubt INSERT aber nur fuer Admins. Daher schlaegt die Zuweisung still fehl, waehrend der Termin (`order_appointments`) korrekt erstellt wird (dort hat der User INSERT-Rechte).
+### Aenderungen in `src/pages/admin/AdminLivechat.tsx`:
+- `employment_type` zum Contract-Data-Fetch hinzufuegen (Zeile 135: `select("first_name, last_name, phone, user_id")` erweiternn um `employment_type`)
+- `employment_type` im State-Typ ergaenzen
+- Badge-Komponente aus `@/components/ui/badge` importieren
+- Badge hinter dem Namen im Header einbauen (Zeile 356-360)
 
-## Loesung
+## 2. Nachrichten bearbeiten (nur Admin)
 
-Eine neue RLS-Policy auf `order_assignments` hinzufuegen, die es Mitarbeitern erlaubt, Zuweisungen fuer sich selbst zu erstellen -- aber NUR wenn eine entsprechende Systemnachricht mit `order_offer` Metadata im Chat existiert. So kann sich ein Mitarbeiter nicht beliebig Auftraege zuweisen, sondern nur solche, die ihm vom Admin angeboten wurden.
+Admin kann eigene Nachrichten per Doppelklick oder Kontextmenue bearbeiten. Die Nachricht wird still aktualisiert -- der Mitarbeiter sieht nur den neuen Text, ohne Hinweis auf Aenderung.
 
-### Datenbank-Migration
+### Aenderungen in `src/pages/admin/AdminLivechat.tsx`:
+- Neue States: `editingMessageId` (string | null) und `editingMessageText` (string)
+- Beim Hover ueber eine Admin-Nachricht ein kleines Stift-Icon anzeigen
+- Beim Klick auf das Stift-Icon: `editingMessageId` und `editingMessageText` setzen
+- Inline-Edit-Modus: Die Blase wird durch eine Textarea mit Speichern/Abbrechen ersetzt
+- Beim Speichern: `supabase.from("chat_messages").update({ content: newText }).eq("id", msgId)` ausfuehren
+- Die Realtime-Subscription in `useChatRealtime.ts` lauscht bereits auf UPDATE-Events (Zeile 67-79), daher aktualisiert sich die Nachricht automatisch auf beiden Seiten
+- Kein "bearbeitet"-Hinweis, kein Verlauf, keine Benachrichtigung
 
-```sql
-CREATE POLICY "Users can insert own assignments from chat offers"
-  ON public.order_assignments
-  FOR INSERT
-  WITH CHECK (
-    contract_id IN (
-      SELECT id FROM employment_contracts
-      WHERE user_id = auth.uid()
-    )
-    AND EXISTS (
-      SELECT 1 FROM chat_messages
-      WHERE chat_messages.contract_id = order_assignments.contract_id
-        AND chat_messages.sender_role = 'system'
-        AND (chat_messages.metadata->>'type') = 'order_offer'
-        AND (chat_messages.metadata->>'order_id')::uuid = order_assignments.order_id
-    )
-  );
+### Aenderungen in `src/components/chat/ChatBubble.tsx`:
+- Neue optionale Props: `onEdit`, `messageId`, `isEditing`, `editText`, `onEditChange`, `onEditSave`, `onEditCancel`
+- Wenn `onEdit` vorhanden und `isOwnMessage`: Stift-Icon bei Hover einblenden
+- Wenn `isEditing`: Textarea + Buttons statt normalem Text rendern
+
+### Technische Details
+
+```text
+Header-Layout mit Badge:
+[Avatar] [Name] [Badge: Minijob] | [Code-Input] [SMS] [+Auftrag] [Glocke] [Templates] [Profil]
+
+Nachricht bearbeiten:
+  - Hover ueber Admin-Blase -> Stift-Icon erscheint
+  - Klick -> Blase wird zur Textarea
+  - Enter (ohne Shift) oder Speichern-Button -> Update via Supabase
+  - Escape oder Abbrechen -> Zurueck zur normalen Anzeige
+  - Update geschieht leise (kein Toast, kein "bearbeitet"-Label)
 ```
 
-Dies stellt sicher:
-1. Der Mitarbeiter kann nur Zuweisungen fuer seinen eigenen Vertrag erstellen
-2. Es muss eine passende Systemnachricht mit `order_offer` fuer genau diesen Auftrag existieren (vom Admin gesendet)
-
-### Keine Code-Aenderungen noetig
-
-Die Logik in `ChatWidget.tsx` (`handleAcceptOrder`) ist bereits korrekt implementiert. Sobald die RLS-Policy existiert, funktioniert der gesamte Flow.
-
+Keine Datenbank-Aenderungen noetig. Die bestehende RLS-Policy erlaubt Admins bereits Updates auf `chat_messages`.
