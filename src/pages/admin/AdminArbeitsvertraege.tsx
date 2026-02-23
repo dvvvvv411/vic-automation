@@ -201,7 +201,7 @@ export default function AdminArbeitsvertraege() {
                           : "–"}
                       </TableCell>
                       <TableCell>
-                        {item.contract?.status === "eingereicht" || item.contract?.status === "genehmigt" ? (
+                        {item.contract?.status === "eingereicht" || item.contract?.status === "genehmigt" || item.contract?.status === "unterzeichnet" ? (
                           <Button variant="outline" size="sm" onClick={() => openDetails(item.contract)}>
                             <Eye className="h-4 w-4 mr-1" />
                             Daten ansehen
@@ -316,6 +316,21 @@ export default function AdminArbeitsvertraege() {
           )}
 
           <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const c = selectedContract;
+                if (!c) return;
+                const birthParts = c.birth_date?.split("-");
+                const birthFormatted = birthParts?.length === 3 ? `${birthParts[2]}.${birthParts[1]}.${birthParts[0]}` : (c.birth_date || "–");
+                const address = `${c.street || ""}${c.street ? ", " : ""}${c.zip_code || ""} ${c.city || ""}`.trim() || "–";
+                const text = `Vorname: ${c.first_name || ""} ${c.last_name || ""}\n\nGeburtsdatum: ${birthFormatted}\n\nGeburtsort: ${c.birth_place || "–"}\n\nAdresse: ${address}\n\nFamilienstand: ${c.marital_status || "–"}\n\nStaatsangehörigkeit: ${c.nationality || "–"}`;
+                navigator.clipboard.writeText(text);
+                toast.success("Daten kopiert!");
+              }}
+            >
+              <Copy className="h-4 w-4 mr-1" /> Daten kopieren
+            </Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Schließen</Button>
             {selectedContract?.status === "eingereicht" && (
               <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => openStartDateDialog(selectedContract)}>
