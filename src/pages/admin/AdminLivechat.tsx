@@ -525,7 +525,7 @@ export default function AdminLivechat() {
             {draftPreview && (
               <div className="px-6 py-2 border-t border-border bg-muted/30 flex items-center gap-2">
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground italic truncate">
+                <p className="text-sm text-muted-foreground italic line-clamp-2 break-words overflow-hidden">
                   {active.first_name} schreibt: {draftPreview}
                 </p>
               </div>
