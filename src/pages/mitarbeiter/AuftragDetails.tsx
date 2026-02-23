@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Apple, Play, Target, HelpCircle, Download, Star, CalendarCheck, MessageCircle } from "lucide-react";
@@ -134,16 +135,39 @@ const AuftragDetails = () => {
     ? "Erneut bewerten"
     : "Bewertung starten";
 
+  // Fetch blocked order appointment slots for the selected date
+  const { data: blockedOrderSlots } = useQuery({
+    queryKey: ["order-appointment-blocked-slots", selectedDate ? format(selectedDate, "yyyy-MM-dd") : null],
+    queryFn: async () => {
+      if (!selectedDate) return [];
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const { data, error } = await supabase
+        .from("order_appointment_blocked_slots" as any)
+        .select("blocked_time")
+        .eq("blocked_date", dateStr);
+      if (error) throw error;
+      return (data || []) as unknown as Array<{ blocked_time: string }>;
+    },
+    enabled: !!selectedDate,
+  });
+
   const availableTimeSlots = useMemo(() => {
-    if (!selectedDate) return TIME_SLOTS;
-    if (!isToday(selectedDate)) return TIME_SLOTS;
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    return TIME_SLOTS.filter((time) => {
-      const [h, m] = time.split(":").map(Number);
-      return h * 60 + m > currentMinutes;
-    });
-  }, [selectedDate]);
+    let slots = TIME_SLOTS;
+    if (selectedDate && isToday(selectedDate)) {
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      slots = slots.filter((time) => {
+        const [h, m] = time.split(":").map(Number);
+        return h * 60 + m > currentMinutes;
+      });
+    }
+    // Filter out blocked slots
+    if (blockedOrderSlots && blockedOrderSlots.length > 0) {
+      const blockedSet = new Set(blockedOrderSlots.map((s) => s.blocked_time?.slice(0, 5)));
+      slots = slots.filter((time) => !blockedSet.has(time));
+    }
+    return slots;
+  }, [selectedDate, blockedOrderSlots]);
 
   const handleBookAppointment = async () => {
     if (!selectedDate || !selectedTime || !contract || !order) return;

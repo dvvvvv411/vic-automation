@@ -15,6 +15,7 @@ import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Trash2, Ban, Check, CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import OrderAppointmentBlocker from "@/components/admin/OrderAppointmentBlocker";
 
 const WEEKDAYS = [
   { value: 1, label: "Mo" },
@@ -438,6 +439,9 @@ export default function AdminZeitplan() {
           </CardContent>
         </Card>
       )}
+
+      {/* Order Appointment Blocking */}
+      <OrderAppointmentBlocker />
     </div>
   );
 }
