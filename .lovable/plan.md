@@ -1,33 +1,44 @@
 
 
-# Stefan Hofmann Termin auf 10:40 umstellen
+# Unterzeichnete Vertraege einsehbar machen + Copy-Button
 
 ## Uebersicht
 
-Der Termin von Stefan Hofmann am 04.03.2026 steht aktuell auf 10:30 Uhr. Da ab dem 02.03.2026 das neue 20-Minuten-Intervall gilt, existiert der Slot 10:30 nicht mehr (die Slots sind dann 10:00, 10:20, 10:40, 11:00, ...). Der Termin wird auf 10:40 Uhr umgestellt und der Slot blockiert.
+Zwei Aenderungen an der Seite `/admin/arbeitsvertraege`:
 
-## Aenderungen (direkt in der Datenbank)
+1. Der "Daten ansehen"-Button wird auch fuer Vertraege mit Status "unterzeichnet" angezeigt
+2. Im Detail-Popup wird ein Copy-Button eingefuegt, der die wichtigsten Daten im gewuenschten Format in die Zwischenablage kopiert
 
-### 1. Termin-Uhrzeit aendern
+## Aenderungen (nur `src/pages/admin/AdminArbeitsvertraege.tsx`)
 
-Das `interview_appointments`-Record (ID: `87610176-d3d1-4f45-ad70-6bad59347693`) wird von `10:30:00` auf `10:40:00` aktualisiert:
+### 1. Button auch bei "unterzeichnet" anzeigen
 
-```sql
-UPDATE interview_appointments
-SET appointment_time = '10:40:00'
-WHERE id = '87610176-d3d1-4f45-ad70-6bad59347693';
+Zeile 204: Die Bedingung wird um `"unterzeichnet"` erweitert:
+
+```typescript
+// Vorher
+item.contract?.status === "eingereicht" || item.contract?.status === "genehmigt"
+
+// Nachher
+item.contract?.status === "eingereicht" || item.contract?.status === "genehmigt" || item.contract?.status === "unterzeichnet"
 ```
 
-### 2. Slot blockieren
+### 2. Copy-Button im Popup
 
-Ein neuer Eintrag in `schedule_blocked_slots` fuer den 04.03.2026 um 10:40 wird erstellt, damit kein weiterer Bewerber diesen Slot buchen kann:
+Im DialogFooter (vor dem Schliessen-Button) wird ein neuer Button eingefuegt, der folgende Daten in die Zwischenablage kopiert:
 
-```sql
-INSERT INTO schedule_blocked_slots (blocked_date, blocked_time, reason)
-VALUES ('2026-03-04', '10:40:00', 'Bewerbungsgespräch Stefan Hofmann');
+```
+Vorname: Max Mustermann
+Geburtsdatum: 22.02.1988
+Geburtsort: Essen
+Adresse: Musterstraße 1, 12345 Musterstadt
+Familienstand: ledig
+Staatsangehörigkeit: deutsch
 ```
 
-## Keine Code-Aenderungen
+Das Geburtsdatum wird dabei ins Format TT.MM.JJJJ umgewandelt. Die Adresse wird aus Strasse, PLZ und Stadt zusammengesetzt.
 
-Nur zwei SQL-Statements in der Datenbank.
+## Keine weiteren Aenderungen
+
+Keine Datenbank-Aenderungen, nur UI-Anpassungen in einer Datei.
 
