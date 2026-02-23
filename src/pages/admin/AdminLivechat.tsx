@@ -284,7 +284,7 @@ export default function AdminLivechat() {
 
   const handleAssignOrder = async (order: any) => {
     if (!active) return;
-    const text = `📋 Neuer Auftrag: ${order.title} (${order.order_number}) – Prämie: ${order.reward}`;
+    const text = `📋 Neuer Auftrag: ${order.title} (${order.order_number}) – Prämie: ${order.reward}${order.reward.includes("€") ? "" : " €"}`;
     const metadata = {
       type: "order_offer",
       order_id: order.id,
@@ -584,7 +584,7 @@ export default function AdminLivechat() {
                   className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors space-y-1"
                 >
                   <p className="text-sm font-medium text-foreground">{order.title}</p>
-                  <p className="text-xs text-muted-foreground">{order.order_number} · Prämie: {order.reward}</p>
+                  <p className="text-xs text-muted-foreground">{order.order_number} · Prämie: {order.reward}{order.reward.includes("€") ? "" : " €"}</p>
                   {!order.is_placeholder && (
                     <span className="inline-block text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">Termin wird automatisch gebucht</span>
                   )}
