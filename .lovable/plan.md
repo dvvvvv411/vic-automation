@@ -1,82 +1,49 @@
 
-
-# Auftrag direkt im Livechat zuweisen
+# SMS-Benachrichtigung per Glocken-Button im Livechat
 
 ## Uebersicht
 
-Im Admin-Livechat wird ein "+ Auftrag"-Button im Header angezeigt, sobald ein Chat aktiv ist. Ueber ein Popup kann der Admin einen noch nicht zugewiesenen Auftrag auswaehlen. Dem Mitarbeiter wird eine interaktive Systemnachricht gesendet, ueber die er den Auftrag annehmen kann. Bei Nicht-Platzhalter-Auftraegen wird der Termin automatisch auf den aktuellen Zeitpunkt gebucht.
+Im Admin-Livechat-Header wird ein neuer Button mit Glocken-Icon hinzugefuegt. Beim Klick oeffnet sich ein Dialog mit einer vorausgefuellten SMS-Nachricht, die der Admin vor dem Versand bearbeiten kann. Erst nach Bestaetigung im Dialog wird die SMS verschickt.
 
-## Ablauf
+## Aenderungen (nur `src/pages/admin/AdminLivechat.tsx`)
 
-1. Admin klickt "+ Auftrag" im Chat-Header
-2. Popup zeigt alle Auftraege, die dem Mitarbeiter NOCH NICHT zugewiesen sind
-3. Admin waehlt einen Auftrag aus und bestaetigt
-4. Eine Systemnachricht wird in den Chat eingefuegt mit Auftragsinfos
-5. Auf der Mitarbeiter-Seite wird die Systemnachricht mit einem "Annehmen"-Button dargestellt
-6. Mitarbeiter klickt "Annehmen":
-   - `order_assignment` wird erstellt (Status "offen")
-   - Bei Nicht-Platzhalter-Auftraegen: `order_appointment` wird automatisch mit aktuellem Datum/Uhrzeit erstellt
-   - Mitarbeiter wird zu `/mitarbeiter/auftragdetails/{order_id}` navigiert
-   - Livechat bleibt geoeffnet
-7. Bewertung wird NICHT automatisch freigeschaltet (wie gewuenscht manuell durch Admin)
+### 1. Neuer Import
 
-## Technische Details
+- `Bell` Icon aus `lucide-react` importieren
 
-### 1. Datenbank: Neue Spalte `metadata` in `chat_messages`
+### 2. Neue State-Variablen
 
-```sql
-ALTER TABLE public.chat_messages
-  ADD COLUMN metadata jsonb DEFAULT NULL;
+- `notifySmsDialogOpen` (boolean) – steuert ob der Dialog offen ist
+- `notifySmsText` (string) – der bearbeitbare SMS-Text
+- `notifySmsSending` (boolean) – Ladezustand waehrend des Versands
+
+### 3. Glocken-Button im Header
+
+Neben dem bestehenden "+ Auftrag"-Button wird ein neuer Icon-Button eingefuegt:
+
+```
+[Code] [Check] [Smartphone] [+ Auftrag] [Glocke] [Templates] [Avatar]
 ```
 
-Dies ermoeglicht das Speichern von strukturierten Daten in Systemnachrichten, z.B.:
+Der Button ist nur sichtbar, wenn ein Chat aktiv ist UND eine Telefonnummer vorliegt.
 
-```json
-{
-  "type": "order_offer",
-  "order_id": "uuid",
-  "order_title": "App-Test XY",
-  "order_number": "A-001",
-  "reward": "25€",
-  "is_placeholder": false
-}
-```
+### 4. Dialog mit bearbeitbarer Nachricht
 
-### 2. Admin-Livechat (`src/pages/admin/AdminLivechat.tsx`)
+- Oeffnet sich beim Klick auf die Glocke
+- Textarea mit vorausgefuelltem Text: `"Sie haben eine neue Nachricht im Livechat. Bitte lesen Sie diese."`
+- Der Admin kann den Text frei bearbeiten
+- "Senden"-Button verschickt die SMS ueber die bestehende `sendSms`-Funktion
+- Der Absendername wird wie bei den anderen SMS-Funktionen aus dem Branding ermittelt
 
-- Neuer "+ Auftrag"-Button im Header (neben den SMS-Buttons), nur sichtbar wenn ein Chat aktiv ist
-- Klick oeffnet ein Dialog mit einer Liste aller Auftraege, die dem aktuellen Mitarbeiter (contract_id) noch nicht zugewiesen sind
-- Nach Auswahl wird eine Systemnachricht mit metadata `type: "order_offer"` in den Chat eingefuegt
+### 5. Versandlogik
 
-### 3. ChatMessage-Typ erweitern (`src/components/chat/useChatRealtime.ts`)
+Nutzt die bestehende `sendSms`-Funktion mit:
+- `to`: Telefonnummer des Mitarbeiters
+- `text`: Der (ggf. bearbeitete) Text aus dem Dialog
+- `event_type`: `"livechat_benachrichtigung"`
+- `recipient_name`: Name des Mitarbeiters
+- `from`: Branding-Absendername (wie bei Ident-Code SMS)
 
-- `metadata` Feld zum `ChatMessage` Interface hinzufuegen (optional, jsonb)
+## Keine weiteren Aenderungen
 
-### 4. SystemMessage erweitern (`src/components/chat/ChatBubble.tsx`)
-
-- Neue Variante der `SystemMessage`-Komponente, die bei vorhandenem `metadata.type === "order_offer"` eine Auftrags-Karte mit "Annehmen"-Button rendert
-- Der Button ist nur auf der Mitarbeiter-Seite (ChatWidget) aktiv
-- Nach Annahme wird der Button durch "Angenommen" ersetzt
-
-### 5. ChatWidget - Annahme-Logik (`src/components/chat/ChatWidget.tsx`)
-
-- Wenn Mitarbeiter auf "Annehmen" klickt:
-  1. `order_assignment` INSERT mit `order_id` und `contract_id`
-  2. Falls `is_placeholder === false`: `order_appointment` INSERT mit aktuellem Datum und aktueller Uhrzeit
-  3. Systemnachricht senden: "Auftrag angenommen"
-  4. Navigation zu `/mitarbeiter/auftragdetails/{order_id}`
-
-### 6. Mitarbeiter-Auftragsdetails (`src/pages/mitarbeiter/AuftragDetails.tsx`)
-
-- Keine Aenderung noetig: Der Auftrag wird bereits korrekt angezeigt, wenn eine Zuweisung und ggf. ein Termin existieren
-
-## Zusammenfassung
-
-| Wo | Was |
-|---|---|
-| Datenbank | Neue nullable `metadata` jsonb-Spalte in `chat_messages` |
-| AdminLivechat.tsx | "+ Auftrag"-Button + Auftrags-Auswahl-Dialog |
-| useChatRealtime.ts | `metadata` Feld im ChatMessage Interface |
-| ChatBubble.tsx | Interaktive SystemMessage mit Annehmen-Button |
-| ChatWidget.tsx | Annahme-Logik (Assignment + Appointment + Navigation) |
-
+Keine Datenbank-Aenderungen. Nur UI-Erweiterung in einer Datei.
