@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
@@ -6,17 +6,18 @@ import { sendSms } from "@/lib/sendSms";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Search } from "lucide-react";
 
 interface AssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "order" | "contract";
-  /** The id of the order (mode=order) or contract (mode=contract) */
   sourceId: string;
   sourceLabel: string;
 }
@@ -24,6 +25,10 @@ interface AssignmentDialogProps {
 export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, sourceLabel }: AssignmentDialogProps) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+
+  // Reset search when dialog opens/closes
+  useEffect(() => { setSearch(""); }, [open]);
 
   // Load existing assignments
   const { data: existing, isLoading: loadingExisting } = useQuery({
@@ -49,7 +54,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
         const { data, error } = await supabase
           .from("employment_contracts")
           .select("id, first_name, last_name, email")
-          .eq("status", "genehmigt");
+          .eq("status", "unterzeichnet");
         if (error) throw error;
         return (data ?? []).map((c) => ({
           id: c.id,
@@ -59,12 +64,12 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
       } else {
         const { data, error } = await supabase
           .from("orders")
-          .select("id, order_number, title");
+          .select("id, order_number, title, provider");
         if (error) throw error;
         return (data ?? []).map((o) => ({
           id: o.id,
           label: `${o.order_number} – ${o.title}`,
-          sublabel: "",
+          sublabel: o.provider ?? "",
         }));
       }
     },
@@ -78,21 +83,28 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
     }
   }, [existing, mode]);
 
+  // Filter items by search
+  const filteredItems = useMemo(() => {
+    if (!items) return [];
+    if (!search.trim()) return items;
+    const term = search.toLowerCase().trim();
+    return items.filter((item) =>
+      item.label.toLowerCase().includes(term) || item.sublabel.toLowerCase().includes(term)
+    );
+  }, [items, search]);
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const col = mode === "order" ? "order_id" : "contract_id";
-      // Determine newly added items
       const existingIds = new Set(existing?.map((a) => (mode === "order" ? a.contract_id : a.order_id)) ?? []);
       const newlyAdded = Array.from(selected).filter((id) => !existingIds.has(id));
 
-      // Delete old
       const { error: delErr } = await supabase
         .from("order_assignments")
         .delete()
         .eq(col, sourceId);
       if (delErr) throw delErr;
 
-      // Insert new
       if (selected.size > 0) {
         const rows = Array.from(selected).map((targetId) =>
           mode === "order"
@@ -107,20 +119,17 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
 
       // Send emails for newly assigned employees
       if (mode === "order" && newlyAdded.length > 0) {
-        // Get order info
         const { data: order } = await supabase
           .from("orders")
           .select("title, order_number, reward")
           .eq("id", sourceId)
           .single();
 
-        // Get employee info
         const { data: contracts } = await supabase
           .from("employment_contracts")
           .select("id, email, first_name, last_name, phone, applications(branding_id)")
           .in("id", newlyAdded);
 
-        // Load SMS template
         const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "auftrag_zugewiesen").single();
 
         for (const c of contracts ?? []) {
@@ -144,13 +153,11 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
               metadata: { order_id: sourceId, contract_id: c.id },
             });
           }
-          // SMS
           if (c.phone) {
             const name = `${c.first_name || ""} ${c.last_name || ""}`.trim();
             const smsText = (tpl as any)?.message
               ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", order?.title || "")
               : `Hallo ${name}, Ihnen wurde ein neuer Auftrag zugewiesen: ${order?.title || ""}`;
-            // Get branding sms_sender_name
             let smsSender: string | undefined;
             const brandingId = (c as any)?.applications?.branding_id;
             if (brandingId) {
@@ -198,30 +205,45 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           <div className="py-8 text-center text-muted-foreground">Laden...</div>
         ) : !items?.length ? (
           <div className="py-8 text-center text-muted-foreground">
-            {mode === "order" ? "Keine genehmigten Mitarbeiter vorhanden." : "Keine Aufträge vorhanden."}
+            {mode === "order" ? "Keine unterzeichneten Mitarbeiter vorhanden." : "Keine Aufträge vorhanden."}
           </div>
         ) : (
-          <ScrollArea className="max-h-[50vh]">
-            <div className="space-y-2 pr-3">
-              {items.map((item) => (
-                <label
-                  key={item.id}
-                  className="flex items-center gap-3 rounded-md border border-border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                >
-                  <Checkbox
-                    checked={selected.has(item.id)}
-                    onCheckedChange={() => toggle(item.id)}
-                  />
-                  <div className="min-w-0">
-                    <div className="font-medium text-sm truncate">{item.label}</div>
-                    {item.sublabel && (
-                      <div className="text-xs text-muted-foreground truncate">{item.sublabel}</div>
-                    )}
-                  </div>
-                </label>
-              ))}
+          <>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={mode === "order" ? "Name oder E-Mail suchen..." : "Auftragsnr., Titel oder Anbieter suchen..."}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
             </div>
-          </ScrollArea>
+            <ScrollArea className="max-h-[50vh]">
+              <div className="space-y-2 pr-3">
+                {filteredItems.length === 0 ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground">Keine Ergebnisse für „{search}"</div>
+                ) : (
+                  filteredItems.map((item) => (
+                    <label
+                      key={item.id}
+                      className="flex items-center gap-3 rounded-md border border-border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                    >
+                      <Checkbox
+                        checked={selected.has(item.id)}
+                        onCheckedChange={() => toggle(item.id)}
+                      />
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm truncate">{item.label}</div>
+                        {item.sublabel && (
+                          <div className="text-xs text-muted-foreground truncate">{item.sublabel}</div>
+                        )}
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </>
         )}
 
         <DialogFooter>
