@@ -1,3 +1,4 @@
+import { useRef, useEffect } from "react";
 import { format, isToday, isYesterday } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -97,6 +98,61 @@ function AttachmentDisplay({ url, isOwn }: { url: string; isOwn: boolean }) {
   );
 }
 
+function EditTextarea({ editText, onEditChange, onEditSave, onEditCancel }: {
+  editText?: string;
+  onEditChange?: (text: string) => void;
+  onEditSave?: () => void;
+  onEditCancel?: () => void;
+}) {
+  const editRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const ta = editRef.current;
+    if (ta) {
+      ta.style.height = "auto";
+      ta.style.height = `${ta.scrollHeight}px`;
+      // cursor to end
+      const len = ta.value.length;
+      ta.setSelectionRange(len, len);
+    }
+  }, []);
+
+  const handleEditInput = (val: string) => {
+    onEditChange?.(val);
+    requestAnimationFrame(() => {
+      const ta = editRef.current;
+      if (ta) {
+        ta.style.height = "auto";
+        ta.style.height = `${ta.scrollHeight}px`;
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-2">
+      <textarea
+        ref={editRef}
+        value={editText}
+        onChange={(e) => handleEditInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onEditSave?.(); }
+          if (e.key === "Escape") onEditCancel?.();
+        }}
+        className="w-full bg-transparent border border-primary-foreground/30 rounded-lg px-2 py-1 text-sm resize-none focus:outline-none min-h-[40px]"
+        autoFocus
+      />
+      <div className="flex gap-1 justify-end">
+        <button onClick={onEditCancel} className="p-1 rounded hover:bg-primary-foreground/20 transition-colors">
+          <X className="h-3.5 w-3.5" />
+        </button>
+        <button onClick={onEditSave} className="p-1 rounded hover:bg-primary-foreground/20 transition-colors">
+          <Check className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, senderName, attachmentUrl, messageId, onEdit, isEditing, editText, onEditChange, onEditSave, onEditCancel }: ChatBubbleProps) {
   return (
     <div className={cn("flex w-full mb-3 gap-2 group", isOwnMessage ? "justify-end" : "justify-start")}>
@@ -127,26 +183,12 @@ export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, sender
           >
             {attachmentUrl && <AttachmentDisplay url={attachmentUrl} isOwn={isOwnMessage} />}
             {isEditing ? (
-              <div className="space-y-2">
-                <textarea
-                  value={editText}
-                  onChange={(e) => onEditChange?.(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onEditSave?.(); }
-                    if (e.key === "Escape") onEditCancel?.();
-                  }}
-                  className="w-full bg-transparent border border-primary-foreground/30 rounded-lg px-2 py-1 text-sm resize-none focus:outline-none min-h-[40px]"
-                  autoFocus
-                />
-                <div className="flex gap-1 justify-end">
-                  <button onClick={onEditCancel} className="p-1 rounded hover:bg-primary-foreground/20 transition-colors">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                  <button onClick={onEditSave} className="p-1 rounded hover:bg-primary-foreground/20 transition-colors">
-                    <Check className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
+              <EditTextarea
+                editText={editText}
+                onEditChange={onEditChange}
+                onEditSave={onEditSave}
+                onEditCancel={onEditCancel}
+              />
             ) : (
               content && <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{linkifyContent(content, isOwnMessage)}</p>
             )}
