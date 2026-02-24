@@ -1,36 +1,25 @@
 
+# Links im Chat anklickbar machen
 
-# Yvonnes Auftraege korrigieren und Admin-Buttons absichern
+## Was wird geaendert
 
-## Was ist passiert?
+**Datei: `src/components/chat/ChatBubble.tsx`**
 
-Bei Felix hat das Status-Update auf "in_pruefung" beim Absenden der Bewertung funktioniert. Bei Yvonne ist es still fehlgeschlagen (vermutlich ein Timing- oder RLS-Problem), und der Code hat den Fehler komplett ignoriert. Dadurch blieben Yvonnes Assignments auf "offen", und die Genehmigung konnte nicht richtig greifen.
+Aktuell wird der Nachrichtentext einfach als Plain Text in einem `<p>`-Tag gerendert (Zeile 117). URLs werden nicht erkannt und sind nicht anklickbar.
 
-## Aenderungen
+## Loesung
 
-### 1. SQL-Migration: Yvonnes Auftraege auf "erfolgreich" setzen
+Eine Hilfsfunktion `renderMessageContent` wird erstellt, die den Text nach URLs durchsucht (per Regex) und diese als `<a>`-Tags mit `target="_blank"` und `rel="noopener noreferrer"` rendert. Der Rest des Texts bleibt normaler Text.
 
-Die beiden bereits genehmigten Auftraege werden direkt auf "erfolgreich" gesetzt. Das Guthaben (95 EUR) ist bereits korrekt.
+### Technische Details
 
-```sql
-UPDATE order_assignments
-SET status = 'erfolgreich'
-WHERE contract_id = '892e6fda-0dbb-4ed5-a7b3-0b8b5315c2f8'
-  AND order_id IN (
-    'a4445b57-979a-4272-bf51-5affdf430f89',
-    'c47dcf68-4220-41fe-95ea-8e38e597d85b'
-  )
-  AND status = 'offen';
-```
+1. **Neue Funktion `linkifyContent`** in `ChatBubble.tsx`:
+   - Regex erkennt URLs (http/https und www.)
+   - Gibt ein Array aus Text-Strings und React `<a>`-Elementen zurueck
+   - Links bekommen `target="_blank"`, `rel="noopener noreferrer"` und ein dezentes Underline-Styling
 
-### 2. Admin-Bewertungsseite: Buttons nicht nur bei "in_pruefung" anzeigen
+2. **Zeile 117 aendern**: Statt `{content}` wird `{linkifyContent(content)}` verwendet, damit URLs automatisch als anklickbare Links dargestellt werden
 
-**Datei: `src/pages/admin/AdminBewertungen.tsx`**
+3. **Styling**: Links erhalten `underline` und bei eigenen Nachrichten (primary background) eine passende helle Farbe, bei fremden Nachrichten die Standard-Link-Farbe
 
-Die Genehmigen/Ablehnen-Buttons werden aktuell nur bei Status "in_pruefung" angezeigt. Das wird geaendert: Buttons erscheinen immer, solange der Status weder "erfolgreich" noch "fehlgeschlagen" ist. So funktioniert die Genehmigung auch wenn das Status-Update beim Absenden mal fehlschlagen sollte.
-
-- **Zeile 319**: `g.assignment_status === "in_pruefung"` aendern zu `!["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status)`
-- **Zeile 375**: `selected?.assignment_status === "in_pruefung"` aendern zu `selected && !["erfolgreich", "fehlgeschlagen"].includes(selected.assignment_status)`
-
-Keine neuen Dateien, keine neuen Abhaengigkeiten. Reviews bleiben unangetastet.
-
+Keine neuen Abhaengigkeiten noetig -- reine String-Verarbeitung mit React-Elementen.
