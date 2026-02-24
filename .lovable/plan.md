@@ -1,22 +1,21 @@
 
-# Eingabefeld automatisch vergroessern + Bearbeitungsfeld fuer vollen Text
+# Dropdown-Problem auf Mobilgeraeten beheben (Familienstand & Art der Beschaeftigung)
 
-## Was wird geaendert
+## Problem
 
-### 1. ChatInput: Textarea waechst automatisch mit dem Text
+Die Select-Dropdowns fuer "Familienstand" und "Art der Beschaeftigung" auf der `/arbeitsvertrag/:id`-Seite zeigen auf Mobilgeraeten nur einen weissen Bildschirm an. 
 
-**Datei: `src/components/chat/ChatInput.tsx`**
+**Ursache:** In der `SelectContent`-Komponente (`src/components/ui/select.tsx`) wird die Viewport-Hoehe auf `h-[var(--radix-select-trigger-height)]` gesetzt. Das beschraenkt die Hoehe des Dropdown-Inhalts auf die Hoehe des Trigger-Buttons (ca. 40px), wodurch die Eintraege nicht sichtbar sind -- man sieht nur weissen Hintergrund.
 
-- Ein `useEffect` (oder Handler in `handleChange`) wird hinzugefuegt, der bei jeder Eingabe die Hoehe der Textarea automatisch anpasst: `textarea.style.height = "auto"` gefolgt von `textarea.style.height = textarea.scrollHeight + "px"`
-- `max-h-[100px]` wird auf `max-h-[200px]` erhoeht (oder ganz entfernt), damit lange Nachrichten vollstaendig sichtbar sind
-- Die Textarea bleibt weiterhin per Enter abschickbar (Shift+Enter fuer Zeilenumbruch)
+## Loesung
 
-### 2. ChatBubble: Bearbeitungs-Textarea zeigt den vollen Text
+**Datei: `src/components/ui/select.tsx`, Zeile 82**
 
-**Datei: `src/components/chat/ChatBubble.tsx`**
+Die CSS-Klasse `h-[var(--radix-select-trigger-height)]` wird zu `max-h-[var(--radix-select-content-available-height)]` geaendert. So wird der Viewport nicht auf die Trigger-Hoehe beschraenkt, sondern nutzt den verfuegbaren Platz.
 
-- Die Edit-Textarea (Zeile 131-139) bekommt dieselbe Auto-Resize-Logik: ein `ref` mit einem Effekt, der beim Oeffnen und bei jeder Aenderung die Hoehe an den Inhalt anpasst
-- `min-h-[40px]` bleibt, aber kein festes `max-h` -- der gesamte Nachrichtentext ist sofort sichtbar wenn man auf Bearbeiten klickt
-- `autoFocus` bleibt bestehen, Cursor wird ans Ende gesetzt
+```text
+Vorher:  h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]
+Nachher: w-full min-w-[var(--radix-select-trigger-width)]
+```
 
-Keine neuen Dateien oder Abhaengigkeiten. Zwei kleine Aenderungen in bestehenden Dateien.
+Das entfernt die fehlerhafte Hoehenbeschraenkung und laesst das Dropdown seinen Inhalt normal anzeigen. Keine neuen Dateien oder Abhaengigkeiten noetig.
