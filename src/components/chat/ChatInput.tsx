@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Send, Plus, X, FileText } from "lucide-react";
 import { TemplateDropdown } from "./TemplateDropdown";
 import { EmojiPicker } from "./EmojiPicker";
@@ -18,6 +18,18 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const resizeTextarea = () => {
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.style.height = "auto";
+      ta.style.height = `${ta.scrollHeight}px`;
+    }
+  };
+
+  useEffect(() => {
+    resizeTextarea();
+  }, [input]);
 
   const handleChange = (val: string) => {
     setInput(val);
@@ -138,7 +150,7 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
           onChange={(e) => handleChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={showTemplates ? "Nachricht oder !template..." : "Nachricht schreiben..."}
-          className="flex-1 resize-none rounded-xl border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[40px] max-h-[100px]"
+          className="flex-1 resize-none rounded-xl border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[40px] max-h-[200px] overflow-y-auto"
           rows={1}
         />
         <button
