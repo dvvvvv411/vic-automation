@@ -316,7 +316,7 @@ const AdminBewertungen = () => {
                         <Button variant="outline" size="sm" onClick={() => setSelected(g)}>
                           Details
                         </Button>
-                        {g.assignment_status === "in_pruefung" && (
+                        {!["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status) && (
                           <>
                             <Button
                               size="sm"
@@ -372,7 +372,7 @@ const AdminBewertungen = () => {
               </div>
             ))}
           </div>
-          {selected?.assignment_status === "in_pruefung" && (
+          {selected && !["erfolgreich", "fehlgeschlagen"].includes(selected.assignment_status) && (
             <>
               <Separator className="my-2" />
               <div className="flex gap-2 justify-end">
