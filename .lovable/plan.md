@@ -1,40 +1,39 @@
 
 
-# Mobile-Optimierung der Vertragsunterzeichnung
+# Suchleiste fuer Bewerbungsgespraeche
 
-## Probleme
+## Uebersicht
 
-1. PDF ist auf Mobile nicht vollstaendig lesbar
-2. "Vertrag unterschreiben"-Button ist unter dem PDF und nicht erreichbar
-3. Kein Download-Button fuer das ununterschriebene PDF
+Eine Suchleiste wird auf der Seite `/admin/bewerbungsgespraeche` hinzugefuegt, mit der Bewerbernamen gefiltert werden koennen. Die Suche filtert clientseitig ueber die bereits geladenen Daten.
 
-## Aenderungen (nur Mobile, Desktop bleibt identisch)
+## Aenderung
 
-**Datei: `src/components/mitarbeiter/ContractSigningView.tsx`**
+**Datei: `src/pages/admin/AdminBewerbungsgespraeche.tsx`**
 
-### 1. Buttons ueber das PDF verschieben (nur Mobile)
+1. **Neuer State**: `const [search, setSearch] = useState("")`
 
-Zwei Button-Bereiche:
-- **Mobile** (`md:hidden`): Buttons werden **oberhalb** des PDF-Viewers angezeigt
-- **Desktop** (`hidden md:flex`): Button bleibt **unterhalb** des PDF-Viewers wie bisher
+2. **Suchleiste**: Ein `Input`-Feld mit Such-Icon wird zwischen den Filter-Buttons und der Tabelle eingefuegt (aehnlich wie in `ConversationList.tsx`).
 
-### 2. PDF-Hoehe auf Mobile reduzieren
+3. **Client-seitige Filterung**: Nach dem Laden der Daten werden die `items` zusaetzlich nach dem eingegebenen Namen gefiltert:
 
-Statt inline `height: 65vh` werden responsive Tailwind-Klassen verwendet: `h-[50vh] md:h-[65vh]`, damit auf Mobile mehr Platz bleibt und der Content scrollbar ist.
-
-### 3. Dezenter Download-Button (nur Mobile)
-
-Ein kleiner, zurueckhaltender Button (variant `ghost` oder `outline`, klein) mit Download-Icon wird nur auf Mobile ueber dem PDF angezeigt. Er oeffnet die PDF-URL in einem neuen Tab zum vollstaendigen Lesen.
-
-### Layout nach Aenderung
-
-```text
-Mobile:                              Desktop (unveraendert):
-[Icon + Titel + Text]               [Icon + Titel + Text]
-[Vertrag unterschreiben]  (md:hidden) [PDF Viewer - 65vh]
-[Vertrag herunterladen]   (md:hidden) [Vertrag unterschreiben]
-[PDF Viewer - 50vh]
+```typescript
+const filteredItems = data.items.filter((item) => {
+  if (!search.trim()) return true;
+  const name = `${item.applications?.first_name ?? ""} ${item.applications?.last_name ?? ""}`.toLowerCase();
+  return name.includes(search.toLowerCase().trim());
+});
 ```
 
-Keine neuen Dateien, keine neuen Abhaengigkeiten. Nur Tailwind-responsive-Klassen und ein zusaetzlicher `<a>`/`<Button>` fuer den Download.
+4. **Tabelle**: `filteredItems` statt `data.items` in der Tabelle und fuer die Leer-Anzeige verwenden.
+
+### Layout
+
+```text
+[Titel + Beschreibung]
+[Vergangene Termine] [Zukuenftige Termine]
+[Suche Icon | Name suchen...          ]    <-- NEU
+[Tabelle]
+```
+
+Keine neuen Abhaengigkeiten. Import von `Input` und `Search`-Icon wird hinzugefuegt.
 
