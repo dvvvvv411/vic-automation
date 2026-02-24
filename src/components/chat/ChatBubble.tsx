@@ -37,6 +37,34 @@ function isImageUrl(url: string) {
   return /\.(jpg|jpeg|png|webp|gif|bmp|svg)(\?.*)?$/i.test(url);
 }
 
+function linkifyContent(text: string, isOwn: boolean) {
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    if (urlRegex.test(part)) {
+      const href = part.startsWith("www.") ? `https://${part}` : part;
+      return (
+        <a
+          key={i}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "underline break-all",
+            isOwn ? "text-primary-foreground/90 hover:text-primary-foreground" : "text-primary hover:text-primary/80"
+          )}
+        >
+          {part}
+        </a>
+      );
+    }
+    // Reset regex lastIndex since we reuse it
+    urlRegex.lastIndex = 0;
+    return part;
+  });
+}
+
 function AttachmentDisplay({ url, isOwn }: { url: string; isOwn: boolean }) {
   const fileName = getFileName(url);
 
@@ -120,7 +148,7 @@ export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, sender
                 </div>
               </div>
             ) : (
-              content && <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{content}</p>
+              content && <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{linkifyContent(content, isOwnMessage)}</p>
             )}
             <p
               className={cn(
