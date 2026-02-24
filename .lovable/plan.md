@@ -1,39 +1,95 @@
 
 
-# Suchleiste fuer Bewerbungsgespraeche
+# Verbesserungen fuer AssignmentDialog, AdminMitarbeiter und AdminAuftraege
 
 ## Uebersicht
 
-Eine Suchleiste wird auf der Seite `/admin/bewerbungsgespraeche` hinzugefuegt, mit der Bewerbernamen gefiltert werden koennen. Die Suche filtert clientseitig ueber die bereits geladenen Daten.
+Vier Bereiche werden angepasst:
+1. AssignmentDialog: Suchfunktion + Status-Filter korrigieren
+2. /admin/mitarbeiter: Suchleiste + Sortierung + Startdatum-Spalte
+3. /admin/auftraege: Zuweisungs-Dialog zeigt nur unterzeichnete Mitarbeiter
 
-## Aenderung
+---
 
-**Datei: `src/pages/admin/AdminBewerbungsgespraeche.tsx`**
+## 1. AssignmentDialog (`src/components/admin/AssignmentDialog.tsx`)
 
-1. **Neuer State**: `const [search, setSearch] = useState("")`
+### Suchleiste hinzufuegen
 
-2. **Suchleiste**: Ein `Input`-Feld mit Such-Icon wird zwischen den Filter-Buttons und der Tabelle eingefuegt (aehnlich wie in `ConversationList.tsx`).
+- Neuer State `search` im Dialog
+- Ein `Input`-Feld mit Such-Icon wird oberhalb der Checkbox-Liste eingefuegt
+- Die angezeigte Liste wird clientseitig nach dem Suchbegriff gefiltert:
+  - **mode="order"** (Mitarbeiter zuweisen): Suche nach Name und E-Mail
+  - **mode="contract"** (Auftraege zuweisen): Suche nach Auftragsnummer, Titel und Anbieter
 
-3. **Client-seitige Filterung**: Nach dem Laden der Daten werden die `items` zusaetzlich nach dem eingegebenen Namen gefiltert:
+### Status-Filter korrigieren
 
-```typescript
-const filteredItems = data.items.filter((item) => {
-  if (!search.trim()) return true;
-  const name = `${item.applications?.first_name ?? ""} ${item.applications?.last_name ?? ""}`.toLowerCase();
-  return name.includes(search.toLowerCase().trim());
-});
-```
+- Zeile 52: `.eq("status", "genehmigt")` aendern zu `.eq("status", "unterzeichnet")`
+- Damit werden nur Mitarbeiter angezeigt, die den Vertrag tatsaechlich unterzeichnet haben
+- Leermeldung (Zeile 201) entsprechend anpassen
 
-4. **Tabelle**: `filteredItems` statt `data.items` in der Tabelle und fuer die Leer-Anzeige verwenden.
+### Auftraege-Query erweitern
 
-### Layout
+- Zeile 61: `select("id, order_number, title")` erweitern um `provider`
+- Das `sublabel` zeigt dann den Anbieter an
+- Suche kann so auch ueber den Anbieter filtern
+
+### Suchfeld zuruecksetzen
+
+- `search` wird auf `""` zurueckgesetzt wenn der Dialog geoeffnet/geschlossen wird (im `useEffect`)
+
+---
+
+## 2. AdminMitarbeiter (`src/pages/admin/AdminMitarbeiter.tsx`)
+
+### Suchleiste
+
+- Neuer State `search`
+- Ein `Input`-Feld mit Such-Icon zwischen Header und Tabelle
+- Clientseitige Filterung nach Name, E-Mail, Telefon und Branding
+
+### Sortierung: Unterzeichnet zuerst
+
+- `useMemo` das die geladenen Items sortiert:
+  - `unterzeichnet` (Rang 0) vor `genehmigt` (Rang 1)
+  - Innerhalb gleicher Gruppe: alphabetisch nach Nachname
+
+### Startdatum-Spalte
+
+- Neue Tabellenspalte "Startdatum" nach "Status"
+- Wert kommt aus `desired_start_date` des Vertrags (muss in der Query ergaenzt werden)
+- Query erweitern: `desired_start_date` zum Select hinzufuegen
+- Formatierung als deutsches Datum oder "–" wenn leer
+- Sortierung innerhalb gleicher Status-Gruppe: zukuenftige Startdaten aufsteigend, vergangene absteigend (gleiche Logik wie bei Arbeitsvertraege)
+
+---
+
+## 3. Technische Details
+
+### AssignmentDialog - Aenderungen
 
 ```text
-[Titel + Beschreibung]
-[Vergangene Termine] [Zukuenftige Termine]
-[Suche Icon | Name suchen...          ]    <-- NEU
-[Tabelle]
+Neuer Import: Input, Search (lucide-react)
+Neuer State: search (useState "")
+Query Zeile 52: "genehmigt" -> "unterzeichnet"
+Query Zeile 61: select erweitern um "provider"
+sublabel fuer orders: Anbieter anzeigen
+Suchfeld zwischen DialogHeader und ScrollArea
+filteredItems = items.filter(nach search)
+ScrollArea mappt ueber filteredItems statt items
 ```
 
-Keine neuen Abhaengigkeiten. Import von `Input` und `Search`-Icon wird hinzugefuegt.
+### AdminMitarbeiter - Aenderungen
+
+```text
+Neue Imports: Input, Search, useMemo
+Neuer State: search
+Query erweitern: desired_start_date in select
+Suchfeld zwischen Header und Tabelle
+useMemo fuer Sortierung (Status + Startdatum)
+filteredItems = sortedItems.filter(nach search)
+Neue TableHead: Startdatum
+Neue TableCell: formatiertes Datum
+```
+
+Keine neuen Dateien oder Abhaengigkeiten noetig. Alle Aenderungen sind rein clientseitig.
 
