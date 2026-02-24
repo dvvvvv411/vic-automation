@@ -1,71 +1,40 @@
 
 
-# Sortierung der Arbeitsvertraege-Tabelle
+# Mobile-Optimierung der Vertragsunterzeichnung
 
-## Uebersicht
+## Probleme
 
-Die Tabelle auf `/admin/arbeitsvertraege` wird automatisch sortiert: zuerst nach Vertragsstatus (Unterzeichnet > Genehmigt > Eingereicht > Offen), dann innerhalb jeder Statusgruppe nach Startdatum (naechstes Datum oben, vergangene unten).
+1. PDF ist auf Mobile nicht vollstaendig lesbar
+2. "Vertrag unterschreiben"-Button ist unter dem PDF und nicht erreichbar
+3. Kein Download-Button fuer das ununterschriebene PDF
 
-## Aenderung
+## Aenderungen (nur Mobile, Desktop bleibt identisch)
 
-**Datei: `src/pages/admin/AdminArbeitsvertraege.tsx`**
+**Datei: `src/components/mitarbeiter/ContractSigningView.tsx`**
 
-Nach dem Laden der Daten (`items`) wird ein `useMemo` eingefuegt, das die Eintraege sortiert:
+### 1. Buttons ueber das PDF verschieben (nur Mobile)
 
-1. **Status-Prioritaet**: Jeder Status bekommt einen numerischen Rang:
-   - `unterzeichnet` = 0
-   - `genehmigt` = 1
-   - `eingereicht` = 2
-   - kein Vertrag / `offen` = 3
+Zwei Button-Bereiche:
+- **Mobile** (`md:hidden`): Buttons werden **oberhalb** des PDF-Viewers angezeigt
+- **Desktop** (`hidden md:flex`): Button bleibt **unterhalb** des PDF-Viewers wie bisher
 
-2. **Startdatum-Sortierung** (innerhalb gleicher Status-Gruppe):
-   - Eintraege mit zukuenftigem oder heutigem Startdatum kommen vor vergangenen
-   - Zukuenftige Daten: aufsteigend (naechstes zuerst)
-   - Vergangene Daten: absteigend (juengstes zuerst)
-   - Eintraege ohne Startdatum ganz am Ende der jeweiligen Gruppe
+### 2. PDF-Hoehe auf Mobile reduzieren
 
-Keine Aenderung an der Datenbank-Abfrage oder anderen Dateien noetig. Die Sortierung passiert rein clientseitig ueber die bereits geladenen Daten.
+Statt inline `height: 65vh` werden responsive Tailwind-Klassen verwendet: `h-[50vh] md:h-[65vh]`, damit auf Mobile mehr Platz bleibt und der Content scrollbar ist.
 
-### Technische Umsetzung
+### 3. Dezenter Download-Button (nur Mobile)
 
-Neues `useMemo` nach der Query:
+Ein kleiner, zurueckhaltender Button (variant `ghost` oder `outline`, klein) mit Download-Icon wird nur auf Mobile ueber dem PDF angezeigt. Er oeffnet die PDF-URL in einem neuen Tab zum vollstaendigen Lesen.
 
-```typescript
-const sortedItems = useMemo(() => {
-  if (!data?.items) return [];
-  const statusOrder: Record<string, number> = {
-    unterzeichnet: 0,
-    genehmigt: 1,
-    eingereicht: 2,
-  };
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+### Layout nach Aenderung
 
-  return [...data.items].sort((a, b) => {
-    const rankA = statusOrder[a.contract?.status] ?? 3;
-    const rankB = statusOrder[b.contract?.status] ?? 3;
-    if (rankA !== rankB) return rankA - rankB;
-
-    const dateA = a.contract?.desired_start_date
-      ? new Date(a.contract.desired_start_date + "T00:00:00")
-      : null;
-    const dateB = b.contract?.desired_start_date
-      ? new Date(b.contract.desired_start_date + "T00:00:00")
-      : null;
-
-    if (!dateA && !dateB) return 0;
-    if (!dateA) return 1;
-    if (!dateB) return -1;
-
-    const futureA = dateA >= today;
-    const futureB = dateB >= today;
-    if (futureA && !futureB) return -1;
-    if (!futureA && futureB) return 1;
-    if (futureA && futureB) return dateA.getTime() - dateB.getTime();
-    return dateB.getTime() - dateA.getTime();
-  });
-}, [data?.items]);
+```text
+Mobile:                              Desktop (unveraendert):
+[Icon + Titel + Text]               [Icon + Titel + Text]
+[Vertrag unterschreiben]  (md:hidden) [PDF Viewer - 65vh]
+[Vertrag herunterladen]   (md:hidden) [Vertrag unterschreiben]
+[PDF Viewer - 50vh]
 ```
 
-In der Tabelle wird dann `sortedItems` statt `data.items` iteriert.
+Keine neuen Dateien, keine neuen Abhaengigkeiten. Nur Tailwind-responsive-Klassen und ein zusaetzlicher `<a>`/`<Button>` fuer den Download.
 
