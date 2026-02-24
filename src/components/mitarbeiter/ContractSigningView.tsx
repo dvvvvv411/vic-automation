@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
-import { FileText, PenTool, Trash2, Loader2 } from "lucide-react";
+import { FileText, PenTool, Trash2, Loader2, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -131,8 +131,32 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
           </p>
         </div>
 
+        {/* Mobile Buttons (above PDF) */}
+        <div className="flex flex-col items-center gap-2 md:hidden">
+          <Button
+            size="lg"
+            className="text-white gap-2 w-full max-w-sm"
+            style={brandColor ? { backgroundColor: brandColor } : undefined}
+            onClick={() => setDialogOpen(true)}
+          >
+            <PenTool className="h-5 w-5" />
+            Vertrag unterschreiben
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-muted-foreground"
+            asChild
+          >
+            <a href={contractPdfUrl} target="_blank" rel="noopener noreferrer">
+              <Download className="h-4 w-4" />
+              Vertrag herunterladen
+            </a>
+          </Button>
+        </div>
+
         {/* PDF Viewer */}
-        <div className="max-w-3xl mx-auto w-full shadow-lg" style={{ height: "65vh" }}>
+        <div className="max-w-3xl mx-auto w-full shadow-lg h-[50vh] md:h-[65vh]">
           <iframe
             src={`${contractPdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
             className="w-full h-full bg-white"
@@ -141,8 +165,8 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
           />
         </div>
 
-        {/* Sign Button */}
-        <div className="flex justify-center">
+        {/* Desktop Sign Button (below PDF) */}
+        <div className="hidden md:flex justify-center">
           <Button
             size="lg"
             className="text-white gap-2"
