@@ -14,7 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, MessageSquare } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, MessageSquare, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ type ViewMode = "default" | "past" | "future";
 export default function AdminBewerbungsgespraeche() {
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("default");
+  const [search, setSearch] = useState("");
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [reminderPreview, setReminderPreview] = useState<{ item: any; message: string; name: string; phone: string; brandingId?: string; senderName?: string } | null>(null);
   const queryClient = useQueryClient();
@@ -272,10 +274,26 @@ export default function AdminBewerbungsgespraeche() {
         </Button>
       </div>
 
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Name suchen..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Laden...</div>
-        ) : !data?.items.length ? (
+        ) : (() => {
+          const filteredItems = (data?.items ?? []).filter((item: any) => {
+            if (!search.trim()) return true;
+            const name = `${item.applications?.first_name ?? ""} ${item.applications?.last_name ?? ""}`.toLowerCase();
+            return name.includes(search.toLowerCase().trim());
+          });
+          return !filteredItems.length ? (
           <div className="text-center py-16 border border-dashed border-border rounded-lg">
             <Calendar className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">Keine Termine in dieser Ansicht.</p>
@@ -298,7 +316,7 @@ export default function AdminBewerbungsgespraeche() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.items.map((item: any) => (
+                  {filteredItems.map((item: any) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
                         {new Date(item.appointment_date).toLocaleDateString("de-DE", {
@@ -397,7 +415,8 @@ export default function AdminBewerbungsgespraeche() {
               </div>
             )}
           </>
-        )}
+        );
+        })()}
       </motion.div>
 
       <Dialog open={!!reminderPreview} onOpenChange={(open) => !open && setReminderPreview(null)}>
