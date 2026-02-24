@@ -1,25 +1,36 @@
 
 
-# Livechat-Nachrichten werden nicht angezeigt
+# Yvonnes Auftraege korrigieren und Admin-Buttons absichern
 
-## Problem
+## Was ist passiert?
 
-Die Konversation mit Yvonne Reiter hat 52 Nachrichten, aber der Chat laedt nur die **ersten 50** (aeltesten). Dadurch werden die 2 neuesten Nachrichten nicht angezeigt. Dieses Problem betrifft jede Konversation, die mehr als 50 Nachrichten hat.
+Bei Felix hat das Status-Update auf "in_pruefung" beim Absenden der Bewertung funktioniert. Bei Yvonne ist es still fehlgeschlagen (vermutlich ein Timing- oder RLS-Problem), und der Code hat den Fehler komplett ignoriert. Dadurch blieben Yvonnes Assignments auf "offen", und die Genehmigung konnte nicht richtig greifen.
 
-## Loesung
+## Aenderungen
 
-Das Nachrichten-Limit in `useChatRealtime.ts` wird deutlich erhoeht und die Sortierung beibehalten. Zusaetzlich wird sichergestellt, dass bei langen Konversationen immer die neuesten Nachrichten sichtbar sind.
+### 1. SQL-Migration: Yvonnes Auftraege auf "erfolgreich" setzen
 
-## Aenderung
+Die beiden bereits genehmigten Auftraege werden direkt auf "erfolgreich" gesetzt. Das Guthaben (95 EUR) ist bereits korrekt.
 
-**Datei: `src/components/chat/useChatRealtime.ts`**
+```sql
+UPDATE order_assignments
+SET status = 'erfolgreich'
+WHERE contract_id = '892e6fda-0dbb-4ed5-a7b3-0b8b5315c2f8'
+  AND order_id IN (
+    'a4445b57-979a-4272-bf51-5affdf430f89',
+    'c47dcf68-4220-41fe-95ea-8e38e597d85b'
+  )
+  AND status = 'offen';
+```
 
-- Zeile 37: `.limit(50)` aendern zu `.limit(200)`
+### 2. Admin-Bewertungsseite: Buttons nicht nur bei "in_pruefung" anzeigen
 
-Das ist die einfachste und sicherste Loesung. 200 Nachrichten decken auch laengere Konversationen ab, ohne die Performance zu beeintraechtigen (Chat-Nachrichten sind kleine Datensaetze).
+**Datei: `src/pages/admin/AdminBewertungen.tsx`**
 
-### Alternative (optional, spaeter)
+Die Genehmigen/Ablehnen-Buttons werden aktuell nur bei Status "in_pruefung" angezeigt. Das wird geaendert: Buttons erscheinen immer, solange der Status weder "erfolgreich" noch "fehlgeschlagen" ist. So funktioniert die Genehmigung auch wenn das Status-Update beim Absenden mal fehlschlagen sollte.
 
-Falls Konversationen irgendwann ueber 200 Nachrichten hinausgehen, koennte eine "Aeltere Nachrichten laden"-Funktion mit Pagination implementiert werden. Fuer den aktuellen Anwendungsfall reicht die Erhoehung des Limits aus.
+- **Zeile 319**: `g.assignment_status === "in_pruefung"` aendern zu `!["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status)`
+- **Zeile 375**: `selected?.assignment_status === "in_pruefung"` aendern zu `selected && !["erfolgreich", "fehlgeschlagen"].includes(selected.assignment_status)`
 
-Eine einzelne Zeile wird geaendert – keine neuen Dateien oder Abhaengigkeiten.
+Keine neuen Dateien, keine neuen Abhaengigkeiten. Reviews bleiben unangetastet.
+
