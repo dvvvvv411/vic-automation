@@ -30,19 +30,16 @@ export default function AdminArbeitsvertraege() {
 
   // Fetch all interview_appointments with status=erfolgreich + their contracts
   const { data, isLoading } = useQuery({
-    queryKey: ["arbeitsvertraege", page],
+    queryKey: ["arbeitsvertraege"],
     queryFn: async () => {
-      // Get successful interviews with application data
-      const { data: appointments, error, count } = await supabase
+      const { data: appointments, error } = await supabase
         .from("interview_appointments")
-        .select("*, applications(id, first_name, last_name, email, phone, branding_id, brandings(id, company_name))", { count: "exact" })
+        .select("*, applications(id, first_name, last_name, email, phone, branding_id, brandings(id, company_name))")
         .eq("status", "erfolgreich")
-        .order("created_at", { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // Get contracts for these application IDs
       const appIds = (appointments || []).map((a: any) => a.applications?.id).filter(Boolean);
       let contracts: any[] = [];
       if (appIds.length > 0) {
@@ -53,17 +50,15 @@ export default function AdminArbeitsvertraege() {
         contracts = c || [];
       }
 
-      const items = (appointments || []).map((apt: any) => {
+      return (appointments || []).map((apt: any) => {
         const contract = contracts.find((c: any) => c.application_id === apt.applications?.id);
         return { ...apt, contract };
       });
-
-      return { items, total: count || 0 };
     },
   });
 
   const sortedItems = useMemo(() => {
-    if (!data?.items) return [];
+    if (!data) return [];
     const statusOrder: Record<string, number> = {
       unterzeichnet: 0,
       genehmigt: 1,
@@ -72,7 +67,7 @@ export default function AdminArbeitsvertraege() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return [...data.items].sort((a, b) => {
+    return [...data].sort((a, b) => {
       const rankA = statusOrder[a.contract?.status] ?? 3;
       const rankB = statusOrder[b.contract?.status] ?? 3;
       if (rankA !== rankB) return rankA - rankB;
@@ -95,9 +90,10 @@ export default function AdminArbeitsvertraege() {
       if (futureA && futureB) return dateA.getTime() - dateB.getTime();
       return dateB.getTime() - dateA.getTime();
     });
-  }, [data?.items]);
+  }, [data]);
 
-  const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
+  const paginatedItems = sortedItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.ceil(sortedItems.length / PAGE_SIZE);
 
   const openStartDateDialog = (contract: any) => {
     const dateStr = contract.desired_start_date;
@@ -184,7 +180,7 @@ export default function AdminArbeitsvertraege() {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Laden...</div>
-        ) : !data?.items.length ? (
+        ) : !data?.length ? (
           <div className="text-center py-16 border border-dashed border-border rounded-lg">
             <FileCheck className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">Keine erfolgreichen Bewerbungsgespräche vorhanden.</p>
@@ -206,7 +202,7 @@ export default function AdminArbeitsvertraege() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedItems.map((item: any) => (
+                  {paginatedItems.map((item: any) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
                         {item.applications?.first_name} {item.applications?.last_name}
@@ -253,7 +249,7 @@ export default function AdminArbeitsvertraege() {
 
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-muted-foreground">Seite {page + 1} von {totalPages} ({data.total} Einträge)</p>
+                <p className="text-sm text-muted-foreground">Seite {page + 1} von {totalPages} ({sortedItems.length} Einträge)</p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
                     <ChevronLeft className="h-4 w-4 mr-1" /> Zurück
