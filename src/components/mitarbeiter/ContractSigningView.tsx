@@ -132,7 +132,7 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
         </div>
 
         {/* Mobile Buttons (above PDF) */}
-        <div className="flex flex-col items-center gap-2 md:hidden">
+        <div className="flex flex-col items-center gap-2 lg:hidden">
           <Button
             size="lg"
             className="text-white gap-2 w-full max-w-sm"
@@ -166,7 +166,7 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
         </div>
 
         {/* Desktop Sign Button (below PDF) */}
-        <div className="hidden md:flex justify-center">
+        <div className="hidden lg:flex flex-col items-center gap-2">
           <Button
             size="lg"
             className="text-white gap-2"
@@ -175,6 +175,17 @@ export function ContractSigningView({ contractId, contractPdfUrl, brandColor }: 
           >
             <PenTool className="h-5 w-5" />
             Vertrag unterschreiben
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-muted-foreground"
+            asChild
+          >
+            <a href={contractPdfUrl} target="_blank" rel="noopener noreferrer">
+              <Download className="h-4 w-4" />
+              Vertrag herunterladen
+            </a>
           </Button>
         </div>
       </div>
