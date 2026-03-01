@@ -9,9 +9,11 @@ interface ChatInputProps {
   showTemplates?: boolean;
   contractData?: { first_name?: string | null; last_name?: string | null };
   onTyping?: (draft: string) => void;
+  externalValue?: string | null;
+  onExternalValueConsumed?: () => void;
 }
 
-export function ChatInput({ onSend, showTemplates = false, contractData, onTyping }: ChatInputProps) {
+export function ChatInput({ onSend, showTemplates = false, contractData, onTyping, externalValue, onExternalValueConsumed }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [templateSearch, setTemplateSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -30,6 +32,15 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
   useEffect(() => {
     resizeTextarea();
   }, [input]);
+
+  // Accept external value (e.g. AI suggestion)
+  useEffect(() => {
+    if (externalValue != null && externalValue !== "") {
+      setInput(externalValue);
+      onExternalValueConsumed?.();
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    }
+  }, [externalValue]);
 
   const handleChange = (val: string) => {
     setInput(val);
