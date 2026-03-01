@@ -1,22 +1,30 @@
 
-# Download-Button fuer Desktop & Tablet-Layout anpassen
+# Sektion "Anstehende Startdaten" auf /admin/mitarbeiter
 
-## Aenderungen in `src/components/mitarbeiter/ContractSigningView.tsx`
+## Aenderung
 
-### 1. Tablet-View gleichsetzen mit Mobile-View
+**Datei: `src/pages/admin/AdminMitarbeiter.tsx`**
 
-Der Breakpoint `md:hidden` (Zeile 135) wird zu `lg:hidden` geaendert, sodass die Buttons (Unterschreiben + Herunterladen) auf Tablet UND Mobile **ueber** dem PDF angezeigt werden. Der Breakpoint fuer den Desktop-Bereich (Zeile 169 `hidden md:flex`) wird zu `hidden lg:flex`.
+Oberhalb der bestehenden Mitarbeiter-Tabelle wird eine neue Sektion eingefuegt, die alle Mitarbeiter/Bewerber mit einem zukuenftigen `desired_start_date` (ab heute) als kompakte Karten-Liste anzeigt.
 
-### 2. Download-Button fuer Desktop hinzufuegen
+### 1. Neue Query fuer anstehende Startdaten
 
-Im Desktop-Bereich (unterhalb des PDFs, `hidden lg:flex`) wird neben dem "Vertrag unterschreiben"-Button ein dezenter Download-Button ergaenzt -- gleicher Stil wie auf Mobile (`variant="ghost"`, `size="sm"`, `text-muted-foreground`).
+Eine separate `useQuery` laedt alle `employment_contracts` mit `desired_start_date >= heute`, unabhaengig vom Status (also auch "eingereicht", "offen" etc.). Die Abfrage holt Name, Status, Startdatum und Branding-Name und sortiert nach Datum aufsteigend (naechstes Datum zuerst).
+
+### 2. UI-Sektion
+
+Zwischen dem Header ("Mitarbeiter" / Beschreibungstext) und der Suche/Tabelle wird ein neuer Block eingefuegt:
+
+- Ueberschrift: "Anstehende Startdaten" mit CalendarClock-Icon
+- Darunter eine horizontale, scrollbare Karten-Liste (Cards)
+- Jede Card zeigt: Name, Startdatum (formatiert), Status-Badge, Branding
+- Falls keine anstehenden Startdaten vorhanden: dezenter Hinweistext
+- Die Sektion wird mit einer motion-Animation eingeblendet
+
+### 3. Beruecksichtigte Status-Werte
+
+Die Query filtert nicht nach Status, sondern nur nach `desired_start_date >= today`. So werden auch Bewerber sichtbar, die noch nicht unterzeichnet haben aber ein Startdatum eingetragen haben. Status-Badges zeigen den aktuellen Stand (offen, eingereicht, genehmigt, unterzeichnet).
 
 ### Ergebnis
 
-| Viewport | Buttons ueber PDF | Buttons unter PDF |
-|----------|-------------------|-------------------|
-| Mobile   | Unterschreiben + Download | -- |
-| Tablet   | Unterschreiben + Download | -- |
-| Desktop  | -- | Unterschreiben + Download (dezent) |
-
-Keine neuen Dateien oder Abhaengigkeiten. Eine Datei, drei kleine Aenderungen.
+Admins sehen auf einen Blick, wer in den naechsten Tagen/Wochen starten soll -- unabhaengig davon, ob der Vertrag schon unterzeichnet ist oder nicht. Keine DB-Aenderungen noetig, nur eine Datei wird angepasst.
