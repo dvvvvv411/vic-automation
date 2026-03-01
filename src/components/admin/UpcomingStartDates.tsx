@@ -46,9 +46,9 @@ export default function UpcomingStartDates() {
       {!upcoming?.length ? (
         <p className="text-sm text-muted-foreground">Keine anstehenden Startdaten.</p>
       ) : (
-        <ScrollArea className="w-full">
+        <ScrollArea className="w-full whitespace-nowrap">
           <div className="flex gap-3 pb-3">
-            {upcoming.map((item: any) => {
+            {upcoming.slice(0, 20).map((item: any) => {
               const style = STATUS_STYLES[item.status] ?? STATUS_STYLES.offen;
               const branding = (item as any).applications?.brandings?.company_name;
               return (
