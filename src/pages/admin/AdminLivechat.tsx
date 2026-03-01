@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ConversationList, type Conversation } from "@/components/chat/ConversationList";
 import { ChatBubble, TypingIndicator, DateSeparator, SystemMessage } from "@/components/chat/ChatBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { AiSuggestionBar } from "@/components/chat/AiSuggestionBar";
 import { TemplateManager } from "@/components/chat/TemplateManager";
 import { AvatarUpload } from "@/components/chat/AvatarUpload";
 import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatRealtime";
@@ -54,6 +55,7 @@ export default function AdminLivechat() {
   const [notifySmsText, setNotifySmsText] = useState("Sie haben eine neue Nachricht im Livechat. Bitte lesen Sie diese.");
   const [notifySmsSending, setNotifySmsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [aiSuggestionValue, setAiSuggestionValue] = useState<string | null>(null);
 
   const { isTyping, draftPreview, sendTyping } = useChatTyping({
     contractId: active?.contract_id ?? null,
@@ -531,8 +533,24 @@ export default function AdminLivechat() {
               </div>
             )}
 
+            {/* AI suggestion bar */}
+            {active && (
+              <AiSuggestionBar
+                contractId={active.contract_id}
+                messages={messages}
+                onAccept={(text) => setAiSuggestionValue(text)}
+              />
+            )}
+
             {/* Input with templates */}
-            <ChatInput onSend={handleSend} showTemplates contractData={contractData} onTyping={handleTyping} />
+            <ChatInput
+              onSend={handleSend}
+              showTemplates
+              contractData={contractData}
+              onTyping={handleTyping}
+              externalValue={aiSuggestionValue}
+              onExternalValueConsumed={() => setAiSuggestionValue(null)}
+            />
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
