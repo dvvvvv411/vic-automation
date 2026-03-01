@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { format, parseISO, isAfter, startOfToday } from "date-fns";
 import { de } from "date-fns/locale";
 import AssignmentDialog from "@/components/admin/AssignmentDialog";
+import UpcomingStartDates from "@/components/admin/UpcomingStartDates";
 
 const PAGE_SIZE = 20;
 
@@ -101,6 +102,8 @@ export default function AdminMitarbeiter() {
         <h2 className="text-3xl font-bold tracking-tight text-foreground">Mitarbeiter</h2>
         <p className="text-muted-foreground mt-1">Alle genehmigten Mitarbeiter mit Zugangsdaten.</p>
       </motion.div>
+
+      <UpcomingStartDates />
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
         {/* Search */}
