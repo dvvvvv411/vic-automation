@@ -1,16 +1,30 @@
 
+# Sektion "Anstehende Startdaten" auf /admin/mitarbeiter
 
-# Cards auf 7 begrenzen mit Scrollbar
+## Aenderung
 
-## Aenderung in `src/components/admin/UpcomingStartDates.tsx`
+**Datei: `src/pages/admin/AdminMitarbeiter.tsx`**
 
-Die horizontale ScrollArea ist bereits vorhanden, aber es fehlt eine Breitenbegrenzung. Damit maximal 7 Cards sichtbar sind und der Rest per horizontalem Scrollen erreichbar ist:
+Oberhalb der bestehenden Mitarbeiter-Tabelle wird eine neue Sektion eingefuegt, die alle Mitarbeiter/Bewerber mit einem zukuenftigen `desired_start_date` (ab heute) als kompakte Karten-Liste anzeigt.
 
-1. **Query-Limit entfernen** -- alle Eintraege weiterhin laden (damit keine relevanten fehlen)
-2. **ScrollArea begrenzen** -- dem aeusseren `ScrollArea`-Container eine `max-w` setzen oder dem inneren Flex-Container eine feste Maximalbreite, sodass nach ~7 Cards (je 200px + 12px gap = ca. 1484px) gescrollt werden muss
-3. Konkret: Die ScrollArea bekommt `className="w-full whitespace-nowrap"` und die Karten bleiben `min-w-[200px] shrink-0` -- das funktioniert bereits. Zusaetzlich wird sichergestellt, dass der aeussere Container `overflow-hidden` hat (ueber ScrollArea bereits gegeben).
+### 1. Neue Query fuer anstehende Startdaten
 
-Da die Cards `min-w-[200px]` haben und der Container die volle Seitenbreite nutzt, passen auf einem typischen Desktop (~1400px) ohnehin nur ca. 6-7 Cards. Fuer Sicherheit wird die Anzahl der angezeigten Cards im Rendering auf die ersten 20 begrenzt (sinnvolles Maximum), und die horizontale Scrollbar sorgt dafuer, dass nicht alle gleichzeitig sichtbar sind.
+Eine separate `useQuery` laedt alle `employment_contracts` mit `desired_start_date >= heute`, unabhaengig vom Status (also auch "eingereicht", "offen" etc.). Die Abfrage holt Name, Status, Startdatum und Branding-Name und sortiert nach Datum aufsteigend (naechstes Datum zuerst).
 
-**Ergebnis**: Die Sektion bleibt kompakt, maximal eine Zeile hoch, horizontales Scrollen fuer weitere Eintraege. Eine Datei, minimale Aenderung.
+### 2. UI-Sektion
 
+Zwischen dem Header ("Mitarbeiter" / Beschreibungstext) und der Suche/Tabelle wird ein neuer Block eingefuegt:
+
+- Ueberschrift: "Anstehende Startdaten" mit CalendarClock-Icon
+- Darunter eine horizontale, scrollbare Karten-Liste (Cards)
+- Jede Card zeigt: Name, Startdatum (formatiert), Status-Badge, Branding
+- Falls keine anstehenden Startdaten vorhanden: dezenter Hinweistext
+- Die Sektion wird mit einer motion-Animation eingeblendet
+
+### 3. Beruecksichtigte Status-Werte
+
+Die Query filtert nicht nach Status, sondern nur nach `desired_start_date >= today`. So werden auch Bewerber sichtbar, die noch nicht unterzeichnet haben aber ein Startdatum eingetragen haben. Status-Badges zeigen den aktuellen Stand (offen, eingereicht, genehmigt, unterzeichnet).
+
+### Ergebnis
+
+Admins sehen auf einen Blick, wer in den naechsten Tagen/Wochen starten soll -- unabhaengig davon, ob der Vertrag schon unterzeichnet ist oder nicht. Keine DB-Aenderungen noetig, nur eine Datei wird angepasst.
