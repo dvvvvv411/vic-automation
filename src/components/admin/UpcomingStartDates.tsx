@@ -6,7 +6,7 @@ import { CalendarClock } from "lucide-react";
 import { motion } from "framer-motion";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   offen: { label: "Offen", className: "text-muted-foreground border-border" },
@@ -46,13 +46,13 @@ export default function UpcomingStartDates() {
       {!upcoming?.length ? (
         <p className="text-sm text-muted-foreground">Keine anstehenden Startdaten.</p>
       ) : (
-        <ScrollArea className="w-full">
-          <div className="flex gap-3 pb-3">
+        <ScrollArea className="max-h-[220px]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3 pb-3">
             {upcoming.map((item: any) => {
               const style = STATUS_STYLES[item.status] ?? STATUS_STYLES.offen;
               const branding = (item as any).applications?.brandings?.company_name;
               return (
-                <Card key={item.id} className="min-w-[200px] shrink-0">
+                <Card key={item.id}>
                   <CardContent className="p-4 space-y-1.5">
                     <p className="font-medium text-sm text-foreground leading-tight">
                       {item.first_name} {item.last_name}
@@ -71,7 +71,6 @@ export default function UpcomingStartDates() {
               );
             })}
           </div>
-          <ScrollBar orientation="horizontal" />
         </ScrollArea>
       )}
     </motion.div>
