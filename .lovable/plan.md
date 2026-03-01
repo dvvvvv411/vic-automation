@@ -1,27 +1,70 @@
 
-
-# "Anstehende Startdaten" Sektion im Admin Dashboard
+# Telefonnummer per Klick kopieren in allen Admin-Tabellen
 
 ## Aenderung
 
-**Datei: `src/pages/admin/AdminDashboard.tsx`**
+In allen Admin-Tabellen, in denen Telefonnummern angezeigt werden, wird die Telefonnummer klickbar gemacht. Ein Klick kopiert die Nummer ins Clipboard und zeigt eine Toast-Meldung "Telefonnummer kopiert!".
 
-Die bereits existierende Komponente `UpcomingStartDates` (aus `src/components/admin/UpcomingStartDates.tsx`) wird direkt im Dashboard wiederverwendet -- genau dieselbe Komponente wie auf `/admin/mitarbeiter`.
+## Betroffene Dateien und Stellen
 
-### Einfuegung
+### 1. `src/pages/admin/AdminBewerbungen.tsx` (Zeile 768)
 
-Die Komponente wird zwischen den Stat-Cards und den Detail-Listen eingefuegt (nach Zeile 149, vor Zeile 152). Das ergibt folgende Reihenfolge:
+Aktuell:
+```tsx
+<TableCell className="text-muted-foreground">{a.phone || "–"}</TableCell>
+```
+Neu: Klickbare Telefonnummer mit Cursor-Pointer und Hover-Effekt. Klick kopiert die Nummer und stoppt die Event-Propagation (da die Tabellenzeile selbst klickbar ist).
 
-1. Willkommens-Header
-2. Stat-Cards (5 Kacheln)
-3. **Anstehende Startdaten** (Grid mit ScrollArea -- NEU)
-4. Detail-Listen (Bewerbungen, Gespraeche, Vertraege, Termine)
+### 2. `src/pages/admin/AdminArbeitsvertraege.tsx` (Zeile 210)
 
-### Umsetzung
+Aktuell:
+```tsx
+<TableCell className="text-muted-foreground">{item.applications?.phone || "–"}</TableCell>
+```
+Neu: Gleiche Logik wie oben.
 
-- Import von `UpcomingStartDates` aus `@/components/admin/UpcomingStartDates`
-- Einfuegen von `<UpcomingStartDates />` zwischen Stat-Cards und Detail-Listen
-- Keine neue Logik, keine Duplizierung -- die Komponente bringt alles mit (Query, Grid, ScrollArea, Badges, Animation)
+### 3. `src/pages/admin/AdminBewerbungsgespraeche.tsx` (Zeile 335-337)
 
-Eine Datei, zwei Zeilen Aenderung (Import + JSX).
+Aktuell:
+```tsx
+<TableCell className="text-muted-foreground">
+  {item.applications?.phone || "–"}
+</TableCell>
+```
+Neu: Gleiche Logik.
 
+### 4. `src/pages/admin/AdminMitarbeiter.tsx` (Zeile 153)
+
+Aktuell:
+```tsx
+<TableCell className="text-muted-foreground">{item.phone || "–"}</TableCell>
+```
+Neu: Gleiche Logik.
+
+## Umsetzung
+
+Jede Telefonnummer-Zelle wird so umgebaut:
+
+```tsx
+<TableCell className="text-muted-foreground">
+  {phoneValue ? (
+    <span
+      className="cursor-pointer hover:text-foreground transition-colors"
+      onClick={(e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(phoneValue);
+        toast.success("Telefonnummer kopiert!");
+      }}
+    >
+      {phoneValue}
+    </span>
+  ) : "–"}
+</TableCell>
+```
+
+- `cursor-pointer` zeigt an, dass die Nummer klickbar ist
+- `hover:text-foreground` gibt visuelles Feedback beim Hover
+- `e.stopPropagation()` verhindert, dass ein Klick auf die Nummer auch die Tabellenzeile oeffnet (wichtig bei AdminBewerbungen, wo Zeilen klickbar sind)
+- `toast.success` bestaetigt das Kopieren
+
+Vier Dateien, jeweils eine minimale Aenderung pro Datei. `toast` ist in allen Dateien bereits importiert.
