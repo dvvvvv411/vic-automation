@@ -1,30 +1,25 @@
 
-# Sektion "Anstehende Startdaten" auf /admin/mitarbeiter
 
-## Aenderung
+# Anstehende Startdaten: Grid mit Scrollbar
 
-**Datei: `src/pages/admin/AdminMitarbeiter.tsx`**
+## Aenderung in `src/components/admin/UpcomingStartDates.tsx`
 
-Oberhalb der bestehenden Mitarbeiter-Tabelle wird eine neue Sektion eingefuegt, die alle Mitarbeiter/Bewerber mit einem zukuenftigen `desired_start_date` (ab heute) als kompakte Karten-Liste anzeigt.
+Das aktuelle Layout ist eine horizontale Scroll-Leiste (`flex` + `ScrollBar horizontal`). Stattdessen wird ein Grid mit max 7 Spalten und vertikaler Scrollbar verwendet.
 
-### 1. Neue Query fuer anstehende Startdaten
+### Aenderungen:
 
-Eine separate `useQuery` laedt alle `employment_contracts` mit `desired_start_date >= heute`, unabhaengig vom Status (also auch "eingereicht", "offen" etc.). Die Abfrage holt Name, Status, Startdatum und Branding-Name und sortiert nach Datum aufsteigend (naechstes Datum zuerst).
+1. **Flex-Layout ersetzen durch Grid**: `flex gap-3` wird zu `grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-3`. So passen auf grossen Bildschirmen 7 Cards in eine Reihe.
 
-### 2. UI-Sektion
+2. **ScrollArea mit fester Hoehe**: Die `ScrollArea` bekommt eine `max-h` (ca. 220px, Platz fuer ~2 Reihen Cards). Gibt es mehr als 2 Reihen, erscheint eine vertikale Scrollbar nur in dieser Sektion.
 
-Zwischen dem Header ("Mitarbeiter" / Beschreibungstext) und der Suche/Tabelle wird ein neuer Block eingefuegt:
+3. **Horizontale ScrollBar entfernen**: Die `<ScrollBar orientation="horizontal" />` wird entfernt, da nicht mehr noetig.
 
-- Ueberschrift: "Anstehende Startdaten" mit CalendarClock-Icon
-- Darunter eine horizontale, scrollbare Karten-Liste (Cards)
-- Jede Card zeigt: Name, Startdatum (formatiert), Status-Badge, Branding
-- Falls keine anstehenden Startdaten vorhanden: dezenter Hinweistext
-- Die Sektion wird mit einer motion-Animation eingeblendet
-
-### 3. Beruecksichtigte Status-Werte
-
-Die Query filtert nicht nach Status, sondern nur nach `desired_start_date >= today`. So werden auch Bewerber sichtbar, die noch nicht unterzeichnet haben aber ein Startdatum eingetragen haben. Status-Badges zeigen den aktuellen Stand (offen, eingereicht, genehmigt, unterzeichnet).
+4. **`min-w-[200px] shrink-0`** von den Cards entfernen, da das Grid die Breite steuert.
 
 ### Ergebnis
 
-Admins sehen auf einen Blick, wer in den naechsten Tagen/Wochen starten soll -- unabhaengig davon, ob der Vertrag schon unterzeichnet ist oder nicht. Keine DB-Aenderungen noetig, nur eine Datei wird angepasst.
+- Bis 7 Cards: eine Reihe, kein Scrollbar
+- 8-14 Cards: zwei Reihen, kein Scrollbar
+- Ab 15 Cards: vertikaler Scroll innerhalb der Sektion, Seite bleibt kompakt
+
+Eine Datei, wenige Zeilen.
