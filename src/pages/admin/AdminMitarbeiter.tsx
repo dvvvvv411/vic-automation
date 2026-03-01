@@ -150,7 +150,11 @@ export default function AdminMitarbeiter() {
                         <TableCell className="font-medium">
                           {item.first_name} {item.last_name}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{item.phone || "–"}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {item.phone ? (
+                            <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.phone); toast.success("Telefonnummer kopiert!"); }}>{item.phone}</span>
+                          ) : "–"}
+                        </TableCell>
                         <TableCell className="text-muted-foreground">{item.email || "–"}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">

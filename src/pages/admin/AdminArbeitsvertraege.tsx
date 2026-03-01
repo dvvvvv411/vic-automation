@@ -207,7 +207,11 @@ export default function AdminArbeitsvertraege() {
                       <TableCell className="font-medium">
                         {item.applications?.first_name} {item.applications?.last_name}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{item.applications?.phone || "–"}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {item.applications?.phone ? (
+                          <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.applications.phone); toast.success("Telefonnummer kopiert!"); }}>{item.applications.phone}</span>
+                        ) : "–"}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{item.applications?.email}</TableCell>
                       <TableCell className="text-muted-foreground">{item.applications?.brandings?.company_name || "–"}</TableCell>
                       <TableCell>

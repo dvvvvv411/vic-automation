@@ -765,7 +765,11 @@ export default function AdminBewerbungen() {
                     <TableRow key={a.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetailApp(a)}>
                       <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
                       <TableCell className="text-muted-foreground">{a.email || "–"}</TableCell>
-                      <TableCell className="text-muted-foreground">{a.phone || "–"}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {a.phone ? (
+                          <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(a.phone); toast.success("Telefonnummer kopiert!"); }}>{a.phone}</span>
+                        ) : "–"}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {a.zip_code || a.city ? `${a.zip_code || ""} ${a.city || ""}`.trim() : "–"}
                       </TableCell>
