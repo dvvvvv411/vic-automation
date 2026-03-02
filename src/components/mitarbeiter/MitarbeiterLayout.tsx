@@ -6,6 +6,8 @@ import { ChatWidget } from "@/components/chat/ChatWidget";
 import { ContractSigningView } from "./ContractSigningView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { ShieldX } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface BrandingData {
   logo_url: string | null;
@@ -20,6 +22,7 @@ interface ContractData {
   status: string;
   contract_pdf_url: string | null;
   signed_contract_pdf_url: string | null;
+  is_suspended: boolean;
 }
 
 export default function MitarbeiterLayout() {
@@ -35,7 +38,7 @@ export default function MitarbeiterLayout() {
       // 1. Get employment contract
       const { data: contractData } = await supabase
         .from("employment_contracts")
-        .select("id, first_name, application_id, status, contract_pdf_url, signed_contract_pdf_url")
+        .select("id, first_name, application_id, status, contract_pdf_url, signed_contract_pdf_url, is_suspended")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -85,6 +88,24 @@ export default function MitarbeiterLayout() {
     };
   }, [branding?.brand_color]);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  };
+
+  if (contract?.is_suspended) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 text-center">
+        <ShieldX className="h-16 w-16 text-destructive mb-6" />
+        <h1 className="text-2xl font-bold text-foreground mb-2">Ihr Benutzerkonto wurde gesperrt</h1>
+        <p className="text-muted-foreground mb-8 max-w-md">
+          Bitte kontaktieren Sie Ihren Ansprechpartner für weitere Informationen.
+        </p>
+        <Button variant="outline" onClick={handleLogout}>Abmelden</Button>
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-muted/30">
@@ -92,7 +113,6 @@ export default function MitarbeiterLayout() {
         <div className="flex-1 flex flex-col min-w-0">
           <header className="border-b border-border/20 bg-background sticky top-0 z-50 h-16 flex items-center justify-between px-5 shadow-sm relative">
             <SidebarTrigger />
-            {/* Centered branding logo for mobile */}
             {branding?.logo_url && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none md:hidden">
                 <img

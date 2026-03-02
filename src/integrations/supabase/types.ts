@@ -289,6 +289,7 @@ export type Database = {
           id: string
           id_back_url: string | null
           id_front_url: string | null
+          is_suspended: boolean
           last_name: string | null
           marital_status: string | null
           nationality: string | null
@@ -323,6 +324,7 @@ export type Database = {
           id?: string
           id_back_url?: string | null
           id_front_url?: string | null
+          is_suspended?: boolean
           last_name?: string | null
           marital_status?: string | null
           nationality?: string | null
@@ -357,6 +359,7 @@ export type Database = {
           id?: string
           id_back_url?: string | null
           id_front_url?: string | null
+          is_suspended?: boolean
           last_name?: string | null
           marital_status?: string | null
           nationality?: string | null

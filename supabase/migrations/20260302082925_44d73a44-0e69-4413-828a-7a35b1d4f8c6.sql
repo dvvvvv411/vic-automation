@@ -1,0 +1,1 @@
+ALTER TABLE public.employment_contracts ADD COLUMN is_suspended boolean NOT NULL DEFAULT false;

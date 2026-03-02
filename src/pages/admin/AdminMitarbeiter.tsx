@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,11 @@ import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Users, ChevronLeft, ChevronRight, Copy, ClipboardList, Search } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Users, ChevronLeft, ChevronRight, Copy, ClipboardList, Search, Lock, Unlock } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { format, parseISO, isAfter, startOfToday } from "date-fns";
@@ -30,13 +34,15 @@ export default function AdminMitarbeiter() {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
   const [assignContract, setAssignContract] = useState<{ id: string; label: string } | null>(null);
+  const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string; isSuspended: boolean } | null>(null);
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ["mitarbeiter", page],
     queryFn: async () => {
       const { data: contracts, error, count } = await supabase
         .from("employment_contracts")
-        .select("id, first_name, last_name, email, phone, temp_password, user_id, application_id, status, desired_start_date, applications(brandings(company_name))", { count: "exact" })
+        .select("id, first_name, last_name, email, phone, temp_password, user_id, application_id, status, desired_start_date, is_suspended, applications(brandings(company_name))", { count: "exact" })
         .in("status", ["genehmigt", "unterzeichnet"])
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -60,6 +66,23 @@ export default function AdminMitarbeiter() {
       return counts;
     },
   });
+
+  const handleToggleSuspend = async () => {
+    if (!suspendTarget) return;
+    const newValue = !suspendTarget.isSuspended;
+    const { error } = await supabase
+      .from("employment_contracts")
+      .update({ is_suspended: newValue })
+      .eq("id", suspendTarget.id);
+
+    if (error) {
+      toast.error("Fehler beim Aktualisieren.");
+    } else {
+      toast.success(newValue ? "Benutzerkonto gesperrt." : "Benutzerkonto entsperrt.");
+      queryClient.invalidateQueries({ queryKey: ["mitarbeiter"] });
+    }
+    setSuspendTarget(null);
+  };
 
   // Sort: unterzeichnet first, then by start date
   const sortedAndFiltered = useMemo(() => {
@@ -140,6 +163,7 @@ export default function AdminMitarbeiter() {
                     <TableHead>Status</TableHead>
                     <TableHead>Startdatum</TableHead>
                     <TableHead>Aufträge</TableHead>
+                    <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -178,15 +202,22 @@ export default function AdminMitarbeiter() {
                           {(item as any).applications?.brandings?.company_name || "–"}
                         </TableCell>
                         <TableCell>
-                          {item.status === "unterzeichnet" ? (
-                            <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
-                              Unterzeichnet
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50">
-                              Nicht unterzeichnet
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {item.status === "unterzeichnet" ? (
+                              <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
+                                Unterzeichnet
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50">
+                                Nicht unterzeichnet
+                              </Badge>
+                            )}
+                            {item.is_suspended && (
+                              <Badge variant="outline" className="text-red-600 border-red-300 bg-red-50">
+                                Gesperrt
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatDate(item.desired_start_date)}
@@ -202,6 +233,23 @@ export default function AdminMitarbeiter() {
                           >
                             <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
                             {count > 0 ? `${count} Aufträge` : "Zuweisen"}
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant={item.is_suspended ? "outline" : "destructive"}
+                            size="sm"
+                            onClick={() => setSuspendTarget({
+                              id: item.id,
+                              name: `${item.first_name ?? ""} ${item.last_name ?? ""}`.trim(),
+                              isSuspended: !!item.is_suspended,
+                            })}
+                          >
+                            {item.is_suspended ? (
+                              <><Unlock className="h-3.5 w-3.5 mr-1.5" /> Entsperren</>
+                            ) : (
+                              <><Lock className="h-3.5 w-3.5 mr-1.5" /> Sperren</>
+                            )}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -237,6 +285,29 @@ export default function AdminMitarbeiter() {
           sourceLabel={assignContract.label}
         />
       )}
+
+      <AlertDialog open={!!suspendTarget} onOpenChange={(v) => { if (!v) setSuspendTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {suspendTarget?.isSuspended
+                ? `Benutzerkonto von ${suspendTarget?.name} entsperren?`
+                : `Benutzerkonto von ${suspendTarget?.name} sperren?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {suspendTarget?.isSuspended
+                ? "Der Mitarbeiter erhält wieder Zugang zum Dashboard und allen Funktionen."
+                : "Der Mitarbeiter wird sofort ausgesperrt und sieht nur noch eine Sperrseite. Er kann nicht mehr auf das Dashboard oder den Livechat zugreifen."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleToggleSuspend}>
+              {suspendTarget?.isSuspended ? "Entsperren" : "Sperren"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
