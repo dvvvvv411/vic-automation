@@ -1,70 +1,58 @@
 
-# Telefonnummer per Klick kopieren in allen Admin-Tabellen
 
-## Aenderung
+# Mitarbeiterkonto sperren
 
-In allen Admin-Tabellen, in denen Telefonnummern angezeigt werden, wird die Telefonnummer klickbar gemacht. Ein Klick kopiert die Nummer ins Clipboard und zeigt eine Toast-Meldung "Telefonnummer kopiert!".
+## Uebersicht
 
-## Betroffene Dateien und Stellen
+Ein "Sperren"-Button in der Mitarbeiter-Tabelle oeffnet ein Bestaetigungs-Popup. Nach Bestaetigung wird das Konto gesperrt. Der gesperrte Mitarbeiter sieht nur noch eine Sperrseite -- kein Dashboard, keine Navigation, keinen Livechat.
 
-### 1. `src/pages/admin/AdminBewerbungen.tsx` (Zeile 768)
+## Aenderungen
 
-Aktuell:
-```tsx
-<TableCell className="text-muted-foreground">{a.phone || "–"}</TableCell>
-```
-Neu: Klickbare Telefonnummer mit Cursor-Pointer und Hover-Effekt. Klick kopiert die Nummer und stoppt die Event-Propagation (da die Tabellenzeile selbst klickbar ist).
+### 1. Datenbank: Neue Spalte `is_suspended` auf `employment_contracts`
 
-### 2. `src/pages/admin/AdminArbeitsvertraege.tsx` (Zeile 210)
-
-Aktuell:
-```tsx
-<TableCell className="text-muted-foreground">{item.applications?.phone || "–"}</TableCell>
-```
-Neu: Gleiche Logik wie oben.
-
-### 3. `src/pages/admin/AdminBewerbungsgespraeche.tsx` (Zeile 335-337)
-
-Aktuell:
-```tsx
-<TableCell className="text-muted-foreground">
-  {item.applications?.phone || "–"}
-</TableCell>
-```
-Neu: Gleiche Logik.
-
-### 4. `src/pages/admin/AdminMitarbeiter.tsx` (Zeile 153)
-
-Aktuell:
-```tsx
-<TableCell className="text-muted-foreground">{item.phone || "–"}</TableCell>
-```
-Neu: Gleiche Logik.
-
-## Umsetzung
-
-Jede Telefonnummer-Zelle wird so umgebaut:
-
-```tsx
-<TableCell className="text-muted-foreground">
-  {phoneValue ? (
-    <span
-      className="cursor-pointer hover:text-foreground transition-colors"
-      onClick={(e) => {
-        e.stopPropagation();
-        navigator.clipboard.writeText(phoneValue);
-        toast.success("Telefonnummer kopiert!");
-      }}
-    >
-      {phoneValue}
-    </span>
-  ) : "–"}
-</TableCell>
+```sql
+ALTER TABLE employment_contracts ADD COLUMN is_suspended boolean NOT NULL DEFAULT false;
 ```
 
-- `cursor-pointer` zeigt an, dass die Nummer klickbar ist
-- `hover:text-foreground` gibt visuelles Feedback beim Hover
-- `e.stopPropagation()` verhindert, dass ein Klick auf die Nummer auch die Tabellenzeile oeffnet (wichtig bei AdminBewerbungen, wo Zeilen klickbar sind)
-- `toast.success` bestaetigt das Kopieren
+Keine neue Tabelle noetig -- die Spalte auf `employment_contracts` reicht, da jeder Mitarbeiter genau einen Vertrag hat und die gesamte App darauf basiert.
 
-Vier Dateien, jeweils eine minimale Aenderung pro Datei. `toast` ist in allen Dateien bereits importiert.
+### 2. `src/pages/admin/AdminMitarbeiter.tsx`
+
+- `is_suspended` in die Select-Query aufnehmen
+- Neue Tabellenspalte "Aktionen" mit einem Button (Schloss-Icon)
+- Bei Klick oeffnet sich ein `AlertDialog` mit Bestaetigungsfrage: "Benutzerkonto von [Name] sperren?"
+- Bei Bestaetigung: `supabase.from("employment_contracts").update({ is_suspended: true }).eq("id", contractId)`
+- Wenn bereits gesperrt: Button zeigt "Entsperren" und setzt `is_suspended` auf `false`
+- Status-Badge "Gesperrt" (rot) wird zusaetzlich angezeigt wenn gesperrt
+- Query wird nach Aktion invalidiert
+
+### 3. `src/components/mitarbeiter/MitarbeiterLayout.tsx`
+
+- `is_suspended` in der Contract-Query mitlesen
+- Wenn `contract.is_suspended === true`: Statt der normalen App-Inhalte (Sidebar, Outlet, ChatWidget) wird eine Ganzseitige Sperrseite gerendert:
+  - Rotes Schild-Icon
+  - Text: "Ihr Benutzerkonto wurde gesperrt"
+  - Beschreibung: "Bitte kontaktieren Sie Ihren Ansprechpartner."
+  - Abmelde-Button
+- Kein Zugriff auf Sidebar, Navigation oder ChatWidget
+
+### 4. Typanpassung
+
+Da `is_suspended` eine neue Spalte ist, wird sie nach der Migration automatisch in den Supabase-Typen verfuegbar sein. Keine manuelle Aenderung an `types.ts` noetig.
+
+## Ablauf
+
+1. Admin klickt auf Schloss-Button in der Mitarbeiter-Zeile
+2. AlertDialog fragt: "Benutzerkonto von Max Mustermann sperren?"
+3. Admin bestaetigt
+4. `is_suspended` wird auf `true` gesetzt
+5. Mitarbeiter sieht beim naechsten Laden (oder sofort bei Realtime) nur die Sperrseite
+6. Admin kann das Konto jederzeit wieder entsperren
+
+## Technische Details
+
+- AlertDialog aus `@/components/ui/alert-dialog` (bereits vorhanden)
+- Lucide Icons: `Lock`, `Unlock`, `ShieldX` fuer die Sperrseite
+- Toast-Benachrichtigung nach erfolgreichem Sperren/Entsperren
+- Kein Edge Function noetig -- direktes Update ueber Supabase Client (Admin hat RLS-Berechtigung)
+
