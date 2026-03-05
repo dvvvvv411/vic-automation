@@ -768,6 +768,30 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_spoof_templates: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          message: string
+          sender_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          message: string
+          sender_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          message?: string
+          sender_name?: string
+        }
+        Relationships: []
+      }
       sms_templates: {
         Row: {
           event_type: string
