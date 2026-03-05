@@ -615,6 +615,24 @@ export type Database = {
         }
         Relationships: []
       }
+      phone_numbers: {
+        Row: {
+          api_url: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          api_url: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          api_url?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

@@ -21,6 +21,7 @@ import AdminEmails from "./pages/admin/AdminEmails";
 import AdminSmsTemplates from "./pages/admin/AdminSmsTemplates";
 import AdminTelegram from "./pages/admin/AdminTelegram";
 import AdminZeitplan from "./pages/admin/AdminZeitplan";
+import AdminTelefonnummern from "./pages/admin/AdminTelefonnummern";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
 import MitarbeiterLayout from "./components/mitarbeiter/MitarbeiterLayout";
@@ -67,6 +68,7 @@ const App = () => (
               <Route path="sms" element={<AdminSmsTemplates />} />
               <Route path="telegram" element={<AdminTelegram />} />
               <Route path="zeitplan" element={<AdminZeitplan />} />
+              <Route path="telefonnummern" element={<AdminTelefonnummern />} />
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
             <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />
