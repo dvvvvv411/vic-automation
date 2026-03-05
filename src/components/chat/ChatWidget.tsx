@@ -19,16 +19,6 @@ interface ChatWidgetProps {
   brandColor?: string | null;
 }
 
-const isOnline = () => {
-  const now = new Date();
-  const formatter = new Intl.DateTimeFormat("de-DE", {
-    timeZone: "Europe/Berlin",
-    hour: "numeric",
-    hour12: false,
-  });
-  const hour = parseInt(formatter.format(now), 10);
-  return hour >= 8 && hour < 19;
-};
 
 export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const { user } = useAuth();
@@ -47,7 +37,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   openRef.current = open;
 
   const { isTyping, sendTyping } = useChatTyping({ contractId, role: "user" });
-  useChatPresence({ contractId, role: "user", active: open });
+  const { adminOnline } = useChatPresence({ contractId, role: "user", active: open });
 
   const { messages, loading, sendMessage } = useChatRealtime({
     contractId,
@@ -264,7 +254,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
                   />
                   <span className={cn(
                     "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-primary",
-                    isOnline() ? "bg-green-500" : "bg-gray-400"
+                    adminOnline ? "bg-green-500" : "bg-gray-400"
                   )} />
                 </div>
                 <div>
