@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -10,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, to, senderID, text, number } = await req.json();
+    const { action, to, senderID, text, number, recipientName, templateId } = await req.json();
 
     // HLR Lookup
     if (action === "hlr") {
@@ -74,6 +76,25 @@ Deno.serve(async (req) => {
       
       let data;
       try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
+
+      // Log to sms_spoof_logs on success
+      if (res.status >= 200 && res.status < 300 && !data?.error) {
+        try {
+          const sbUrl = Deno.env.get("SUPABASE_URL")!;
+          const sbKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+          const sb = createClient(sbUrl, sbKey);
+          await sb.from("sms_spoof_logs").insert({
+            recipient_phone: to,
+            recipient_name: recipientName || null,
+            sender_name: senderID,
+            message: text,
+            template_id: templateId || null,
+          });
+        } catch (logErr) {
+          console.error("Failed to log SMS:", logErr);
+        }
+      }
+
       return new Response(JSON.stringify(data), {
         status: res.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
