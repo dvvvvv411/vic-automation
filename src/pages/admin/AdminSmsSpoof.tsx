@@ -433,13 +433,13 @@ export default function AdminSmsSpoof() {
         </Card>
 
         {/* Right: History */}
-        <Card>
+        <Card className="h-full flex flex-col">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-base">
               <History className="h-4 w-4 text-primary" /> Verlauf
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 min-h-0 overflow-auto">
             {logsLoading ? (
               <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
             ) : logs.length === 0 ? (
@@ -450,7 +450,7 @@ export default function AdminSmsSpoof() {
                 <p className="text-sm text-muted-foreground">Noch keine SMS gesendet.</p>
               </div>
             ) : (
-              <div className="rounded-lg border overflow-auto max-h-[420px]">
+              <div className="rounded-lg border">
                 <Table>
                   <TableHeader>
                     <TableRow>
