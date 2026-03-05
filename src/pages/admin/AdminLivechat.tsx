@@ -12,6 +12,7 @@ import { useChatTyping } from "@/components/chat/useChatTyping";
 import { useChatPresence } from "@/components/chat/useChatPresence";
 import { sendSms } from "@/lib/sendSms";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
+import { SmsWatch } from "@/components/chat/SmsWatch";
 import { Switch } from "@/components/ui/switch";
 import { MessageCircle, Pencil, Smartphone, Check, Plus, Bell, PencilLine, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -381,6 +382,7 @@ export default function AdminLivechat() {
               <p className="text-sm text-muted-foreground">Kein Chat ausgewählt</p>
             )}
           </div>
+          {active && <SmsWatch />}
           <div className="flex items-center gap-2">
             {active && contractData.phone && (
               <>
