@@ -1,58 +1,81 @@
 
 
-# Mitarbeiterkonto sperren
+# Neuer Admin-Reiter "Telefonnummern" unter Betrieb
 
 ## Uebersicht
 
-Ein "Sperren"-Button in der Mitarbeiter-Tabelle oeffnet ein Bestaetigungs-Popup. Nach Bestaetigung wird das Konto gesperrt. Der gesperrte Mitarbeiter sieht nur noch eine Sperrseite -- kein Dashboard, keine Navigation, keinen Livechat.
+Ein neuer Bereich `/admin/telefonnummern` wird erstellt, in dem der Admin API-Share-Links von anosim.net einfuegen kann. Die App ruft dann den oeffentlichen Endpoint `GET /api/v1/OrderBookingShare?token=...` auf und zeigt die Telefonnummerndaten in einer Tabelle an. SMS werden per Collapsible in der jeweiligen Zeile angezeigt. Alles aktualisiert sich alle 5 Sekunden.
 
-## Aenderungen
+## Datenbankdesign
 
-### 1. Datenbank: Neue Spalte `is_suspended` auf `employment_contracts`
+Neue Tabelle `phone_numbers` zum Speichern der API-Links:
 
 ```sql
-ALTER TABLE employment_contracts ADD COLUMN is_suspended boolean NOT NULL DEFAULT false;
+CREATE TABLE public.phone_numbers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  api_url text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.phone_numbers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins can manage phone_numbers"
+  ON public.phone_numbers FOR ALL
+  TO authenticated
+  USING (has_role(auth.uid(), 'admin'));
 ```
 
-Keine neue Tabelle noetig -- die Spalte auf `employment_contracts` reicht, da jeder Mitarbeiter genau einen Vertrag hat und die gesamte App darauf basiert.
+Die Tabelle speichert nur die API-URL. Alle Daten (Nummer, Land, Status, SMS) werden live ueber den oeffentlichen anosim-Endpoint abgerufen -- kein Caching noetig.
 
-### 2. `src/pages/admin/AdminMitarbeiter.tsx`
+## Neue Dateien
 
-- `is_suspended` in die Select-Query aufnehmen
-- Neue Tabellenspalte "Aktionen" mit einem Button (Schloss-Icon)
-- Bei Klick oeffnet sich ein `AlertDialog` mit Bestaetigungsfrage: "Benutzerkonto von [Name] sperren?"
-- Bei Bestaetigung: `supabase.from("employment_contracts").update({ is_suspended: true }).eq("id", contractId)`
-- Wenn bereits gesperrt: Button zeigt "Entsperren" und setzt `is_suspended` auf `false`
-- Status-Badge "Gesperrt" (rot) wird zusaetzlich angezeigt wenn gesperrt
-- Query wird nach Aktion invalidiert
+### 1. `src/pages/admin/AdminTelefonnummern.tsx`
 
-### 3. `src/components/mitarbeiter/MitarbeiterLayout.tsx`
+- Input-Feld + Button zum Hinzufuegen eines API-Links (Validierung: muss `anosim.net/api/v1/orderbookingshare?token=` enthalten)
+- Tabelle mit allen gespeicherten Nummern
+- Fuer jede gespeicherte URL wird per `useQuery` mit `refetchInterval: 5000` der anosim-Endpoint aufgerufen
+- Tabellenspalten: Nummer, Land, Typ, Service, Start, Ende, Status
+- Klick auf Zeile oeffnet ein Collapsible mit den letzten 10 SMS (sortiert nach `messageDate` absteigend)
+- Loeschen-Button pro Zeile (mit Bestaetigung)
+- Status-Badges: Active = gruen, Ended = rot, Pending = gelb
 
-- `is_suspended` in der Contract-Query mitlesen
-- Wenn `contract.is_suspended === true`: Statt der normalen App-Inhalte (Sidebar, Outlet, ChatWidget) wird eine Ganzseitige Sperrseite gerendert:
-  - Rotes Schild-Icon
-  - Text: "Ihr Benutzerkonto wurde gesperrt"
-  - Beschreibung: "Bitte kontaktieren Sie Ihren Ansprechpartner."
-  - Abmelde-Button
-- Kein Zugriff auf Sidebar, Navigation oder ChatWidget
+### 2. Aenderungen an bestehenden Dateien
 
-### 4. Typanpassung
+**`src/components/admin/AdminSidebar.tsx`**: Neuer Eintrag `{ title: "Telefonnummern", url: "/admin/telefonnummern", icon: Phone }` in der Gruppe "Betrieb" (nach Bewertungen)
 
-Da `is_suspended` eine neue Spalte ist, wird sie nach der Migration automatisch in den Supabase-Typen verfuegbar sein. Keine manuelle Aenderung an `types.ts` noetig.
+**`src/App.tsx`**: Neue Route `<Route path="telefonnummern" element={<AdminTelefonnummern />} />` unter `/admin`
 
-## Ablauf
+## API-Aufruf
 
-1. Admin klickt auf Schloss-Button in der Mitarbeiter-Zeile
-2. AlertDialog fragt: "Benutzerkonto von Max Mustermann sperren?"
-3. Admin bestaetigt
-4. `is_suspended` wird auf `true` gesetzt
-5. Mitarbeiter sieht beim naechsten Laden (oder sofort bei Realtime) nur die Sperrseite
-6. Admin kann das Konto jederzeit wieder entsperren
+Der `OrderBookingShare` Endpoint ist **oeffentlich** -- kein API-Key noetig. Der Admin gibt einfach die volle URL ein (z.B. `https://anosim.net/api/v1/orderbookingshare?token=94f6576eb60a4f95`), und die App ruft diese URL direkt per `fetch` auf. Alle 5 Sekunden wird die Antwort aktualisiert.
 
-## Technische Details
+Antwortformat:
+```json
+{
+  "number": "+4912345678910",
+  "country": "Germany",
+  "rentalType": "Activation",
+  "service": "Facebook",
+  "startDate": "2025-05-22T02:36:52.7Z",
+  "endDate": "2025-05-22T03:36:52.7Z",
+  "state": "Active",
+  "sms": [{ "messageSender": "...", "messageDate": "...", "messageText": "..." }]
+}
+```
 
-- AlertDialog aus `@/components/ui/alert-dialog` (bereits vorhanden)
-- Lucide Icons: `Lock`, `Unlock`, `ShieldX` fuer die Sperrseite
-- Toast-Benachrichtigung nach erfolgreichem Sperren/Entsperren
-- Kein Edge Function noetig -- direktes Update ueber Supabase Client (Admin hat RLS-Berechtigung)
+## SMS-Anzeige
+
+- Standardmaessig eingeklappt
+- Klick auf Tabellenzeile klappt SMS-Bereich auf (Collapsible)
+- Zeigt die letzten 10 SMS, sortiert nach Datum (neueste zuerst)
+- Jede SMS zeigt: Absender, Datum/Uhrzeit, Nachrichtentext
+
+## Zusammenfassung der Aenderungen
+
+| Datei | Aenderung |
+|---|---|
+| Migration | Neue Tabelle `phone_numbers` |
+| `AdminTelefonnummern.tsx` | Neue Seite (NEU) |
+| `AdminSidebar.tsx` | Neuer Nav-Eintrag |
+| `App.tsx` | Neue Route |
 
