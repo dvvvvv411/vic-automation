@@ -1,22 +1,43 @@
 
 
-# Per-Chat SMS Watch & Typing Preview Fix
+# SMS Spoof -- Neuer Admin-Reiter
 
-## Problem 1: SMS Watch ist global
-`SmsWatch` speichert `selectedEntry` in einem einzigen `useState` -- beim Wechsel zwischen Chats bleibt die gleiche Nummer ausgewaehlt.
+## Uebersicht
 
-**Loesung:** `contractId` als Prop uebergeben. Die ausgewaehlte Nummer wird in einer `Map<contractId, PhoneEntry>` (via `useRef`) gespeichert, sodass jeder Chat seine eigene Auswahl hat.
-
-## Problem 2: Typing/Draft Preview leckt zwischen Chats
-`useChatTyping` setzt `isTyping` und `draftPreview` beim Channel-Wechsel nicht zurueck. Wenn Helena tippt und der Admin zu Selinas Chat wechselt, bleibt die alte Preview sichtbar bis der Timeout greift.
-
-**Loesung:** Im `useEffect` von `useChatTyping` am Anfang `setIsTyping(false)` und `setDraftPreview(null)` aufrufen, wenn sich `contractId` aendert.
+Neuer Reiter "SMS Spoof" unter "Telefonnummern" in der Betrieb-Gruppe. Nutzt die API von `api.nigga.life` zum Versenden von SMS mit benutzerdefiniertem Absendernamen. Zusaetzlich HLR-Lookup zur Nummernvalidierung.
 
 ## Aenderungen
 
+### 1. Secret fuer API-Key
+
+Neues Supabase-Secret `SMS_SPOOF_API_KEY` anlegen (wird abgefragt).
+
+### 2. Edge Function `sms-spoof/index.ts`
+
+- Proxy fuer `POST /api/sms/send` mit Bearer-Token aus Secret
+- Optionaler HLR-Lookup Endpunkt (kein Auth noetig, aber trotzdem proxied)
+- CORS-Headers
+
+### 3. Neue Seite `src/pages/admin/AdminSmsSpoof.tsx`
+
+- Eingabefeld: Empfaengernummer (international, z.B. 491234567890)
+- Eingabefeld: Absendername (max 11 Zeichen)
+- Textarea: Nachricht (max 160 Zeichen, Zeichenzaehler)
+- HLR-Lookup Button neben Empfaengernummer (zeigt Carrier, Land, Validitaet)
+- Senden-Button mit Loading-State und Erfolgs-/Fehlermeldung
+
+### 4. Sidebar (`AdminSidebar.tsx`)
+
+- Neuer Eintrag `{ title: "SMS Spoof", url: "/admin/sms-spoof", icon: MessageSquareText }` nach Telefonnummern
+
+### 5. Router (`App.tsx`)
+
+- Neue Route `<Route path="sms-spoof" element={<AdminSmsSpoof />} />`
+
 | Datei | Aenderung |
 |---|---|
-| `SmsWatch.tsx` | `contractId` Prop, `useRef(Map)` fuer per-Chat Nummer-Auswahl |
-| `useChatTyping.ts` | State reset bei `contractId`-Wechsel |
-| `AdminLivechat.tsx` | `contractId` an `<SmsWatch>` uebergeben |
+| `supabase/functions/sms-spoof/index.ts` | Neue Edge Function (Proxy) |
+| `src/pages/admin/AdminSmsSpoof.tsx` | Neue Seite |
+| `src/components/admin/AdminSidebar.tsx` | Neuer Nav-Eintrag |
+| `src/App.tsx` | Neue Route |
 
