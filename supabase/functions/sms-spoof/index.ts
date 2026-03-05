@@ -48,12 +48,23 @@ Deno.serve(async (req) => {
       const reqBody = JSON.stringify({ to, senderID, text });
       console.log("SMS send request:", { to, senderID, textLen: text.length, apiKeyLen: apiKey?.length });
       
-      const res = await fetch("https://api.nigga.life/api/sms/send", {
+      const res = await fetch("https://nigga.life/api/sms/send", {
         method: "POST",
         headers: {
-          accept: "application/json",
-          authorization: `Bearer ${apiKey}`,
+          "accept": "*/*",
+          "accept-language": "en-US,en;q=0.6",
+          "authorization": `Bearer ${apiKey}`,
           "content-type": "application/json",
+          "origin": "https://nigga.life",
+          "referer": "https://nigga.life/dashboard",
+          "sec-ch-ua": '"Not:A-Brand";v="99", "Brave";v="145", "Chromium";v="145"',
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": '"Windows"',
+          "sec-fetch-dest": "empty",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-site": "same-origin",
+          "sec-gpc": "1",
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
         },
         body: reqBody,
       });
