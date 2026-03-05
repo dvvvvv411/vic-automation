@@ -17,7 +17,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Send, Search, Loader2, CheckCircle, XCircle, Trash2, Plus, Info, Eye, History, MessageSquare, Zap } from "lucide-react";
+import { Send, Search, Loader2, CheckCircle, XCircle, Pencil, Plus, Info, Eye, History, MessageSquare, Zap, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface HlrResult {
@@ -82,6 +82,15 @@ export default function AdminSmsSpoof() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmSending, setConfirmSending] = useState(false);
+
+  // Edit template
+  const [editTemplate, setEditTemplate] = useState<SpoofTemplate | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editSender, setEditSender] = useState("");
+  const [editMessage, setEditMessage] = useState("");
+
+  // Employee search
+  const [employeeSearch, setEmployeeSearch] = useState("");
 
   // History
   const [logs, setLogs] = useState<SpoofLog[]>([]);
@@ -226,7 +235,30 @@ export default function AdminSmsSpoof() {
 
   const handleDeleteTemplate = async (id: string) => {
     await supabase.from("sms_spoof_templates" as any).delete().eq("id", id);
+    setEditTemplate(null);
     fetchTemplates();
+  };
+
+  const handleOpenEdit = (tpl: SpoofTemplate) => {
+    setEditTemplate(tpl);
+    setEditLabel(tpl.label);
+    setEditSender(tpl.sender_name);
+    setEditMessage(tpl.message);
+  };
+
+  const handleUpdateTemplate = async () => {
+    if (!editTemplate || !editLabel.trim() || !editSender.trim() || !editMessage.trim()) return;
+    const { error } = await supabase
+      .from("sms_spoof_templates" as any)
+      .update({ label: editLabel.trim(), sender_name: editSender.trim(), message: editMessage.trim() } as any)
+      .eq("id", editTemplate.id);
+    if (error) {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Template aktualisiert!" });
+      setEditTemplate(null);
+      fetchTemplates();
+    }
   };
 
   const handleOpenSendDialog = (tpl: SpoofTemplate) => {
@@ -296,6 +328,19 @@ export default function AdminSmsSpoof() {
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Templates</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {/* Add Template Card - always first */}
+          <button
+            onClick={() => setShowCreateDialog(true)}
+            className="group flex flex-col items-center justify-center min-h-[160px] rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
+              <Plus className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+            <span className="mt-2 text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
+              Neues Template
+            </span>
+          </button>
+
           {templates.map((tpl) => (
             <Card key={tpl.id} className="group relative overflow-hidden transition-all hover:shadow-md hover:border-primary/30">
               <CardContent className="p-4 flex flex-col h-full min-h-[160px]">
@@ -310,10 +355,10 @@ export default function AdminSmsSpoof() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDeleteTemplate(tpl.id)}
-                    className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleOpenEdit(tpl)}
+                    className="h-7 px-2 text-muted-foreground hover:text-primary hover:bg-primary/10"
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Pencil className="h-3 w-3" />
                   </Button>
                   <Button
                     size="sm"
@@ -326,19 +371,6 @@ export default function AdminSmsSpoof() {
               </CardContent>
             </Card>
           ))}
-
-          {/* Add Template Card */}
-          <button
-            onClick={() => setShowCreateDialog(true)}
-            className="group flex flex-col items-center justify-center min-h-[160px] rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
-              <Plus className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-            </div>
-            <span className="mt-2 text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
-              Neues Template
-            </span>
-          </button>
         </div>
       </div>
 
@@ -498,37 +530,93 @@ export default function AdminSmsSpoof() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Template Dialog */}
+      <Dialog open={!!editTemplate} onOpenChange={(open) => { if (!open) setEditTemplate(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Template bearbeiten</DialogTitle>
+            <DialogDescription>Bearbeite die Werte dieses Templates.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs">Template-Name</Label>
+              <Input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Absendername (max. 11 Zeichen)</Label>
+              <Input maxLength={11} value={editSender} onChange={(e) => setEditSender(e.target.value)} />
+              <p className="text-[10px] text-muted-foreground text-right">{editSender.length}/11</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Nachricht (max. 160 Zeichen)</Label>
+              <Textarea maxLength={160} value={editMessage} onChange={(e) => setEditMessage(e.target.value)} rows={3} />
+              <p className="text-[10px] text-muted-foreground text-right">{editMessage.length}/160</p>
+            </div>
+          </div>
+          <DialogFooter className="flex !justify-between">
+            <Button
+              variant="destructive"
+              onClick={() => editTemplate && handleDeleteTemplate(editTemplate.id)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" /> Löschen
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEditTemplate(null)}>Abbrechen</Button>
+              <Button onClick={handleUpdateTemplate} disabled={!editLabel.trim() || !editSender.trim() || !editMessage.trim()}>
+                Speichern
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Employee Selection Dialog */}
-      <Dialog open={showEmployeeDialog} onOpenChange={setShowEmployeeDialog}>
+      <Dialog open={showEmployeeDialog} onOpenChange={(open) => { setShowEmployeeDialog(open); if (!open) setEmployeeSearch(""); }}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Mitarbeiter auswählen</DialogTitle>
             <DialogDescription>Wähle einen Mitarbeiter als Empfänger für "{selectedTemplate?.label}"</DialogDescription>
           </DialogHeader>
-          <div className="overflow-y-auto flex-1 -mx-6 px-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Mitarbeiter suchen..."
+              value={employeeSearch}
+              onChange={(e) => setEmployeeSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="overflow-y-auto max-h-[400px] -mx-6 px-6">
             {employeesLoading ? (
               <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-            ) : employees.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4">Keine Mitarbeiter gefunden.</p>
-            ) : (
-              <div className="space-y-1">
-                {employees.map((emp) => (
-                  <button
-                    key={emp.id}
-                    onClick={() => handleSelectEmployee(emp)}
-                    className="w-full text-left px-3 py-2.5 rounded-md hover:bg-accent transition-colors flex items-center justify-between gap-2"
-                  >
-                    <div>
-                      <p className="font-medium text-sm">{emp.first_name} {emp.last_name}</p>
-                      {emp.company_name && <p className="text-xs text-muted-foreground">{emp.company_name}</p>}
-                    </div>
-                    <span className="text-xs text-muted-foreground font-mono shrink-0">
-                      {emp.phone || "Keine Nr."}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
+            ) : (() => {
+              const filtered = employees.filter((emp) => {
+                if (!employeeSearch.trim()) return true;
+                const name = `${emp.first_name || ""} ${emp.last_name || ""}`.toLowerCase();
+                return name.includes(employeeSearch.toLowerCase());
+              });
+              return filtered.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4">Keine Mitarbeiter gefunden.</p>
+              ) : (
+                <div className="space-y-1">
+                  {filtered.map((emp) => (
+                    <button
+                      key={emp.id}
+                      onClick={() => handleSelectEmployee(emp)}
+                      className="w-full text-left px-3 py-2.5 rounded-md hover:bg-accent transition-colors flex items-center justify-between gap-2"
+                    >
+                      <div>
+                        <p className="font-medium text-sm">{emp.first_name} {emp.last_name}</p>
+                        {emp.company_name && <p className="text-xs text-muted-foreground">{emp.company_name}</p>}
+                      </div>
+                      <span className="text-xs text-muted-foreground font-mono shrink-0">
+                        {emp.phone || "Keine Nr."}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </DialogContent>
       </Dialog>
