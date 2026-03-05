@@ -1,39 +1,36 @@
 
 
-# SMS Watch im Admin-Livechat Header
+# SMS Watch Redesign
 
-## Uebersicht
+## Probleme & Anforderungen
 
-Ein neues "SMS Watch" Element wird im Chat-Header zwischen dem Mitarbeiternamen und dem Code-Eingabefeld eingefuegt. Es ermoeglicht dem Admin, eine der unter `/admin/telefonnummern` hinzugefuegten Telefonnummern auszuwaehlen und eingehende SMS in Echtzeit (alle 5 Sekunden) zu ueberwachen.
-
-## Funktionsweise
-
-1. **SMS Watch Button** im Header -- klickt der Admin darauf, oeffnet sich ein Popover
-2. **Telefonnummern-Auswahl**: Popover zeigt alle `phone_numbers`-Eintraege (via anosim-proxy). Admin waehlt eine Nummer aus
-3. **Aktive Ueberwachung**: Nach Auswahl wird die ausgewaehlte Nummer alle 5s abgefragt. Badge zeigt Anzahl neuer SMS seit Auswahl
-4. **SMS-Ansicht**: Erneuter Klick zeigt die letzten 10 empfangenen SMS + Button zum Wechseln der Nummer
+1. ScrollArea funktioniert nicht (braucht feste Hoehe statt `max-h-72`)
+2. Neueste SMS soll direkt im Header-Button als Preview sichtbar sein (ohne Dropdown)
+3. Alle 5 Sekunden Aktualisierung (ist bereits implementiert via `refetchInterval: 5000`)
+4. Direkt eine neue Telefonnummer hinzufuegen koennen (API-Link Input im Dropdown)
+5. Insgesamt schoener und moderner gestalten
 
 ## Aenderungen
 
-### 1. Neue Komponente: `src/components/chat/SmsWatch.tsx`
+### `src/components/chat/SmsWatch.tsx` -- Komplett ueberarbeiten
 
-- Eigene Komponente fuer das gesamte SMS Watch Feature
-- State: `selectedPhoneId`, `smsList`, `lastSeenCount`
-- Laedt `phone_numbers` aus der DB
-- Fuer die ausgewaehlte Nummer: `useQuery` mit `refetchInterval: 5000` ueber `anosim-proxy`
-- Popover mit zwei Ansichten:
-  - **Keine Nummer ausgewaehlt**: Liste der verfuegbaren Nummern zum Auswaehlen
-  - **Nummer ausgewaehlt**: Letzte 10 SMS + Button "Nummer aendern"
-- Badge am Button zeigt neue SMS seit letztem Oeffnen
+**Header-Button:**
+- Zeigt die neueste SMS als einzeiligen Preview-Text neben dem Eye-Icon (truncated)
+- Badge fuer neue SMS bleibt
+- Wenn keine Nummer gewaehlt: "SMS Watch" Text
 
-### 2. `src/pages/admin/AdminLivechat.tsx`
+**Popover-Inhalt (Nummer gewaehlt):**
+- ScrollArea mit fester Hoehe (`h-72`) statt `max-h-72` fuer korrektes Scrolling
+- SMS-Karten mit leichtem Farbakzent fuer die neueste SMS
+- Header mit Telefonnummer + "Aendern" Button
 
-- Import und Platzierung von `<SmsWatch />` im Header zwischen Name und Code-Eingabefeld (Zeile ~384, vor dem `quickSmsCode` Input)
+**Popover-Inhalt (keine Nummer):**
+- Liste der verfuegbaren Nummern
+- Neuer Abschnitt unten: Input-Feld fuer neuen anosim API-Link + Hinzufuegen-Button
+- Nutzt `useMutation` zum Einfuegen in `phone_numbers` Tabelle (gleiche Logik wie AdminTelefonnummern)
 
-## Zusammenfassung
-
-| Datei | Aenderung |
-|---|---|
-| `src/components/chat/SmsWatch.tsx` | Neue Komponente |
-| `AdminLivechat.tsx` | SmsWatch im Header einfuegen |
+**Visuelles Upgrade:**
+- Neueste SMS im Popover mit gruener/blauen Akzent-Border hervorgehoben
+- Kompaktere SMS-Karten
+- Pulsierender Punkt neben dem Icon wenn aktiv ueberwacht wird
 
