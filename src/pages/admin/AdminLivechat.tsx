@@ -382,7 +382,7 @@ export default function AdminLivechat() {
               <p className="text-sm text-muted-foreground">Kein Chat ausgewählt</p>
             )}
           </div>
-          {active && <SmsWatch />}
+          {active && <SmsWatch contractId={active.contract_id} />}
           <div className="flex items-center gap-2">
             {active && contractData.phone && (
               <>
