@@ -45,6 +45,9 @@ Deno.serve(async (req) => {
         });
       }
 
+      const reqBody = JSON.stringify({ to, senderID, text });
+      console.log("SMS send request:", { to, senderID, textLen: text.length, apiKeyLen: apiKey?.length });
+      
       const res = await fetch("https://api.nigga.life/api/sms/send", {
         method: "POST",
         headers: {
@@ -52,10 +55,14 @@ Deno.serve(async (req) => {
           authorization: `Bearer ${apiKey}`,
           "content-type": "application/json",
         },
-        body: JSON.stringify({ to, senderID, text }),
+        body: reqBody,
       });
 
-      const data = await res.json();
+      const rawText = await res.text();
+      console.log("SMS API response:", res.status, rawText);
+      
+      let data;
+      try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
       return new Response(JSON.stringify(data), {
         status: res.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
