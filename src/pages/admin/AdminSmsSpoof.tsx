@@ -156,8 +156,7 @@ export default function AdminSmsSpoof() {
   const resolveVariables = (msg: string, emp: Employee) => {
     return msg
       .replace(/%Vorname%/g, emp.first_name || "")
-      .replace(/%Nachname%/g, emp.last_name || "")
-      .replace(/%Unternehmen%/g, emp.company_name || "");
+      .replace(/%Nachname%/g, emp.last_name || "");
   };
 
   // --- Existing manual send ---
@@ -348,8 +347,7 @@ export default function AdminSmsSpoof() {
               <p className="font-medium text-foreground">Verfügbare Variablen:</p>
               <p className="text-muted-foreground">
                 <code className="bg-muted px-1 rounded">%Vorname%</code>{" "}
-                <code className="bg-muted px-1 rounded">%Nachname%</code>{" "}
-                <code className="bg-muted px-1 rounded">%Unternehmen%</code>
+                <code className="bg-muted px-1 rounded">%Nachname%</code>
               </p>
             </div>
           </div>
@@ -367,7 +365,7 @@ export default function AdminSmsSpoof() {
 
           <div className="space-y-2">
             <Label>Nachricht (max. 160 Zeichen)</Label>
-            <Textarea placeholder="Hallo %Vorname%, willkommen bei %Unternehmen%!" maxLength={160} value={tplMessage} onChange={(e) => setTplMessage(e.target.value)} rows={3} />
+            <Textarea placeholder="Hallo %Vorname%, wie geht es dir?" maxLength={160} value={tplMessage} onChange={(e) => setTplMessage(e.target.value)} rows={3} />
             <p className="text-xs text-muted-foreground text-right">{tplMessage.length}/160</p>
           </div>
 
