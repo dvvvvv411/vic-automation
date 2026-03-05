@@ -12,6 +12,7 @@ import { useChatTyping } from "@/components/chat/useChatTyping";
 import { useChatPresence } from "@/components/chat/useChatPresence";
 import { sendSms } from "@/lib/sendSms";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
+import { Switch } from "@/components/ui/switch";
 import { MessageCircle, Pencil, Smartphone, Check, Plus, Bell, PencilLine, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -63,7 +64,8 @@ export default function AdminLivechat() {
     role: "admin",
   });
 
-  const { onlineContractIds } = useChatPresence({ contractId: null, role: "admin" });
+  const [adminOnlineStatus, setAdminOnlineStatus] = useState(true);
+  const { onlineContractIds } = useChatPresence({ contractId: null, role: "admin", active: adminOnlineStatus });
 
   // Load admin profile
   useEffect(() => {
@@ -472,6 +474,14 @@ export default function AdminLivechat() {
                     >
                       OK
                     </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <label className="text-xs font-medium text-foreground">Online-Status</label>
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${adminOnlineStatus ? "bg-green-500" : "bg-muted-foreground/30"}`} />
+                    <span className="text-xs text-muted-foreground">{adminOnlineStatus ? "Online" : "Offline"}</span>
+                    <Switch checked={adminOnlineStatus} onCheckedChange={setAdminOnlineStatus} />
                   </div>
                 </div>
               </PopoverContent>

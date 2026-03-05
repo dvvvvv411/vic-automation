@@ -11,6 +11,8 @@ export function useChatPresence({ contractId, role, active = true }: UseChatPres
   const [onlineContractIds, setOnlineContractIds] = useState<Set<string>>(new Set());
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
+  const [adminOnline, setAdminOnline] = useState(false);
+
   useEffect(() => {
     const channel = supabase.channel("chat-presence", {
       config: { presence: { key: role === "user" ? contractId ?? "unknown" : "admin" } },
@@ -22,23 +24,35 @@ export function useChatPresence({ contractId, role, active = true }: UseChatPres
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
         const ids = new Set<string>();
+        let adminPresent = false;
         for (const key of Object.keys(state)) {
           for (const presence of state[key]) {
             const p = presence as any;
             if (p.role === "user" && p.contract_id) {
               ids.add(p.contract_id);
             }
+            if (p.role === "admin") {
+              adminPresent = true;
+            }
           }
         }
         setOnlineContractIds(ids);
+        setAdminOnline(adminPresent);
       })
       .subscribe(async (status) => {
-        if (status === "SUBSCRIBED" && active && role === "user" && contractId) {
-          await channel.track({
-            contract_id: contractId,
-            role: "user",
-            online_at: new Date().toISOString(),
-          });
+        if (status === "SUBSCRIBED" && active) {
+          if (role === "user" && contractId) {
+            await channel.track({
+              contract_id: contractId,
+              role: "user",
+              online_at: new Date().toISOString(),
+            });
+          } else if (role === "admin") {
+            await channel.track({
+              role: "admin",
+              online_at: new Date().toISOString(),
+            });
+          }
         }
       });
 
@@ -52,18 +66,25 @@ export function useChatPresence({ contractId, role, active = true }: UseChatPres
   // Track/untrack when active changes
   useEffect(() => {
     const channel = channelRef.current;
-    if (!channel || role !== "user" || !contractId) return;
+    if (!channel) return;
 
     if (active) {
-      channel.track({
-        contract_id: contractId,
-        role: "user",
-        online_at: new Date().toISOString(),
-      });
+      if (role === "user" && contractId) {
+        channel.track({
+          contract_id: contractId,
+          role: "user",
+          online_at: new Date().toISOString(),
+        });
+      } else if (role === "admin") {
+        channel.track({
+          role: "admin",
+          online_at: new Date().toISOString(),
+        });
+      }
     } else {
       channel.untrack();
     }
   }, [active, contractId, role]);
 
-  return { onlineContractIds };
+  return { onlineContractIds, adminOnline };
 }
