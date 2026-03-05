@@ -1,43 +1,22 @@
 
-
-# SMS Spoof Templates Feature
-
-## Overview
-Add a new "Templates" section to `/admin/sms-spoof` where admins can create reusable SMS templates with sender name, message text, and variable support. Each saved template shows as a card with a "Send" button that opens a multi-step dialog: employee selection -> confirmation preview -> send.
+# SMS Spoof History
 
 ## Database
-
-**New table: `sms_spoof_templates`**
+New table `sms_spoof_logs` to record every sent spoof SMS:
 - `id` uuid PK
-- `sender_name` text (max 11 chars)
-- `message` text (max 160 chars)
-- `label` text (display name)
+- `recipient_phone` text
+- `recipient_name` text (nullable, for employee name)
+- `sender_name` text (the spoofed sender ID)
+- `message` text
+- `template_id` uuid (nullable, FK to sms_spoof_templates)
 - `created_at` timestamptz
-- RLS: admin-only CRUD
+- RLS: admin-only SELECT
 
-## UI Changes
+## Edge Function Change (`supabase/functions/sms-spoof/index.ts`)
+After a successful SMS send (non-error response), log the send to `sms_spoof_logs` using the Supabase service role client. Accept optional `recipientName` and `templateId` fields from the request body.
 
-**File: `src/pages/admin/AdminSmsSpoof.tsx`**
-
-Add a new section below the existing "Nachricht senden" card:
-
-1. **Template Creator** - Card with inputs for Label, Absendername (max 11), Nachricht (max 160), and a "Speichern" button. Info box listing available variables: `%Vorname%`, `%Nachname%`, `%Unternehmen%`.
-
-2. **Saved Templates** - Grid of cards, each showing label, sender name, message preview, and two buttons: "Loeschen" and "SMS senden".
-
-3. **Employee Selection Dialog** - When "SMS senden" is clicked, a dialog opens listing all employees (from `employment_contracts` joined with `applications` for branding). Each row shows name + phone. Clicking a row opens the confirmation step.
-
-4. **Confirmation Dialog** - Shows the resolved message (variables replaced with actual employee data), recipient name, phone number, and sender name. "Senden" button invokes `sms-spoof` edge function with the resolved values.
-
-**Variable Resolution Logic:**
-- `%Vorname%` -> `employment_contracts.first_name`
-- `%Nachname%` -> `employment_contracts.last_name`
-- `%Unternehmen%` -> `brandings.company_name` (via `applications.branding_id`)
-
-## Data Flow
-1. Query employees: `employment_contracts` (status != 'offen', not suspended) joined with `applications` -> `brandings` for company name
-2. On employee select: replace variables in template message
-3. On confirm: call `sms-spoof` edge function with `{ action: "send", to, senderID, text }`
-
-No edge function changes needed -- the existing send action handles everything.
-
+## UI Change (`src/pages/admin/AdminSmsSpoof.tsx`)
+1. Add a "History" section at the bottom with a table showing: Datum, Empfänger, Telefon, Absender, and a "Preview" button.
+2. Fetch from `sms_spoof_logs` ordered by `created_at desc`.
+3. Preview Dialog: clicking a row opens a dialog showing the full message text, recipient info, and sender name.
+4. Pass `recipientName` and `templateId` from both the manual send and template send flows so the edge function can log them.
