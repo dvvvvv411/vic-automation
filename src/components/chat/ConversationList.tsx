@@ -21,9 +21,10 @@ interface ConversationListProps {
   conversations: Conversation[];
   search: string;
   onSearchChange: (val: string) => void;
+  onlineContractIds?: Set<string>;
 }
 
-export function ConversationList({ activeId, onSelect, conversations, search, onSearchChange }: ConversationListProps) {
+export function ConversationList({ activeId, onSelect, conversations, search, onSearchChange, onlineContractIds }: ConversationListProps) {
   const filtered = conversations.filter((c) => {
     const name = `${c.first_name ?? ""} ${c.last_name ?? ""}`.toLowerCase();
     return name.includes(search.toLowerCase());
@@ -56,9 +57,17 @@ export function ConversationList({ activeId, onSelect, conversations, search, on
               )}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-medium text-sm text-foreground truncate">
-                  {conv.first_name} {conv.last_name}
-                </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {onlineContractIds && (
+                    <span className={cn(
+                      "h-2 w-2 rounded-full shrink-0",
+                      onlineContractIds.has(conv.contract_id) ? "bg-green-500" : "bg-muted-foreground/30"
+                    )} />
+                  )}
+                  <span className="font-medium text-sm text-foreground truncate">
+                    {conv.first_name} {conv.last_name}
+                  </span>
+                </div>
                 <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
                   {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true, locale: de })}
                 </span>

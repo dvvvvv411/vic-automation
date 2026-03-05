@@ -9,6 +9,7 @@ import { TemplateManager } from "@/components/chat/TemplateManager";
 import { AvatarUpload } from "@/components/chat/AvatarUpload";
 import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatRealtime";
 import { useChatTyping } from "@/components/chat/useChatTyping";
+import { useChatPresence } from "@/components/chat/useChatPresence";
 import { sendSms } from "@/lib/sendSms";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
 import { MessageCircle, Pencil, Smartphone, Check, Plus, Bell, PencilLine, X } from "lucide-react";
@@ -61,6 +62,8 @@ export default function AdminLivechat() {
     contractId: active?.contract_id ?? null,
     role: "admin",
   });
+
+  const { onlineContractIds } = useChatPresence({ contractId: null, role: "admin" });
 
   // Load admin profile
   useEffect(() => {
@@ -346,6 +349,7 @@ export default function AdminLivechat() {
           conversations={conversations}
           search={search}
           onSearchChange={setSearch}
+          onlineContractIds={onlineContractIds}
         />
       </div>
 
