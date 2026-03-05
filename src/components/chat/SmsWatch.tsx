@@ -109,15 +109,15 @@ export function SmsWatch() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 gap-2 relative max-w-[220px]">
-          <div className="relative">
+        <Button variant="outline" size="sm" className="h-auto min-h-9 py-1.5 gap-2 relative max-w-md text-left">
+          <div className="relative shrink-0">
             <Eye className="h-4 w-4 shrink-0" />
             {selectedEntry && (
               <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
             )}
           </div>
           {latestSms ? (
-            <span className="truncate text-xs font-normal opacity-70">
+            <span className="line-clamp-2 whitespace-normal text-xs font-normal opacity-70">
               {latestSms.messageText}
             </span>
           ) : (
