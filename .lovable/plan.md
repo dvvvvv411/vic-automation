@@ -1,42 +1,37 @@
 
 
-# Online-Status im Admin-Livechat
+# Admin Online/Offline Toggle im Livechat
 
 ## Uebersicht
 
-Im Admin-Livechat soll in der Konversationsliste ein gruener Punkt angezeigt werden, wenn ein Mitarbeiter gerade aktiv den Chat geoeffnet hat. Dafuer wird Supabase Realtime Presence verwendet.
+Der Admin kann sich im Profil-Popover manuell als Online oder Offline markieren. Die zeitbasierte `isOnline()`-Funktion im ChatWidget wird entfernt und durch den echten Presence-Status des Admins ersetzt.
 
 ## Aenderungen
 
-### 1. Neuer Hook: `src/components/chat/useChatPresence.ts`
+### 1. `src/components/chat/useChatPresence.ts`
 
-Zentraler Hook fuer Presence-Management:
-- Nutzt `supabase.channel("chat-presence")` mit `.track()` um den eigenen Status zu senden
-- Parameter: `contractId`, `role` ("user" oder "admin")
-- User-Seite: Tracked Presence wenn ChatWidget geoeffnet ist, untracked wenn geschlossen
-- Admin-Seite: Subscribed auf Presence-State und gibt ein Set der aktuell online contract_ids zurueck
+- Admin tracked jetzt auch Presence wenn `active === true`: `.track({ role: "admin" })`
+- Wenn `active === false`: `.untrack()`
+- Neues Feld im Return: `adminOnline: boolean` -- prueft ob ein Admin im Presence-State ist
 
-### 2. `src/components/chat/ChatWidget.tsx`
+### 2. `src/pages/admin/AdminLivechat.tsx`
 
-- Importiert `useChatPresence`
-- Wenn `open === true`: tracked Presence mit `{ contract_id, role: "user" }`
-- Wenn `open === false` oder Unmount: untracked Presence
+- Neuer State: `adminOnlineStatus` (boolean, default `true`)
+- Im Profil-Popover (nach Anzeigename): Switch-Toggle "Online-Status" mit Label
+- `useChatPresence` erhaelt `active: adminOnlineStatus` und `role: "admin"`
+- Import von `Switch` aus `@/components/ui/switch`
 
-### 3. `src/components/chat/ConversationList.tsx`
+### 3. `src/components/chat/ChatWidget.tsx`
 
-- Neues Prop: `onlineContractIds: Set<string>`
-- Zeigt einen gruenen Punkt neben dem Namen, wenn die `contract_id` im Set enthalten ist
-- Text "Online" oder "Offline" als kleiner Hinweis unter dem Namen
+- `isOnline()`-Funktion komplett entfernen
+- `useChatPresence` gibt jetzt `adminOnline` zurueck
+- Der gruene/graue Punkt im Chat-Header nutzt `adminOnline` statt `isOnline()`
 
-### 4. `src/pages/admin/AdminLivechat.tsx`
+### Zusammenfassung
 
-- Importiert `useChatPresence` mit `role: "admin"`
-- Gibt das `onlineContractIds` Set an `ConversationList` weiter
-
-## Technische Details
-
-- Supabase Realtime Presence erfordert keinen DB-Zugriff -- es laeuft komplett ueber WebSockets
-- Kein neues Datenbankschema noetig
-- Presence-State wird automatisch bereinigt wenn der Client disconnected (Tab schliessen, Navigation weg)
-- Ein einzelner Channel `chat-presence` wird geteilt, sodass der Admin alle Online-User auf einmal sieht
+| Datei | Aenderung |
+|---|---|
+| `useChatPresence.ts` | Admin-Tracking + `adminOnline` im Return |
+| `AdminLivechat.tsx` | Toggle im Profil-Popover |
+| `ChatWidget.tsx` | `isOnline()` entfernen, `adminOnline` nutzen |
 
