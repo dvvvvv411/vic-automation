@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -16,7 +17,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Send, Search, Loader2, CheckCircle, XCircle, Trash2, Plus, Info, Eye, History } from "lucide-react";
+import { Send, Search, Loader2, CheckCircle, XCircle, Trash2, Plus, Info, Eye, History, MessageSquare, Zap } from "lucide-react";
 import { format } from "date-fns";
 
 interface HlrResult {
@@ -69,6 +70,7 @@ export default function AdminSmsSpoof() {
   const [tplSender, setTplSender] = useState("");
   const [tplMessage, setTplMessage] = useState("");
   const [tplSaving, setTplSaving] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Send dialog
   const [selectedTemplate, setSelectedTemplate] = useState<SpoofTemplate | null>(null);
@@ -124,7 +126,6 @@ export default function AdminSmsSpoof() {
       return;
     }
 
-    // Get application_ids to fetch branding info
     const appIds = data.map((d) => d.application_id).filter(Boolean);
     const { data: apps } = await supabase
       .from("applications")
@@ -159,7 +160,6 @@ export default function AdminSmsSpoof() {
       .replace(/%Nachname%/g, emp.last_name || "");
   };
 
-  // --- Existing manual send ---
   const handleHlr = async () => {
     if (!to.trim()) return;
     setHlrLoading(true);
@@ -202,7 +202,6 @@ export default function AdminSmsSpoof() {
     }
   };
 
-  // --- Templates ---
   const handleSaveTemplate = async () => {
     if (!tplLabel.trim() || !tplSender.trim() || !tplMessage.trim()) {
       toast({ title: "Alle Felder ausfüllen", variant: "destructive" });
@@ -219,6 +218,7 @@ export default function AdminSmsSpoof() {
       setTplLabel("");
       setTplSender("");
       setTplMessage("");
+      setShowCreateDialog(false);
       fetchTemplates();
     }
     setTplSaving(false);
@@ -278,133 +278,225 @@ export default function AdminSmsSpoof() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">SMS Spoof</h1>
-
-      {/* Existing manual send card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Nachricht senden</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Empfängernummer (international, z.B. 491234567890)</Label>
-            <div className="flex gap-2">
-              <Input placeholder="491234567890" value={to} onChange={(e) => setTo(e.target.value)} className="flex-1" />
-              <Button variant="outline" size="icon" onClick={handleHlr} disabled={hlrLoading || !to.trim()}>
-                {hlrLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </Button>
-            </div>
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+            <Zap className="h-5 w-5 text-primary" />
           </div>
-
-          {hlrResult && (
-            <div className="rounded-md border p-3 text-sm space-y-1 bg-muted/30">
-              <div className="flex items-center gap-2">
-                {hlrResult.is_valid ? (
-                  <Badge variant="default" className="gap-1"><CheckCircle className="h-3 w-3" /> Gültig</Badge>
-                ) : (
-                  <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> Ungültig</Badge>
-                )}
-                <span className="text-muted-foreground">{hlrResult.region_code}</span>
-              </div>
-              {hlrResult.formatted_international && <p>Formatiert: {hlrResult.formatted_international}</p>}
-              {hlrResult.number_type && <p>Typ: {hlrResult.number_type}</p>}
-              {hlrResult.location && <p>Ort: {hlrResult.location}</p>}
-              {hlrResult.carrier && <p>Carrier: {hlrResult.carrier}</p>}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label>Absendername (max. 11 Zeichen)</Label>
-            <Input placeholder="MyBrand" maxLength={11} value={senderID} onChange={(e) => setSenderID(e.target.value)} />
-            <p className="text-xs text-muted-foreground text-right">{senderID.length}/11</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Nachricht (max. 160 Zeichen)</Label>
-            <Textarea placeholder="Deine Nachricht..." maxLength={160} value={text} onChange={(e) => setText(e.target.value)} rows={4} />
-            <p className="text-xs text-muted-foreground text-right">{text.length}/160</p>
-          </div>
-
-          <Button onClick={handleSend} disabled={sending || !to.trim() || !senderID.trim() || !text.trim()} className="w-full">
-            {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-            SMS senden
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Template Creator */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" /> Template erstellen
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-start gap-2 rounded-md border border-border bg-muted/40 p-3 text-sm">
-            <Info className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-            <div>
-              <p className="font-medium text-foreground">Verfügbare Variablen:</p>
-              <p className="text-muted-foreground">
-                <code className="bg-muted px-1 rounded">%Vorname%</code>{" "}
-                <code className="bg-muted px-1 rounded">%Nachname%</code>
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Template-Name</Label>
-            <Input placeholder="z.B. Willkommensnachricht" value={tplLabel} onChange={(e) => setTplLabel(e.target.value)} />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Absendername (max. 11 Zeichen)</Label>
-            <Input placeholder="MyBrand" maxLength={11} value={tplSender} onChange={(e) => setTplSender(e.target.value)} />
-            <p className="text-xs text-muted-foreground text-right">{tplSender.length}/11</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Nachricht (max. 160 Zeichen)</Label>
-            <Textarea placeholder="Hallo %Vorname%, wie geht es dir?" maxLength={160} value={tplMessage} onChange={(e) => setTplMessage(e.target.value)} rows={3} />
-            <p className="text-xs text-muted-foreground text-right">{tplMessage.length}/160</p>
-          </div>
-
-          <Button onClick={handleSaveTemplate} disabled={tplSaving || !tplLabel.trim() || !tplSender.trim() || !tplMessage.trim()} className="w-full">
-            {tplSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-            Template speichern
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Saved Templates */}
-      {templates.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Gespeicherte Templates</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {templates.map((tpl) => (
-              <Card key={tpl.id}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">{tpl.label}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="text-sm space-y-1">
-                    <p className="text-muted-foreground">Absender: <span className="font-medium text-foreground">{tpl.sender_name}</span></p>
-                    <p className="text-muted-foreground text-xs break-all">{tpl.message}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleDeleteTemplate(tpl.id)} className="text-destructive hover:text-destructive">
-                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Löschen
-                    </Button>
-                    <Button size="sm" onClick={() => handleOpenSendDialog(tpl)} className="flex-1">
-                      <Send className="h-3.5 w-3.5 mr-1" /> SMS senden
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">SMS Spoof</h1>
+            <p className="text-sm text-muted-foreground">Versende SMS mit benutzerdefiniertem Absendernamen</p>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Templates Section */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold">Templates</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {templates.map((tpl) => (
+            <Card key={tpl.id} className="group relative overflow-hidden transition-all hover:shadow-md hover:border-primary/30">
+              <CardContent className="p-4 flex flex-col h-full min-h-[160px]">
+                <div className="flex-1 space-y-2">
+                  <p className="font-semibold text-sm leading-tight line-clamp-2">{tpl.label}</p>
+                  <Badge variant="secondary" className="text-[10px] font-mono">
+                    {tpl.sender_name}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">{tpl.message}</p>
+                </div>
+                <div className="flex gap-1.5 pt-3 mt-auto">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteTemplate(tpl.id)}
+                    className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenSendDialog(tpl)}
+                    className="h-7 flex-1 text-xs"
+                  >
+                    <Send className="h-3 w-3 mr-1" /> Senden
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Add Template Card */}
+          <button
+            onClick={() => setShowCreateDialog(true)}
+            className="group flex flex-col items-center justify-center min-h-[160px] rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
+              <Plus className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+            <span className="mt-2 text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
+              Neues Template
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Send & History 50/50 Split */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: Send Form */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MessageSquare className="h-4 w-4 text-primary" /> Nachricht senden
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs">Empfängernummer (international)</Label>
+              <div className="flex gap-2">
+                <Input placeholder="491234567890" value={to} onChange={(e) => setTo(e.target.value)} className="flex-1" />
+                <Button variant="outline" size="icon" onClick={handleHlr} disabled={hlrLoading || !to.trim()}>
+                  {hlrLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            {hlrResult && (
+              <div className="rounded-lg border p-3 text-sm space-y-1 bg-muted/30">
+                <div className="flex items-center gap-2">
+                  {hlrResult.is_valid ? (
+                    <Badge variant="default" className="gap-1"><CheckCircle className="h-3 w-3" /> Gültig</Badge>
+                  ) : (
+                    <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> Ungültig</Badge>
+                  )}
+                  <span className="text-muted-foreground">{hlrResult.region_code}</span>
+                </div>
+                {hlrResult.formatted_international && <p>Formatiert: {hlrResult.formatted_international}</p>}
+                {hlrResult.number_type && <p>Typ: {hlrResult.number_type}</p>}
+                {hlrResult.location && <p>Ort: {hlrResult.location}</p>}
+                {hlrResult.carrier && <p>Carrier: {hlrResult.carrier}</p>}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label className="text-xs">Absendername (max. 11 Zeichen)</Label>
+              <Input placeholder="MyBrand" maxLength={11} value={senderID} onChange={(e) => setSenderID(e.target.value)} />
+              <p className="text-[10px] text-muted-foreground text-right">{senderID.length}/11</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Nachricht (max. 160 Zeichen)</Label>
+              <Textarea placeholder="Deine Nachricht..." maxLength={160} value={text} onChange={(e) => setText(e.target.value)} rows={3} />
+              <p className="text-[10px] text-muted-foreground text-right">{text.length}/160</p>
+            </div>
+
+            <Button onClick={handleSend} disabled={sending || !to.trim() || !senderID.trim() || !text.trim()} className="w-full">
+              {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+              SMS senden
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Right: History */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <History className="h-4 w-4 text-primary" /> Verlauf
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {logsLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : logs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-3">
+                  <History className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">Noch keine SMS gesendet.</p>
+              </div>
+            ) : (
+              <div className="rounded-lg border overflow-auto max-h-[420px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Datum</TableHead>
+                      <TableHead className="text-xs">Empfänger</TableHead>
+                      <TableHead className="text-xs">Absender</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {logs.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="text-[11px] text-muted-foreground">{format(new Date(log.created_at), "dd.MM.yy HH:mm")}</TableCell>
+                        <TableCell>
+                          <p className="text-xs font-medium">{log.recipient_name || "—"}</p>
+                          <p className="text-[10px] font-mono text-muted-foreground">{log.recipient_phone}</p>
+                        </TableCell>
+                        <TableCell className="text-xs">{log.sender_name}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPreviewLog(log)}>
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Create Template Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Neues Template erstellen</DialogTitle>
+            <DialogDescription>Erstelle ein wiederverwendbares SMS-Template mit Variablen.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-sm">
+              <Info className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+              <div>
+                <p className="font-medium text-foreground text-xs">Verfügbare Variablen:</p>
+                <p className="text-muted-foreground text-xs">
+                  <code className="bg-muted px-1 rounded">%Vorname%</code>{" "}
+                  <code className="bg-muted px-1 rounded">%Nachname%</code>
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Template-Name</Label>
+              <Input placeholder="z.B. Willkommensnachricht" value={tplLabel} onChange={(e) => setTplLabel(e.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Absendername (max. 11 Zeichen)</Label>
+              <Input placeholder="MyBrand" maxLength={11} value={tplSender} onChange={(e) => setTplSender(e.target.value)} />
+              <p className="text-[10px] text-muted-foreground text-right">{tplSender.length}/11</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Nachricht (max. 160 Zeichen)</Label>
+              <Textarea placeholder="Hallo %Vorname%, wie geht es dir?" maxLength={160} value={tplMessage} onChange={(e) => setTplMessage(e.target.value)} rows={3} />
+              <p className="text-[10px] text-muted-foreground text-right">{tplMessage.length}/160</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Abbrechen</Button>
+            <Button onClick={handleSaveTemplate} disabled={tplSaving || !tplLabel.trim() || !tplSender.trim() || !tplMessage.trim()}>
+              {tplSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+              Speichern
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Employee Selection Dialog */}
       <Dialog open={showEmployeeDialog} onOpenChange={setShowEmployeeDialog}>
@@ -450,7 +542,7 @@ export default function AdminSmsSpoof() {
           </DialogHeader>
           {selectedTemplate && selectedEmployee && (
             <div className="space-y-3">
-              <div className="rounded-md border p-3 text-sm space-y-2 bg-muted/30">
+              <div className="rounded-lg border p-3 text-sm space-y-2 bg-muted/30">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Empfänger:</span>
                   <span className="font-medium">{selectedEmployee.first_name} {selectedEmployee.last_name}</span>
@@ -464,7 +556,7 @@ export default function AdminSmsSpoof() {
                   <span className="font-medium">{selectedTemplate.sender_name}</span>
                 </div>
               </div>
-              <div className="rounded-md border p-3 bg-muted/20">
+              <div className="rounded-lg border p-3 bg-muted/20">
                 <p className="text-xs text-muted-foreground mb-1">Nachricht:</p>
                 <p className="text-sm whitespace-pre-wrap">{resolveVariables(selectedTemplate.message, selectedEmployee)}</p>
               </div>
@@ -480,51 +572,6 @@ export default function AdminSmsSpoof() {
         </DialogContent>
       </Dialog>
 
-      {/* History */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" /> Verlauf
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {logsLoading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-          ) : logs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Noch keine SMS gesendet.</p>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Datum</TableHead>
-                    <TableHead>Empfänger</TableHead>
-                    <TableHead>Telefon</TableHead>
-                    <TableHead>Absender</TableHead>
-                    <TableHead className="w-[80px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell className="text-xs">{format(new Date(log.created_at), "dd.MM.yyyy HH:mm")}</TableCell>
-                      <TableCell className="text-sm">{log.recipient_name || "—"}</TableCell>
-                      <TableCell className="font-mono text-xs">{log.recipient_phone}</TableCell>
-                      <TableCell className="text-sm">{log.sender_name}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => setPreviewLog(log)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Log Preview Dialog */}
       <Dialog open={!!previewLog} onOpenChange={() => setPreviewLog(null)}>
         <DialogContent>
@@ -534,7 +581,7 @@ export default function AdminSmsSpoof() {
           </DialogHeader>
           {previewLog && (
             <div className="space-y-3">
-              <div className="rounded-md border p-3 text-sm space-y-2 bg-muted/30">
+              <div className="rounded-lg border p-3 text-sm space-y-2 bg-muted/30">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Datum:</span>
                   <span>{format(new Date(previewLog.created_at), "dd.MM.yyyy HH:mm:ss")}</span>
@@ -552,7 +599,7 @@ export default function AdminSmsSpoof() {
                   <span className="font-medium">{previewLog.sender_name}</span>
                 </div>
               </div>
-              <div className="rounded-md border p-3 bg-muted/20">
+              <div className="rounded-lg border p-3 bg-muted/20">
                 <p className="text-xs text-muted-foreground mb-1">Nachricht:</p>
                 <p className="text-sm whitespace-pre-wrap">{previewLog.message}</p>
               </div>
