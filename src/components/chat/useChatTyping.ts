@@ -14,6 +14,9 @@ export function useChatTyping({ contractId, role }: UseChatTypingProps) {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
+    setIsTyping(false);
+    setDraftPreview(null);
+
     if (!contractId) return;
 
     const channel = supabase.channel(`chat-typing-${contractId}`);

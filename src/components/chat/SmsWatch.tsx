@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -26,8 +26,14 @@ interface PhoneEntry {
   api_url: string;
 }
 
-export function SmsWatch() {
-  const [selectedEntry, setSelectedEntry] = useState<PhoneEntry | null>(null);
+interface SmsWatchProps {
+  contractId: string | null;
+}
+
+export function SmsWatch({ contractId }: SmsWatchProps) {
+  const selectionsRef = useRef(new Map<string, PhoneEntry>());
+  const selectedEntry = contractId ? selectionsRef.current.get(contractId) ?? null : null;
+  const [, forceUpdate] = useState(0);
   const [lastSeenCount, setLastSeenCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [newUrl, setNewUrl] = useState("");
@@ -88,15 +94,20 @@ export function SmsWatch() {
   }, [open, sortedSms.length]);
 
   const handleSelectEntry = (entry: PhoneEntry) => {
-    setSelectedEntry(entry);
+    if (contractId) {
+      selectionsRef.current.set(contractId, entry);
+      forceUpdate((n) => n + 1);
+    }
     setLastSeenCount(0);
   };
 
   const handleChangeNumber = () => {
-    setSelectedEntry(null);
+    if (contractId) {
+      selectionsRef.current.delete(contractId);
+      forceUpdate((n) => n + 1);
+    }
     setLastSeenCount(0);
   };
-
   const handleAddUrl = () => {
     const trimmed = newUrl.trim();
     if (!trimmed.toLowerCase().includes("anosim.net/api/v1/orderbookingshare?token=")) {
