@@ -41,9 +41,11 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
   const { data, isLoading, isError } = useQuery<AnosimData>({
     queryKey: ["anosim", entry.api_url],
     queryFn: async () => {
-      const res = await fetch(entry.api_url);
-      if (!res.ok) throw new Error("API-Fehler");
-      return res.json();
+      const { data, error } = await supabase.functions.invoke("anosim-proxy", {
+        body: { url: entry.api_url },
+      });
+      if (error) throw error;
+      return data;
     },
     refetchInterval: 5000,
   });

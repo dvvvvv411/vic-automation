@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.ai-chat-suggest]
 verify_jwt = false
+
+[functions.anosim-proxy]
+verify_jwt = false
