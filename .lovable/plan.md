@@ -1,14 +1,14 @@
 
 
-# Fix: SMS Spoof Edge Function 404
+# Fix: SMS Spoof Edge Function erneut deployen
 
 ## Problem
-The edge function `sms-spoof` returns 404 because it hasn't been deployed to Supabase yet. The code exists locally but needs deployment.
+Die Edge Function `sms-spoof` gibt weiterhin 404 zurueck (`{"detail":"Not Found"}`). Die Logs zeigen zwar Boot-Events, aber die Funktion ist offenbar nicht korrekt erreichbar.
 
-## Solution
-Deploy the `sms-spoof` edge function. No code changes needed -- the existing implementation matches the API documentation correctly.
+## Loesung
+Edge Function `sms-spoof` erneut deployen. Kein Code muss geaendert werden -- die Implementierung ist korrekt und entspricht der API-Dokumentation.
 
-| Action | Detail |
+| Aktion | Detail |
 |---|---|
-| Deploy `sms-spoof` | Deploy the existing edge function to Supabase |
+| Redeploy `sms-spoof` | Edge Function erneut deployen |
 
