@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Eye, RefreshCw, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Eye, RefreshCw, Loader2, Plus } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface AnosimSms {
   messageSender: string;
@@ -28,16 +30,19 @@ export function SmsWatch() {
   const [selectedEntry, setSelectedEntry] = useState<PhoneEntry | null>(null);
   const [lastSeenCount, setLastSeenCount] = useState(0);
   const [open, setOpen] = useState(false);
+  const [newUrl, setNewUrl] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: entries = [] } = useQuery<PhoneEntry[]>({
     queryKey: ["phone_numbers"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("phone_numbers" as any)
+        .from("phone_numbers")
         .select("id, api_url")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as any;
+      return data;
     },
   });
 
@@ -54,12 +59,26 @@ export function SmsWatch() {
     refetchInterval: 5000,
   });
 
+  const addMutation = useMutation({
+    mutationFn: async (apiUrl: string) => {
+      const { error } = await supabase.from("phone_numbers").insert({ api_url: apiUrl });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["phone_numbers"] });
+      setNewUrl("");
+      toast({ title: "Hinzugefügt", description: "Telefonnummer wurde hinzugefügt." });
+    },
+    onError: () => toast({ title: "Fehler", variant: "destructive" }),
+  });
+
   const sortedSms = anosimData?.sms
     ? [...anosimData.sms]
         .sort((a, b) => new Date(b.messageDate).getTime() - new Date(a.messageDate).getTime())
         .slice(0, 10)
     : [];
 
+  const latestSms = sortedSms[0];
   const newCount = sortedSms.length - lastSeenCount;
 
   useEffect(() => {
@@ -78,12 +97,32 @@ export function SmsWatch() {
     setLastSeenCount(0);
   };
 
+  const handleAddUrl = () => {
+    const trimmed = newUrl.trim();
+    if (!trimmed.toLowerCase().includes("anosim.net/api/v1/orderbookingshare?token=")) {
+      toast({ title: "Ungültiger Link", description: "Muss ein anosim.net Share-Link sein.", variant: "destructive" });
+      return;
+    }
+    addMutation.mutate(trimmed);
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 gap-1.5 relative">
-          <Eye className="h-4 w-4" />
-          <span className="hidden sm:inline text-xs">SMS</span>
+        <Button variant="outline" size="sm" className="h-9 gap-2 relative max-w-[220px]">
+          <div className="relative">
+            <Eye className="h-4 w-4 shrink-0" />
+            {selectedEntry && (
+              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            )}
+          </div>
+          {latestSms ? (
+            <span className="truncate text-xs font-normal opacity-70">
+              {latestSms.messageText}
+            </span>
+          ) : (
+            <span className="text-xs hidden sm:inline">SMS Watch</span>
+          )}
           {newCount > 0 && !open && (
             <Badge className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 text-[10px] bg-destructive text-destructive-foreground">
               {newCount}
@@ -93,10 +132,10 @@ export function SmsWatch() {
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
         {!selectedEntry ? (
-          <div className="p-3 space-y-2">
+          <div className="p-3 space-y-3">
             <p className="text-sm font-medium">Telefonnummer wählen</p>
             {entries.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Keine Nummern unter /admin/telefonnummern hinzugefügt.</p>
+              <p className="text-xs text-muted-foreground">Keine Nummern vorhanden.</p>
             ) : (
               <div className="space-y-1">
                 {entries.map((entry) => (
@@ -104,11 +143,30 @@ export function SmsWatch() {
                 ))}
               </div>
             )}
+            <div className="border-t pt-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Neue Nummer hinzufügen</p>
+              <div className="flex gap-1.5">
+                <Input
+                  placeholder="anosim.net Share-Link…"
+                  value={newUrl}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddUrl()}
+                  className="h-8 text-xs"
+                />
+                <Button size="sm" className="h-8 px-2 shrink-0" onClick={handleAddUrl} disabled={addMutation.isPending}>
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col">
             <div className="flex items-center justify-between p-3 border-b">
               <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                </span>
                 <span className="text-sm font-medium">{anosimData?.number || "Laden…"}</span>
                 {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
               </div>
@@ -116,20 +174,27 @@ export function SmsWatch() {
                 <RefreshCw className="h-3 w-3" /> Ändern
               </Button>
             </div>
-            <ScrollArea className="max-h-72">
+            <ScrollArea className="h-72">
               {sortedSms.length === 0 ? (
                 <p className="p-3 text-xs text-muted-foreground">Keine SMS empfangen.</p>
               ) : (
-                <div className="p-2 space-y-2">
+                <div className="p-2 space-y-1.5">
                   {sortedSms.map((sms, i) => (
-                    <div key={i} className="rounded-md border bg-background p-2 text-xs">
+                    <div
+                      key={i}
+                      className={`rounded-md border p-2 text-xs transition-colors ${
+                        i === 0
+                          ? "border-primary/40 bg-primary/5"
+                          : "bg-background"
+                      }`}
+                    >
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="font-medium">{sms.messageSender}</span>
                         <span className="text-muted-foreground text-[10px]">
                           {format(new Date(sms.messageDate), "dd.MM. HH:mm")}
                         </span>
                       </div>
-                      <p className="text-foreground">{sms.messageText}</p>
+                      <p className="text-foreground leading-snug">{sms.messageText}</p>
                     </div>
                   ))}
                 </div>
