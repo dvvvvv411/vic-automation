@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock, Phone } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +43,7 @@ const navGroups = [
       { title: "Auftragstermine", url: "/admin/auftragstermine", icon: CalendarClock },
       { title: "Livechat", url: "/admin/livechat", icon: MessageCircle },
       { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
+      { title: "Telefonnummern", url: "/admin/telefonnummern", icon: Phone },
     ],
   },
   {
