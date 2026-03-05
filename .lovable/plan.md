@@ -1,32 +1,42 @@
 
 
-# Fix: CORS-Problem bei anosim.net API
+# Online-Status im Admin-Livechat
 
-## Problem
+## Uebersicht
 
-Der direkte `fetch`-Aufruf von `https://anosim.net/api/v1/orderbookingshare?token=...` aus dem Browser schlaegt fehl wegen **CORS** (Cross-Origin Resource Sharing). Der anosim.net-Server erlaubt keine Anfragen von fremden Domains im Browser.
+Im Admin-Livechat soll in der Konversationsliste ein gruener Punkt angezeigt werden, wenn ein Mitarbeiter gerade aktiv den Chat geoeffnet hat. Dafuer wird Supabase Realtime Presence verwendet.
 
-## Loesung
+## Aenderungen
 
-Eine **Supabase Edge Function** als Proxy erstellen, die den API-Aufruf serverseitig macht und das Ergebnis an den Browser weitergibt.
+### 1. Neuer Hook: `src/components/chat/useChatPresence.ts`
 
-### 1. Neue Edge Function: `supabase/functions/anosim-proxy/index.ts`
+Zentraler Hook fuer Presence-Management:
+- Nutzt `supabase.channel("chat-presence")` mit `.track()` um den eigenen Status zu senden
+- Parameter: `contractId`, `role` ("user" oder "admin")
+- User-Seite: Tracked Presence wenn ChatWidget geoeffnet ist, untracked wenn geschlossen
+- Admin-Seite: Subscribed auf Presence-State und gibt ein Set der aktuell online contract_ids zurueck
 
-- Nimmt die anosim-URL als Query-Parameter entgegen
-- Validiert, dass die URL `anosim.net/api/v1/orderbookingshare` enthaelt
-- Ruft die URL serverseitig per `fetch` auf (kein CORS-Problem)
-- Gibt die JSON-Antwort mit CORS-Headern zurueck
+### 2. `src/components/chat/ChatWidget.tsx`
 
-### 2. Aenderung in `src/pages/admin/AdminTelefonnummern.tsx`
+- Importiert `useChatPresence`
+- Wenn `open === true`: tracked Presence mit `{ contract_id, role: "user" }`
+- Wenn `open === false` oder Unmount: untracked Presence
 
-- Statt direkt `fetch(entry.api_url)` aufzurufen, wird die Anfrage ueber die Edge Function geleitet:
-  `supabase.functions.invoke("anosim-proxy", { body: { url: entry.api_url } })`
-- Alternativ: `fetch(\`\${supabaseUrl}/functions/v1/anosim-proxy?url=\${encodeURIComponent(entry.api_url)}\`)`
+### 3. `src/components/chat/ConversationList.tsx`
 
-### Zusammenfassung
+- Neues Prop: `onlineContractIds: Set<string>`
+- Zeigt einen gruenen Punkt neben dem Namen, wenn die `contract_id` im Set enthalten ist
+- Text "Online" oder "Offline" als kleiner Hinweis unter dem Namen
 
-| Datei | Aenderung |
-|---|---|
-| `supabase/functions/anosim-proxy/index.ts` | Neue Edge Function (Proxy) |
-| `AdminTelefonnummern.tsx` | Fetch ueber Proxy statt direkt |
+### 4. `src/pages/admin/AdminLivechat.tsx`
+
+- Importiert `useChatPresence` mit `role: "admin"`
+- Gibt das `onlineContractIds` Set an `ConversationList` weiter
+
+## Technische Details
+
+- Supabase Realtime Presence erfordert keinen DB-Zugriff -- es laeuft komplett ueber WebSockets
+- Kein neues Datenbankschema noetig
+- Presence-State wird automatisch bereinigt wenn der Client disconnected (Tab schliessen, Navigation weg)
+- Ein einzelner Channel `chat-presence` wird geteilt, sodass der Admin alle Online-User auf einmal sieht
 
