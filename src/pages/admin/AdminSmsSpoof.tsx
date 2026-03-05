@@ -15,7 +15,9 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Send, Search, Loader2, CheckCircle, XCircle, Trash2, Plus, Info } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Send, Search, Loader2, CheckCircle, XCircle, Trash2, Plus, Info, Eye, History } from "lucide-react";
+import { format } from "date-fns";
 
 interface HlrResult {
   number_type: string;
@@ -41,6 +43,16 @@ interface Employee {
   last_name: string | null;
   phone: string | null;
   company_name: string | null;
+}
+
+interface SpoofLog {
+  id: string;
+  recipient_phone: string;
+  recipient_name: string | null;
+  sender_name: string;
+  message: string;
+  template_id: string | null;
+  created_at: string;
 }
 
 export default function AdminSmsSpoof() {
@@ -69,9 +81,26 @@ export default function AdminSmsSpoof() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmSending, setConfirmSending] = useState(false);
 
+  // History
+  const [logs, setLogs] = useState<SpoofLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [previewLog, setPreviewLog] = useState<SpoofLog | null>(null);
+
   useEffect(() => {
     fetchTemplates();
+    fetchLogs();
   }, []);
+
+  const fetchLogs = async () => {
+    setLogsLoading(true);
+    const { data } = await supabase
+      .from("sms_spoof_logs" as any)
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (data) setLogs(data as any);
+    setLogsLoading(false);
+  };
 
   const fetchTemplates = async () => {
     const { data } = await supabase
@@ -165,6 +194,7 @@ export default function AdminSmsSpoof() {
       } else {
         toast({ title: "SMS gesendet!", description: `An ${to}` });
         setText("");
+        fetchLogs();
       }
     } catch (err) {
       toast({ title: "Senden fehlgeschlagen", description: String(err), variant: "destructive" });
@@ -227,6 +257,8 @@ export default function AdminSmsSpoof() {
           to: selectedEmployee.phone.replace(/[^0-9]/g, ""),
           senderID: selectedTemplate.sender_name,
           text: resolvedText,
+          recipientName: `${selectedEmployee.first_name || ""} ${selectedEmployee.last_name || ""}`.trim(),
+          templateId: selectedTemplate.id,
         },
       });
       if (error) throw error;
@@ -234,6 +266,7 @@ export default function AdminSmsSpoof() {
         toast({ title: "Fehler", description: data.error, variant: "destructive" });
       } else {
         toast({ title: "SMS gesendet!", description: `An ${selectedEmployee.first_name} ${selectedEmployee.last_name}` });
+        fetchLogs();
       }
     } catch (err) {
       toast({ title: "Senden fehlgeschlagen", description: String(err), variant: "destructive" });
@@ -446,6 +479,87 @@ export default function AdminSmsSpoof() {
               Senden
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" /> Verlauf
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {logsLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : logs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Noch keine SMS gesendet.</p>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Datum</TableHead>
+                    <TableHead>Empfänger</TableHead>
+                    <TableHead>Telefon</TableHead>
+                    <TableHead>Absender</TableHead>
+                    <TableHead className="w-[80px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {logs.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="text-xs">{format(new Date(log.created_at), "dd.MM.yyyy HH:mm")}</TableCell>
+                      <TableCell className="text-sm">{log.recipient_name || "—"}</TableCell>
+                      <TableCell className="font-mono text-xs">{log.recipient_phone}</TableCell>
+                      <TableCell className="text-sm">{log.sender_name}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" onClick={() => setPreviewLog(log)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Log Preview Dialog */}
+      <Dialog open={!!previewLog} onOpenChange={() => setPreviewLog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>SMS Vorschau</DialogTitle>
+            <DialogDescription>Details der gesendeten SMS.</DialogDescription>
+          </DialogHeader>
+          {previewLog && (
+            <div className="space-y-3">
+              <div className="rounded-md border p-3 text-sm space-y-2 bg-muted/30">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Datum:</span>
+                  <span>{format(new Date(previewLog.created_at), "dd.MM.yyyy HH:mm:ss")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Empfänger:</span>
+                  <span className="font-medium">{previewLog.recipient_name || "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Telefon:</span>
+                  <span className="font-mono text-xs">{previewLog.recipient_phone}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Absender:</span>
+                  <span className="font-medium">{previewLog.sender_name}</span>
+                </div>
+              </div>
+              <div className="rounded-md border p-3 bg-muted/20">
+                <p className="text-xs text-muted-foreground mb-1">Nachricht:</p>
+                <p className="text-sm whitespace-pre-wrap">{previewLog.message}</p>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

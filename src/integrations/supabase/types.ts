@@ -768,6 +768,44 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_spoof_logs: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          recipient_name: string | null
+          recipient_phone: string
+          sender_name: string
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          recipient_name?: string | null
+          recipient_phone: string
+          sender_name: string
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          recipient_name?: string | null
+          recipient_phone?: string
+          sender_name?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_spoof_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "sms_spoof_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_spoof_templates: {
         Row: {
           created_at: string
