@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { hexToHSL } from "@/lib/hexToHSL";
 
 interface BrandingData {
   logo_url: string | null;

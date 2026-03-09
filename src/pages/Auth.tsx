@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 
 import { toast } from "sonner";
 import { Shield, CheckCircle, Building2 } from "lucide-react";
+import { hexToHSL } from "@/lib/hexToHSL";
 
 const trustPoints = [
   { icon: Shield, title: "Sicherer Zugang", desc: "Geschützter Mitarbeiterbereich" },
