@@ -41,19 +41,21 @@ const Auth = () => {
 
       const { data } = await supabase
         .from("brandings")
-        .select("logo_url")
+        .select("logo_url, brand_color")
         .eq("domain", hostname)
         .maybeSingle();
 
       if (data?.logo_url) {
         setBrandingLogoUrl(data.logo_url);
+        setBrandingColor(data.brand_color ?? null);
       } else {
         const { data: fallback } = await supabase
           .from("brandings")
-          .select("logo_url")
+          .select("logo_url, brand_color")
           .eq("domain", "frik-maxeiner.de")
           .maybeSingle();
         setBrandingLogoUrl(fallback?.logo_url ?? null);
+        setBrandingColor(fallback?.brand_color ?? null);
       }
       setBrandingReady(true);
     };
