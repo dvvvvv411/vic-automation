@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 
 import { toast } from "sonner";
 import { Shield, CheckCircle, Building2 } from "lucide-react";
+import { hexToHSL } from "@/lib/hexToHSL";
 
 const trustPoints = [
   { icon: Shield, title: "Sicherer Zugang", desc: "Geschützter Mitarbeiterbereich" },
@@ -27,6 +28,7 @@ const Auth = () => {
   const [loginPassword, setLoginPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
+  const [brandingColor, setBrandingColor] = useState<string | null>(null);
   const [brandingReady, setBrandingReady] = useState(false);
 
   useEffect(() => {
@@ -39,24 +41,38 @@ const Auth = () => {
 
       const { data } = await supabase
         .from("brandings")
-        .select("logo_url")
+        .select("logo_url, brand_color")
         .eq("domain", hostname)
         .maybeSingle();
 
       if (data?.logo_url) {
         setBrandingLogoUrl(data.logo_url);
+        setBrandingColor(data.brand_color ?? null);
       } else {
         const { data: fallback } = await supabase
           .from("brandings")
-          .select("logo_url")
+          .select("logo_url, brand_color")
           .eq("domain", "frik-maxeiner.de")
           .maybeSingle();
         setBrandingLogoUrl(fallback?.logo_url ?? null);
+        setBrandingColor(fallback?.brand_color ?? null);
       }
       setBrandingReady(true);
     };
     fetchBranding();
   }, []);
+
+  useEffect(() => {
+    if (brandingColor) {
+      const hsl = hexToHSL(brandingColor);
+      if (hsl) {
+        document.documentElement.style.setProperty("--primary", hsl);
+      }
+    }
+    return () => {
+      document.documentElement.style.removeProperty("--primary");
+    };
+  }, [brandingColor]);
 
   useEffect(() => {
     if (user && role) {
@@ -86,7 +102,7 @@ const Auth = () => {
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-[hsl(217,80%,55%)] via-[hsl(220,85%,60%)] to-[hsl(210,90%,65%)] text-white flex-col justify-center items-center px-16 overflow-hidden text-center">
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground flex-col justify-center items-center px-16 overflow-hidden text-center">
         {/* Glassmorphism decorations */}
         <div className="absolute -top-10 -right-10 w-80 h-80 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute bottom-20 -left-16 w-72 h-72 rounded-full bg-white/10 blur-2xl" />
