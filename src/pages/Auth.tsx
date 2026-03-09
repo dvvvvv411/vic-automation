@@ -63,6 +63,18 @@ const Auth = () => {
   }, []);
 
   useEffect(() => {
+    if (brandingColor) {
+      const hsl = hexToHSL(brandingColor);
+      if (hsl) {
+        document.documentElement.style.setProperty("--primary", hsl);
+      }
+    }
+    return () => {
+      document.documentElement.style.removeProperty("--primary");
+    };
+  }, [brandingColor]);
+
+  useEffect(() => {
     if (user && role) {
       navigate(role === "admin" ? "/admin" : "/mitarbeiter", { replace: true });
     }
