@@ -1,16 +1,23 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# Auth-Seite: Subdomain-Erkennung für Branding
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Problem
+Die Auth-Seite wird über `web.DOMAIN.de` aufgerufen. Der aktuelle Code strippt Subdomains korrekt (`parts.slice(-2).join(".")`), sodass `web.example.de` → `example.de` wird. Das funktioniert bereits richtig.
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+**Aber**: Es wird nur `logo_url` gefetcht, nicht `brand_color`. Der vorherige Plan zur Brand-Color-Integration wurde noch nicht umgesetzt.
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+## Änderungen in `src/pages/Auth.tsx`
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+1. **Select erweitern**: `logo_url` → `logo_url, brand_color` (beide Queries: Domain-Match + Fallback)
+2. **State erweitern**: `brandingColor: string | null` hinzufügen
+3. **useEffect für CSS-Variable**: `--primary` dynamisch setzen wenn `brandingColor` vorhanden
+4. **Linkes Panel**: Festen blauen Gradient durch `hsl(var(--primary))` basierten Gradient ersetzen
+
+## Neue Datei: `src/lib/hexToHSL.ts`
+- `hexToHSL`-Funktion aus `MitarbeiterLayout.tsx` extrahieren
+- Import in `Auth.tsx` und `MitarbeiterLayout.tsx`
+
+## Subdomain-Logik
+Der bestehende Code in Zeile 35-38 funktioniert bereits korrekt: `web.example.de` → `example.de`. Keine Änderung nötig.
+
