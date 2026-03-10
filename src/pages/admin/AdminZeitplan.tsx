@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar } from "@/components/ui/calendar";
@@ -9,12 +9,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Trash2, Ban, Check, CalendarIcon } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Trash2, Ban, Check } from "lucide-react";
 import OrderAppointmentBlocker from "@/components/admin/OrderAppointmentBlocker";
 
 const WEEKDAYS = [
@@ -27,10 +27,7 @@ const WEEKDAYS = [
   { value: 7, label: "So" },
 ];
 
-const TIME_OPTIONS = Array.from({ length: 25 }, (_, i) => {
-  const h = Math.floor(i / 1);
-  return `${String(h).padStart(2, "0")}:00`;
-}).filter((_, i) => i <= 23);
+const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
 
 function generateTimeSlots(start: string, end: string, interval: number) {
   const slots: string[] = [];
@@ -50,8 +47,19 @@ export default function AdminZeitplan() {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockReason, setBlockReason] = useState("");
+  const [blockBrandingId, setBlockBrandingId] = useState<string>("all");
 
-  // Load settings
+  // Load brandings
+  const { data: brandings = [] } = useQuery({
+    queryKey: ["brandings"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("brandings").select("id, company_name").order("company_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Load global settings
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ["schedule-settings"],
     queryFn: async () => {
@@ -65,28 +73,37 @@ export default function AdminZeitplan() {
     },
   });
 
-  // Local form state
+  // Load branding-specific settings
+  const { data: brandingSettings = [] } = useQuery({
+    queryKey: ["branding-schedule-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("branding_schedule_settings" as any)
+        .select("*");
+      if (error) throw error;
+      return (data || []) as unknown as Array<{
+        id: string;
+        branding_id: string;
+        start_time: string;
+        end_time: string;
+        slot_interval_minutes: number;
+        available_days: number[];
+      }>;
+    },
+  });
+
+  // Local form state for global settings
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
   const [interval, setIntervalVal] = useState<number | null>(null);
   const [days, setDays] = useState<number[] | null>(null);
-  const [newInterval, setNewInterval] = useState<number | null>(null);
-  const [changeDate, setChangeDate] = useState<Date | null>(null);
 
   const effectiveStart = startTime ?? settings?.start_time?.slice(0, 5) ?? "08:00";
   const effectiveEnd = endTime ?? settings?.end_time?.slice(0, 5) ?? "18:00";
-  const effectiveInterval = interval ?? settings?.slot_interval_minutes ?? 30;
+  const effectiveInterval = interval ?? settings?.slot_interval_minutes ?? 20;
   const effectiveDays = days ?? settings?.available_days ?? [1, 2, 3, 4, 5, 6];
-  const effectiveNewInterval = newInterval ?? (settings as any)?.new_slot_interval_minutes ?? null;
-  const effectiveChangeDate = changeDate ?? ((settings as any)?.interval_change_date ? new Date((settings as any).interval_change_date + "T00:00:00") : null);
 
-  // Determine the interval to use for a given date
-  const getIntervalForDate = (date: Date | undefined) => {
-    if (!date || !effectiveChangeDate || !effectiveNewInterval) return effectiveInterval;
-    return date >= effectiveChangeDate ? effectiveNewInterval : effectiveInterval;
-  };
-
-  // Load blocked slots
+  // Load blocked slots + auto-delete past ones
   const { data: blockedSlots } = useQuery({
     queryKey: ["schedule-blocked-slots"],
     queryFn: async () => {
@@ -95,11 +112,19 @@ export default function AdminZeitplan() {
         .select("*")
         .order("blocked_date", { ascending: true });
       if (error) throw error;
-      return data || [];
+      const today = format(new Date(), "yyyy-MM-dd");
+      const past = (data || []).filter((s) => s.blocked_date < today);
+      const current = (data || []).filter((s) => s.blocked_date >= today);
+      // Auto-delete past slots in background
+      if (past.length > 0) {
+        const pastIds = past.map((s) => s.id);
+        supabase.from("schedule_blocked_slots").delete().in("id", pastIds).then(() => {});
+      }
+      return current;
     },
   });
 
-  // Save settings mutation
+  // Save global settings mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!settings?.id) return;
@@ -110,8 +135,8 @@ export default function AdminZeitplan() {
           end_time: effectiveEnd + ":00",
           slot_interval_minutes: effectiveInterval,
           available_days: effectiveDays,
-          new_slot_interval_minutes: effectiveNewInterval,
-          interval_change_date: effectiveChangeDate ? format(effectiveChangeDate, "yyyy-MM-dd") : null,
+          new_slot_interval_minutes: null,
+          interval_change_date: null,
         } as any)
         .eq("id", settings.id);
       if (error) throw error;
@@ -123,8 +148,27 @@ export default function AdminZeitplan() {
       setEndTime(null);
       setIntervalVal(null);
       setDays(null);
-      setNewInterval(null);
-      setChangeDate(null);
+    },
+    onError: () => toast({ title: "Fehler beim Speichern", variant: "destructive" }),
+  });
+
+  // Save branding-specific settings
+  const saveBrandingSettingsMutation = useMutation({
+    mutationFn: async (params: { branding_id: string; start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] }) => {
+      const { error } = await supabase
+        .from("branding_schedule_settings" as any)
+        .upsert({
+          branding_id: params.branding_id,
+          start_time: params.start_time + ":00",
+          end_time: params.end_time + ":00",
+          slot_interval_minutes: params.slot_interval_minutes,
+          available_days: params.available_days,
+        } as any, { onConflict: "branding_id" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Branding-Einstellungen gespeichert" });
+      queryClient.invalidateQueries({ queryKey: ["branding-schedule-settings"] });
     },
     onError: () => toast({ title: "Fehler beim Speichern", variant: "destructive" }),
   });
@@ -136,7 +180,12 @@ export default function AdminZeitplan() {
       const dateStr = format(selectedDate, "yyyy-MM-dd");
       const { error } = await supabase
         .from("schedule_blocked_slots")
-        .insert({ blocked_date: dateStr, blocked_time: time + ":00", reason: blockReason || null });
+        .insert({
+          blocked_date: dateStr,
+          blocked_time: time + ":00",
+          reason: blockReason || null,
+          branding_id: blockBrandingId === "all" ? null : blockBrandingId,
+        } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -160,10 +209,9 @@ export default function AdminZeitplan() {
   });
 
   // Time slots for selected date
-  const dateInterval = getIntervalForDate(selectedDate);
   const timeSlots = useMemo(
-    () => generateTimeSlots(effectiveStart, effectiveEnd, dateInterval),
-    [effectiveStart, effectiveEnd, dateInterval]
+    () => generateTimeSlots(effectiveStart, effectiveEnd, effectiveInterval),
+    [effectiveStart, effectiveEnd, effectiveInterval]
   );
 
   // Blocked times for selected date
@@ -215,7 +263,7 @@ export default function AdminZeitplan() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Allgemeine Zeiteinstellungen</CardTitle>
-          <CardDescription>Definieren Sie die tägliche Zeitspanne und verfügbare Wochentage.</CardDescription>
+          <CardDescription>Definieren Sie die globale tägliche Zeitspanne und verfügbare Wochentage (Fallback für alle Brandings).</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -247,64 +295,11 @@ export default function AdminZeitplan() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="15">15 Min</SelectItem>
+                  <SelectItem value="20">20 Min</SelectItem>
                   <SelectItem value="30">30 Min</SelectItem>
                   <SelectItem value="60">60 Min</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-
-          <div className="border-t pt-4 space-y-4">
-            <Label className="text-base font-semibold">Intervallwechsel ab Stichtag</Label>
-            <p className="text-sm text-muted-foreground">Optional: Ab einem bestimmten Datum ein anderes Intervall verwenden.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Stichtag</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !effectiveChangeDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {effectiveChangeDate ? format(effectiveChangeDate, "dd.MM.yyyy") : "Datum wählen"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={effectiveChangeDate ?? undefined}
-                      onSelect={(d) => setChangeDate(d ?? null)}
-                      locale={de}
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-                {effectiveChangeDate && (
-                  <Button variant="ghost" size="sm" onClick={() => { setChangeDate(null as any); setNewInterval(null); }}>
-                    Stichtag entfernen
-                  </Button>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>Neues Intervall</Label>
-                <Select
-                  value={effectiveNewInterval ? String(effectiveNewInterval) : ""}
-                  onValueChange={(v) => setNewInterval(Number(v))}
-                  disabled={!effectiveChangeDate}
-                >
-                  <SelectTrigger><SelectValue placeholder="Intervall wählen" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 Min</SelectItem>
-                    <SelectItem value="20">20 Min</SelectItem>
-                    <SelectItem value="30">30 Min</SelectItem>
-                    <SelectItem value="60">60 Min</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </div>
 
@@ -329,6 +324,45 @@ export default function AdminZeitplan() {
         </CardContent>
       </Card>
 
+      {/* Per-Branding Settings */}
+      {brandings.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Branding-spezifische Zeiteinstellungen</CardTitle>
+            <CardDescription>Individuelle Einstellungen pro Branding. Ohne Einstellung wird der globale Fallback verwendet.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue={brandings[0]?.id}>
+              <TabsList className="flex flex-wrap h-auto gap-1">
+                {brandings.map((b) => (
+                  <TabsTrigger key={b.id} value={b.id} className="text-xs">
+                    {b.company_name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {brandings.map((b) => {
+                const bs = brandingSettings.find((s) => s.branding_id === b.id);
+                return (
+                  <TabsContent key={b.id} value={b.id}>
+                    <BrandingScheduleForm
+                      brandingId={b.id}
+                      brandingName={b.company_name}
+                      existing={bs}
+                      globalStart={effectiveStart}
+                      globalEnd={effectiveEnd}
+                      globalInterval={effectiveInterval}
+                      globalDays={effectiveDays}
+                      onSave={(params) => saveBrandingSettingsMutation.mutate(params)}
+                      isSaving={saveBrandingSettingsMutation.isPending}
+                    />
+                  </TabsContent>
+                );
+              })}
+            </Tabs>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Block Slots */}
       <Card>
         <CardHeader>
@@ -339,7 +373,6 @@ export default function AdminZeitplan() {
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Calendar */}
             <div>
               <Calendar
                 mode="single"
@@ -357,9 +390,22 @@ export default function AdminZeitplan() {
                   onChange={(e) => setBlockReason(e.target.value)}
                 />
               </div>
+              {brandings.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <Label>Branding</Label>
+                  <Select value={blockBrandingId} onValueChange={setBlockBrandingId}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Alle Brandings</SelectItem>
+                      {brandings.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.company_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
-            {/* Time slots */}
             <div>
               {!selectedDate ? (
                 <p className="text-sm text-muted-foreground py-8 text-center">
@@ -442,6 +488,99 @@ export default function AdminZeitplan() {
 
       {/* Order Appointment Blocking */}
       <OrderAppointmentBlocker />
+    </div>
+  );
+}
+
+// Sub-component for per-branding schedule settings
+function BrandingScheduleForm({
+  brandingId,
+  brandingName,
+  existing,
+  globalStart,
+  globalEnd,
+  globalInterval,
+  globalDays,
+  onSave,
+  isSaving,
+}: {
+  brandingId: string;
+  brandingName: string;
+  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] };
+  globalStart: string;
+  globalEnd: string;
+  globalInterval: number;
+  globalDays: number[];
+  onSave: (params: { branding_id: string; start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] }) => void;
+  isSaving: boolean;
+}) {
+  const [st, setSt] = useState(existing?.start_time?.slice(0, 5) || globalStart);
+  const [et, setEt] = useState(existing?.end_time?.slice(0, 5) || globalEnd);
+  const [iv, setIv] = useState(existing?.slot_interval_minutes || globalInterval);
+  const [ds, setDs] = useState<number[]>(existing?.available_days || globalDays);
+
+  const toggleDay = (day: number) => {
+    setDs((prev) => prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort());
+  };
+
+  return (
+    <div className="space-y-4 pt-4">
+      <p className="text-sm text-muted-foreground">
+        {existing ? `Individuelle Einstellung für ${brandingName}` : `Noch keine individuelle Einstellung – nutzt globale Werte`}
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label>Startzeit</Label>
+          <Select value={st} onValueChange={setSt}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {TIME_OPTIONS.map((t) => (
+                <SelectItem key={t} value={t}>{t} Uhr</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Endzeit</Label>
+          <Select value={et} onValueChange={setEt}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {TIME_OPTIONS.map((t) => (
+                <SelectItem key={t} value={t}>{t} Uhr</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Intervall</Label>
+          <Select value={String(iv)} onValueChange={(v) => setIv(Number(v))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="15">15 Min</SelectItem>
+              <SelectItem value="20">20 Min</SelectItem>
+              <SelectItem value="30">30 Min</SelectItem>
+              <SelectItem value="60">60 Min</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>Verfügbare Wochentage</Label>
+        <div className="flex flex-wrap gap-3">
+          {WEEKDAYS.map((wd) => (
+            <label key={wd.value} className="flex items-center gap-2 cursor-pointer">
+              <Checkbox checked={ds.includes(wd.value)} onCheckedChange={() => toggleDay(wd.value)} />
+              <span className="text-sm">{wd.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <Button
+        onClick={() => onSave({ branding_id: brandingId, start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds })}
+        disabled={isSaving}
+      >
+        {isSaving ? "Speichern..." : "Branding-Einstellungen speichern"}
+      </Button>
     </div>
   );
 }

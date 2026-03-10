@@ -26,6 +26,7 @@ interface TelegramChat {
   chat_id: string;
   label: string;
   events: string[];
+  branding_ids: string[];
   created_at: string;
 }
 
@@ -34,6 +35,7 @@ export default function AdminTelegram() {
   const [newChatId, setNewChatId] = useState("");
   const [newLabel, setNewLabel] = useState("");
   const [newEvents, setNewEvents] = useState<string[]>([]);
+  const [newBrandingIds, setNewBrandingIds] = useState<string[]>([]);
 
   const { data: chats = [], isLoading } = useQuery({
     queryKey: ["telegram-chats"],
@@ -47,12 +49,25 @@ export default function AdminTelegram() {
     },
   });
 
+  const { data: brandings = [] } = useQuery({
+    queryKey: ["brandings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brandings")
+        .select("id, company_name")
+        .order("company_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("telegram_chats" as any).insert({
         chat_id: newChatId.trim(),
         label: newLabel.trim(),
         events: newEvents,
+        branding_ids: newBrandingIds,
       } as any);
       if (error) throw error;
     },
@@ -61,6 +76,7 @@ export default function AdminTelegram() {
       setNewChatId("");
       setNewLabel("");
       setNewEvents([]);
+      setNewBrandingIds([]);
       toast.success("Chat-ID hinzugefügt");
     },
     onError: () => toast.error("Fehler beim Speichern"),
@@ -91,9 +107,29 @@ export default function AdminTelegram() {
       });
   };
 
+  const toggleBranding = (chatId: string, currentBrandingIds: string[], brandingId: string) => {
+    const updated = currentBrandingIds.includes(brandingId)
+      ? currentBrandingIds.filter((b) => b !== brandingId)
+      : [...currentBrandingIds, brandingId];
+    supabase
+      .from("telegram_chats" as any)
+      .update({ branding_ids: updated } as any)
+      .eq("id", chatId)
+      .then(({ error }) => {
+        if (error) toast.error("Fehler");
+        else queryClient.invalidateQueries({ queryKey: ["telegram-chats"] });
+      });
+  };
+
   const toggleNewEvent = (key: string) => {
     setNewEvents((prev) =>
       prev.includes(key) ? prev.filter((e) => e !== key) : [...prev, key]
+    );
+  };
+
+  const toggleNewBranding = (id: string) => {
+    setNewBrandingIds((prev) =>
+      prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
     );
   };
 
@@ -182,6 +218,23 @@ export default function AdminTelegram() {
               ))}
             </div>
           </div>
+          {brandings.length > 0 && (
+            <div className="space-y-2">
+              <Label>Brandings (nur Benachrichtigungen dieser Brandings)</Label>
+              <p className="text-xs text-muted-foreground">Keine Auswahl = Benachrichtigungen für alle Brandings</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {brandings.map((b) => (
+                  <label key={b.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={newBrandingIds.includes(b.id)}
+                      onCheckedChange={() => toggleNewBranding(b.id)}
+                    />
+                    {b.company_name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <Button
             onClick={() => createMutation.mutate()}
             disabled={!newChatId.trim() || !newLabel.trim() || createMutation.isPending}
@@ -220,17 +273,37 @@ export default function AdminTelegram() {
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {EVENT_TYPES.map((ev) => (
-                    <label key={ev.key} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <Checkbox
-                        checked={chat.events.includes(ev.key)}
-                        onCheckedChange={() => toggleEvent(chat.id, chat.events, ev.key)}
-                      />
-                      {ev.label}
-                    </label>
-                  ))}
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Ereignisse</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {EVENT_TYPES.map((ev) => (
+                      <label key={ev.key} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={chat.events.includes(ev.key)}
+                          onCheckedChange={() => toggleEvent(chat.id, chat.events, ev.key)}
+                        />
+                        {ev.label}
+                      </label>
+                    ))}
+                  </div>
                 </div>
+                {brandings.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">Brandings</Label>
+                    <p className="text-xs text-muted-foreground">Keine Auswahl = alle Brandings</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {brandings.map((b) => (
+                        <label key={b.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <Checkbox
+                            checked={(chat.branding_ids || []).includes(b.id)}
+                            onCheckedChange={() => toggleBranding(chat.id, chat.branding_ids || [], b.id)}
+                          />
+                          {b.company_name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
