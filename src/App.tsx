@@ -74,6 +74,7 @@ const App = () => (
               <Route path="zeitplan" element={<AdminZeitplan />} />
               <Route path="telefonnummern" element={<AdminTelefonnummern />} />
               <Route path="sms-spoof" element={<AdminSmsSpoof />} />
+              <Route path="kunden" element={<AdminKunden />} />
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
             <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />
