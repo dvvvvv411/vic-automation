@@ -36,6 +36,7 @@ import {
 import { Plus, FileText, Trash2, Check, X, Copy, CalendarCheck, ExternalLink, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
 
 const applicationSchema = z.object({
