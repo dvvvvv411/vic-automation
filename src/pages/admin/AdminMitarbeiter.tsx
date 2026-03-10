@@ -37,6 +37,7 @@ export default function AdminMitarbeiter() {
   const [assignContract, setAssignContract] = useState<{ id: string; label: string } | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string; isSuspended: boolean } | null>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ["mitarbeiter", page],
