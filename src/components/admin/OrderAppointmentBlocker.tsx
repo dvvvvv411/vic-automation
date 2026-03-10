@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -22,6 +23,16 @@ export default function OrderAppointmentBlocker() {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockReason, setBlockReason] = useState("");
+  const [blockBrandingId, setBlockBrandingId] = useState<string>("all");
+
+  const { data: brandings = [] } = useQuery({
+    queryKey: ["brandings"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("brandings").select("id, company_name").order("company_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const { data: blockedSlots } = useQuery({
     queryKey: ["order-appointment-blocked-slots"],
@@ -31,12 +42,22 @@ export default function OrderAppointmentBlocker() {
         .select("*")
         .order("blocked_date", { ascending: true });
       if (error) throw error;
-      return (data || []) as unknown as Array<{
+      const allSlots = (data || []) as unknown as Array<{
         id: string;
         blocked_date: string;
         blocked_time: string;
         reason: string | null;
+        branding_id: string | null;
       }>;
+      const today = format(new Date(), "yyyy-MM-dd");
+      const past = allSlots.filter((s) => s.blocked_date < today);
+      const current = allSlots.filter((s) => s.blocked_date >= today);
+      // Auto-delete past slots
+      if (past.length > 0) {
+        const pastIds = past.map((s) => s.id);
+        supabase.from("order_appointment_blocked_slots" as any).delete().in("id", pastIds).then(() => {});
+      }
+      return current;
     },
   });
 
@@ -46,7 +67,12 @@ export default function OrderAppointmentBlocker() {
       const dateStr = format(selectedDate, "yyyy-MM-dd");
       const { error } = await supabase
         .from("order_appointment_blocked_slots" as any)
-        .insert({ blocked_date: dateStr, blocked_time: time + ":00", reason: blockReason || null });
+        .insert({
+          blocked_date: dateStr,
+          blocked_time: time + ":00",
+          reason: blockReason || null,
+          branding_id: blockBrandingId === "all" ? null : blockBrandingId,
+        });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -118,6 +144,20 @@ export default function OrderAppointmentBlocker() {
                   onChange={(e) => setBlockReason(e.target.value)}
                 />
               </div>
+              {brandings.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <Label>Branding</Label>
+                  <Select value={blockBrandingId} onValueChange={setBlockBrandingId}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Alle Brandings</SelectItem>
+                      {brandings.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.company_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div>

@@ -11,6 +11,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Users, ChevronLeft, ChevronRight, Copy, ClipboardList, Search, Lock, Unlock, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -86,7 +87,6 @@ export default function AdminMitarbeiter() {
     setSuspendTarget(null);
   };
 
-  // Sort: unterzeichnet first, then by start date
   const sortedAndFiltered = useMemo(() => {
     const items = data?.items ?? [];
     const today = startOfToday();
@@ -122,6 +122,7 @@ export default function AdminMitarbeiter() {
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
 
   return (
+    <TooltipProvider>
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-8">
         <h2 className="text-3xl font-bold tracking-tight text-foreground">Mitarbeiter</h2>
@@ -131,7 +132,6 @@ export default function AdminMitarbeiter() {
       <UpcomingStartDates />
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-        {/* Search */}
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -165,7 +165,6 @@ export default function AdminMitarbeiter() {
                     <TableHead>Status</TableHead>
                     <TableHead>Startdatum</TableHead>
                     <TableHead>Aufträge</TableHead>
-                    <TableHead>Details</TableHead>
                     <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -245,26 +244,32 @@ export default function AdminMitarbeiter() {
                           </Button>
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/mitarbeiter/${item.id}`)}>
-                            <Eye className="h-3.5 w-3.5 mr-1.5" /> Details
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant={item.is_suspended ? "outline" : "destructive"}
-                            size="sm"
-                            onClick={() => setSuspendTarget({
-                              id: item.id,
-                              name: `${item.first_name ?? ""} ${item.last_name ?? ""}`.trim(),
-                              isSuspended: !!item.is_suspended,
-                            })}
-                          >
-                            {item.is_suspended ? (
-                              <><Unlock className="h-3.5 w-3.5 mr-1.5" /> Entsperren</>
-                            ) : (
-                              <><Lock className="h-3.5 w-3.5 mr-1.5" /> Sperren</>
-                            )}
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/mitarbeiter/${item.id}`)}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Details</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant={item.is_suspended ? "outline" : "destructive"}
+                                  size="icon"
+                                  onClick={() => setSuspendTarget({
+                                    id: item.id,
+                                    name: `${item.first_name ?? ""} ${item.last_name ?? ""}`.trim(),
+                                    isSuspended: !!item.is_suspended,
+                                  })}
+                                >
+                                  {item.is_suspended ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{item.is_suspended ? "Entsperren" : "Sperren"}</TooltipContent>
+                            </Tooltip>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -323,5 +328,6 @@ export default function AdminMitarbeiter() {
         </AlertDialogContent>
       </AlertDialog>
     </>
+    </TooltipProvider>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Star, CheckCircle, XCircle } from "lucide-react";
+import { Star, CheckCircle, XCircle, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
@@ -15,6 +15,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 interface GroupedReview {
@@ -149,7 +150,6 @@ const AdminBewertungen = () => {
         .update({ balance: currentBalance + reward })
         .eq("id", g.contract_id);
 
-      // Get branding sms_sender_name
       let smsSender: string | undefined;
       const brandingId = (contract as any)?.applications?.branding_id;
       if (brandingId) {
@@ -157,7 +157,6 @@ const AdminBewertungen = () => {
         smsSender = (branding as any)?.sms_sender_name || undefined;
       }
 
-      // Send email
       if (contract?.email) {
         await sendEmail({
           to: contract.email,
@@ -175,7 +174,6 @@ const AdminBewertungen = () => {
         });
       }
 
-      // SMS
       if (contract?.phone) {
         const name = `${contract.first_name || ""} ${contract.last_name || ""}`.trim();
         const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewertung_genehmigt").single();
@@ -214,14 +212,12 @@ const AdminBewertungen = () => {
       .eq("order_id", g.order_id)
       .eq("contract_id", g.contract_id);
 
-    // Send email
     const { data: contract } = await supabase
       .from("employment_contracts")
       .select("email, first_name, last_name, phone, applications(branding_id)")
       .eq("id", g.contract_id)
       .single();
 
-    // Get branding sms_sender_name
     let smsSender: string | undefined;
     const brandingId = (contract as any)?.applications?.branding_id;
     if (brandingId) {
@@ -246,7 +242,6 @@ const AdminBewertungen = () => {
       });
     }
 
-    // SMS
     if (contract?.phone) {
       const name = `${contract.first_name || ""} ${contract.last_name || ""}`.trim();
       const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewertung_abgelehnt").single();
@@ -273,6 +268,7 @@ const AdminBewertungen = () => {
   }
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Bewertungen</h1>
 
@@ -312,32 +308,45 @@ const AdminBewertungen = () => {
                       {format(new Date(g.date), "dd.MM.yyyy")}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setSelected(g)}>
-                          Details
-                        </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="icon" onClick={() => setSelected(g)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Details</TooltipContent>
+                        </Tooltip>
                         {!["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status) && (
                           <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-green-600 border-green-300 hover:bg-green-50"
-                              disabled={isProcessing}
-                              onClick={() => handleApprove(g)}
-                            >
-                              <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                              Genehmigen
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-destructive border-destructive/30 hover:bg-destructive/5"
-                              disabled={isProcessing}
-                              onClick={() => handleReject(g)}
-                            >
-                              <XCircle className="h-3.5 w-3.5 mr-1" />
-                              Ablehnen
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="outline"
+                                  className="text-green-600 border-green-300 hover:bg-green-50"
+                                  disabled={isProcessing}
+                                  onClick={() => handleApprove(g)}
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Genehmigen</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="outline"
+                                  className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                                  disabled={isProcessing}
+                                  onClick={() => handleReject(g)}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Ablehnen</TooltipContent>
+                            </Tooltip>
                           </>
                         )}
                       </div>
@@ -376,32 +385,41 @@ const AdminBewertungen = () => {
             <>
               <Separator className="my-2" />
               <div className="flex gap-2 justify-end">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-green-600 border-green-300 hover:bg-green-50"
-                  disabled={!!processing}
-                  onClick={() => selected && handleApprove(selected)}
-                >
-                  <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                  Genehmigen
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-destructive border-destructive/30 hover:bg-destructive/5"
-                  disabled={!!processing}
-                  onClick={() => selected && handleReject(selected)}
-                >
-                  <XCircle className="h-3.5 w-3.5 mr-1" />
-                  Ablehnen
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="text-green-600 border-green-300 hover:bg-green-50"
+                      disabled={!!processing}
+                      onClick={() => selected && handleApprove(selected)}
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Genehmigen</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                      disabled={!!processing}
+                      onClick={() => selected && handleReject(selected)}
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Ablehnen</TooltipContent>
+                </Tooltip>
               </div>
             </>
           )}
         </DialogContent>
       </Dialog>
     </div>
+    </TooltipProvider>
   );
 };
 

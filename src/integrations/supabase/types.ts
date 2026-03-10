@@ -94,6 +94,44 @@ export type Database = {
           },
         ]
       }
+      branding_schedule_settings: {
+        Row: {
+          available_days: number[]
+          branding_id: string
+          created_at: string
+          end_time: string
+          id: string
+          slot_interval_minutes: number
+          start_time: string
+        }
+        Insert: {
+          available_days?: number[]
+          branding_id: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          slot_interval_minutes?: number
+          start_time?: string
+        }
+        Update: {
+          available_days?: number[]
+          branding_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          slot_interval_minutes?: number
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branding_schedule_settings_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: true
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brandings: {
         Row: {
           brand_color: string | null
@@ -424,6 +462,7 @@ export type Database = {
         Row: {
           blocked_date: string
           blocked_time: string
+          branding_id: string | null
           created_at: string
           id: string
           reason: string | null
@@ -431,6 +470,7 @@ export type Database = {
         Insert: {
           blocked_date: string
           blocked_time: string
+          branding_id?: string | null
           created_at?: string
           id?: string
           reason?: string | null
@@ -438,11 +478,20 @@ export type Database = {
         Update: {
           blocked_date?: string
           blocked_time?: string
+          branding_id?: string | null
           created_at?: string
           id?: string
           reason?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "order_appointment_blocked_slots_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_appointments: {
         Row: {
@@ -661,6 +710,7 @@ export type Database = {
         Row: {
           blocked_date: string
           blocked_time: string
+          branding_id: string | null
           created_at: string
           id: string
           reason: string | null
@@ -668,6 +718,7 @@ export type Database = {
         Insert: {
           blocked_date: string
           blocked_time: string
+          branding_id?: string | null
           created_at?: string
           id?: string
           reason?: string | null
@@ -675,11 +726,20 @@ export type Database = {
         Update: {
           blocked_date?: string
           blocked_time?: string
+          branding_id?: string | null
           created_at?: string
           id?: string
           reason?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "schedule_blocked_slots_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       schedule_settings: {
         Row: {
@@ -856,6 +916,7 @@ export type Database = {
       }
       telegram_chats: {
         Row: {
+          branding_ids: string[]
           chat_id: string
           created_at: string
           events: string[]
@@ -863,6 +924,7 @@ export type Database = {
           label: string
         }
         Insert: {
+          branding_ids?: string[]
           chat_id: string
           created_at?: string
           events?: string[]
@@ -870,6 +932,7 @@ export type Database = {
           label?: string
         }
         Update: {
+          branding_ids?: string[]
           chat_id?: string
           created_at?: string
           events?: string[]
