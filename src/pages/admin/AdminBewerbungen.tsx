@@ -521,6 +521,7 @@ export default function AdminBewerbungen() {
   };
 
   return (
+    <TooltipProvider>
     <>
       <motion.div
         initial={{ opacity: 0, y: 10 }}
