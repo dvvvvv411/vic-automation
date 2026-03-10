@@ -1,16 +1,44 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# Mitarbeiter-Detailseite `/admin/mitarbeiter/:id`
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Übersicht
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+Neue Detailseite für jeden Mitarbeiter im Admin-Panel, erreichbar über einen "Details"-Button in der Mitarbeiter-Tabelle. Die Seite zeigt alle relevanten Informationen auf einen Blick.
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+## Änderungen
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+### 1. Neue Route in `src/App.tsx`
+- `<Route path="mitarbeiter/:id" element={<AdminMitarbeiterDetail />} />` unter den Admin-Routen hinzufügen
+
+### 2. "Details"-Button in `src/pages/admin/AdminMitarbeiter.tsx`
+- Neue Spalte "Details" mit einem Button/Link pro Zeile, der zu `/admin/mitarbeiter/{contract.id}` navigiert (via `useNavigate`)
+
+### 3. Neue Seite `src/pages/admin/AdminMitarbeiterDetail.tsx`
+Lädt den Vertrag per `useParams().id` und zeigt folgende Sektionen:
+
+**Header**: Name, Status-Badge, Branding + Quick-Buttons:
+- "Zum Livechat" → navigiert zu `/admin/livechat` (mit contract_id als State/Query, damit der Chat direkt ausgewählt wird)
+- "Auftrag zuweisen" → öffnet den bestehenden `AssignmentDialog` im `contract`-Modus
+- "Genehmigen" → nur wenn Status "eingereicht", gleiche Logik wie in AdminArbeitsvertraege (Startdatum-Dialog + Edge Function Call)
+- "Sperren/Entsperren" → gleiche Logik wie in AdminMitarbeiter
+
+**Persönliche Daten** (aus `employment_contracts`):
+- Alle Felder wie im Arbeitsverträge-Detaildialog: Name, Geburtsdatum, Geburtsort, Nationalität, Adresse, Familienstand, Beschäftigungsart, Startdatum, SV-Nr, Steuer-ID, Krankenkasse, IBAN/BIC/Bank
+- Personalausweis-Bilder (Vorder-/Rückseite) mit Klick-Vorschau
+
+**Aufträge** (aus `order_assignments` + `orders`):
+- Tabelle: Auftragsnummer, Titel, Anbieter, Prämie, Status (Badge), Termin (aus `order_appointments`)
+
+**Bewertungen** (aus `order_reviews` + `orders`):
+- Gruppiert nach Auftrag mit Durchschnittsbewertung, einzelne Fragen/Ratings/Kommentare aufklappbar
+
+### 4. Livechat-Integration
+- Der "Zum Livechat"-Button navigiert zu `/admin/livechat?contract={id}`, und in `AdminLivechat.tsx` wird beim Mount der Query-Parameter gelesen, um den Chat direkt auszuwählen
+
+## Dateien
+- `src/App.tsx` — neue Route
+- `src/pages/admin/AdminMitarbeiter.tsx` — Details-Button hinzufügen
+- `src/pages/admin/AdminMitarbeiterDetail.tsx` — neue Datei
+- `src/pages/admin/AdminLivechat.tsx` — Query-Parameter für auto-select Contract
+
