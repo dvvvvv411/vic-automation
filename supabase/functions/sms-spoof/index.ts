@@ -12,6 +12,31 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Authenticate caller
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const sbUrl = Deno.env.get("SUPABASE_URL")!;
+    const sbAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const callerClient = createClient(sbUrl, sbAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await callerClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const callerUserId = claimsData.claims.sub;
+
     const { action, to, senderID, text, number, recipientName, templateId } = await req.json();
 
     // HLR Lookup
@@ -77,18 +102,18 @@ Deno.serve(async (req) => {
       let data;
       try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
 
-      // Log to sms_spoof_logs on success
+      // Log to sms_spoof_logs on success — use service role but set created_by from caller
       if (res.status >= 200 && res.status < 300 && !data?.error) {
         try {
-          const sbUrl = Deno.env.get("SUPABASE_URL")!;
-          const sbKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-          const sb = createClient(sbUrl, sbKey);
+          const sbServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+          const sb = createClient(sbUrl, sbServiceKey);
           await sb.from("sms_spoof_logs").insert({
             recipient_phone: to,
             recipient_name: recipientName || null,
             sender_name: senderID,
             message: text,
             template_id: templateId || null,
+            created_by: callerUserId,
           });
         } catch (logErr) {
           console.error("Failed to log SMS:", logErr);

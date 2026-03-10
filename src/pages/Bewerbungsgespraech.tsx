@@ -158,9 +158,15 @@ export default function Bewerbungsgespraech() {
     mutationFn: async () => {
       const dateStr = format(selectedDate!, "yyyy-MM-dd");
       const timeStr = selectedTime! + ":00";
+      // Get the application's created_by (branding owner) to propagate ownership
+      const { data: appData } = await supabase
+        .from("applications")
+        .select("created_by")
+        .eq("id", id!)
+        .maybeSingle();
       const { error: insertError } = await supabase
         .from("interview_appointments")
-        .insert({ application_id: id!, appointment_date: dateStr, appointment_time: timeStr });
+        .insert({ application_id: id!, appointment_date: dateStr, appointment_time: timeStr, created_by: appData?.created_by || null });
       if (insertError) throw insertError;
       const { error: rpcError } = await supabase.rpc("update_application_status", {
         _application_id: id!, _status: "termin_gebucht",

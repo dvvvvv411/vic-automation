@@ -131,11 +131,24 @@ Deno.serve(async (req) => {
       role: "user",
     });
 
-    // Update contract
+    // Determine the created_by owner from the application's branding
+    const brandingIdForOwner = (contract as any).applications?.branding_id;
+    let ownerId = contract.created_by || null;
+    if (!ownerId && brandingIdForOwner) {
+      const { data: brandingRow } = await adminClient
+        .from("brandings")
+        .select("created_by")
+        .eq("id", brandingIdForOwner)
+        .single();
+      ownerId = (brandingRow as any)?.created_by || null;
+    }
+
+    // Update contract with owner
     await adminClient.from("employment_contracts").update({
       status: "genehmigt",
       user_id: newUser.user.id,
       temp_password: tempPassword,
+      created_by: ownerId,
     }).eq("id", contract_id);
 
     // Generate contract PDF via Docmosis
