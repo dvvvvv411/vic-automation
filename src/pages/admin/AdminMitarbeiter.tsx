@@ -11,7 +11,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, ChevronLeft, ChevronRight, Copy, ClipboardList, Search, Lock, Unlock } from "lucide-react";
+import { Users, ChevronLeft, ChevronRight, Copy, ClipboardList, Search, Lock, Unlock, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { format, parseISO, isAfter, startOfToday } from "date-fns";
