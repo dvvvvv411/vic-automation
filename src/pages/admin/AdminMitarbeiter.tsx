@@ -165,6 +165,7 @@ export default function AdminMitarbeiter() {
                     <TableHead>Status</TableHead>
                     <TableHead>Startdatum</TableHead>
                     <TableHead>Aufträge</TableHead>
+                    <TableHead>Details</TableHead>
                     <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
