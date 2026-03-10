@@ -1,29 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Livechat Header aufräumen & Template-Erstellung in Dropdown integrieren
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Änderungen
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-### 1. Header bereinigen (`src/pages/admin/AdminLivechat.tsx`)
-- **SMS senden Button** (Zeile 408-416, Smartphone-Icon) entfernen
-- **SMS Dialog** (Zeile 580-620+) entfernen samt zugehörigem State (`smsDialogOpen`, `smsCode`, `smsSending`)
-- **TemplateManager** (Zeile 445, Settings-Icon) aus dem Header entfernen
-- **AiSuggestionBar** (Zeile 552-559) entfernen samt `aiSuggestionValue` State
-- **ChatInput**: `externalValue` und `onExternalValueConsumed` Props entfernen (waren nur für AI-Vorschläge)
-- Import-Bereinigung: `AiSuggestionBar`, `TemplateManager`, `Smartphone` entfernen
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-### 2. "Neues Template erstellen" in TemplateDropdown (`src/components/chat/TemplateDropdown.tsx`)
-- Am Ende der gefilterten Template-Liste einen "+ Neues Template erstellen"-Button hinzufügen
-- Neue Prop `onCreateNew` hinzufügen, die einen Dialog/Callback auslöst
-- Der Button wird immer angezeigt, auch wenn Templates vorhanden sind (solange Dropdown sichtbar)
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-### 3. Template-Erstellungs-Dialog in ChatInput integrieren (`src/components/chat/ChatInput.tsx`)
-- `TemplateManager`-Dialog (nur den Erstellungs-Teil) als inline Dialog einbetten
-- Neuer State `templateDialogOpen` in ChatInput
-- Wenn "Neues Template erstellen" im Dropdown geklickt wird, öffnet sich der Dialog
-- Nach Erstellung wird die Query invalidiert und das neue Template erscheint im Dropdown
-
-### 4. Dropdown auch bei leerem `!` anzeigen (`src/components/chat/TemplateDropdown.tsx`)
-- Aktuell: Dropdown zeigt nichts wenn keine Templates matchen
-- Neu: Auch bei leerem Ergebnis den "+ Neues Template"-Button anzeigen
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe

@@ -1,14 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
 
 interface TemplateDropdownProps {
   search: string;
   onSelect: (content: string) => void;
   visible: boolean;
+  onCreateNew?: () => void;
 }
 
-export function TemplateDropdown({ search, onSelect, visible }: TemplateDropdownProps) {
+export function TemplateDropdown({ search, onSelect, visible, onCreateNew }: TemplateDropdownProps) {
   const { data: templates } = useQuery({
     queryKey: ["chat-templates"],
     queryFn: async () => {
@@ -17,13 +18,11 @@ export function TemplateDropdown({ search, onSelect, visible }: TemplateDropdown
     },
   });
 
-  if (!visible || !templates?.length) return null;
+  if (!visible) return null;
 
-  const filtered = templates.filter((t) =>
+  const filtered = (templates ?? []).filter((t) =>
     t.shortcode.toLowerCase().startsWith(search.toLowerCase())
   );
-
-  if (!filtered.length) return null;
 
   return (
     <div className="absolute bottom-full left-0 right-0 mb-1 bg-card border border-border rounded-xl shadow-lg max-h-48 overflow-y-auto z-10">
@@ -40,6 +39,18 @@ export function TemplateDropdown({ search, onSelect, visible }: TemplateDropdown
           <span className="text-muted-foreground truncate">{t.content}</span>
         </button>
       ))}
+      {onCreateNew && (
+        <button
+          className="w-full px-4 py-2.5 text-left hover:bg-muted/50 transition-colors flex items-center gap-2 text-sm border-t border-border text-muted-foreground hover:text-foreground"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onCreateNew();
+          }}
+        >
+          <Plus className="h-4 w-4" />
+          <span>Neues Template erstellen</span>
+        </button>
+      )}
     </div>
   );
 }

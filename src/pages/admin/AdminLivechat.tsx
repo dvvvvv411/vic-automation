@@ -4,8 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ConversationList, type Conversation } from "@/components/chat/ConversationList";
 import { ChatBubble, TypingIndicator, DateSeparator, SystemMessage } from "@/components/chat/ChatBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
-import { AiSuggestionBar } from "@/components/chat/AiSuggestionBar";
-import { TemplateManager } from "@/components/chat/TemplateManager";
 import { AvatarUpload } from "@/components/chat/AvatarUpload";
 import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatRealtime";
 import { useChatTyping } from "@/components/chat/useChatTyping";
@@ -14,7 +12,7 @@ import { sendSms } from "@/lib/sendSms";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
 import { SmsWatch } from "@/components/chat/SmsWatch";
 import { Switch } from "@/components/ui/switch";
-import { MessageCircle, Pencil, Smartphone, Check, Plus, Bell, PencilLine, X } from "lucide-react";
+import { MessageCircle, Pencil, Check, Plus, Bell, PencilLine, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,9 +44,6 @@ export default function AdminLivechat() {
   const [adminDisplayName, setAdminDisplayName] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
-  const [smsDialogOpen, setSmsDialogOpen] = useState(false);
-  const [smsCode, setSmsCode] = useState("");
-  const [smsSending, setSmsSending] = useState(false);
   const [quickSmsCode, setQuickSmsCode] = useState("");
   const [quickSmsSending, setQuickSmsSending] = useState(false);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
@@ -58,7 +53,6 @@ export default function AdminLivechat() {
   const [notifySmsText, setNotifySmsText] = useState("Sie haben eine neue Nachricht im Livechat. Bitte lesen Sie diese.");
   const [notifySmsSending, setNotifySmsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [aiSuggestionValue, setAiSuggestionValue] = useState<string | null>(null);
 
   const { isTyping, draftPreview, sendTyping } = useChatTyping({
     contractId: active?.contract_id ?? null,
@@ -233,52 +227,16 @@ export default function AdminLivechat() {
       toast.error("SMS-Versand fehlgeschlagen");
     }
   };
-  const handleSendSms = async () => {
-    if (!contractData.phone || !smsCode.trim()) return;
-    setSmsSending(true);
-    const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
-    const smsFullText = `Ihr Ident-Code lautet: ${smsCode.trim()}.`;
-    let smsSender: string | undefined;
-    if (active) {
-      const { data: contractFull } = await supabase
-        .from("employment_contracts")
-        .select("applications(branding_id)")
-        .eq("id", active.contract_id)
-        .single();
-      const brandingId = (contractFull as any)?.applications?.branding_id;
-      if (brandingId) {
-        const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
-        smsSender = (branding as any)?.sms_sender_name || undefined;
-      }
-    }
-    const success = await sendSms({
-      to: contractData.phone,
-      text: smsFullText,
-      event_type: "manuell",
-      recipient_name: name,
-      from: smsSender,
-    });
-    setSmsSending(false);
-    if (success) {
-      toast.success("SMS gesendet!");
-      setSmsCode("");
-      setSmsDialogOpen(false);
-    } else {
-      toast.error("SMS-Versand fehlgeschlagen");
-    }
-  };
 
   const loadAvailableOrders = useCallback(async () => {
     if (!active) return;
     setOrderLoading(true);
-    // Get already assigned order IDs for this contract
     const { data: existing } = await supabase
       .from("order_assignments")
       .select("order_id")
       .eq("contract_id", active.contract_id);
     const assignedIds = (existing ?? []).map((e: any) => e.order_id);
 
-    // Get all orders
     const { data: allOrders } = await supabase
       .from("orders")
       .select("id, title, order_number, reward, is_placeholder")
@@ -385,64 +343,52 @@ export default function AdminLivechat() {
           {active && <SmsWatch contractId={active.contract_id} />}
           <div className="flex items-center gap-2">
             {active && contractData.phone && (
-              <>
-                <div className="flex items-center gap-1">
-                  <Input
-                    value={quickSmsCode}
-                    onChange={(e) => setQuickSmsCode(e.target.value)}
-                    placeholder="Code"
-                    className="h-9 w-20 text-sm"
-                    onKeyDown={(e) => { if (e.key === "Enter") handleQuickSms(); }}
-                  />
-                  <Button
-                    variant="default"
-                    size="icon"
-                    className="h-9 w-9"
-                    disabled={!quickSmsCode.trim() || quickSmsSending}
-                    onClick={handleQuickSms}
-                    title="Ident-Code per SMS senden"
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                </div>
+              <div className="flex items-center gap-1">
+                <Input
+                  value={quickSmsCode}
+                  onChange={(e) => setQuickSmsCode(e.target.value)}
+                  placeholder="Code"
+                  className="h-9 w-20 text-sm"
+                  onKeyDown={(e) => { if (e.key === "Enter") handleQuickSms(); }}
+                />
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="icon"
                   className="h-9 w-9"
-                  onClick={() => setSmsDialogOpen(true)}
-                  title="SMS-Dialog öffnen"
+                  disabled={!quickSmsCode.trim() || quickSmsSending}
+                  onClick={handleQuickSms}
+                  title="Ident-Code per SMS senden"
                 >
-                  <Smartphone className="h-4 w-4" />
+                  <Check className="h-4 w-4" />
                 </Button>
-              </>
+              </div>
             )}
             {active && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 gap-1.5"
-                  onClick={handleOpenOrderDialog}
-                  title="Auftrag zuweisen"
-                >
-                  <Plus className="h-4 w-4" />
-                  Auftrag
-                </Button>
-              )}
-              {active && contractData.phone && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={() => {
-                    setNotifySmsText("Sie haben eine neue Nachricht im Livechat. Bitte lesen Sie diese.");
-                    setNotifySmsDialogOpen(true);
-                  }}
-                  title="Livechat-Benachrichtigung per SMS"
-                >
-                  <Bell className="h-4 w-4" />
-                </Button>
-              )}
-              {active && <TemplateManager />}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5"
+                onClick={handleOpenOrderDialog}
+                title="Auftrag zuweisen"
+              >
+                <Plus className="h-4 w-4" />
+                Auftrag
+              </Button>
+            )}
+            {active && contractData.phone && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => {
+                  setNotifySmsText("Sie haben eine neue Nachricht im Livechat. Bitte lesen Sie diese.");
+                  setNotifySmsDialogOpen(true);
+                }}
+                title="Livechat-Benachrichtigung per SMS"
+              >
+                <Bell className="h-4 w-4" />
+              </Button>
+            )}
             {/* Admin profile popover – always visible */}
             <Popover>
               <PopoverTrigger asChild>
@@ -549,23 +495,12 @@ export default function AdminLivechat() {
               </div>
             )}
 
-            {/* AI suggestion bar */}
-            {active && (
-              <AiSuggestionBar
-                contractId={active.contract_id}
-                messages={messages}
-                onAccept={(text) => setAiSuggestionValue(text)}
-              />
-            )}
-
             {/* Input with templates */}
             <ChatInput
               onSend={handleSend}
               showTemplates
               contractData={contractData}
               onTyping={handleTyping}
-              externalValue={aiSuggestionValue}
-              onExternalValueConsumed={() => setAiSuggestionValue(null)}
             />
           </>
         ) : (
@@ -575,44 +510,6 @@ export default function AdminLivechat() {
           </div>
         )}
       </div>
-
-      {/* SMS Dialog */}
-      <Dialog open={smsDialogOpen} onOpenChange={setSmsDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Smartphone className="h-4 w-4" />
-              SMS senden
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Empfänger</Label>
-              <p className="text-sm font-medium">{contractData.first_name} {contractData.last_name}</p>
-              <p className="text-xs text-muted-foreground">{contractData.phone}</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Ident-Code</Label>
-              <Input
-                value={smsCode}
-                onChange={(e) => setSmsCode(e.target.value)}
-                placeholder="z.B. 5258"
-              />
-              {smsCode.trim() && (
-                <p className="text-sm text-muted-foreground bg-muted rounded-md px-3 py-2">
-                  Ihr Ident-Code lautet: <span className="font-semibold text-foreground">{smsCode.trim()}</span>.
-                </p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSmsDialogOpen(false)}>Abbrechen</Button>
-            <Button onClick={handleSendSms} disabled={smsSending || !smsCode.trim()}>
-              {smsSending ? "Wird gesendet..." : "SMS senden"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Order Assignment Dialog */}
       <Dialog open={orderDialogOpen} onOpenChange={setOrderDialogOpen}>
