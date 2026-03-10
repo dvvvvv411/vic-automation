@@ -239,6 +239,11 @@ export default function AdminMitarbeiter() {
                           </Button>
                         </TableCell>
                         <TableCell>
+                          <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/mitarbeiter/${item.id}`)}>
+                            <Eye className="h-3.5 w-3.5 mr-1.5" /> Details
+                          </Button>
+                        </TableCell>
+                        <TableCell>
                           <Button
                             variant={item.is_suspended ? "outline" : "destructive"}
                             size="sm"

@@ -62,6 +62,7 @@ const App = () => (
               <Route path="bewerbungsgespraeche" element={<AdminBewerbungsgespraeche />} />
               <Route path="arbeitsvertraege" element={<AdminArbeitsvertraege />} />
               <Route path="mitarbeiter" element={<AdminMitarbeiter />} />
+              <Route path="mitarbeiter/:id" element={<AdminMitarbeiterDetail />} />
               <Route path="auftraege" element={<AdminAuftraege />} />
               <Route path="auftragstermine" element={<AdminAuftragstermine />} />
               <Route path="livechat" element={<AdminLivechat />} />
