@@ -4,7 +4,7 @@ import { useUserRole, AppRole } from "@/hooks/useUserRole";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRole: AppRole;
+  allowedRole: AppRole | AppRole[];
 }
 
 const ProtectedRoute = ({ children, allowedRole }: ProtectedRouteProps) => {
@@ -23,8 +23,9 @@ const ProtectedRoute = ({ children, allowedRole }: ProtectedRouteProps) => {
     return <Navigate to="/auth" replace />;
   }
 
-  if (role !== allowedRole) {
-    if (role === "admin") return <Navigate to="/admin" replace />;
+  const allowed = Array.isArray(allowedRole) ? allowedRole : [allowedRole];
+  if (!role || !allowed.includes(role)) {
+    if (role === "admin" || role === "kunde") return <Navigate to="/admin" replace />;
     if (role === "user") return <Navigate to="/mitarbeiter" replace />;
     return <Navigate to="/auth" replace />;
   }
