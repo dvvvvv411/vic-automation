@@ -175,14 +175,20 @@ export default function AdminMitarbeiter() {
                     return (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
-                          {item.first_name} {item.last_name}
+                          <span className="cursor-pointer underline hover:text-primary transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/admin/mitarbeiter/${item.id}`); }}>
+                            {item.first_name} {item.last_name}
+                          </span>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {item.phone ? (
                             <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.phone); toast.success("Telefonnummer kopiert!"); }}>{item.phone}</span>
                           ) : "–"}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{item.email || "–"}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {item.email ? (
+                            <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.email); toast.success("E-Mail kopiert!"); }}>{item.email}</span>
+                          ) : "–"}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{item.temp_password || "–"}</code>
