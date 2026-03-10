@@ -491,10 +491,14 @@ export default function AdminBewerbungen() {
           </>
         )}
         {status === "bewerbungsgespraech" && (
-          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); copyLink(app); }} className="text-xs">
-            <Copy className="h-4 w-4 mr-1" />
-            Link kopieren
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); copyLink(app); }}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Link kopieren</TooltipContent>
+          </Tooltip>
         )}
         {status === "termin_gebucht" && app.interview_appointments?.[0] && (
           <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -504,9 +508,14 @@ export default function AdminBewerbungen() {
             {app.interview_appointments[0].appointment_time?.slice(0, 5)} Uhr
           </span>
         )}
-        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(app.id); }}>
-          <Trash2 className="h-4 w-4 text-muted-foreground" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(app.id); }}>
+              <Trash2 className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Löschen</TooltipContent>
+        </Tooltip>
       </div>
     );
   };
