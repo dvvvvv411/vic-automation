@@ -175,7 +175,9 @@ export default function AdminMitarbeiter() {
                     return (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
-                          {item.first_name} {item.last_name}
+                          <span className="cursor-pointer underline hover:text-primary transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/admin/mitarbeiter/${item.id}`); }}>
+                            {item.first_name} {item.last_name}
+                          </span>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {item.phone ? (
