@@ -154,6 +154,148 @@ export default function AdminMitarbeiterDetail() {
     return acc;
   }, {});
 
+  // Review helpers
+  const parseReward = (reward: string): number => {
+    const num = parseFloat(reward.replace(/[^0-9.,]/g, "").replace(",", "."));
+    return isNaN(num) ? 0 : num;
+  };
+
+  const getAssignmentForOrder = (orderId: string) =>
+    (assignments ?? []).find((a: any) => a.order_id === orderId);
+
+  const handleReviewApprove = async (orderId: string) => {
+    const assignment = getAssignmentForOrder(orderId);
+    if (!assignment) return;
+    const key = orderId;
+    setReviewProcessing(key);
+
+    const reward = parseReward(assignment.orders?.reward ?? "0");
+
+    const { error: statusErr } = await supabase
+      .from("order_assignments")
+      .update({ status: "erfolgreich" })
+      .eq("order_id", orderId)
+      .eq("contract_id", contract!.id);
+
+    if (statusErr) {
+      toast.error("Fehler beim Genehmigen.");
+      setReviewProcessing(null);
+      return;
+    }
+
+    if (reward > 0) {
+      const currentBalance = Number(contract!.balance ?? 0);
+      await supabase
+        .from("employment_contracts")
+        .update({ balance: currentBalance + reward })
+        .eq("id", contract!.id);
+
+      let smsSender: string | undefined;
+      const brandingId = (contract as any)?.applications?.brandings?.id;
+      if (brandingId) {
+        const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
+        smsSender = (branding as any)?.sms_sender_name || undefined;
+      }
+
+      const orderTitle = assignment.orders?.title ?? "Auftrag";
+
+      if (contract!.email) {
+        await sendEmail({
+          to: contract!.email,
+          recipient_name: fullName,
+          subject: "Ihre Bewertung wurde genehmigt",
+          body_title: "Bewertung genehmigt",
+          body_lines: [
+            `Sehr geehrte/r ${fullName},`,
+            `Ihre Bewertung für den Auftrag "${orderTitle}" wurde genehmigt.`,
+            `Die Prämie von ${assignment.orders?.reward ?? "0€"} wurde Ihrem Konto gutgeschrieben.`,
+          ],
+          branding_id: (contract as any)?.applications?.brandings?.id || null,
+          event_type: "bewertung_genehmigt",
+          metadata: { order_id: orderId, contract_id: contract!.id },
+        });
+      }
+
+      if (contract!.phone) {
+        const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewertung_genehmigt").single();
+        const smsText = (tpl as any)?.message
+          ? (tpl as any).message.replace("{name}", fullName).replace("{auftrag}", orderTitle).replace("{praemie}", assignment.orders?.reward ?? "0€")
+          : `Hallo ${fullName}, Ihre Bewertung für "${orderTitle}" wurde genehmigt. Prämie: ${assignment.orders?.reward ?? "0€"}.`;
+        await sendSms({ to: contract!.phone, text: smsText, event_type: "bewertung_genehmigt", recipient_name: fullName, from: smsSender });
+      }
+    }
+
+    toast.success("Bewertung genehmigt und Prämie gutgeschrieben!");
+    queryClient.invalidateQueries({ queryKey: ["admin-contract-detail", id] });
+    queryClient.invalidateQueries({ queryKey: ["admin-contract-assignments", id] });
+    queryClient.invalidateQueries({ queryKey: ["admin-contract-reviews", id] });
+    setReviewProcessing(null);
+  };
+
+  const handleReviewReject = async (orderId: string) => {
+    const assignment = getAssignmentForOrder(orderId);
+    if (!assignment) return;
+    setReviewProcessing(orderId);
+
+    const { error: statusErr } = await supabase
+      .from("order_assignments")
+      .update({ status: "fehlgeschlagen" })
+      .eq("order_id", orderId)
+      .eq("contract_id", contract!.id);
+
+    if (statusErr) {
+      toast.error("Fehler beim Ablehnen.");
+      setReviewProcessing(null);
+      return;
+    }
+
+    await supabase
+      .from("order_reviews")
+      .delete()
+      .eq("order_id", orderId)
+      .eq("contract_id", contract!.id);
+
+    const orderTitle = assignment.orders?.title ?? "Auftrag";
+
+    let smsSender: string | undefined;
+    const brandingId = (contract as any)?.applications?.brandings?.id;
+    if (brandingId) {
+      const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
+      smsSender = (branding as any)?.sms_sender_name || undefined;
+    }
+
+    if (contract!.email) {
+      await sendEmail({
+        to: contract!.email,
+        recipient_name: fullName,
+        subject: "Ihre Bewertung wurde abgelehnt",
+        body_title: "Bewertung abgelehnt",
+        body_lines: [
+          `Sehr geehrte/r ${fullName},`,
+          `Ihre Bewertung für den Auftrag "${orderTitle}" konnte leider nicht akzeptiert werden.`,
+          "Bitte führen Sie die Bewertung erneut durch und achten Sie auf die Vorgaben.",
+        ],
+        branding_id: brandingId || null,
+        event_type: "bewertung_abgelehnt",
+        metadata: { order_id: orderId, contract_id: contract!.id },
+      });
+    }
+
+    if (contract!.phone) {
+      const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewertung_abgelehnt").single();
+      const smsText = (tpl as any)?.message
+        ? (tpl as any).message.replace("{name}", fullName).replace("{auftrag}", orderTitle)
+        : `Hallo ${fullName}, Ihre Bewertung für "${orderTitle}" wurde leider abgelehnt.`;
+      await sendSms({ to: contract!.phone, text: smsText, event_type: "bewertung_abgelehnt", recipient_name: fullName, from: smsSender });
+    }
+
+    toast.success("Bewertung abgelehnt. Mitarbeiter kann erneut bewerten.");
+    queryClient.invalidateQueries({ queryKey: ["admin-contract-detail", id] });
+    queryClient.invalidateQueries({ queryKey: ["admin-contract-assignments", id] });
+    queryClient.invalidateQueries({ queryKey: ["admin-contract-reviews", id] });
+    setReviewProcessing(null);
+  };
+
   const handleToggleSuspend = async () => {
     if (!contract || !suspendTarget) return;
     const newValue = !suspendTarget.isSuspended;
