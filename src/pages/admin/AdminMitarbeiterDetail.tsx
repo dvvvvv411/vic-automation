@@ -19,9 +19,11 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, MessageCircle, ClipboardList, CheckCircle, Lock, Unlock, Star, ChevronDown, ImageIcon } from "lucide-react";
+import { ArrowLeft, MessageCircle, ClipboardList, CheckCircle, XCircle, Lock, Unlock, Star, ChevronDown, ImageIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { sendEmail } from "@/lib/sendEmail";
+import { sendSms } from "@/lib/sendSms";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import AssignmentDialog from "@/components/admin/AssignmentDialog";
