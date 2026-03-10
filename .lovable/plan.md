@@ -1,24 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Bewertungsstatus + Genehmigen/Ablehnen auf Mitarbeiter-Detailseite
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Aktueller Zustand
-Die Bewertungen-Sektion zeigt nur Sterne und Kommentare pro Auftrag (Collapsible), aber keinen Bewertungsstatus und keine Genehmigen/Ablehnen-Buttons.
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-## Änderungen in `src/pages/admin/AdminMitarbeiterDetail.tsx`
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-### 1. Status-Badge pro Bewertungsgruppe anzeigen
-- Den `assignment_status` aus `assignments` für jeden Auftrag im Bewertungsbereich anzeigen (gleiche Badges wie in der Auftrags-Tabelle: "In Prüfung", "Erfolgreich", "Fehlgeschlagen", "Offen")
-- Dazu beim Rendern der `reviewsByOrder`-Gruppen den passenden Assignment-Status aus `assignments` nachschlagen
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-### 2. Genehmigen/Ablehnen-Buttons pro Bewertungsgruppe
-- Für Bewertungen mit Status ≠ "erfolgreich" und ≠ "fehlgeschlagen": CheckCircle (Genehmigen) und XCircle (Ablehnen) Buttons in der CollapsibleTrigger-Zeile anzeigen
-- **Genehmigen**: gleiche Logik wie `AdminBewertungen.tsx` — Status auf "erfolgreich" setzen, Prämie gutschreiben, E-Mail + SMS senden
-- **Ablehnen**: Status auf "fehlgeschlagen", Reviews löschen, E-Mail + SMS senden
-- Processing-State um doppelte Klicks zu verhindern
-- Nach Aktion: queries invalidieren (`admin-contract-detail`, `admin-contract-assignments`, `admin-contract-reviews`)
-
-### 3. Imports hinzufügen
-- `XCircle` von lucide-react
-- `sendEmail` und `sendSms` aus den lib-Dateien
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
