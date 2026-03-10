@@ -829,5 +829,6 @@ export default function AdminBewerbungen() {
         )}
       </motion.div>
     </>
+    </TooltipProvider>
   );
 }
