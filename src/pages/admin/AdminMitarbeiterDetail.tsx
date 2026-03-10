@@ -535,12 +535,17 @@ export default function AdminMitarbeiterDetail() {
               <div className="space-y-3">
                 {Object.entries(reviewsByOrder).map(([orderId, group]: [string, any]) => {
                   const avg = group.items.reduce((s: number, r: any) => s + r.rating, 0) / group.items.length;
+                  const assignment = getAssignmentForOrder(orderId);
+                  const status = assignment?.status ?? "offen";
+                  const canAct = !["erfolgreich", "fehlgeschlagen"].includes(status);
+                  const isProcessing = reviewProcessing === orderId;
                   return (
                     <Collapsible key={orderId}>
                       <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
                         <div className="flex items-center gap-3">
                           <span className="font-medium text-sm">{group.order?.title ?? "Auftrag"}</span>
                           <span className="text-xs text-muted-foreground">{group.order?.order_number}</span>
+                          {assignmentStatusBadge(status)}
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1">
@@ -565,6 +570,30 @@ export default function AdminMitarbeiterDetail() {
                             {r.comment && <p className="text-sm text-muted-foreground">{r.comment}</p>}
                           </div>
                         ))}
+                        {canAct && (
+                          <div className="flex gap-2 justify-end pt-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 border-green-300 hover:bg-green-50"
+                              disabled={isProcessing}
+                              onClick={() => handleReviewApprove(orderId)}
+                            >
+                              <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                              Genehmigen
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                              disabled={isProcessing}
+                              onClick={() => handleReviewReject(orderId)}
+                            >
+                              <XCircle className="h-3.5 w-3.5 mr-1" />
+                              Ablehnen
+                            </Button>
+                          </div>
+                        )}
                       </CollapsibleContent>
                     </Collapsible>
                   );
