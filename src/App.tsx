@@ -13,6 +13,7 @@ import AdminBewerbungen from "./pages/admin/AdminBewerbungen";
 import AdminBewerbungsgespraeche from "./pages/admin/AdminBewerbungsgespraeche";
 import AdminArbeitsvertraege from "./pages/admin/AdminArbeitsvertraege";
 import AdminMitarbeiter from "./pages/admin/AdminMitarbeiter";
+import AdminMitarbeiterDetail from "./pages/admin/AdminMitarbeiterDetail";
 import AdminAuftraege from "./pages/admin/AdminAuftraege";
 import AdminLivechat from "./pages/admin/AdminLivechat";
 import AdminBewertungen from "./pages/admin/AdminBewertungen";
