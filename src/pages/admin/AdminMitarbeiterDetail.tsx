@@ -88,6 +88,7 @@ export default function AdminMitarbeiterDetail() {
   const [startDateDialogOpen, setStartDateDialogOpen] = useState(false);
   const [confirmedStartDate, setConfirmedStartDate] = useState<Date | undefined>(undefined);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [reviewProcessing, setReviewProcessing] = useState<string | null>(null);
 
   // Fetch contract with branding
   const { data: contract, isLoading } = useQuery({
