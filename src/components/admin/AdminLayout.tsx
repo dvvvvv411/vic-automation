@@ -2,17 +2,32 @@ import { Outlet, useLocation, Navigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "./AdminSidebar";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
+import { useUserRole } from "@/hooks/useUserRole";
+
+const KUNDE_BLOCKED_PATHS = [
+  "/admin/brandings",
+  "/admin/emails",
+  "/admin/sms",
+  "/admin/telegram",
+  "/admin/kunden",
+];
 
 export default function AdminLayout() {
   const { allowedPaths, loading, hasAccess } = useAdminPermissions();
+  const { isKunde, loading: roleLoading } = useUserRole();
   const location = useLocation();
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
+  }
+
+  // Block kunde from accessing restricted paths
+  if (isKunde && KUNDE_BLOCKED_PATHS.some((p) => location.pathname.startsWith(p))) {
+    return <Navigate to="/admin" replace />;
   }
 
   // For /admin index route: redirect to first allowed path if no dashboard access

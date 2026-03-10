@@ -130,6 +130,19 @@ Deno.serve(async (req) => {
       resume_url = publicUrlData.publicUrl;
     }
 
+    // Determine created_by from branding owner
+    let owner_id: string | null = null;
+    if (branding_id) {
+      const { data: brandingRow } = await supabase
+        .from("brandings")
+        .select("created_by")
+        .eq("id", branding_id)
+        .maybeSingle();
+      if (brandingRow?.created_by) {
+        owner_id = brandingRow.created_by;
+      }
+    }
+
     // Insert application
     const { data: application, error: insertError } = await supabase
       .from("applications")
@@ -144,6 +157,7 @@ Deno.serve(async (req) => {
         employment_type: employment_type!,
         branding_id: branding_id || null,
         resume_url,
+        created_by: owner_id,
       })
       .select("id")
       .single();

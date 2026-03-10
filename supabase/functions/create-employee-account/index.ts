@@ -58,11 +58,11 @@ Deno.serve(async (req) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", caller.id)
-      .eq("role", "admin")
+      .in("role", ["admin", "kunde"])
       .single();
 
     if (!roleCheck) {
-      return new Response(JSON.stringify({ error: "Nur Admins können Konten erstellen" }), {
+      return new Response(JSON.stringify({ error: "Nur Admins/Kunden können Konten erstellen" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

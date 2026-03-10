@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.sms-spoof]
 verify_jwt = false
+
+[functions.create-kunde-account]
+verify_jwt = false
