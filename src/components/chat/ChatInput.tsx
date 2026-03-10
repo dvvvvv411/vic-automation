@@ -1,8 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Plus, X, FileText } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { TemplateDropdown } from "./TemplateDropdown";
 import { EmojiPicker } from "./EmojiPicker";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface ChatInputProps {
   onSend: (text: string, file?: File) => void;
@@ -18,8 +25,12 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
   const [templateSearch, setTemplateSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [newShortcode, setNewShortcode] = useState("");
+  const [newContent, setNewContent] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const qc = useQueryClient();
 
   const resizeTextarea = () => {
     const ta = textareaRef.current;
@@ -94,12 +105,31 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
     const end = ta?.selectionEnd ?? input.length;
     const newVal = input.substring(0, start) + emoji + input.substring(end);
     handleChange(newVal);
-    // restore cursor after emoji
     requestAnimationFrame(() => {
       ta?.focus();
       const pos = start + emoji.length;
       ta?.setSelectionRange(pos, pos);
     });
+  };
+
+  const addTemplateMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("chat_templates").insert({ shortcode: newShortcode.trim(), content: newContent.trim() });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["chat-templates"] });
+      setNewShortcode("");
+      setNewContent("");
+      setTemplateDialogOpen(false);
+      toast.success("Template erstellt");
+    },
+    onError: () => toast.error("Fehler beim Erstellen"),
+  });
+
+  const handleCreateNew = () => {
+    setShowDropdown(false);
+    setTemplateDialogOpen(true);
   };
 
   return (
@@ -109,6 +139,7 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
           search={templateSearch}
           onSelect={handleTemplateSelect}
           visible={showDropdown}
+          onCreateNew={handleCreateNew}
         />
       )}
 
@@ -177,6 +208,41 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
           <Send className="h-4 w-4" />
         </button>
       </div>
+
+      {/* Template creation dialog */}
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Neues Template erstellen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Shortcode</label>
+              <Input
+                placeholder="z.B. hallo"
+                value={newShortcode}
+                onChange={(e) => setNewShortcode(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Template-Text</label>
+              <Textarea
+                placeholder="Variablen: %vorname%, %nachname%"
+                value={newContent}
+                onChange={(e) => setNewContent(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <Button
+              onClick={() => addTemplateMutation.mutate()}
+              disabled={!newShortcode.trim() || !newContent.trim()}
+              className="w-full"
+            >
+              Template erstellen
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
