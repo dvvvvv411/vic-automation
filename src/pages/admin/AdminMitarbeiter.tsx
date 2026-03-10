@@ -11,7 +11,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, ChevronLeft, ChevronRight, Copy, ClipboardList, Search, Lock, Unlock } from "lucide-react";
+import { Users, ChevronLeft, ChevronRight, Copy, ClipboardList, Search, Lock, Unlock, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { format, parseISO, isAfter, startOfToday } from "date-fns";
@@ -36,6 +37,7 @@ export default function AdminMitarbeiter() {
   const [assignContract, setAssignContract] = useState<{ id: string; label: string } | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string; isSuspended: boolean } | null>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ["mitarbeiter", page],
@@ -163,6 +165,7 @@ export default function AdminMitarbeiter() {
                     <TableHead>Status</TableHead>
                     <TableHead>Startdatum</TableHead>
                     <TableHead>Aufträge</TableHead>
+                    <TableHead>Details</TableHead>
                     <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -233,6 +236,11 @@ export default function AdminMitarbeiter() {
                           >
                             <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
                             {count > 0 ? `${count} Aufträge` : "Zuweisen"}
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/mitarbeiter/${item.id}`)}>
+                            <Eye className="h-3.5 w-3.5 mr-1.5" /> Details
                           </Button>
                         </TableCell>
                         <TableCell>

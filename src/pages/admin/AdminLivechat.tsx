@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ConversationList, type Conversation } from "@/components/chat/ConversationList";
@@ -120,6 +121,19 @@ export default function AdminLivechat() {
   }, []);
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
+
+  // Auto-select contract from query param
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const contractParam = searchParams.get("contract");
+    if (contractParam && conversations.length > 0 && !active) {
+      const match = conversations.find((c) => c.contract_id === contractParam);
+      if (match) {
+        setActive(match);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [searchParams, conversations, active, setSearchParams]);
 
   // Realtime for all messages
   useEffect(() => {
