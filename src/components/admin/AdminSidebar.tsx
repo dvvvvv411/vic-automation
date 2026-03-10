@@ -1,5 +1,6 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock, Phone, MessageSquareText } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
+import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -19,6 +20,15 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+
+// Paths hidden from kunde role
+const KUNDE_HIDDEN_PATHS = [
+  "/admin/brandings",
+  "/admin/emails",
+  "/admin/sms",
+  "/admin/telegram",
+  "/admin/kunden",
+];
 
 const navGroups = [
   {
@@ -55,6 +65,7 @@ const navGroups = [
       { title: "SMS", url: "/admin/sms", icon: Smartphone },
       { title: "Telegram", url: "/admin/telegram", icon: Send },
       { title: "Zeitplan", url: "/admin/zeitplan", icon: Clock },
+      { title: "Kunden", url: "/admin/kunden", icon: UserPlus },
     ],
   },
 ];
@@ -62,6 +73,7 @@ const navGroups = [
 export function AdminSidebar() {
   const { user, signOut } = useAuth();
   const { hasAccess, loading: permissionsLoading } = useAdminPermissions();
+  const { isKunde } = useUserRole();
 
   const { data: neuCount } = useQuery({
     queryKey: ["badge-bewerbungen-neu"],
@@ -155,13 +167,17 @@ export function AdminSidebar() {
       <SidebarContent>
         <div className="px-4 py-5">
           <h2 className="text-lg font-bold tracking-tight text-foreground">
-            Vic <span className="text-primary">Admin</span>
+            Vic <span className="text-primary">{isKunde ? "Kunde" : "Admin"}</span>
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">Kontrollpanel</p>
         </div>
 
         {!permissionsLoading && navGroups.map((group, groupIndex) => {
-          const visibleItems = group.items.filter((item) => hasAccess(item.url));
+          const visibleItems = group.items.filter((item) => {
+            if (!hasAccess(item.url)) return false;
+            if (isKunde && KUNDE_HIDDEN_PATHS.includes(item.url)) return false;
+            return true;
+          });
           if (visibleItems.length === 0) return null;
           return (
             <div key={group.label ?? "overview"}>
