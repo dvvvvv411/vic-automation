@@ -373,9 +373,13 @@ export default function AdminLivechat() {
                 <AvatarUpload avatarUrl={employeeProfile.avatar_url} name={active.first_name} size={36} />
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="font-semibold text-foreground">
+                    <button
+                      type="button"
+                      onClick={() => setDetailDialogOpen(true)}
+                      className="font-semibold text-foreground hover:underline cursor-pointer text-left"
+                    >
                       {active.first_name} {active.last_name}
-                    </h2>
+                    </button>
                     {contractData.employment_type && (
                       <Badge variant="secondary" className="text-[10px] px-2 py-0">
                         {contractData.employment_type}
