@@ -1,50 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Fix: Kunde sieht keine Chat-Nachrichten von Mitarbeitern
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Ursache
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-Die RLS-Policy "Kunden can select own chat_messages" prüft `created_by = auth.uid()`. Aber `created_by` in `chat_messages` ist bei allen Nachrichten `NULL` — es wird beim Insert nie gesetzt. Daher sieht der Kunde keine einzige Nachricht.
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-Gleiches Problem bei der UPDATE-Policy für Kunden.
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-## Lösung
-
-Die Kunde-Policies auf Contract-Ownership umstellen statt `created_by` zu prüfen. Ein Kunde soll alle Nachrichten sehen/updaten können, die zu Verträgen gehören, die er erstellt hat (`employment_contracts.created_by = auth.uid()`).
-
-### Migration (SQL)
-
-```sql
--- Fix SELECT: Kunde sieht Nachrichten seiner Verträge
-DROP POLICY "Kunden can select own chat_messages" ON public.chat_messages;
-CREATE POLICY "Kunden can select own chat_messages" ON public.chat_messages
-FOR SELECT TO authenticated
-USING (
-  is_kunde(auth.uid()) AND
-  contract_id IN (
-    SELECT id FROM employment_contracts WHERE created_by = auth.uid()
-  )
-);
-
--- Fix UPDATE: Kunde kann Nachrichten seiner Verträge updaten
-DROP POLICY IF EXISTS "Admins can update chat_messages" ON public.chat_messages;
-CREATE POLICY "Admins can update chat_messages" ON public.chat_messages
-FOR UPDATE TO authenticated
-USING (
-  (has_role(auth.uid(), 'admin') AND (created_by = auth.uid() OR created_by IS NULL))
-  OR (is_kunde(auth.uid()) AND contract_id IN (
-    SELECT id FROM employment_contracts WHERE created_by = auth.uid()
-  ))
-);
-```
-
-### Auch Realtime betroffen
-
-Die Realtime-Subscription auf Zeile 148-153 in `AdminLivechat.tsx` hat keinen Filter. Postgres Changes respektiert RLS — nach dem Policy-Fix werden die Events automatisch beim Kunden ankommen.
-
-| Änderung | Beschreibung |
-|----------|-------------|
-| Migration (SQL) | Kunde SELECT/UPDATE Policies auf Contract-Ownership umstellen |
-
-Keine Code-Änderungen nötig — nur RLS-Policies.
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
