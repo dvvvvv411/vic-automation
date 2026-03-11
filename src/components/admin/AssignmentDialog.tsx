@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,6 +46,23 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
     },
   });
 
+  // Load assignment counts per contract (for mode="order")
+  const { data: assignmentCounts } = useQuery({
+    queryKey: ["order_assignments", "counts_by_contract"],
+    enabled: open && mode === "order",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_assignments")
+        .select("contract_id");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach((a) => {
+        counts[a.contract_id] = (counts[a.contract_id] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+
   // Load items to pick from
   const { data: items, isLoading: loadingItems } = useQuery({
     queryKey: [mode === "order" ? "assignable_contracts" : "assignable_orders"],
@@ -53,13 +71,14 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
       if (mode === "order") {
         const { data, error } = await supabase
           .from("employment_contracts")
-          .select("id, first_name, last_name, email")
+          .select("id, first_name, last_name, email, employment_type")
           .eq("status", "unterzeichnet");
         if (error) throw error;
         return (data ?? []).map((c) => ({
           id: c.id,
           label: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(),
           sublabel: c.email ?? "",
+          employmentType: c.employment_type ?? null,
         }));
       } else {
         const { data, error } = await supabase
@@ -70,6 +89,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           id: o.id,
           label: `${o.order_number} – ${o.title}`,
           sublabel: o.provider ?? "",
+          employmentType: null as string | null,
         }));
       }
     },
@@ -232,11 +252,24 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                         checked={selected.has(item.id)}
                         onCheckedChange={() => toggle(item.id)}
                       />
-                      <div className="min-w-0">
-                        <div className="font-medium text-sm truncate">{item.label}</div>
-                        {item.sublabel && (
-                          <div className="text-xs text-muted-foreground truncate">{item.sublabel}</div>
-                        )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm truncate">{item.label}</span>
+                          {mode === "order" && assignmentCounts && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
+                              {assignmentCounts[item.id] || 0} {(assignmentCounts[item.id] || 0) === 1 ? "Auftrag" : "Aufträge"}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          {item.sublabel && <span className="truncate">{item.sublabel}</span>}
+                          {item.employmentType && (
+                            <>
+                              {item.sublabel && <span>·</span>}
+                              <span className="shrink-0">{item.employmentType}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </label>
                   ))

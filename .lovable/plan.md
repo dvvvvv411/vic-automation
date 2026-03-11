@@ -1,26 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# AssignmentDialog verbessern: Anstellungsart + Auftrags-Badge
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Änderungen in `src/components/admin/AssignmentDialog.tsx`
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-### 1. Query erweitern (Zeile 56)
-`employment_contracts` Select um `employment_type` erweitern:
-```
-.select("id, first_name, last_name, email, employment_type")
-```
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-### 2. Auftrags-Zählung laden
-Neue Query: Alle `order_assignments` laden und pro `contract_id` zählen, um die Anzahl zugewiesener Aufträge pro Mitarbeiter anzuzeigen.
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-### 3. Item-Datenstruktur erweitern
-Das `items`-Array bekommt zusätzliche Felder: `employmentType` und die Zählung wird beim Rendern aus den Assignment-Counts geholt.
-
-### 4. UI pro Mitarbeiter-Zeile
-- **Anstellungsart** als Text unter dem Namen (z.B. "Minijob", "Vollzeit")
-- **Badge** mit Anzahl zugewiesener Aufträge (z.B. "3 Aufträge")
-
-| Datei | Änderung |
-|-------|----------|
-| `AssignmentDialog.tsx` | Query erweitern, Assignment-Counts laden, UI mit employment_type + Badge |
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
