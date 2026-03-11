@@ -27,6 +27,7 @@ import { sendSms } from "@/lib/sendSms";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import AssignmentDialog from "@/components/admin/AssignmentDialog";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "–";
