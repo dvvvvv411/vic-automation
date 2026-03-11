@@ -27,6 +27,7 @@ function getMonthOptions() {
 
 export default function AdminSmsHistory() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
+  const userId = useUserQueryKey();
 
   const monthStart = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
