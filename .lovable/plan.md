@@ -1,24 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Fix: Anosim Share-Link Validierung
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Problem
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-Die URL-Validierung ist zu strikt. Sie prüft auf `anosim.net/api/v1/orderbookingshare`, aber der Share-Link hat das Format `anosim.net/share/orderbooking?token=...`. Betroffen sind drei Stellen:
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-1. **`supabase/functions/anosim-proxy/index.ts`** (Zeile 15): Proxy blockt die URL
-2. **`src/pages/admin/AdminTelefonnummern.tsx`**: `isValidUrl` prüft auf falsches Muster
-3. **`src/components/chat/SmsWatch.tsx`**: `handleAddUrl` prüft auf falsches Muster
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-## Lösung
-
-Alle drei Validierungen so ändern, dass sie `anosim.net` akzeptieren -- sowohl das alte API-Format als auch das neue Share-Format:
-
-| Datei | Änderung |
-|-------|----------|
-| `anosim-proxy/index.ts` | Validierung auf `anosim.net` mit Token-Parameter lockern |
-| `AdminTelefonnummern.tsx` | `isValidUrl` anpassen |
-| `SmsWatch.tsx` | `handleAddUrl` Validierung anpassen |
-
-Die Proxy-Funktion muss danach neu deployed werden.
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe

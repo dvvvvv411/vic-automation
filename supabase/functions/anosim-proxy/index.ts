@@ -12,7 +12,8 @@ Deno.serve(async (req) => {
   try {
     const { url } = await req.json();
 
-    if (!url || !url.toLowerCase().includes("anosim.net/api/v1/orderbookingshare")) {
+    const lower = url?.toLowerCase() ?? "";
+    if (!url || !(lower.includes("anosim.net/api/v1/orderbookingshare") || lower.includes("anosim.net/share/orderbooking"))) {
       return new Response(JSON.stringify({ error: "Invalid URL" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

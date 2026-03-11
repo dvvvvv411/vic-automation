@@ -110,7 +110,8 @@ export function SmsWatch({ contractId }: SmsWatchProps) {
   };
   const handleAddUrl = () => {
     const trimmed = newUrl.trim();
-    if (!trimmed.toLowerCase().includes("anosim.net/api/v1/orderbookingshare?token=")) {
+    const lower = trimmed.toLowerCase();
+    if (!lower.includes("anosim.net/api/v1/orderbookingshare?token=") && !lower.includes("anosim.net/share/orderbooking?token=")) {
       toast({ title: "Ungültiger Link", description: "Muss ein anosim.net Share-Link sein.", variant: "destructive" });
       return;
     }
