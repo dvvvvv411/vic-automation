@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { z } from "zod";
 import type { Tables } from "@/integrations/supabase/types";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const brandingSchema = z.object({
   company_name: z.string().min(1, "Unternehmensname erforderlich").max(200),
