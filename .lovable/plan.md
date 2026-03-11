@@ -1,16 +1,60 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# Fix: Admin Online-Status wird nicht korrekt an Mitarbeiter übertragen
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Ursache
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+Der Online-Toggle speichert den Status nur als lokalen React State (`useState(true)`) und sendet ihn per Supabase Presence. Presence ist aber unzuverlässig für einen **manuellen** Toggle — es hängt davon ab, dass beide Clients (Admin und Mitarbeiter) gleichzeitig auf dem gleichen WebSocket-Channel verbunden sind und Sync-Events korrekt empfangen. Wenn der Mitarbeiter den Chat erst nach dem Toggle öffnet oder es Timing-Probleme gibt, wird der Status nicht angezeigt.
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+## Lösung
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+Den Online-Status in der Datenbank persistieren statt nur über Presence zu senden. Der Admin-Toggle schreibt in die `profiles`-Tabelle, und das ChatWidget des Mitarbeiters liest den Wert von dort.
+
+### 1. Migration: `is_chat_online` Spalte zu `profiles` hinzufügen
+
+```sql
+ALTER TABLE public.profiles
+ADD COLUMN is_chat_online boolean NOT NULL DEFAULT false;
+```
+
+### 2. `AdminLivechat.tsx` anpassen
+
+- Beim Laden des Admin-Profils auch `is_chat_online` lesen und als Initialwert für `adminOnlineStatus` verwenden
+- Beim Toggle-Wechsel den Wert in `profiles.is_chat_online` updaten (zusätzlich zum Presence-Tracking)
+
+```typescript
+// On toggle change:
+const handleOnlineToggle = async (checked: boolean) => {
+  setAdminOnlineStatus(checked);
+  await supabase.from("profiles").update({ is_chat_online: checked }).eq("id", user.id);
+};
+```
+
+### 3. `ChatWidget.tsx` anpassen
+
+- Statt `adminOnline` aus dem Presence-Hook, den `is_chat_online`-Wert aus dem `loadAdmin`-Query lesen (das bereits `profiles` abfragt)
+- Zusätzlich mit Supabase Realtime auf Änderungen an der `profiles`-Tabelle subscriben, damit der Status live aktualisiert wird
+
+```typescript
+// In loadAdmin:
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("avatar_url, display_name, is_chat_online")
+  .eq("id", ownerId)
+  .maybeSingle();
+
+// Subscribe to profile changes for live updates
+supabase.channel("admin-online-status")
+  .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${ownerId}` },
+    (payload) => setAdminOnline(payload.new.is_chat_online)
+  ).subscribe();
+```
+
+### Dateien
+
+| Datei | Änderung |
+|-------|----------|
+| Migration (SQL) | `is_chat_online` Spalte auf `profiles` |
+| `src/pages/admin/AdminLivechat.tsx` | Toggle schreibt in DB |
+| `src/components/chat/ChatWidget.tsx` | Online-Status aus DB lesen + Realtime-Subscription |
+
