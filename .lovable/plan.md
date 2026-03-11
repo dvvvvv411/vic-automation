@@ -1,18 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Bewertung-Freischalten: Button statt Toggle
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Änderung in `MitarbeiterDetailPopup.tsx`
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-Den `Switch`-Toggle in der Bewertungs-Spalte durch einen `Button` ersetzen:
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-- **Nicht freigeschaltet**: Button "Freischalten" (outline/secondary style)
-- **Bereits freigeschaltet**: Badge "Freigeschaltet" (grün) -- kein Button mehr nötig, da die Aktion einmalig ist
-- **Platzhalter-Aufträge**: Badge "Auto" bleibt wie bisher
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-Import von `Switch` entfernen, `Button` importieren.
-
-| Datei | Änderung |
-|-------|----------|
-| `MitarbeiterDetailPopup.tsx` | Switch durch Button "Freischalten" ersetzen, Import anpassen |
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe

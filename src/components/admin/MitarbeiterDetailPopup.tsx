@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { Star, ChevronDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
@@ -261,16 +261,17 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
                                   <TableCell className="text-muted-foreground">{a.orders?.provider ?? "–"}</TableCell>
                                   <TableCell className="text-muted-foreground">{a.orders?.reward ?? "–"}</TableCell>
                                   <TableCell>{assignmentStatusBadge(a.status)}</TableCell>
-                                  <TableCell>
-                                    {a.orders?.is_placeholder ? (
-                                      <Badge variant="outline" className="text-muted-foreground">Auto</Badge>
-                                    ) : (
-                                      <Switch
-                                        checked={a.review_unlocked}
-                                        onCheckedChange={() => toggleReviewUnlocked(a.id, a.review_unlocked)}
-                                      />
-                                    )}
-                                  </TableCell>
+                                    <TableCell>
+                                     {a.orders?.is_placeholder ? (
+                                       <Badge variant="outline" className="text-muted-foreground">Auto</Badge>
+                                     ) : a.review_unlocked ? (
+                                       <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">Freigeschaltet</Badge>
+                                     ) : (
+                                       <Button variant="outline" size="sm" onClick={() => toggleReviewUnlocked(a.id, false)}>
+                                         Freischalten
+                                       </Button>
+                                     )}
+                                   </TableCell>
                                   <TableCell className="text-muted-foreground">
                                     {a.appointment
                                       ? `${format(parseISO(a.appointment.appointment_date), "dd.MM.yyyy")} ${a.appointment.appointment_time?.slice(0, 5)}`
