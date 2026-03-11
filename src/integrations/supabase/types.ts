@@ -755,6 +755,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           display_name: string | null
+          email: string | null
           full_name: string | null
           id: string
           is_chat_online: boolean
@@ -763,6 +764,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          email?: string | null
           full_name?: string | null
           id: string
           is_chat_online?: boolean
@@ -771,6 +773,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          email?: string | null
           full_name?: string | null
           id?: string
           is_chat_online?: boolean
@@ -871,6 +874,7 @@ export type Database = {
       }
       sms_logs: {
         Row: {
+          branding_id: string | null
           created_at: string
           created_by: string | null
           error_message: string | null
@@ -882,6 +886,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          branding_id?: string | null
           created_at?: string
           created_by?: string | null
           error_message?: string | null
@@ -893,6 +898,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          branding_id?: string | null
           created_at?: string
           created_by?: string | null
           error_message?: string | null
@@ -903,7 +909,15 @@ export type Database = {
           recipient_phone?: string
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sms_logs_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sms_spoof_logs: {
         Row: {
