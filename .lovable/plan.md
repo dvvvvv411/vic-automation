@@ -1,16 +1,27 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# Fix: Mitarbeiter Online-Status wird Admin nicht angezeigt
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Ursache
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+Das `ChatWidget` (Mitarbeiter-Seite) verwendet `useChatPresence` nicht. Der Mitarbeiter sendet also nie seine Presence auf dem WebSocket-Channel. Der Admin lauscht zwar auf `role: "user"` Presences, aber niemand sendet sie.
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+## Lösung
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+In `ChatWidget.tsx` den `useChatPresence`-Hook importieren und aufrufen, damit der Mitarbeiter seine Anwesenheit broadcastet, wenn er den Chat geöffnet hat.
+
+### Änderung in `src/components/chat/ChatWidget.tsx`
+
+1. Import hinzufügen: `import { useChatPresence } from "./useChatPresence";`
+2. Hook aufrufen mit `contractId`, `role: "user"` und `active: open` (nur tracken wenn Chat-Popup offen ist):
+
+```typescript
+useChatPresence({ contractId, role: "user", active: open });
+```
+
+Das ist eine 2-Zeilen-Änderung. Der bestehende Presence-Hook auf Admin-Seite empfängt dann die User-Presence und zeigt den grünen Punkt korrekt an.
+
+| Datei | Änderung |
+|-------|----------|
+| `src/components/chat/ChatWidget.tsx` | `useChatPresence` importieren und aufrufen |
+
