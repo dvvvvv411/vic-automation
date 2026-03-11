@@ -71,6 +71,7 @@ interface MitarbeiterDetailPopupProps {
 
 export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange }: MitarbeiterDetailPopupProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ["popup-contract-detail", contractId],
