@@ -33,7 +33,7 @@ interface SmsWatchProps {
 
 function extractTanCode(text: string): string | null {
   const patterns = [
-    /(?:code|tan|pin|ident)[\s\-:]*(\d{4,8})/i,
+    /(?:code|tan|pin|ident|clave)[\s\-:]*(?:\w+[\s\-:]+)?(\d{4,8})/i,
     /(\d{4,8})\s*\.?\s*$/,
   ];
   for (const p of patterns) {
