@@ -8,7 +8,7 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { AvatarUpload } from "@/components/chat/AvatarUpload";
 import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatRealtime";
 import { useChatTyping } from "@/components/chat/useChatTyping";
-import { useChatPresence } from "@/components/chat/useChatPresence";
+
 import { sendSms } from "@/lib/sendSms";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
 import { SmsWatch } from "@/components/chat/SmsWatch";
@@ -61,7 +61,7 @@ export default function AdminLivechat() {
   });
 
   const [adminOnlineStatus, setAdminOnlineStatus] = useState(false);
-  const { onlineContractIds } = useChatPresence({ contractId: null, role: "admin", active: adminOnlineStatus });
+  const [onlineContractIds, setOnlineContractIds] = useState<Set<string>>(new Set());
 
   const handleOnlineToggle = async (checked: boolean) => {
     setAdminOnlineStatus(checked);
@@ -94,7 +94,7 @@ export default function AdminLivechat() {
     setEditingName(false);
   };
 
-  // Load conversations
+  // Load conversations + online status
   const loadConversations = useCallback(async () => {
     const { data: msgs } = await supabase
       .from("chat_messages")
@@ -117,8 +117,19 @@ export default function AdminLivechat() {
 
     const { data: contracts } = await supabase
       .from("employment_contracts")
-      .select("id, first_name, last_name, user_id")
+      .select("id, first_name, last_name, user_id, chat_active_at")
       .in("id", contractIds);
+
+    // Compute online status from chat_active_at
+    const now = Date.now();
+    const onlineIds = new Set<string>();
+    for (const c of contracts ?? []) {
+      const activeAt = (c as any).chat_active_at;
+      if (activeAt && (now - new Date(activeAt).getTime()) < 2 * 60 * 1000) {
+        onlineIds.add(c.id);
+      }
+    }
+    setOnlineContractIds(onlineIds);
 
     const convs: Conversation[] = (contracts ?? [])
       .filter((c) => map.has(c.id))
@@ -143,11 +154,26 @@ export default function AdminLivechat() {
     }
   }, [searchParams, conversations, active, setSearchParams]);
 
-  // Realtime for all messages
+  // Realtime for all messages + employee online status heartbeat
   useEffect(() => {
     const channel = supabase
       .channel("admin-chat-all")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, () => loadConversations())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "employment_contracts" }, (payload: any) => {
+        const id = payload.new?.id;
+        const activeAt = payload.new?.chat_active_at;
+        if (id) {
+          setOnlineContractIds(prev => {
+            const next = new Set(prev);
+            if (activeAt && (Date.now() - new Date(activeAt).getTime()) < 2 * 60 * 1000) {
+              next.add(id);
+            } else {
+              next.delete(id);
+            }
+            return next;
+          });
+        }
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [loadConversations]);

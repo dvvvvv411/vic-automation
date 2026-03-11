@@ -1,0 +1,1 @@
+ALTER TABLE public.employment_contracts ADD COLUMN chat_active_at timestamptz DEFAULT NULL;

@@ -1,43 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Fix: Mitarbeiter Online-Status im Admin-Livechat
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Problem
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-Supabase Presence ist unzuverlässig für die Anzeige des Mitarbeiter-Online-Status. Presence-Events werden nur transient über WebSocket synchronisiert und gehen verloren bei Timing-Problemen, Tab-Wechsel oder wenn die Verbindungen nicht exakt gleichzeitig bestehen.
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-## Lösung: DB-basierter Heartbeat
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-Statt Presence verwenden wir einen DB-basierten Ansatz wie beim Admin-Online-Status:
-
-### 1. Migration: `chat_active_at` Spalte auf `employment_contracts`
-
-```sql
-ALTER TABLE public.employment_contracts
-ADD COLUMN chat_active_at timestamptz DEFAULT NULL;
-```
-
-Employee gilt als "online" wenn `chat_active_at` weniger als 2 Minuten alt ist.
-
-### 2. `ChatWidget.tsx` anpassen
-
-Wenn der Chat geöffnet ist (`open === true`), sofort und dann alle 30 Sekunden `chat_active_at = now()` auf den Contract updaten. Beim Schließen auf `NULL` setzen.
-
-### 3. `AdminLivechat.tsx` anpassen
-
-- Beim Laden der Conversations auch `chat_active_at` aus `employment_contracts` lesen
-- Online-Status berechnen: `chat_active_at && (now - chat_active_at) < 2 min`
-- Realtime-Subscription auf `employment_contracts` UPDATE Events, um `chat_active_at` Änderungen live zu empfangen
-- `onlineContractIds` Set lokal aus diesen Daten berechnen statt aus Presence
-
-### 4. Presence-Hook Aufräumen
-
-- `useChatPresence` Import und Aufruf aus `AdminLivechat.tsx` entfernen (für Employee-Status nicht mehr benötigt)
-- `useChatPresence` in `ChatWidget.tsx` kann bleiben für Admin-Online-Anzeige (oder auch entfernt werden, da Admin-Status jetzt DB-basiert ist)
-
-| Datei | Änderung |
-|-------|----------|
-| Migration (SQL) | `chat_active_at` Spalte auf `employment_contracts` |
-| `src/components/chat/ChatWidget.tsx` | Heartbeat: alle 30s `chat_active_at` updaten wenn Chat offen |
-| `src/pages/admin/AdminLivechat.tsx` | Online-Status aus DB lesen statt Presence, Realtime-Subscription für Updates |
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
