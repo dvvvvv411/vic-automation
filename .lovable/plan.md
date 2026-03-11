@@ -1,16 +1,38 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# Bugfix: Mitarbeiter kann Vertrag nicht sehen / Unterschrift wird übersprungen
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Ursache
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+Die letzte Migration hat die `employment_contracts` RLS-Policy `"Anon can select employment_contracts"` (die auf `{public}` = alle Rollen galt) entfernt und durch eine `anon`-only Policy ersetzt. Dadurch können authentifizierte User mit Rolle `user` (Mitarbeiter) ihren eigenen Vertrag nicht mehr lesen.
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+Das `MitarbeiterLayout` fragt `.from("employment_contracts").select(...).eq("user_id", user.id)` ab → bekommt `null` zurück → zeigt weder die Unterschrifts-Ansicht noch den Vertrag an → der Mitarbeiter landet direkt im Dashboard.
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+## Lösung
+
+Eine neue RLS-Policy hinzufügen, die Mitarbeitern erlaubt ihren eigenen Vertrag zu lesen und zu aktualisieren:
+
+```sql
+-- Mitarbeiter können eigenen Vertrag lesen
+CREATE POLICY "Users can select own employment_contract"
+ON public.employment_contracts
+FOR SELECT
+TO authenticated
+USING (user_id = auth.uid());
+
+-- Mitarbeiter können eigenen Vertrag aktualisieren (für Unterschrift etc.)
+CREATE POLICY "Users can update own employment_contract"
+ON public.employment_contracts
+FOR UPDATE
+TO authenticated
+USING (user_id = auth.uid());
+```
+
+## Dateien
+
+| Datei | Änderung |
+|-------|----------|
+| Migration (SQL) | 2 neue RLS-Policies für `employment_contracts` |
+
+Keine Code-Änderungen nötig — das Frontend funktioniert bereits korrekt, es fehlt nur der Datenbankzugriff.
+
