@@ -35,6 +35,7 @@ const PLACEHOLDER_INFO: Record<string, string[]> = {
 
 export default function AdminSmsTemplates() {
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
   const [testPhone, setTestPhone] = useState("");
   const [testText, setTestText] = useState("");
   const [testSending, setTestSending] = useState(false);
