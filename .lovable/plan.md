@@ -1,16 +1,78 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# Fix: Livechat zeigt falschen Ansprechpartner für Kunde-Mitarbeiter
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Problem
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+In `ChatWidget.tsx` (Zeile 77-82) wird der Ansprechpartner immer über `user_roles.role = 'admin'` geladen — das findet immer den Haupt-Admin (Simon Heber). Mitarbeiter, die von einem Kundenkonto erstellt wurden, sollten stattdessen den Kunden als Ansprechpartner sehen.
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+## Lösung
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+Die `loadAdmin`-Funktion ändern: Statt pauschal den ersten Admin zu suchen, den `created_by` des `employment_contracts` des eingeloggten Mitarbeiters verwenden. Das ist die User-ID des Kunden (oder Admins), der den Mitarbeiter hinzugefügt hat.
+
+### `src/components/chat/ChatWidget.tsx`
+
+Die Logik in `loadAdmin` (Zeile 77-92) ersetzen:
+
+1. Über `contractId` den `employment_contract` laden und dessen `created_by` lesen
+2. Falls `created_by` vorhanden → Profil dieses Users laden (= der Kunde)
+3. Falls `created_by` NULL → Fallback auf bisherige Logik (erster Admin)
+
+```typescript
+const loadAdmin = async () => {
+  let ownerId: string | null = null;
+
+  // Try to find the owner of this contract (kunde or admin)
+  if (contractId) {
+    const { data: contract } = await supabase
+      .from("employment_contracts")
+      .select("created_by")
+      .eq("id", contractId)
+      .maybeSingle();
+    ownerId = contract?.created_by ?? null;
+  }
+
+  // Fallback: find first admin
+  if (!ownerId) {
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "admin")
+      .limit(1);
+    ownerId = roles?.[0]?.user_id ?? null;
+  }
+
+  if (!ownerId) return;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("avatar_url, display_name")
+    .eq("id", ownerId)
+    .maybeSingle();
+  // ... rest stays the same
+};
+```
+
+### RLS-Anpassung
+
+Der Mitarbeiter braucht Lesezugriff auf das Profil des Kunden. Aktuell erlaubt die `profiles`-Policy nur Admin-Profile zu lesen (`Users can view admin profiles` prüft `role = 'admin'`). Eine neue Policy oder Erweiterung ist nötig:
+
+```sql
+-- Mitarbeiter können das Profil ihres Vertrags-Eigentümers sehen
+CREATE POLICY "Users can view contract owner profile"
+ON public.profiles FOR SELECT TO authenticated
+USING (
+  id IN (
+    SELECT ec.created_by FROM employment_contracts ec
+    WHERE ec.user_id = auth.uid() AND ec.created_by IS NOT NULL
+  )
+);
+```
+
+### Dateien
+
+| Datei | Änderung |
+|-------|----------|
+| `src/components/chat/ChatWidget.tsx` | `loadAdmin` → Contract-Owner statt erster Admin |
+| Migration (SQL) | Neue RLS-Policy auf `profiles` für Contract-Owner-Zugriff |
+
