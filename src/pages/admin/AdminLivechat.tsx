@@ -60,8 +60,15 @@ export default function AdminLivechat() {
     role: "admin",
   });
 
-  const [adminOnlineStatus, setAdminOnlineStatus] = useState(true);
+  const [adminOnlineStatus, setAdminOnlineStatus] = useState(false);
   const { onlineContractIds } = useChatPresence({ contractId: null, role: "admin", active: adminOnlineStatus });
+
+  const handleOnlineToggle = async (checked: boolean) => {
+    setAdminOnlineStatus(checked);
+    if (user) {
+      await supabase.from("profiles").update({ is_chat_online: checked } as any).eq("id", user.id);
+    }
+  };
 
   // Load admin profile
   useEffect(() => {
