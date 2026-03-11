@@ -249,6 +249,7 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
                                 <TableHead>Anbieter</TableHead>
                                 <TableHead>Prämie</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead>Bewertung</TableHead>
                                 <TableHead>Termin</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -260,6 +261,16 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
                                   <TableCell className="text-muted-foreground">{a.orders?.provider ?? "–"}</TableCell>
                                   <TableCell className="text-muted-foreground">{a.orders?.reward ?? "–"}</TableCell>
                                   <TableCell>{assignmentStatusBadge(a.status)}</TableCell>
+                                  <TableCell>
+                                    {a.orders?.is_placeholder ? (
+                                      <Badge variant="outline" className="text-muted-foreground">Auto</Badge>
+                                    ) : (
+                                      <Switch
+                                        checked={a.review_unlocked}
+                                        onCheckedChange={() => toggleReviewUnlocked(a.id, a.review_unlocked)}
+                                      />
+                                    )}
+                                  </TableCell>
                                   <TableCell className="text-muted-foreground">
                                     {a.appointment
                                       ? `${format(parseISO(a.appointment.appointment_date), "dd.MM.yyyy")} ${a.appointment.appointment_time?.slice(0, 5)}`
