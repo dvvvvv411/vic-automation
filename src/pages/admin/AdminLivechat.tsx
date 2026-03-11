@@ -52,6 +52,7 @@ export default function AdminLivechat() {
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
   const [notifySmsDialogOpen, setNotifySmsDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [notifySmsText, setNotifySmsText] = useState("Sie haben eine neue Nachricht im Livechat. Bitte lesen Sie diese.");
   const [notifySmsSending, setNotifySmsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -373,9 +374,13 @@ export default function AdminLivechat() {
                 <AvatarUpload avatarUrl={employeeProfile.avatar_url} name={active.first_name} size={36} />
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="font-semibold text-foreground">
+                    <button
+                      type="button"
+                      onClick={() => setDetailDialogOpen(true)}
+                      className="font-semibold text-foreground hover:underline cursor-pointer text-left"
+                    >
                       {active.first_name} {active.last_name}
-                    </h2>
+                    </button>
                     {contractData.employment_type && (
                       <Badge variant="secondary" className="text-[10px] px-2 py-0">
                         {contractData.employment_type}
@@ -632,6 +637,22 @@ export default function AdminLivechat() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Mitarbeiter-Detail Dialog */}
+      {active && (
+        <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+          <DialogContent className="max-w-5xl h-[85vh] p-0 overflow-hidden">
+            <DialogHeader className="sr-only">
+              <DialogTitle>{active.first_name} {active.last_name} – Details</DialogTitle>
+            </DialogHeader>
+            <iframe
+              src={`/admin/mitarbeiter/${active.contract_id}`}
+              className="w-full h-full border-0 rounded-lg"
+              title={`${active.first_name} ${active.last_name} Details`}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
