@@ -872,6 +872,7 @@ export type Database = {
       sms_logs: {
         Row: {
           created_at: string
+          created_by: string | null
           error_message: string | null
           event_type: string
           id: string
@@ -882,6 +883,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           error_message?: string | null
           event_type: string
           id?: string
@@ -892,6 +894,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           error_message?: string | null
           event_type?: string
           id?: string
