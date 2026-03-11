@@ -28,6 +28,19 @@ interface PhoneEntry {
 
 interface SmsWatchProps {
   contractId: string | null;
+  onTanCodeExtracted?: (code: string) => void;
+}
+
+function extractTanCode(text: string): string | null {
+  const patterns = [
+    /(?:code|tan|pin|ident)[\s\-:]*(\d{4,8})/i,
+    /(\d{4,8})\s*\.?\s*$/,
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m) return m[1];
+  }
+  return null;
 }
 
 export function SmsWatch({ contractId }: SmsWatchProps) {
