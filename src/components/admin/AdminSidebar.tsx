@@ -64,6 +64,7 @@ const navGroups = [
       { title: "Brandings", url: "/admin/brandings", icon: Palette },
       { title: "E-Mails", url: "/admin/emails", icon: Mail },
       { title: "SMS", url: "/admin/sms", icon: Smartphone },
+      { title: "SMS History", url: "/admin/sms-history", icon: History },
       { title: "Telegram", url: "/admin/telegram", icon: Send },
       { title: "Zeitplan", url: "/admin/zeitplan", icon: Clock },
       { title: "Kunden", url: "/admin/kunden", icon: UserPlus },
