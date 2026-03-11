@@ -638,20 +638,13 @@ export default function AdminLivechat() {
         </DialogContent>
       </Dialog>
 
-      {/* Mitarbeiter-Detail Dialog */}
+      {/* Mitarbeiter-Detail Popup */}
       {active && (
-        <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-          <DialogContent className="max-w-5xl h-[85vh] p-0 overflow-hidden">
-            <DialogHeader className="sr-only">
-              <DialogTitle>{active.first_name} {active.last_name} – Details</DialogTitle>
-            </DialogHeader>
-            <iframe
-              src={`/admin/mitarbeiter/${active.contract_id}`}
-              className="w-full h-full border-0 rounded-lg"
-              title={`${active.first_name} ${active.last_name} Details`}
-            />
-          </DialogContent>
-        </Dialog>
+        <MitarbeiterDetailPopup
+          contractId={active.contract_id}
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+        />
       )}
     </div>
   );
