@@ -19,6 +19,7 @@ export default function AdminAuftragstermine() {
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("default");
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
