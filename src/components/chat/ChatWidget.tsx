@@ -69,7 +69,10 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
 
   // Load admin profile (with sessionStorage cache)
   useEffect(() => {
-    const cached = sessionStorage.getItem("admin_chat_profile");
+    if (!contractId) return;
+
+    const cacheKey = `admin_chat_profile_${contractId}`;
+    const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
       try { setAdminProfile(JSON.parse(cached)); } catch {}
     }
@@ -78,14 +81,12 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
       let ownerId: string | null = null;
 
       // Try to find the owner of this contract (kunde or admin who created it)
-      if (contractId) {
-        const { data: contract } = await supabase
-          .from("employment_contracts")
-          .select("created_by")
-          .eq("id", contractId)
-          .maybeSingle();
-        ownerId = contract?.created_by ?? null;
-      }
+      const { data: contract } = await supabase
+        .from("employment_contracts")
+        .select("created_by")
+        .eq("id", contractId)
+        .maybeSingle();
+      ownerId = contract?.created_by ?? null;
 
       // Fallback: find first admin
       if (!ownerId) {
@@ -107,11 +108,11 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
       if (profile) {
         const p = { avatar_url: profile.avatar_url, display_name: profile.display_name };
         setAdminProfile(p);
-        sessionStorage.setItem("admin_chat_profile", JSON.stringify(p));
+        sessionStorage.setItem(cacheKey, JSON.stringify(p));
       }
     };
     loadAdmin();
-  }, []);
+  }, [contractId]);
 
   // Auto-scroll bei neuen Nachrichten
   useEffect(() => {
