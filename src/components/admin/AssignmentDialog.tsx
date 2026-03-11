@@ -252,11 +252,24 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                         checked={selected.has(item.id)}
                         onCheckedChange={() => toggle(item.id)}
                       />
-                      <div className="min-w-0">
-                        <div className="font-medium text-sm truncate">{item.label}</div>
-                        {item.sublabel && (
-                          <div className="text-xs text-muted-foreground truncate">{item.sublabel}</div>
-                        )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm truncate">{item.label}</span>
+                          {mode === "order" && assignmentCounts && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
+                              {assignmentCounts[item.id] || 0} {(assignmentCounts[item.id] || 0) === 1 ? "Auftrag" : "Aufträge"}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          {item.sublabel && <span className="truncate">{item.sublabel}</span>}
+                          {item.employmentType && (
+                            <>
+                              {item.sublabel && <span>·</span>}
+                              <span className="shrink-0">{item.employmentType}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </label>
                   ))
