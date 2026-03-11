@@ -389,7 +389,7 @@ export default function AdminLivechat() {
               <p className="text-sm text-muted-foreground">Kein Chat ausgewählt</p>
             )}
           </div>
-          {active && <SmsWatch contractId={active.contract_id} />}
+          {active && <SmsWatch contractId={active.contract_id} onTanCodeExtracted={(code) => { setQuickSmsCode(code); setExternalChatValue(code); }} />}
           <div className="flex items-center gap-2">
             {active && contractData.phone && (
               <div className="flex items-center gap-1">
