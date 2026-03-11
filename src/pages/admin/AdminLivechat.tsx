@@ -451,7 +451,7 @@ export default function AdminLivechat() {
                   <div className="flex items-center gap-2">
                     <span className={`h-2 w-2 rounded-full ${adminOnlineStatus ? "bg-green-500" : "bg-muted-foreground/30"}`} />
                     <span className="text-xs text-muted-foreground">{adminOnlineStatus ? "Online" : "Offline"}</span>
-                    <Switch checked={adminOnlineStatus} onCheckedChange={setAdminOnlineStatus} />
+                    <Switch checked={adminOnlineStatus} onCheckedChange={handleOnlineToggle} />
                   </div>
                 </div>
               </PopoverContent>
