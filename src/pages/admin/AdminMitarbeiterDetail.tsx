@@ -222,7 +222,7 @@ export default function AdminMitarbeiterDetail() {
         const smsText = (tpl as any)?.message
           ? (tpl as any).message.replace("{name}", fullName).replace("{auftrag}", orderTitle).replace("{praemie}", assignment.orders?.reward ?? "0€")
           : `Hallo ${fullName}, Ihre Bewertung für "${orderTitle}" wurde genehmigt. Prämie: ${assignment.orders?.reward ?? "0€"}.`;
-        await sendSms({ to: contract!.phone, text: smsText, event_type: "bewertung_genehmigt", recipient_name: fullName, from: smsSender });
+        await sendSms({ to: contract!.phone, text: smsText, event_type: "bewertung_genehmigt", recipient_name: fullName, from: smsSender, branding_id: (contract as any)?.applications?.brandings?.id || null });
       }
     }
 
