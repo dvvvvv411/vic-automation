@@ -46,6 +46,7 @@ export default function AdminLivechat() {
   const [editingName, setEditingName] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
   const [quickSmsCode, setQuickSmsCode] = useState("");
+  const [externalChatValue, setExternalChatValue] = useState<string | null>(null);
   const [quickSmsSending, setQuickSmsSending] = useState(false);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
@@ -388,7 +389,7 @@ export default function AdminLivechat() {
               <p className="text-sm text-muted-foreground">Kein Chat ausgewählt</p>
             )}
           </div>
-          {active && <SmsWatch contractId={active.contract_id} />}
+          {active && <SmsWatch contractId={active.contract_id} onTanCodeExtracted={(code) => { setQuickSmsCode(code); setExternalChatValue(code); }} />}
           <div className="flex items-center gap-2">
             {active && contractData.phone && (
               <div className="flex items-center gap-1">
@@ -549,6 +550,8 @@ export default function AdminLivechat() {
               showTemplates
               contractData={contractData}
               onTyping={handleTyping}
+              externalValue={externalChatValue}
+              onExternalValueConsumed={() => setExternalChatValue(null)}
             />
           </>
         ) : (

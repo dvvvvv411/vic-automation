@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Eye, RefreshCw, Loader2, Plus } from "lucide-react";
+import { Eye, RefreshCw, Loader2, Plus, ArrowDownRight } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,9 +28,22 @@ interface PhoneEntry {
 
 interface SmsWatchProps {
   contractId: string | null;
+  onTanCodeExtracted?: (code: string) => void;
 }
 
-export function SmsWatch({ contractId }: SmsWatchProps) {
+function extractTanCode(text: string): string | null {
+  const patterns = [
+    /(?:code|tan|pin|ident)[\s\-:]*(\d{4,8})/i,
+    /(\d{4,8})\s*\.?\s*$/,
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
   const selectionsRef = useRef(new Map<string, PhoneEntry>());
   const selectedEntry = contractId ? selectionsRef.current.get(contractId) ?? null : null;
   const [, forceUpdate] = useState(0);
@@ -208,6 +221,21 @@ export function SmsWatch({ contractId }: SmsWatchProps) {
                         </span>
                       </div>
                       <p className="text-foreground leading-snug">{sms.messageText}</p>
+                      {(() => {
+                        const tanCode = extractTanCode(sms.messageText);
+                        if (!tanCode || !onTanCodeExtracted) return null;
+                        return (
+                          <div className="flex justify-end mt-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onTanCodeExtracted(tanCode); }}
+                              className="h-6 w-6 rounded flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                              title={`Code ${tanCode} einfügen`}
+                            >
+                              <ArrowDownRight className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
