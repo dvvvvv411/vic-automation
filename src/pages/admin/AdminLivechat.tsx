@@ -326,6 +326,7 @@ export default function AdminLivechat() {
     setNotifySmsSending(true);
     const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
     let smsSender: string | undefined;
+    let notifyBrandingId: string | null = null;
     if (active) {
       const { data: contractFull } = await supabase
         .from("employment_contracts")
@@ -333,19 +334,19 @@ export default function AdminLivechat() {
         .eq("id", active.contract_id)
         .single();
       const brandingId = (contractFull as any)?.applications?.branding_id;
+      notifyBrandingId = brandingId || null;
       if (brandingId) {
         const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
         smsSender = (branding as any)?.sms_sender_name || undefined;
       }
     }
-    const brandingIdForNotify = (contractFull as any)?.applications?.branding_id || null;
     const success = await sendSms({
       to: contractData.phone,
       text: notifySmsText.trim(),
       event_type: "livechat_benachrichtigung",
       recipient_name: name,
       from: smsSender,
-      branding_id: brandingIdForNotify,
+      branding_id: notifyBrandingId,
     });
     setNotifySmsSending(false);
     if (success) {
