@@ -75,13 +75,14 @@ export default function AdminLivechat() {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("avatar_url, display_name, full_name")
+      .select("avatar_url, display_name, full_name, is_chat_online")
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data }: any) => {
         if (data) {
           setAdminAvatar(data.avatar_url);
           setAdminDisplayName(data.display_name || data.full_name || "");
+          setAdminOnlineStatus(data.is_chat_online ?? false);
         }
       });
   }, [user]);
