@@ -252,6 +252,7 @@ export default function AdminBewerbungen() {
           event_type: "indeed_bewerbung_angenommen",
           recipient_name: fullName,
           from: (brandingData as any)?.sms_sender_name || undefined,
+          branding_id: app.branding_id || null,
         });
       } else {
         // Normal: Email + SMS with short link
