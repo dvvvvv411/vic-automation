@@ -28,6 +28,7 @@ const KUNDE_HIDDEN_PATHS = [
   "/admin/sms",
   "/admin/telegram",
   "/admin/kunden",
+  "/admin/sms-history",
 ];
 
 const navGroups = [
