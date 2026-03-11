@@ -1138,6 +1138,7 @@ export type Database = {
         Args: { _appointment_id: string; _status: string }
         Returns: undefined
       }
+      user_branding_ids: { Args: { _user_id: string }; Returns: string[] }
     }
     Enums: {
       app_role: "admin" | "user" | "kunde"
