@@ -92,7 +92,7 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_assignments")
-        .select("*, orders(order_number, title, provider, reward)")
+        .select("*, orders(order_number, title, provider, reward, is_placeholder)")
         .eq("contract_id", contractId)
         .order("assigned_at", { ascending: false });
       if (error) throw error;
