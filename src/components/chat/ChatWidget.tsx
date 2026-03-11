@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useChatRealtime, type ChatMessage } from "./useChatRealtime";
 import { useChatSounds } from "./useChatSounds";
 import { useChatTyping } from "./useChatTyping";
-import { useChatPresence } from "./useChatPresence";
+
 import { ChatBubble, TypingIndicator, DateSeparator, SystemMessage } from "./ChatBubble";
 import { AvatarUpload } from "./AvatarUpload";
 import { uploadChatAttachment } from "./uploadChatAttachment";
@@ -29,6 +29,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [adminOnline, setAdminOnline] = useState(false);
   const [adminProfile, setAdminProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,7 +38,6 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   openRef.current = open;
 
   const { isTyping, sendTyping } = useChatTyping({ contractId, role: "user" });
-  const { adminOnline } = useChatPresence({ contractId, role: "user", active: open });
 
   const { messages, loading, sendMessage } = useChatRealtime({
     contractId,
@@ -102,16 +102,41 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("avatar_url, display_name")
+        .select("avatar_url, display_name, is_chat_online")
         .eq("id", ownerId)
         .maybeSingle();
       if (profile) {
-        const p = { avatar_url: profile.avatar_url, display_name: profile.display_name };
+        const p = { avatar_url: (profile as any).avatar_url, display_name: (profile as any).display_name };
         setAdminProfile(p);
+        setAdminOnline((profile as any).is_chat_online ?? false);
         sessionStorage.setItem(cacheKey, JSON.stringify(p));
       }
+
+      // Subscribe to realtime changes for admin online status
+      const statusChannel = supabase
+        .channel(`admin-online-${ownerId}`)
+        .on("postgres_changes", {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${ownerId}`,
+        }, (payload: any) => {
+          setAdminOnline(payload.new.is_chat_online ?? false);
+          if (payload.new.display_name !== undefined || payload.new.avatar_url !== undefined) {
+            setAdminProfile(prev => ({
+              avatar_url: payload.new.avatar_url ?? prev.avatar_url,
+              display_name: payload.new.display_name ?? prev.display_name,
+            }));
+          }
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(statusChannel);
+      };
     };
-    loadAdmin();
+    const cleanup = loadAdmin();
+    return () => { cleanup.then(fn => fn?.()); };
   }, [contractId]);
 
   // Auto-scroll bei neuen Nachrichten

@@ -60,21 +60,29 @@ export default function AdminLivechat() {
     role: "admin",
   });
 
-  const [adminOnlineStatus, setAdminOnlineStatus] = useState(true);
+  const [adminOnlineStatus, setAdminOnlineStatus] = useState(false);
   const { onlineContractIds } = useChatPresence({ contractId: null, role: "admin", active: adminOnlineStatus });
+
+  const handleOnlineToggle = async (checked: boolean) => {
+    setAdminOnlineStatus(checked);
+    if (user) {
+      await supabase.from("profiles").update({ is_chat_online: checked } as any).eq("id", user.id);
+    }
+  };
 
   // Load admin profile
   useEffect(() => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("avatar_url, display_name, full_name")
+      .select("avatar_url, display_name, full_name, is_chat_online")
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data }: any) => {
         if (data) {
           setAdminAvatar(data.avatar_url);
           setAdminDisplayName(data.display_name || data.full_name || "");
+          setAdminOnlineStatus(data.is_chat_online ?? false);
         }
       });
   }, [user]);
@@ -443,7 +451,7 @@ export default function AdminLivechat() {
                   <div className="flex items-center gap-2">
                     <span className={`h-2 w-2 rounded-full ${adminOnlineStatus ? "bg-green-500" : "bg-muted-foreground/30"}`} />
                     <span className="text-xs text-muted-foreground">{adminOnlineStatus ? "Online" : "Offline"}</span>
-                    <Switch checked={adminOnlineStatus} onCheckedChange={setAdminOnlineStatus} />
+                    <Switch checked={adminOnlineStatus} onCheckedChange={handleOnlineToggle} />
                   </div>
                 </div>
               </PopoverContent>
