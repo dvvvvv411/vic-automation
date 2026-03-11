@@ -38,7 +38,6 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   openRef.current = open;
 
   const { isTyping, sendTyping } = useChatTyping({ contractId, role: "user" });
-  const { adminOnline } = useChatPresence({ contractId, role: "user", active: open });
 
   const { messages, loading, sendMessage } = useChatRealtime({
     contractId,
