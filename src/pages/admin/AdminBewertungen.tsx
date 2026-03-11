@@ -251,7 +251,7 @@ const AdminBewertungen = () => {
       const smsText = (tpl as any)?.message
         ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", g.order_title)
         : `Hallo ${name}, Ihre Bewertung für "${g.order_title}" wurde leider abgelehnt.`;
-      await sendSms({ to: contract.phone, text: smsText, event_type: "bewertung_abgelehnt", recipient_name: name, from: smsSender });
+      await sendSms({ to: contract.phone, text: smsText, event_type: "bewertung_abgelehnt", recipient_name: name, from: smsSender, branding_id: brandingId || null });
     }
 
     toast.success("Bewertung abgelehnt. Mitarbeiter kann erneut bewerten.");

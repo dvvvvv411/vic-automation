@@ -286,7 +286,7 @@ export default function AdminBewerbungen() {
             const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single();
             smsSender = (branding as any)?.sms_sender_name || undefined;
           }
-          await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen", recipient_name: fullName, from: smsSender });
+          await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
         }
       }
     },

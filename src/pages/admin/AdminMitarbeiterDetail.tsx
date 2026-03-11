@@ -287,7 +287,7 @@ export default function AdminMitarbeiterDetail() {
       const smsText = (tpl as any)?.message
         ? (tpl as any).message.replace("{name}", fullName).replace("{auftrag}", orderTitle)
         : `Hallo ${fullName}, Ihre Bewertung für "${orderTitle}" wurde leider abgelehnt.`;
-      await sendSms({ to: contract!.phone, text: smsText, event_type: "bewertung_abgelehnt", recipient_name: fullName, from: smsSender });
+      await sendSms({ to: contract!.phone, text: smsText, event_type: "bewertung_abgelehnt", recipient_name: fullName, from: smsSender, branding_id: brandingId || null });
     }
 
     toast.success("Bewertung abgelehnt. Mitarbeiter kann erneut bewerten.");

@@ -337,12 +337,14 @@ export default function AdminLivechat() {
         smsSender = (branding as any)?.sms_sender_name || undefined;
       }
     }
+    const brandingIdForNotify = (contractFull as any)?.applications?.branding_id || null;
     const success = await sendSms({
       to: contractData.phone,
       text: notifySmsText.trim(),
       event_type: "livechat_benachrichtigung",
       recipient_name: name,
       from: smsSender,
+      branding_id: brandingIdForNotify,
     });
     setNotifySmsSending(false);
     if (success) {

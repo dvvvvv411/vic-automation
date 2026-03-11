@@ -245,7 +245,7 @@ const AuftragDetails = () => {
         const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
         smsSender = (branding as any)?.sms_sender_name || undefined;
       }
-      await sendSms({ to: contractData.phone, text: smsText, event_type: "termin_gebucht", recipient_name: name, from: smsSender });
+      await sendSms({ to: contractData.phone, text: smsText, event_type: "termin_gebucht", recipient_name: name, from: smsSender, branding_id: brandingId || null });
     }
 
     // Telegram notification
