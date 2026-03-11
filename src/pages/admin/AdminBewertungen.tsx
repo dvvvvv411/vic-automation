@@ -183,7 +183,7 @@ const AdminBewertungen = () => {
         const smsText = (tpl as any)?.message
           ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", g.order_title).replace("{praemie}", g.order_reward)
           : `Hallo ${name}, Ihre Bewertung für "${g.order_title}" wurde genehmigt. Prämie: ${g.order_reward}.`;
-        await sendSms({ to: contract.phone, text: smsText, event_type: "bewertung_genehmigt", recipient_name: name, from: smsSender });
+        await sendSms({ to: contract.phone, text: smsText, event_type: "bewertung_genehmigt", recipient_name: name, from: smsSender, branding_id: brandingId || null });
       }
     }
 
