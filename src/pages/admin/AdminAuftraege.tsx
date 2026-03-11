@@ -17,6 +17,7 @@ import { Plus, Pencil, Trash2, X, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import AssignmentDialog from "@/components/admin/AssignmentDialog";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 interface Order {
   id: string;
