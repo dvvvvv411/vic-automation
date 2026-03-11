@@ -40,9 +40,11 @@ export default function AdminMitarbeiter() {
   const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string; isSuspended: boolean } | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const userId = useUserQueryKey();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["mitarbeiter", page],
+    queryKey: ["mitarbeiter", page, userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data: contracts, error, count } = await supabase
         .from("employment_contracts")
