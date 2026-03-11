@@ -156,9 +156,11 @@ export default function AdminBewerbungen() {
   const [massImportText, setMassImportText] = useState("");
   const [massImportErrors, setMassImportErrors] = useState<string[]>([]);
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
 
   const { data: applications, isLoading } = useQuery({
-    queryKey: ["applications"],
+    queryKey: ["applications", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
