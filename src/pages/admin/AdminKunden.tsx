@@ -52,7 +52,8 @@ export default function AdminKunden() {
 
   // Fetch all brandings (admin's own)
   const { data: brandings } = useQuery({
-    queryKey: ["admin-all-brandings"],
+    queryKey: ["admin-all-brandings", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data } = await supabase.from("brandings").select("id, company_name");
       return data ?? [];

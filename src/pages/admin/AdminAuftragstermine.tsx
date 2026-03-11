@@ -26,7 +26,8 @@ export default function AdminAuftragstermine() {
   const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["order-appointments-admin", page, viewMode],
+    queryKey: ["order-appointments-admin", page, viewMode, userId],
+    enabled: !!userId,
     queryFn: async () => {
       let query = supabase
         .from("order_appointments")

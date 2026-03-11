@@ -47,7 +47,8 @@ export default function AdminBewerbungsgespraeche() {
   const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["interview-appointments", page, viewMode],
+    queryKey: ["interview-appointments", page, viewMode, userId],
+    enabled: !!userId,
     queryFn: async () => {
       let query = supabase
         .from("interview_appointments")

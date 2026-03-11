@@ -18,9 +18,11 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
 
 export default function UpcomingStartDates() {
   const today = new Date().toISOString().split("T")[0];
+  const userId = useUserQueryKey();
 
   const { data: upcoming } = useQuery({
-    queryKey: ["upcoming-start-dates", today],
+    queryKey: ["upcoming-start-dates", today, userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employment_contracts")

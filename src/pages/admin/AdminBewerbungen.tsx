@@ -172,7 +172,8 @@ export default function AdminBewerbungen() {
   });
 
   const { data: brandings } = useQuery({
-    queryKey: ["brandings"],
+    queryKey: ["brandings", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")

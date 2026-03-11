@@ -182,9 +182,11 @@ export default function AdminTelefonnummern() {
   const [url, setUrl] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
 
   const { data: entries = [], isLoading } = useQuery<PhoneEntry[]>({
-    queryKey: ["phone_numbers"],
+    queryKey: ["phone_numbers", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("phone_numbers" as any)

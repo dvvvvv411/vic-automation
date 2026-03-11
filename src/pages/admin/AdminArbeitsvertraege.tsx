@@ -28,10 +28,12 @@ export default function AdminArbeitsvertraege() {
   const [startDateDialogOpen, setStartDateDialogOpen] = useState(false);
   const [confirmedStartDate, setConfirmedStartDate] = useState<Date | undefined>(undefined);
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
 
   // Fetch all interview_appointments with status=erfolgreich + their contracts
   const { data, isLoading } = useQuery({
-    queryKey: ["arbeitsvertraege"],
+    queryKey: ["arbeitsvertraege", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data: appointments, error } = await supabase
         .from("interview_appointments")

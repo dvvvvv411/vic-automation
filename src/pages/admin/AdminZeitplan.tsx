@@ -82,7 +82,8 @@ export default function AdminZeitplan() {
 
   // Load blocked slots + auto-delete past ones
   const { data: blockedSlots } = useQuery({
-    queryKey: ["schedule-blocked-slots"],
+    queryKey: ["schedule-blocked-slots", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("schedule_blocked_slots")
