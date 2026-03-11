@@ -754,6 +754,7 @@ export type Database = {
           display_name: string | null
           full_name: string | null
           id: string
+          is_chat_online: boolean
         }
         Insert: {
           avatar_url?: string | null
@@ -761,6 +762,7 @@ export type Database = {
           display_name?: string | null
           full_name?: string | null
           id: string
+          is_chat_online?: boolean
         }
         Update: {
           avatar_url?: string | null
@@ -768,6 +770,7 @@ export type Database = {
           display_name?: string | null
           full_name?: string | null
           id?: string
+          is_chat_online?: boolean
         }
         Relationships: []
       }
