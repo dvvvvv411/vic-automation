@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Star, ChevronDown, ImageIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Star, ChevronDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { useState } from "react";
+import { toast } from "sonner";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "–";
@@ -69,6 +71,7 @@ interface MitarbeiterDetailPopupProps {
 
 export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange }: MitarbeiterDetailPopupProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ["popup-contract-detail", contractId],
@@ -89,7 +92,7 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_assignments")
-        .select("*, orders(order_number, title, provider, reward)")
+        .select("*, orders(order_number, title, provider, reward, is_placeholder)")
         .eq("contract_id", contractId)
         .order("assigned_at", { ascending: false });
       if (error) throw error;
@@ -132,6 +135,18 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
   const fullName = contract ? `${contract.first_name ?? ""} ${contract.last_name ?? ""}`.trim() || "Unbekannt" : "";
   const branding = (contract as any)?.applications?.brandings?.company_name ?? "–";
 
+  const toggleReviewUnlocked = async (assignmentId: string, currentValue: boolean) => {
+    const { error } = await supabase
+      .from("order_assignments")
+      .update({ review_unlocked: !currentValue })
+      .eq("id", assignmentId);
+    if (error) {
+      toast.error("Fehler beim Aktualisieren");
+      return;
+    }
+    toast.success(!currentValue ? "Bewertung freigeschaltet" : "Bewertung gesperrt");
+    queryClient.invalidateQueries({ queryKey: ["popup-contract-assignments", contractId] });
+  };
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -234,6 +249,7 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
                                 <TableHead>Anbieter</TableHead>
                                 <TableHead>Prämie</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead>Bewertung</TableHead>
                                 <TableHead>Termin</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -245,6 +261,16 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
                                   <TableCell className="text-muted-foreground">{a.orders?.provider ?? "–"}</TableCell>
                                   <TableCell className="text-muted-foreground">{a.orders?.reward ?? "–"}</TableCell>
                                   <TableCell>{assignmentStatusBadge(a.status)}</TableCell>
+                                  <TableCell>
+                                    {a.orders?.is_placeholder ? (
+                                      <Badge variant="outline" className="text-muted-foreground">Auto</Badge>
+                                    ) : (
+                                      <Switch
+                                        checked={a.review_unlocked}
+                                        onCheckedChange={() => toggleReviewUnlocked(a.id, a.review_unlocked)}
+                                      />
+                                    )}
+                                  </TableCell>
                                   <TableCell className="text-muted-foreground">
                                     {a.appointment
                                       ? `${format(parseISO(a.appointment.appointment_date), "dd.MM.yyyy")} ${a.appointment.appointment_time?.slice(0, 5)}`

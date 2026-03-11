@@ -1,20 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Bewertung freischalten im MitarbeiterDetailPopup
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Änderungen in `src/components/admin/MitarbeiterDetailPopup.tsx`
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-1. **`review_unlocked` im Query laden**: Das `order_assignments` Select um `review_unlocked` erweitern (bereits als `select("*")` geladen, also schon vorhanden).
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-2. **Neue Spalte "Bewertung" in der Aufträge-Tabelle**: Eine zusätzliche Spalte mit einem Switch/Button hinzufügen, der `review_unlocked` toggelt. Nur für Nicht-Platzhalter-Aufträge relevant (Platzhalter sind immer freigeschaltet). Da wir `orders.is_placeholder` noch nicht laden, muss das Select erweitert werden: `orders(order_number, title, provider, reward, is_placeholder)`.
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-3. **Toggle-Handler**: Beim Klick auf den Switch wird `supabase.from("order_assignments").update({ review_unlocked: true/false }).eq("id", assignment.id)` aufgerufen und der Query-Cache invalidiert.
-
-4. **Imports**: `Switch` aus `@/components/ui/switch`, `useQueryClient` aus `@tanstack/react-query`, `toast` aus `sonner`.
-
-### UI-Detail
-- Neue Spalte "Bewertung" nach "Status"
-- Switch-Toggle: grün wenn freigeschaltet, grau wenn gesperrt
-- Bei Platzhalter-Aufträgen: Badge "Auto" statt Switch (da immer freigeschaltet)
-- Toast-Feedback bei Erfolg/Fehler
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
