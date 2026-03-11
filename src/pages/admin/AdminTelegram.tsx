@@ -40,7 +40,8 @@ export default function AdminTelegram() {
   const [newBrandingIds, setNewBrandingIds] = useState<string[]>([]);
 
   const { data: chats = [], isLoading } = useQuery({
-    queryKey: ["telegram-chats"],
+    queryKey: ["telegram-chats", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("telegram_chats" as any)
