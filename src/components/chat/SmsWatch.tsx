@@ -43,7 +43,7 @@ function extractTanCode(text: string): string | null {
   return null;
 }
 
-export function SmsWatch({ contractId }: SmsWatchProps) {
+export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
   const selectionsRef = useRef(new Map<string, PhoneEntry>());
   const selectedEntry = contractId ? selectionsRef.current.get(contractId) ?? null : null;
   const [, forceUpdate] = useState(0);
