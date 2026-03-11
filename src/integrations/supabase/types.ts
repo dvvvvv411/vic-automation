@@ -330,6 +330,7 @@ export type Database = {
           bic: string | null
           birth_date: string | null
           birth_place: string | null
+          chat_active_at: string | null
           city: string | null
           contract_pdf_url: string | null
           created_at: string
@@ -366,6 +367,7 @@ export type Database = {
           bic?: string | null
           birth_date?: string | null
           birth_place?: string | null
+          chat_active_at?: string | null
           city?: string | null
           contract_pdf_url?: string | null
           created_at?: string
@@ -402,6 +404,7 @@ export type Database = {
           bic?: string | null
           birth_date?: string | null
           birth_place?: string | null
+          chat_active_at?: string | null
           city?: string | null
           contract_pdf_url?: string | null
           created_at?: string
