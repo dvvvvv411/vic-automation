@@ -58,7 +58,8 @@ export default function AdminZeitplan() {
 
   // Load brandings
   const { data: brandings = [] } = useQuery({
-    queryKey: ["brandings"],
+    queryKey: ["brandings", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase.from("brandings").select("id, company_name").order("company_name");
       if (error) throw error;
@@ -68,7 +69,8 @@ export default function AdminZeitplan() {
 
   // Load branding-specific settings
   const { data: brandingSettings = [] } = useQuery({
-    queryKey: ["branding-schedule-settings"],
+    queryKey: ["branding-schedule-settings", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("branding_schedule_settings")
