@@ -251,6 +251,7 @@ export default function AdminLivechat() {
     const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
     const smsFullText = `Ihr Ident-Code lautet: ${quickSmsCode.trim()}.`;
     let smsSender: string | undefined;
+    let smsBrandingId: string | null = null;
     if (active) {
       const { data: contractFull } = await supabase
         .from("employment_contracts")
@@ -258,6 +259,7 @@ export default function AdminLivechat() {
         .eq("id", active.contract_id)
         .single();
       const brandingId = (contractFull as any)?.applications?.branding_id;
+      smsBrandingId = brandingId || null;
       if (brandingId) {
         const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
         smsSender = (branding as any)?.sms_sender_name || undefined;
@@ -269,6 +271,7 @@ export default function AdminLivechat() {
       event_type: "manuell",
       recipient_name: name,
       from: smsSender,
+      branding_id: smsBrandingId,
     });
     setQuickSmsSending(false);
     if (success) {
@@ -323,6 +326,7 @@ export default function AdminLivechat() {
     setNotifySmsSending(true);
     const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
     let smsSender: string | undefined;
+    let notifyBrandingId: string | null = null;
     if (active) {
       const { data: contractFull } = await supabase
         .from("employment_contracts")
@@ -330,6 +334,7 @@ export default function AdminLivechat() {
         .eq("id", active.contract_id)
         .single();
       const brandingId = (contractFull as any)?.applications?.branding_id;
+      notifyBrandingId = brandingId || null;
       if (brandingId) {
         const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
         smsSender = (branding as any)?.sms_sender_name || undefined;
@@ -341,6 +346,7 @@ export default function AdminLivechat() {
       event_type: "livechat_benachrichtigung",
       recipient_name: name,
       from: smsSender,
+      branding_id: notifyBrandingId,
     });
     setNotifySmsSending(false);
     if (success) {

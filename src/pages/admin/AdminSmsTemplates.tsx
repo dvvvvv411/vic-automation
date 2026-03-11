@@ -86,6 +86,7 @@ export default function AdminSmsTemplates() {
       text: testText.trim(),
       event_type: "test",
       from: senderName,
+      branding_id: testBrandingId || null,
     });
     setTestSending(false);
     if (success) {

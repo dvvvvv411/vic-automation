@@ -199,6 +199,7 @@ export default function AdminBewerbungsgespraeche() {
         event_type: "gespraech_erinnerung",
         recipient_name: name,
         from: senderName,
+        branding_id: brandingId || null,
       });
 
       await sendEmail({

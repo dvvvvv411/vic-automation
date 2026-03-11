@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { to, text, event_type, recipient_name, from } = await req.json();
+    const { to, text, event_type, recipient_name, from, branding_id } = await req.json();
 
     if (!to || !text) {
       return new Response(
@@ -23,13 +23,10 @@ Deno.serve(async (req) => {
 
     // Normalize phone number
     function normalizePhone(phone: string): string {
-      // Remove all non-digit characters except leading +
       let cleaned = phone.replace(/(?!^\+)\D/g, "");
-      // If starts with 0, replace with +49
       if (cleaned.startsWith("0")) {
         cleaned = "+49" + cleaned.slice(1);
       }
-      // Ensure + prefix if starts with 49 and no +
       if (cleaned.startsWith("49") && !cleaned.startsWith("+")) {
         cleaned = "+" + cleaned;
       }
@@ -80,8 +77,6 @@ Deno.serve(async (req) => {
     const smsResult = await smsResponse.text();
     console.log("seven.io raw response:", smsResult);
 
-    // seven.io returns "100" for success, other codes are errors
-    // The response can be JSON or a plain status code
     let success = false;
     try {
       const parsed = JSON.parse(smsResult);
@@ -104,6 +99,7 @@ Deno.serve(async (req) => {
       status: success ? "sent" : "failed",
       error_message: success ? null : smsResult,
       created_by: createdBy,
+      branding_id: branding_id || null,
     });
 
     if (!success) {

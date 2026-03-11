@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquareText, Send, BarChart3, Users } from "lucide-react";
+import { MessageSquareText, Send, BarChart3, Building2 } from "lucide-react";
 import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const MONTHS_BACK = 12;
@@ -38,12 +38,22 @@ export default function AdminSmsHistory() {
   const fromISO = monthStart.toISOString();
   const toISO = monthEnd.toISOString();
 
-  // Fetch profiles for mapping user IDs to emails
+  // Fetch profiles for mapping user IDs to names/emails
   const { data: profiles } = useQuery({
     queryKey: ["sms-history-profiles", userId],
     enabled: !!userId,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name");
+      const { data } = await supabase.from("profiles").select("id, full_name, email");
+      return data ?? [];
+    },
+  });
+
+  // Fetch brandings for mapping branding IDs to company names
+  const { data: brandings } = useQuery({
+    queryKey: ["sms-history-brandings", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data } = await supabase.from("brandings").select("id, company_name");
       return data ?? [];
     },
   });
@@ -79,14 +89,28 @@ export default function AdminSmsHistory() {
   });
 
   const profileMap = useMemo(() => {
-    const m = new Map<string, string>();
-    profiles?.forEach((p) => m.set(p.id, p.full_name || p.id));
+    const m = new Map<string, { name: string; email: string | null }>();
+    profiles?.forEach((p: any) => m.set(p.id, { name: p.full_name || p.id, email: p.email || null }));
     return m;
   }, [profiles]);
 
+  const brandingMap = useMemo(() => {
+    const m = new Map<string, string>();
+    brandings?.forEach((b: any) => m.set(b.id, b.company_name));
+    return m;
+  }, [brandings]);
+
   const getUserLabel = (uid: string | null) => {
     if (!uid) return "System";
-    return profileMap.get(uid) || uid.slice(0, 8) + "…";
+    const p = profileMap.get(uid);
+    if (p?.email) return p.email;
+    if (p?.name) return p.name;
+    return uid.slice(0, 8) + "…";
+  };
+
+  const getBrandingLabel = (brandingId: string | null) => {
+    if (!brandingId) return "–";
+    return brandingMap.get(brandingId) || brandingId.slice(0, 8) + "…";
   };
 
   // Stats
@@ -94,25 +118,29 @@ export default function AdminSmsHistory() {
   const spoofCount = spoofLogs?.length ?? 0;
   const totalCount = smsCount + spoofCount;
 
-  // Per-user breakdown
-  const perUser = useMemo(() => {
-    const map = new Map<string, { sms: number; spoof: number }>();
-    smsLogs?.forEach((l) => {
-      const key = l.created_by ?? "system";
-      const cur = map.get(key) || { sms: 0, spoof: 0 };
-      cur.sms++;
-      map.set(key, cur);
-    });
-    spoofLogs?.forEach((l) => {
-      const key = l.created_by ?? "system";
-      const cur = map.get(key) || { sms: 0, spoof: 0 };
-      cur.spoof++;
-      map.set(key, cur);
+  // Per-branding breakdown for seven.io
+  const perBranding = useMemo(() => {
+    const map = new Map<string, number>();
+    smsLogs?.forEach((l: any) => {
+      const key = l.branding_id ?? "unknown";
+      map.set(key, (map.get(key) || 0) + 1);
     });
     return Array.from(map.entries())
-      .map(([uid, counts]) => ({ uid, ...counts, total: counts.sms + counts.spoof }))
-      .sort((a, b) => b.total - a.total);
-  }, [smsLogs, spoofLogs]);
+      .map(([bid, count]) => ({ bid, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [smsLogs]);
+
+  // Per-user breakdown for spoof
+  const perSpoofUser = useMemo(() => {
+    const map = new Map<string, number>();
+    spoofLogs?.forEach((l: any) => {
+      const key = l.created_by ?? "system";
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([uid, count]) => ({ uid, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [spoofLogs]);
 
   const monthOptions = useMemo(getMonthOptions, []);
 
@@ -133,7 +161,7 @@ export default function AdminSmsHistory() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Gesamt SMS</CardTitle>
@@ -161,47 +189,70 @@ export default function AdminSmsHistory() {
             <div className="text-2xl font-bold">{spoofCount}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Nutzerkonten</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{perUser.length}</div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Per-User Breakdown */}
-      {perUser.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Nutzung pro Konto</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Konto</TableHead>
-                  <TableHead className="text-right">seven.io</TableHead>
-                  <TableHead className="text-right">Spoof</TableHead>
-                  <TableHead className="text-right">Gesamt</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {perUser.map((u) => (
-                  <TableRow key={u.uid}>
-                    <TableCell className="font-medium">{getUserLabel(u.uid === "system" ? null : u.uid)}</TableCell>
-                    <TableCell className="text-right">{u.sms}</TableCell>
-                    <TableCell className="text-right">{u.spoof}</TableCell>
-                    <TableCell className="text-right font-semibold">{u.total}</TableCell>
+      {/* Breakdowns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Per-Branding for seven.io */}
+        {perBranding.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Building2 className="h-4 w-4" /> seven.io pro Branding
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Branding</TableHead>
+                    <TableHead className="text-right">Anzahl</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                </TableHeader>
+                <TableBody>
+                  {perBranding.map((b) => (
+                    <TableRow key={b.bid}>
+                      <TableCell className="font-medium">
+                        {b.bid === "unknown" ? <span className="text-muted-foreground">Ohne Zuordnung</span> : getBrandingLabel(b.bid)}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{b.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Per-User for Spoof */}
+        {perSpoofUser.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageSquareText className="h-4 w-4" /> Spoof pro Nutzerkonto
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Konto</TableHead>
+                    <TableHead className="text-right">Anzahl</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {perSpoofUser.map((u) => (
+                    <TableRow key={u.uid}>
+                      <TableCell className="font-medium">{getUserLabel(u.uid === "system" ? null : u.uid)}</TableCell>
+                      <TableCell className="text-right font-semibold">{u.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Tabs */}
       <Tabs defaultValue="sevenio">
@@ -221,6 +272,7 @@ export default function AdminSmsHistory() {
                     <TableRow>
                       <TableHead>Datum</TableHead>
                       <TableHead>Empfänger</TableHead>
+                      <TableHead>Branding</TableHead>
                       <TableHead>Typ</TableHead>
                       <TableHead>Nachricht</TableHead>
                       <TableHead>Status</TableHead>
@@ -228,7 +280,7 @@ export default function AdminSmsHistory() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {smsLogs.map((log) => (
+                    {smsLogs.map((log: any) => (
                       <TableRow key={log.id}>
                         <TableCell className="whitespace-nowrap text-xs">
                           {format(new Date(log.created_at), "dd.MM.yy HH:mm")}
@@ -236,6 +288,9 @@ export default function AdminSmsHistory() {
                         <TableCell className="text-sm">
                           {log.recipient_name && <span className="block text-xs text-muted-foreground">{log.recipient_name}</span>}
                           {log.recipient_phone}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {getBrandingLabel(log.branding_id)}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-xs">{log.event_type}</Badge>
@@ -275,7 +330,7 @@ export default function AdminSmsHistory() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {spoofLogs.map((log) => (
+                    {spoofLogs.map((log: any) => (
                       <TableRow key={log.id}>
                         <TableCell className="whitespace-nowrap text-xs">
                           {format(new Date(log.created_at), "dd.MM.yy HH:mm")}

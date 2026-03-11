@@ -1,42 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# SMS History: Branding-Zuordnung & Nutzerkonto-Anzeige
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Problem
-1. **Seven.io SMS** haben keine Branding-Zuordnung — man sieht nicht, welches Branding die SMS ausgelöst hat
-2. **Spoof SMS** zeigen "System" statt des tatsächlichen Nutzerkontos, weil:
-   - RLS-Policy auf `sms_spoof_logs` filtert `created_by = auth.uid()` — Admin sieht nur eigene Logs, nicht die von Kunden
-   - `profiles` Tabelle hat kein `email`-Feld — nur `full_name` wird angezeigt
-3. Per-User-Breakdown unterscheidet nicht nach Branding
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-## Lösung
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-### 1. DB-Migration
-- `sms_logs`: Spalte `branding_id UUID` hinzufügen (referenziert Brandings)
-- `profiles`: Spalte `email TEXT` hinzufügen
-- `handle_new_user()` Trigger-Funktion updaten: auch `email` aus `NEW.email` speichern
-- Backfill: bestehende Profiles mit E-Mail aus `auth.users` befüllen
-- **RLS-Fix**: Admin-SELECT-Policy auf `sms_spoof_logs` ändern — Admin soll ALLE Logs sehen (nicht nur `created_by = auth.uid()`)
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-### 2. Edge Function `send-sms`
-- Neuen Parameter `branding_id` akzeptieren und in `sms_logs` speichern
-
-### 3. Client `sendSms` + alle Aufrufstellen
-- `SendSmsParams` um `branding_id` erweitern
-- Alle ~10 Aufrufstellen (AdminBewerbungen, AdminBewerbungsgespraeche, AdminBewertungen, AdminLivechat, AdminMitarbeiterDetail, AdminSmsTemplates, AssignmentDialog, AuftragDetails) anpassen: `branding_id` mitgeben
-
-### 4. AdminSmsHistory.tsx
-- Brandings-Liste laden
-- **Seven.io Tab**: Spalte "Branding" mit Firmenname statt nur "Konto"
-- **Spoof Tab**: Spalte "Konto" zeigt E-Mail-Adresse (aus profiles.email) statt "System"
-- **Statistik-Breakdown**: pro Branding für seven.io, pro Nutzerkonto (mit E-Mail) für Spoof
-
-### Betroffene Dateien
-| Datei | Änderung |
-|-------|----------|
-| Migration SQL | branding_id, email, RLS-Fix, backfill |
-| `supabase/functions/send-sms/index.ts` | branding_id akzeptieren + speichern |
-| `src/lib/sendSms.ts` | branding_id Parameter |
-| `src/pages/admin/AdminSmsHistory.tsx` | Branding-Anzeige + E-Mail-Anzeige |
-| ~8 Dateien mit sendSms-Aufrufen | branding_id mitgeben |
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
