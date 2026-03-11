@@ -108,7 +108,7 @@ export default function AdminMitarbeiterDetail() {
 
   // Fetch assignments with orders and appointments
   const { data: assignments } = useQuery({
-    queryKey: ["admin-contract-assignments", id],
+    queryKey: ["admin-contract-assignments", id, userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_assignments")
