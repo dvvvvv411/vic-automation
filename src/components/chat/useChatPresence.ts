@@ -4,12 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 interface UseChatPresenceOptions {
   contractId: string | null;
   role: "user" | "admin";
-  active?: boolean; // whether to track own presence (default: true)
+  active?: boolean;
 }
 
 export function useChatPresence({ contractId, role, active = true }: UseChatPresenceOptions) {
   const [onlineContractIds, setOnlineContractIds] = useState<Set<string>>(new Set());
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const activeRef = useRef(active);
+  activeRef.current = active;
 
   const [adminOnline, setAdminOnline] = useState(false);
 
@@ -40,7 +42,7 @@ export function useChatPresence({ contractId, role, active = true }: UseChatPres
         setAdminOnline(adminPresent);
       })
       .subscribe(async (status) => {
-        if (status === "SUBSCRIBED" && active) {
+        if (status === "SUBSCRIBED" && activeRef.current) {
           if (role === "user" && contractId) {
             await channel.track({
               contract_id: contractId,
@@ -61,7 +63,7 @@ export function useChatPresence({ contractId, role, active = true }: UseChatPres
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [contractId, role, active]);
+  }, [contractId, role]);
 
   // Track/untrack when active changes
   useEffect(() => {

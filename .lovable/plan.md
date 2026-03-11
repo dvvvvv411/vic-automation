@@ -1,47 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Fix: Admin/Kunde Online-Status wird dem Mitarbeiter nicht angezeigt
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Ursache
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-In `useChatPresence.ts` ist `active` im Dependency-Array des ersten `useEffect` (Zeile 64). Jedes Mal wenn der Mitarbeiter den Chat-Popup öffnet oder schliesst, wird der komplette Presence-Channel abgebaut und neu aufgebaut. Während des Neuaufbaus gehen Sync-Events verloren und der Admin-Status wird nicht rechtzeitig erkannt.
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-Ausserdem wird der Channel bei jedem `active`-Wechsel komplett neu erstellt (untrack + removeChannel + neuer Channel + subscribe). Das ist unnötig, da der zweite `useEffect` (Zeile 67-87) bereits das Track/Untrack bei `active`-Wechsel übernimmt.
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-## Lösung
-
-In `src/components/chat/useChatPresence.ts`:
-
-1. **`active` aus dem Dependency-Array des ersten useEffect entfernen** — Channel bleibt dauerhaft bestehen und empfängt Sync-Events kontinuierlich
-2. **Track-Logik im ersten useEffect nur initial ausführen** — den `active`-Check in den `subscribe`-Callback behalten, aber mit einem Ref für den aktuellen `active`-Wert arbeiten
-3. **Channel nur bei `contractId` oder `role`-Wechsel neu erstellen**
-
-```typescript
-// First useEffect: create channel, subscribe, listen for sync
-// Dependencies: [contractId, role] — NOT active
-useEffect(() => {
-  const channel = supabase.channel("chat-presence", {
-    config: { presence: { key: role === "user" ? contractId ?? "unknown" : "admin" } },
-  });
-  channelRef.current = channel;
-
-  channel
-    .on("presence", { event: "sync" }, () => {
-      // ... same sync logic
-    })
-    .subscribe(async (status) => {
-      if (status === "SUBSCRIBED" && activeRef.current) {
-        // ... track
-      }
-    });
-
-  return () => { channel.untrack(); supabase.removeChannel(channel); };
-}, [contractId, role]); // active removed
-
-// Second useEffect: track/untrack when active changes (unchanged)
-```
-
-| Datei | Änderung |
-|-------|----------|
-| `src/components/chat/useChatPresence.ts` | `active` aus deps entfernen, activeRef verwenden |
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
