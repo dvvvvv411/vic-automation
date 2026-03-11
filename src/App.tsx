@@ -25,6 +25,7 @@ import AdminZeitplan from "./pages/admin/AdminZeitplan";
 import AdminTelefonnummern from "./pages/admin/AdminTelefonnummern";
 import AdminSmsSpoof from "./pages/admin/AdminSmsSpoof";
 import AdminKunden from "./pages/admin/AdminKunden";
+import AdminSmsHistory from "./pages/admin/AdminSmsHistory";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
 import MitarbeiterLayout from "./components/mitarbeiter/MitarbeiterLayout";
