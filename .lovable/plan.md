@@ -1,16 +1,49 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# SMS History -- Admin-only Übersichtsseite
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Übersicht
+Neuer Reiter "SMS History" im Admin-Panel (nur für Admins sichtbar, nicht für Kunden). Zeigt eine kombinierte Übersicht aller versendeten SMS (seven.io + Spoof) mit Statistiken pro Monat und pro Nutzerkonto.
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+## Datengrundlage
+- **sms_spoof_logs**: Hat `created_by` Spalte -- kann Nutzer zugeordnet werden
+- **sms_logs**: Hat **keine** `created_by` Spalte -- muss per Migration ergänzt werden, damit man nachvollziehen kann wer die SMS ausgelöst hat
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+## Änderungen
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+### 1. DB-Migration: `created_by` zu `sms_logs` hinzufügen
+```sql
+ALTER TABLE sms_logs ADD COLUMN created_by uuid;
+```
+Damit zukünftige SMS dem auslösenden Nutzer zugeordnet werden können.
+
+### 2. Edge Function `send-sms` anpassen
+Authorization-Header auslesen und `created_by` beim Insert in `sms_logs` setzen (wie bei `sms-spoof` bereits gemacht).
+
+### 3. Neue Seite: `src/pages/admin/AdminSmsHistory.tsx`
+**Layout:**
+- **Statistik-Cards oben**: Gesamtzahl SMS diesen Monat, davon Spoof vs. seven.io, Aufschlüsselung nach Nutzerkonto
+- **Monatsfilter**: Dropdown/Picker für Monat+Jahr
+- **Zwei Tabs**: "Spoof SMS" und "seven.io SMS"
+- **Tabellen** mit: Datum, Empfänger, Absender, Nachricht (gekürzt), Status, Nutzerkonto (E-Mail)
+
+Die Seite nutzt `supabase.rpc` oder direkte Queries mit Joins auf `auth.users` via `profiles` um die E-Mail des Senders anzuzeigen.
+
+### 4. Routing + Sidebar
+- Route: `/admin/sms-history`
+- Sidebar-Eintrag unter "Betrieb" mit `History`-Icon
+- `KUNDE_HIDDEN_PATHS` in AdminLayout + AdminSidebar erweitern um `/admin/sms-history`
+
+### 5. RLS
+`sms_logs` hat bereits eine Admin-only SELECT Policy. Für die neue `created_by`-Spalte ist keine RLS-Änderung nötig.
+
+## Betroffene Dateien
+| Datei | Änderung |
+|-------|----------|
+| Migration SQL | `created_by` Spalte zu `sms_logs` |
+| `supabase/functions/send-sms/index.ts` | Auth-Header parsen, `created_by` setzen |
+| `src/pages/admin/AdminSmsHistory.tsx` | Neue Seite (Statistik + Tabellen) |
+| `src/App.tsx` | Route hinzufügen |
+| `src/components/admin/AdminSidebar.tsx` | Nav-Eintrag + KUNDE_HIDDEN |
+| `src/components/admin/AdminLayout.tsx` | KUNDE_BLOCKED_PATHS erweitern |
+
