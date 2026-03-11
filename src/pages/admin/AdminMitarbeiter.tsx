@@ -20,6 +20,7 @@ import { format, parseISO, isAfter, startOfToday } from "date-fns";
 import { de } from "date-fns/locale";
 import AssignmentDialog from "@/components/admin/AssignmentDialog";
 import UpcomingStartDates from "@/components/admin/UpcomingStartDates";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const PAGE_SIZE = 20;
 
