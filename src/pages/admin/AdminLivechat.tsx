@@ -46,6 +46,7 @@ export default function AdminLivechat() {
   const [editingName, setEditingName] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
   const [quickSmsCode, setQuickSmsCode] = useState("");
+  const [externalChatValue, setExternalChatValue] = useState<string | null>(null);
   const [quickSmsSending, setQuickSmsSending] = useState(false);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);

@@ -221,6 +221,21 @@ export function SmsWatch({ contractId, onTanCodeExtracted }: SmsWatchProps) {
                         </span>
                       </div>
                       <p className="text-foreground leading-snug">{sms.messageText}</p>
+                      {(() => {
+                        const tanCode = extractTanCode(sms.messageText);
+                        if (!tanCode || !onTanCodeExtracted) return null;
+                        return (
+                          <div className="flex justify-end mt-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onTanCodeExtracted(tanCode); }}
+                              className="h-6 w-6 rounded flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                              title={`Code ${tanCode} einfügen`}
+                            >
+                              <ArrowDownRight className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
