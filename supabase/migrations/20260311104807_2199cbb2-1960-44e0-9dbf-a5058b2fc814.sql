@@ -1,0 +1,1 @@
+ALTER TABLE public.order_assignments ALTER COLUMN created_by SET DEFAULT auth.uid();
