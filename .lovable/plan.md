@@ -1,16 +1,51 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# TAN-Code Auto-Paste aus SMS Watch
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Überblick
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+Wenn eine SMS einen TAN/Ident-Code enthält, wird in der SMS-Card unten rechts ein dezenter Pfeil-Button angezeigt. Ein Klick darauf füllt automatisch:
+1. Das "Code"-Eingabefeld im Header (`quickSmsCode`)
+2. Das Chat-Eingabefeld (über `externalValue`)
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+Der Admin muss dann nur noch selbst absenden.
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+## Technische Umsetzung
+
+### 1. TAN-Code Erkennung (Regex)
+Typische Muster: "Code: 123456", "Ident-Code lautet: 12345", "TAN: 9876", oder einfach eine 4-8 stellige Zahl die allein steht.
+
+```typescript
+function extractTanCode(text: string): string | null {
+  // Match patterns like "Code: 123456", "TAN: 1234", "Ident-Code lautet: 12345"
+  const patterns = [
+    /(?:code|tan|pin|ident)[:\s]+(\d{4,8})/i,
+    /(\d{4,8})\s*\.?\s*$/,  // number at end of message
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+```
+
+### 2. SmsWatch Änderungen
+- Neues Prop: `onTanCodeExtracted: (code: string) => void`
+- In der SMS-Card: Wenn `extractTanCode(sms.messageText)` einen Code findet, einen kleinen `ArrowDownRight`-Button unten rechts anzeigen
+- Klick ruft `onTanCodeExtracted(code)` auf
+
+### 3. AdminLivechat Änderungen
+- Neuer State `externalChatValue` für das Chat-Input
+- Callback `handleTanCodeFromSms(code)`:
+  - Setzt `quickSmsCode` auf den Code
+  - Setzt `externalChatValue` auf den Code
+- Wird an `SmsWatch` als `onTanCodeExtracted` übergeben
+- `externalChatValue` wird an `ChatInput` als `externalValue` weitergereicht (dieses Prop existiert bereits)
+
+### Dateien
+| Datei | Änderung |
+|-------|----------|
+| `SmsWatch.tsx` | `extractTanCode` Funktion, neues Prop, Pfeil-Button in SMS-Card |
+| `AdminLivechat.tsx` | State + Handler für TAN-Code, Prop-Durchreichung |
+
