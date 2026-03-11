@@ -10,6 +10,7 @@ import { CalendarClock, ChevronLeft, ChevronRight, History, ArrowRight, Unlock, 
 import { motion } from "framer-motion";
 import { format, addDays } from "date-fns";
 import { toast } from "sonner";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const PAGE_SIZE = 20;
 type ViewMode = "default" | "past" | "future";
