@@ -8,6 +8,7 @@ import {
 import { Mail, Eye } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 /* ------------------------------------------------------------------ */
 /*  Client-side mirror of the Edge Function buildEmailHtml             */
