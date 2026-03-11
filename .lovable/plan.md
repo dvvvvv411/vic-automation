@@ -1,16 +1,48 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# Fix: Livechat zeigt falschen Ansprechpartner
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Ursache
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+Zwei Probleme:
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+1. **useEffect hat leere Dependencies `[]`** (Zeile 114): `contractId` wird asynchron geladen und ist initial `null`. Der Effect läuft einmal mit `null`, überspringt die Contract-Query, findet per Fallback Simon Heber (erster Admin) und läuft nie wieder.
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+2. **sessionStorage-Cache ist nicht contract-spezifisch**: Der Key `admin_chat_profile` speichert global ein Profil. Wenn Simon Heber einmal gecacht wurde, wird er sofort angezeigt.
+
+## Lösung
+
+In `src/components/chat/ChatWidget.tsx`:
+
+1. **`contractId` als Dependency hinzufügen**: `}, [contractId])` statt `}, [])`
+2. **Cache-Key contract-spezifisch machen**: `admin_chat_profile_${contractId}` statt `admin_chat_profile`
+3. **Early return wenn contractId null**: Keinen Fallback laden wenn contractId noch nicht da ist
+
+```typescript
+useEffect(() => {
+  if (!contractId) return;
+  
+  const cacheKey = `admin_chat_profile_${contractId}`;
+  const cached = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    try { setAdminProfile(JSON.parse(cached)); } catch {}
+  }
+
+  const loadAdmin = async () => {
+    // ... existing logic (unchanged)
+    if (profile) {
+      const p = { ... };
+      setAdminProfile(p);
+      sessionStorage.setItem(cacheKey, JSON.stringify(p));
+    }
+  };
+  loadAdmin();
+}, [contractId]);
+```
+
+| Datei | Änderung |
+|-------|----------|
+| `src/components/chat/ChatWidget.tsx` | Dependency-Array + cache key fixen |
+
+Keine Datenbank-Änderungen nötig.
+
