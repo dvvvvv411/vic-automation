@@ -56,7 +56,6 @@ const navGroups = [
       { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
       { title: "Telefonnummern", url: "/admin/telefonnummern", icon: Phone },
       { title: "SMS Spoof", url: "/admin/sms-spoof", icon: MessageSquareText },
-      { title: "SMS History", url: "/admin/sms-history", icon: History },
     ],
   },
   {
