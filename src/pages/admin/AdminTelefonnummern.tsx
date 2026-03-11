@@ -228,7 +228,8 @@ export default function AdminTelefonnummern() {
       toast({ title: "Ungültiger Link", description: "Der Link muss ein anosim.net Share-Link sein.", variant: "destructive" });
       return;
     }
-    addMutation.mutate(url.trim());
+    const apiUrl = url.trim().replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
+    addMutation.mutate(apiUrl);
   };
 
   return (
