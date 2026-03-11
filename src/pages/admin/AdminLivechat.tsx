@@ -263,12 +263,14 @@ export default function AdminLivechat() {
         smsSender = (branding as any)?.sms_sender_name || undefined;
       }
     }
+    const brandingIdForSms = (contractFull as any)?.applications?.branding_id || null;
     const success = await sendSms({
       to: contractData.phone,
       text: smsFullText,
       event_type: "manuell",
       recipient_name: name,
       from: smsSender,
+      branding_id: brandingIdForSms,
     });
     setQuickSmsSending(false);
     if (success) {
