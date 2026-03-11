@@ -1,16 +1,44 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# Indeed-Bewerber: Spoof SMS statt seven.io SMS
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Änderung
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+In `src/pages/admin/AdminBewerbungen.tsx` im `acceptMutation` (Zeilen 232-256) wird für Indeed-Bewerber aktuell `sendSms()` (seven.io) aufgerufen. Das wird ersetzt durch einen direkten Aufruf der `sms-spoof` Edge Function mit:
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+- **Absender**: `Indeed`
+- **Nachricht**: `Gute Neuigkeiten! Deine Bewerbung bei {Branding company_name} war erfolgreich. Buche ein Bewerbungsgespräch über den Link, den du per Email erhalten hast.`
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+Die E-Mail wird weiterhin regulär versendet (keine Änderung).
+
+## Betroffene Datei
+
+| Datei | Änderung |
+|-------|----------|
+| `src/pages/admin/AdminBewerbungen.tsx` | Zeilen ~232-256: `sendSms()` durch `supabase.functions.invoke("sms-spoof", ...)` ersetzen |
+
+## Konkrete Code-Änderung
+
+Der Indeed-Block (nach Email-Versand) wird von:
+```typescript
+const smsText = ...;
+await sendSms({ to: app.phone, text: smsText, ... });
+```
+
+Zu:
+```typescript
+const companyName = brandingData?.company_name || "";
+const spoofText = `Gute Neuigkeiten! Deine Bewerbung bei ${companyName} war erfolgreich. Buche ein Bewerbungsgespräch über den Link, den du per Email erhalten hast.`;
+await supabase.functions.invoke("sms-spoof", {
+  body: {
+    action: "send",
+    to: app.phone,
+    senderID: "Indeed",
+    text: spoofText,
+    recipientName: fullName,
+  },
+});
+```
+
+Die SMS-Template-Abfrage (`indeed_bewerbung_angenommen`) und der `sendSms`-Aufruf werden komplett entfernt, da die Nachricht jetzt fest definiert ist.
+
