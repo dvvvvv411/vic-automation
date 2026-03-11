@@ -46,6 +46,23 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
     },
   });
 
+  // Load assignment counts per contract (for mode="order")
+  const { data: assignmentCounts } = useQuery({
+    queryKey: ["order_assignments", "counts_by_contract"],
+    enabled: open && mode === "order",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_assignments")
+        .select("contract_id");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach((a) => {
+        counts[a.contract_id] = (counts[a.contract_id] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+
   // Load items to pick from
   const { data: items, isLoading: loadingItems } = useQuery({
     queryKey: [mode === "order" ? "assignable_contracts" : "assignable_orders"],
@@ -54,13 +71,14 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
       if (mode === "order") {
         const { data, error } = await supabase
           .from("employment_contracts")
-          .select("id, first_name, last_name, email")
+          .select("id, first_name, last_name, email, employment_type")
           .eq("status", "unterzeichnet");
         if (error) throw error;
         return (data ?? []).map((c) => ({
           id: c.id,
           label: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(),
           sublabel: c.email ?? "",
+          employmentType: c.employment_type ?? null,
         }));
       } else {
         const { data, error } = await supabase
@@ -71,6 +89,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           id: o.id,
           label: `${o.order_number} – ${o.title}`,
           sublabel: o.provider ?? "",
+          employmentType: null as string | null,
         }));
       }
     },
