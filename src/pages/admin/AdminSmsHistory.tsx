@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageSquareText, Send, BarChart3, Users } from "lucide-react";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const MONTHS_BACK = 12;
 
