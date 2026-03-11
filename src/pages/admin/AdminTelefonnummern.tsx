@@ -218,8 +218,10 @@ export default function AdminTelefonnummern() {
     },
   });
 
-  const isValidUrl = (u: string) =>
-    u.toLowerCase().includes("anosim.net/api/v1/orderbookingshare?token=");
+  const isValidUrl = (u: string) => {
+    const l = u.toLowerCase();
+    return l.includes("anosim.net/api/v1/orderbookingshare?token=") || l.includes("anosim.net/share/orderbooking?token=");
+  };
 
   const handleAdd = () => {
     if (!isValidUrl(url)) {
