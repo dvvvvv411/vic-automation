@@ -10,6 +10,7 @@ import { CalendarClock, ChevronLeft, ChevronRight, History, ArrowRight, Unlock, 
 import { motion } from "framer-motion";
 import { format, addDays } from "date-fns";
 import { toast } from "sonner";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const PAGE_SIZE = 20;
 type ViewMode = "default" | "past" | "future";
@@ -18,13 +19,15 @@ export default function AdminAuftragstermine() {
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("default");
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
   const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["order-appointments-admin", page, viewMode],
+    queryKey: ["order-appointments-admin", page, viewMode, userId],
+    enabled: !!userId,
     queryFn: async () => {
       let query = supabase
         .from("order_appointments")

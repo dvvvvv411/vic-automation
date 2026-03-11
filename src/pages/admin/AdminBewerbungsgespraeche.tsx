@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
 import { toast } from "sonner";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ export default function AdminBewerbungsgespraeche() {
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [reminderPreview, setReminderPreview] = useState<{ item: any; message: string; name: string; phone: string; brandingId?: string; senderName?: string } | null>(null);
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
@@ -45,7 +47,8 @@ export default function AdminBewerbungsgespraeche() {
   const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["interview-appointments", page, viewMode],
+    queryKey: ["interview-appointments", page, viewMode, userId],
+    enabled: !!userId,
     queryFn: async () => {
       let query = supabase
         .from("interview_appointments")

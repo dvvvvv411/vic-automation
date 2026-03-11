@@ -16,6 +16,7 @@ import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Trash2, Ban, Check } from "lucide-react";
 import OrderAppointmentBlocker from "@/components/admin/OrderAppointmentBlocker";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const WEEKDAYS = [
   { value: 1, label: "Mo" },
@@ -50,13 +51,15 @@ const DEFAULT_DAYS = [1, 2, 3, 4, 5, 6];
 
 export default function AdminZeitplan() {
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockReason, setBlockReason] = useState("");
   const [blockBrandingId, setBlockBrandingId] = useState<string>("all");
 
   // Load brandings
   const { data: brandings = [] } = useQuery({
-    queryKey: ["brandings"],
+    queryKey: ["brandings", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase.from("brandings").select("id, company_name").order("company_name");
       if (error) throw error;
@@ -66,7 +69,8 @@ export default function AdminZeitplan() {
 
   // Load branding-specific settings
   const { data: brandingSettings = [] } = useQuery({
-    queryKey: ["branding-schedule-settings"],
+    queryKey: ["branding-schedule-settings", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("branding_schedule_settings")
@@ -78,7 +82,8 @@ export default function AdminZeitplan() {
 
   // Load blocked slots + auto-delete past ones
   const { data: blockedSlots } = useQuery({
-    queryKey: ["schedule-blocked-slots"],
+    queryKey: ["schedule-blocked-slots", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("schedule_blocked_slots")

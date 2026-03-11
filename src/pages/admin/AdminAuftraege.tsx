@@ -17,6 +17,7 @@ import { Plus, Pencil, Trash2, X, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import AssignmentDialog from "@/components/admin/AssignmentDialog";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 interface Order {
   id: string;
@@ -46,13 +47,15 @@ const emptyForm = {
 
 export default function AdminAuftraege() {
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [assignOrder, setAssignOrder] = useState<Order | null>(null);
 
   const { data: orders, isLoading } = useQuery({
-    queryKey: ["orders"],
+    queryKey: ["orders", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
@@ -65,7 +68,8 @@ export default function AdminAuftraege() {
 
   // Load assignment counts per order
   const { data: assignmentCounts } = useQuery({
-    queryKey: ["order_assignments", "counts_by_order"],
+    queryKey: ["order_assignments", "counts_by_order", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_assignments")

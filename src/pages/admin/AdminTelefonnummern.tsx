@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ChevronDown, ChevronRight, Copy, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 interface AnosimSms {
   messageSender: string;
@@ -181,9 +182,11 @@ export default function AdminTelefonnummern() {
   const [url, setUrl] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
 
   const { data: entries = [], isLoading } = useQuery<PhoneEntry[]>({
-    queryKey: ["phone_numbers"],
+    queryKey: ["phone_numbers", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("phone_numbers" as any)

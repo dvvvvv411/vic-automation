@@ -20,6 +20,7 @@ import { format, parseISO, isAfter, startOfToday } from "date-fns";
 import { de } from "date-fns/locale";
 import AssignmentDialog from "@/components/admin/AssignmentDialog";
 import UpcomingStartDates from "@/components/admin/UpcomingStartDates";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const PAGE_SIZE = 20;
 
@@ -39,9 +40,11 @@ export default function AdminMitarbeiter() {
   const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string; isSuspended: boolean } | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const userId = useUserQueryKey();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["mitarbeiter", page],
+    queryKey: ["mitarbeiter", page, userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data: contracts, error, count } = await supabase
         .from("employment_contracts")
@@ -56,7 +59,8 @@ export default function AdminMitarbeiter() {
   });
 
   const { data: assignmentCounts } = useQuery({
-    queryKey: ["order_assignments", "counts_by_contract"],
+    queryKey: ["order_assignments", "counts_by_contract", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_assignments")

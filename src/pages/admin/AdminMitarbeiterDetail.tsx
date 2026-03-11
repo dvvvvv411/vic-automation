@@ -27,6 +27,7 @@ import { sendSms } from "@/lib/sendSms";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import AssignmentDialog from "@/components/admin/AssignmentDialog";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "–";
@@ -82,7 +83,7 @@ export default function AdminMitarbeiterDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
+  const userId = useUserQueryKey();
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [suspendTarget, setSuspendTarget] = useState<{ isSuspended: boolean } | null>(null);
   const [startDateDialogOpen, setStartDateDialogOpen] = useState(false);
@@ -92,7 +93,7 @@ export default function AdminMitarbeiterDetail() {
 
   // Fetch contract with branding
   const { data: contract, isLoading } = useQuery({
-    queryKey: ["admin-contract-detail", id],
+    queryKey: ["admin-contract-detail", id, userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employment_contracts")
@@ -107,7 +108,7 @@ export default function AdminMitarbeiterDetail() {
 
   // Fetch assignments with orders and appointments
   const { data: assignments } = useQuery({
-    queryKey: ["admin-contract-assignments", id],
+    queryKey: ["admin-contract-assignments", id, userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_assignments")
@@ -132,7 +133,7 @@ export default function AdminMitarbeiterDetail() {
 
   // Fetch reviews
   const { data: reviews } = useQuery({
-    queryKey: ["admin-contract-reviews", id],
+    queryKey: ["admin-contract-reviews", id, userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_reviews")

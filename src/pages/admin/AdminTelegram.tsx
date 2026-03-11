@@ -11,6 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Send, Info } from "lucide-react";
 import { toast } from "sonner";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const EVENT_TYPES = [
   { key: "gespraech_gebucht", label: "Bewerbungsgespräch gebucht", desc: "Bewerber bucht ein Bewerbungsgespräch" },
@@ -32,13 +33,15 @@ interface TelegramChat {
 
 export default function AdminTelegram() {
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
   const [newChatId, setNewChatId] = useState("");
   const [newLabel, setNewLabel] = useState("");
   const [newEvents, setNewEvents] = useState<string[]>([]);
   const [newBrandingIds, setNewBrandingIds] = useState<string[]>([]);
 
   const { data: chats = [], isLoading } = useQuery({
-    queryKey: ["telegram-chats"],
+    queryKey: ["telegram-chats", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("telegram_chats" as any)
@@ -50,7 +53,8 @@ export default function AdminTelegram() {
   });
 
   const { data: brandings = [] } = useQuery({
-    queryKey: ["brandings"],
+    queryKey: ["brandings", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")

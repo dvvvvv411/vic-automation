@@ -8,6 +8,7 @@ import {
 import { Mail, Eye } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 /* ------------------------------------------------------------------ */
 /*  Client-side mirror of the Edge Function buildEmailHtml             */
@@ -223,9 +224,11 @@ const templates: TemplateDefinition[] = [
 export default function AdminEmails() {
   const [selectedBrandingId, setSelectedBrandingId] = useState<string>("none");
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const userId = useUserQueryKey();
 
   const { data: brandings } = useQuery({
-    queryKey: ["brandings-for-preview"],
+    queryKey: ["brandings-for-preview", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")

@@ -38,6 +38,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const applicationSchema = z.object({
   first_name: z.string().trim().min(1, "Vorname erforderlich").max(100),
@@ -156,9 +157,11 @@ export default function AdminBewerbungen() {
   const [massImportText, setMassImportText] = useState("");
   const [massImportErrors, setMassImportErrors] = useState<string[]>([]);
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
 
   const { data: applications, isLoading } = useQuery({
-    queryKey: ["applications"],
+    queryKey: ["applications", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
@@ -170,7 +173,8 @@ export default function AdminBewerbungen() {
   });
 
   const { data: brandings } = useQuery({
-    queryKey: ["brandings"],
+    queryKey: ["brandings", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")

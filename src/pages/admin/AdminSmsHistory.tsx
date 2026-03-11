@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageSquareText, Send, BarChart3, Users } from "lucide-react";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const MONTHS_BACK = 12;
 
@@ -26,6 +27,7 @@ function getMonthOptions() {
 
 export default function AdminSmsHistory() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
+  const userId = useUserQueryKey();
 
   const monthStart = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
@@ -38,7 +40,8 @@ export default function AdminSmsHistory() {
 
   // Fetch profiles for mapping user IDs to emails
   const { data: profiles } = useQuery({
-    queryKey: ["sms-history-profiles"],
+    queryKey: ["sms-history-profiles", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("id, full_name");
       return data ?? [];
@@ -47,7 +50,8 @@ export default function AdminSmsHistory() {
 
   // Fetch sms_logs (seven.io)
   const { data: smsLogs, isLoading: smsLoading } = useQuery({
-    queryKey: ["sms-history-logs", selectedMonth],
+    queryKey: ["sms-history-logs", selectedMonth, userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data } = await supabase
         .from("sms_logs")
@@ -61,7 +65,8 @@ export default function AdminSmsHistory() {
 
   // Fetch sms_spoof_logs
   const { data: spoofLogs, isLoading: spoofLoading } = useQuery({
-    queryKey: ["sms-history-spoof", selectedMonth],
+    queryKey: ["sms-history-spoof", selectedMonth, userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data } = await supabase
         .from("sms_spoof_logs")
