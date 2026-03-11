@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
       event_type: event_type || "manuell",
       status: success ? "sent" : "failed",
       error_message: success ? null : smsResult,
+      created_by: createdBy,
     });
 
     if (!success) {
