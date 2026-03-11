@@ -54,7 +54,8 @@ export default function AdminAuftraege() {
   const [assignOrder, setAssignOrder] = useState<Order | null>(null);
 
   const { data: orders, isLoading } = useQuery({
-    queryKey: ["orders"],
+    queryKey: ["orders", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
