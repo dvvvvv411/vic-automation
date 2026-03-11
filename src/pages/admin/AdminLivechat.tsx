@@ -8,7 +8,7 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { AvatarUpload } from "@/components/chat/AvatarUpload";
 import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatRealtime";
 import { useChatTyping } from "@/components/chat/useChatTyping";
-import { useChatPresence } from "@/components/chat/useChatPresence";
+
 import { sendSms } from "@/lib/sendSms";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
 import { SmsWatch } from "@/components/chat/SmsWatch";

@@ -39,7 +39,26 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   openRef.current = open;
 
   const { isTyping, sendTyping } = useChatTyping({ contractId, role: "user" });
-  useChatPresence({ contractId, role: "user", active: open });
+
+  // DB-based heartbeat: update chat_active_at every 30s when chat is open
+  useEffect(() => {
+    if (!open || !contractId) {
+      // Clear on close
+      if (contractId) {
+        supabase.from("employment_contracts").update({ chat_active_at: null } as any).eq("id", contractId).then(() => {});
+      }
+      return;
+    }
+    const updateHeartbeat = () => {
+      supabase.from("employment_contracts").update({ chat_active_at: new Date().toISOString() } as any).eq("id", contractId).then(() => {});
+    };
+    updateHeartbeat(); // immediate
+    const interval = setInterval(updateHeartbeat, 30000);
+    return () => {
+      clearInterval(interval);
+      supabase.from("employment_contracts").update({ chat_active_at: null } as any).eq("id", contractId).then(() => {});
+    };
+  }, [open, contractId]);
 
   const { messages, loading, sendMessage } = useChatRealtime({
     contractId,
