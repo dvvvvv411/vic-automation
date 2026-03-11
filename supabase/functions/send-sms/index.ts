@@ -50,6 +50,16 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Extract user id from auth header
+    let createdBy: string | null = null;
+    const authHeader = req.headers.get("authorization");
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
+      const { data: { user } } = await anonClient.auth.getUser(token);
+      if (user) createdBy = user.id;
+    }
+
     // Determine sender name (max 11 alphanumeric chars for seven.io)
     const sender = from ? from.substring(0, 11) : "Vic";
 
@@ -93,6 +103,7 @@ Deno.serve(async (req) => {
       event_type: event_type || "manuell",
       status: success ? "sent" : "failed",
       error_message: success ? null : smsResult,
+      created_by: createdBy,
     });
 
     if (!success) {

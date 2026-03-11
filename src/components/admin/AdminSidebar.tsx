@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
@@ -28,6 +28,7 @@ const KUNDE_HIDDEN_PATHS = [
   "/admin/sms",
   "/admin/telegram",
   "/admin/kunden",
+  "/admin/sms-history",
 ];
 
 const navGroups = [
@@ -55,6 +56,7 @@ const navGroups = [
       { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
       { title: "Telefonnummern", url: "/admin/telefonnummern", icon: Phone },
       { title: "SMS Spoof", url: "/admin/sms-spoof", icon: MessageSquareText },
+      { title: "SMS History", url: "/admin/sms-history", icon: History },
     ],
   },
   {

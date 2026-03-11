@@ -25,6 +25,7 @@ import AdminZeitplan from "./pages/admin/AdminZeitplan";
 import AdminTelefonnummern from "./pages/admin/AdminTelefonnummern";
 import AdminSmsSpoof from "./pages/admin/AdminSmsSpoof";
 import AdminKunden from "./pages/admin/AdminKunden";
+import AdminSmsHistory from "./pages/admin/AdminSmsHistory";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
 import MitarbeiterLayout from "./components/mitarbeiter/MitarbeiterLayout";
@@ -74,6 +75,7 @@ const App = () => (
               <Route path="zeitplan" element={<AdminZeitplan />} />
               <Route path="telefonnummern" element={<AdminTelefonnummern />} />
               <Route path="sms-spoof" element={<AdminSmsSpoof />} />
+              <Route path="sms-history" element={<AdminSmsHistory />} />
               <Route path="kunden" element={<AdminKunden />} />
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
