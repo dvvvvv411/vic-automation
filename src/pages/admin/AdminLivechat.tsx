@@ -52,6 +52,7 @@ export default function AdminLivechat() {
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
   const [notifySmsDialogOpen, setNotifySmsDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [notifySmsText, setNotifySmsText] = useState("Sie haben eine neue Nachricht im Livechat. Bitte lesen Sie diese.");
   const [notifySmsSending, setNotifySmsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
