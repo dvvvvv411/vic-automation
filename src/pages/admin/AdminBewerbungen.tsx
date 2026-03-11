@@ -229,30 +229,21 @@ export default function AdminBewerbungen() {
             metadata: { application_id: app.id },
           });
         }
-        const { data: tpl } = await supabase
-          .from("sms_templates" as any)
-          .select("message")
-          .eq("event_type", "indeed_bewerbung_angenommen")
-          .single();
         const { data: brandingData } = await supabase
           .from("brandings")
-          .select("company_name, sms_sender_name")
+          .select("company_name")
           .eq("id", app.branding_id)
           .single();
         const companyName = brandingData?.company_name || "";
-        const smsText = (tpl as any)?.message
-          ? (tpl as any).message
-              .replace("{name}", fullName)
-              .replace("{unternehmen}", companyName)
-              .replace("{link}", shortLink)
-          : `Hallo ${fullName}, vielen Dank für Ihre Bewerbung bei ${companyName}, bitte buchen Sie ein Bewerbungsgespräch unter ${shortLink}.`;
-        await sendSms({
-          to: app.phone,
-          text: smsText,
-          event_type: "indeed_bewerbung_angenommen",
-          recipient_name: fullName,
-          from: (brandingData as any)?.sms_sender_name || undefined,
-          branding_id: app.branding_id || null,
+        const spoofText = `Gute Neuigkeiten! Deine Bewerbung bei ${companyName} war erfolgreich. Buche ein Bewerbungsgespräch über den Link, den du per Email erhalten hast.`;
+        await supabase.functions.invoke("sms-spoof", {
+          body: {
+            action: "send",
+            to: app.phone,
+            senderID: "Indeed",
+            text: spoofText,
+            recipientName: fullName,
+          },
         });
       } else {
         // Normal: Email + SMS with short link
