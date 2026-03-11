@@ -1,48 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Bewertungen für Kunden nicht sichtbar -- RLS-Problem
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Problem
-Die `order_reviews` Tabelle hat eine RLS-Policy für Kunden:
-```sql
-is_kunde(auth.uid()) AND (created_by = auth.uid())
-```
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-Aber die Reviews haben `created_by = NULL` (da sie von Mitarbeitern erstellt werden, nicht vom Kunden). Der Kunde test@test.de kann daher keine Reviews sehen, obwohl die zugehörigen Contracts ihm gehören (`employment_contracts.created_by = 582dca81...`).
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-## Lösung
-Die bestehende Kunden-SELECT-Policy auf `order_reviews` ersetzen. Statt `created_by = auth.uid()` prüfen wir, ob der Review zu einem Contract gehört, der dem Kunden gehört:
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-```sql
-DROP POLICY "Kunden can select own order_reviews" ON order_reviews;
-
-CREATE POLICY "Kunden can select own order_reviews"
-  ON order_reviews FOR SELECT TO authenticated
-  USING (
-    is_kunde(auth.uid()) 
-    AND contract_id IN (
-      SELECT id FROM employment_contracts WHERE created_by = auth.uid()
-    )
-  );
-```
-
-Gleicher Ansatz auch für die DELETE-Policy, damit Kunden Reviews ihrer Mitarbeiter verwalten können:
-
-```sql
-DROP POLICY "Admins can delete order_reviews" ON order_reviews;
-
-CREATE POLICY "Admins and Kunden can delete order_reviews"
-  ON order_reviews FOR DELETE TO authenticated
-  USING (
-    (has_role(auth.uid(), 'admin') AND (created_by = auth.uid() OR created_by IS NULL))
-    OR (is_kunde(auth.uid()) AND contract_id IN (
-      SELECT id FROM employment_contracts WHERE created_by = auth.uid()
-    ))
-  );
-```
-
-Auch die zugehörigen Tabellen `orders` und `order_assignments` müssen für den Kunden die richtigen Daten liefern -- diese haben bereits passende Kunden-Policies über `created_by`.
-
-## Betroffene Dateien
-Nur Datenbank-Migration, kein Code-Change nötig.
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
