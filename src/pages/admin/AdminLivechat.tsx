@@ -154,11 +154,26 @@ export default function AdminLivechat() {
     }
   }, [searchParams, conversations, active, setSearchParams]);
 
-  // Realtime for all messages
+  // Realtime for all messages + employee online status heartbeat
   useEffect(() => {
     const channel = supabase
       .channel("admin-chat-all")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, () => loadConversations())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "employment_contracts" }, (payload: any) => {
+        const id = payload.new?.id;
+        const activeAt = payload.new?.chat_active_at;
+        if (id) {
+          setOnlineContractIds(prev => {
+            const next = new Set(prev);
+            if (activeAt && (Date.now() - new Date(activeAt).getTime()) < 2 * 60 * 1000) {
+              next.add(id);
+            } else {
+              next.delete(id);
+            }
+            return next;
+          });
+        }
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [loadConversations]);
