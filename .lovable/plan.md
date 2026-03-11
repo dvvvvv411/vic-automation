@@ -1,31 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Fix: Bestehende order_assignments mit korrektem created_by füllen
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Problem
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-1. **test@test.de hat die Rolle `kunde`** (nicht admin)
-2. Die kunde-RLS-Policy auf `order_assignments` erfordert `created_by = auth.uid()` -- NULL-Werte werden nicht akzeptiert (anders als bei admin, wo `created_by IS NULL` erlaubt ist)
-3. **Alle** bestehenden order_assignments haben `created_by = NULL` -- auch die gerade erstellte Zuweisung für indeedpic, weil sie **vor** der DEFAULT-Migration erstellt wurde
-4. Konsequenz: Kunde kann seine eigenen Zuweisungen nicht sehen UND nicht löschen (DELETE-Policy gleicher Check), was auch das Aktualisieren im Dialog unmöglich macht
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-## Lösung
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-**Eine Daten-Migration**: Alle `order_assignments` mit `created_by IS NULL` bekommen den `created_by`-Wert vom verknüpften `employment_contracts`-Eintrag. Das ist der korrekte Besitzer, da der Kunde den Mitarbeiter über sein Branding ongeboardet hat.
-
-```sql
-UPDATE order_assignments oa
-SET created_by = ec.created_by
-FROM employment_contracts ec
-WHERE oa.contract_id = ec.id
-  AND oa.created_by IS NULL
-  AND ec.created_by IS NOT NULL;
-```
-
-Damit werden alle bestehenden Zuweisungen dem richtigen Kunden zugeordnet. Zukünftige Zuweisungen bekommen `created_by` automatisch durch den bereits gesetzten DEFAULT.
-
-| Aktion | Detail |
-|--------|--------|
-| SQL UPDATE | Bestehende NULL `created_by` aus `employment_contracts.created_by` ableiten |
-| Keine Code-Änderung | DEFAULT greift bereits für neue Inserts |
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
