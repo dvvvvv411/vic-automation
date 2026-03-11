@@ -40,7 +40,8 @@ export default function AdminSmsHistory() {
 
   // Fetch profiles for mapping user IDs to emails
   const { data: profiles } = useQuery({
-    queryKey: ["sms-history-profiles"],
+    queryKey: ["sms-history-profiles", userId],
+    enabled: !!userId,
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("id, full_name");
       return data ?? [];
