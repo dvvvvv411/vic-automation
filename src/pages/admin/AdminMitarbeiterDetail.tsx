@@ -83,7 +83,7 @@ export default function AdminMitarbeiterDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
+  const userId = useUserQueryKey();
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [suspendTarget, setSuspendTarget] = useState<{ isSuspended: boolean } | null>(null);
   const [startDateDialogOpen, setStartDateDialogOpen] = useState(false);
