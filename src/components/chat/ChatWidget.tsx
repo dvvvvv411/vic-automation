@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useChatRealtime, type ChatMessage } from "./useChatRealtime";
 import { useChatSounds } from "./useChatSounds";
 import { useChatTyping } from "./useChatTyping";
+import { useChatPresence } from "./useChatPresence";
 
 import { ChatBubble, TypingIndicator, DateSeparator, SystemMessage } from "./ChatBubble";
 import { AvatarUpload } from "./AvatarUpload";
@@ -38,6 +39,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   openRef.current = open;
 
   const { isTyping, sendTyping } = useChatTyping({ contractId, role: "user" });
+  useChatPresence({ contractId, role: "user", active: open });
 
   const { messages, loading, sendMessage } = useChatRealtime({
     contractId,
