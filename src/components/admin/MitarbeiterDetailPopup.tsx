@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Star, ChevronDown, ImageIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Star, ChevronDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { useState } from "react";
+import { toast } from "sonner";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "–";
