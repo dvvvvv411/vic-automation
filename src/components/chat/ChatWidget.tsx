@@ -75,16 +75,34 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
     }
 
     const loadAdmin = async () => {
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "admin")
-        .limit(1);
-      if (!roles || roles.length === 0) return;
+      let ownerId: string | null = null;
+
+      // Try to find the owner of this contract (kunde or admin who created it)
+      if (contractId) {
+        const { data: contract } = await supabase
+          .from("employment_contracts")
+          .select("created_by")
+          .eq("id", contractId)
+          .maybeSingle();
+        ownerId = contract?.created_by ?? null;
+      }
+
+      // Fallback: find first admin
+      if (!ownerId) {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "admin")
+          .limit(1);
+        ownerId = roles?.[0]?.user_id ?? null;
+      }
+
+      if (!ownerId) return;
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("avatar_url, display_name")
-        .eq("id", roles[0].user_id)
+        .eq("id", ownerId)
         .maybeSingle();
       if (profile) {
         const p = { avatar_url: profile.avatar_url, display_name: profile.display_name };
