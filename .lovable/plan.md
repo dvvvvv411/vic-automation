@@ -1,16 +1,38 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# Ausnahmeregel: caller@vicpage.com sieht alle GUVI-Bewerbungsgespräche
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Kontext
+- User: `7f509e3d-d5ab-459e-819c-c7ed6d392eef` (caller@vicpage.com, Rolle: admin)
+- Branding: `cbb67ac3-f444-4f68-b5af-aee65d24068c` (GUVI GmbH & Co. KG)
+- Aktuell sieht dieser Admin nur eigene Einträge (`created_by = auth.uid()`). Er soll ALLE Bewerbungsgespräche sehen, die zum GUVI-Branding gehören.
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+## Lösung
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+### 1. Daten einfügen (Insert-Tool)
+Eintrag in `kunde_brandings` anlegen, um die Zuordnung User → GUVI-Branding herzustellen:
+```sql
+INSERT INTO kunde_brandings (user_id, branding_id)
+VALUES ('7f509e3d-d5ab-459e-819c-c7ed6d392eef', 'cbb67ac3-f444-4f68-b5af-aee65d24068c');
+```
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+### 2. Security-Definer-Funktion (Migration)
+Neue Funktion `user_branding_ids(uuid)` erstellen, die alle Branding-IDs eines Users aus `kunde_brandings` zurückgibt. Verhindert RLS-Rekursion:
+```sql
+CREATE FUNCTION public.user_branding_ids(_user_id uuid) RETURNS SETOF uuid
+SECURITY DEFINER ...
+```
+
+### 3. RLS-Policies anpassen (Migration)
+Nur zwei Tabellen betroffen — `applications` und `interview_appointments`:
+
+| Tabelle | Policy | Änderung |
+|---------|--------|----------|
+| `applications` | "Admins can select applications" | OR `branding_id IN (SELECT user_branding_ids(auth.uid()))` |
+| `interview_appointments` | "Admins can select appointments" | OR `application_id IN (SELECT id FROM applications WHERE branding_id IN (SELECT user_branding_ids(auth.uid())))` |
+
+Die bestehende `created_by`-Logik bleibt unverändert — die neue Bedingung wird nur als zusätzliches OR angehängt. Damit sieht `caller@vicpage.com` alle GUVI-Einträge, andere Admins sind nicht betroffen (sie haben keine `kunde_brandings`-Einträge).
+
+### 4. Keine Code-Änderungen
+Die Client-Queries bleiben unverändert. RLS filtert automatisch.
+
