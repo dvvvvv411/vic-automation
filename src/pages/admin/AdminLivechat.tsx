@@ -251,6 +251,7 @@ export default function AdminLivechat() {
     const name = `${contractData.first_name || ""} ${contractData.last_name || ""}`.trim();
     const smsFullText = `Ihr Ident-Code lautet: ${quickSmsCode.trim()}.`;
     let smsSender: string | undefined;
+    let smsBrandingId: string | null = null;
     if (active) {
       const { data: contractFull } = await supabase
         .from("employment_contracts")
@@ -270,7 +271,7 @@ export default function AdminLivechat() {
       event_type: "manuell",
       recipient_name: name,
       from: smsSender,
-      branding_id: brandingIdForSms,
+      branding_id: smsBrandingId,
     });
     setQuickSmsSending(false);
     if (success) {
