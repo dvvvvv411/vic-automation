@@ -94,7 +94,7 @@ export default function AdminLivechat() {
     setEditingName(false);
   };
 
-  // Load conversations
+  // Load conversations + online status
   const loadConversations = useCallback(async () => {
     const { data: msgs } = await supabase
       .from("chat_messages")
