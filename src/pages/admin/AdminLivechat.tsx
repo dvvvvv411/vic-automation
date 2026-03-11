@@ -550,6 +550,8 @@ export default function AdminLivechat() {
               showTemplates
               contractData={contractData}
               onTyping={handleTyping}
+              externalValue={externalChatValue}
+              onExternalValueConsumed={() => setExternalChatValue(null)}
             />
           </>
         ) : (
