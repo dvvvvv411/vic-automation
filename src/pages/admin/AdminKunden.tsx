@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { UserPlus, Settings, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 export default function AdminKunden() {
   const queryClient = useQueryClient();
