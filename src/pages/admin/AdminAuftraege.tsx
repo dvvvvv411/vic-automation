@@ -47,6 +47,7 @@ const emptyForm = {
 
 export default function AdminAuftraege() {
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
