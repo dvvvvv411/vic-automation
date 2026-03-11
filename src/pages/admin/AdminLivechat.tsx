@@ -60,8 +60,7 @@ export default function AdminLivechat() {
     role: "admin",
   });
 
-  const [adminOnlineStatus, setAdminOnlineStatus] = useState(false);
-  const { onlineContractIds } = useChatPresence({ contractId: null, role: "admin", active: adminOnlineStatus });
+  const [onlineContractIds, setOnlineContractIds] = useState<Set<string>>(new Set());
 
   const handleOnlineToggle = async (checked: boolean) => {
     setAdminOnlineStatus(checked);
