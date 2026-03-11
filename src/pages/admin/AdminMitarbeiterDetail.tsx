@@ -133,7 +133,7 @@ export default function AdminMitarbeiterDetail() {
 
   // Fetch reviews
   const { data: reviews } = useQuery({
-    queryKey: ["admin-contract-reviews", id],
+    queryKey: ["admin-contract-reviews", id, userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_reviews")
