@@ -258,12 +258,12 @@ export default function AdminLivechat() {
         .eq("id", active.contract_id)
         .single();
       const brandingId = (contractFull as any)?.applications?.branding_id;
+      smsBrandingId = brandingId || null;
       if (brandingId) {
         const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
         smsSender = (branding as any)?.sms_sender_name || undefined;
       }
     }
-    const brandingIdForSms = (contractFull as any)?.applications?.branding_id || null;
     const success = await sendSms({
       to: contractData.phone,
       text: smsFullText,
