@@ -26,7 +26,7 @@ export default function AdminLayout() {
   }
 
   // Block kunde from accessing restricted paths
-  if (isKunde && KUNDE_BLOCKED_PATHS.some((p) => location.pathname.startsWith(p))) {
+  if (isKunde && KUNDE_BLOCKED_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"))) {
     return <Navigate to="/admin" replace />;
   }
 

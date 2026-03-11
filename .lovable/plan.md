@@ -1,22 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Fix: SMS Spoof Seite für Kunden nicht erreichbar
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Problem
-`KUNDE_BLOCKED_PATHS` enthält `/admin/sms`. Der Check `location.pathname.startsWith("/admin/sms")` trifft auch auf `/admin/sms-spoof` zu, da der Pfad mit `/admin/sms` beginnt.
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-## Lösung
-In beiden Dateien (`AdminLayout.tsx` und `AdminSidebar.tsx`) den `startsWith`-Check durch einen exakten Vergleich ersetzen, da alle Blocked-Paths vollständige Pfade sind:
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-| Datei | Änderung |
-|-------|----------|
-| `AdminLayout.tsx` (Zeile 29) | `startsWith(p)` → exakter Match `pathname === p` oder `startsWith(p + "/")` |
-| `AdminSidebar.tsx` (Zeile 178) | Gleicher Fix bei `KUNDE_HIDDEN_PATHS.includes(item.url)` — hier ist es bereits `includes` (exakt), also kein Problem |
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-Konkret nur `AdminLayout.tsx` Zeile 29 ändern:
-```ts
-if (isKunde && KUNDE_BLOCKED_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(p + "/")))
-```
-
-Dies erlaubt `/admin/sms-spoof` während `/admin/sms` und `/admin/sms/...` weiterhin blockiert bleiben.
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
