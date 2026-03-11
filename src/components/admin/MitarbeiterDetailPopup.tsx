@@ -135,6 +135,18 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
   const fullName = contract ? `${contract.first_name ?? ""} ${contract.last_name ?? ""}`.trim() || "Unbekannt" : "";
   const branding = (contract as any)?.applications?.brandings?.company_name ?? "–";
 
+  const toggleReviewUnlocked = async (assignmentId: string, currentValue: boolean) => {
+    const { error } = await supabase
+      .from("order_assignments")
+      .update({ review_unlocked: !currentValue })
+      .eq("id", assignmentId);
+    if (error) {
+      toast.error("Fehler beim Aktualisieren");
+      return;
+    }
+    toast.success(!currentValue ? "Bewertung freigeschaltet" : "Bewertung gesperrt");
+    queryClient.invalidateQueries({ queryKey: ["popup-contract-assignments", contractId] });
+  };
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
