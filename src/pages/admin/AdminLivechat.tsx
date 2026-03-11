@@ -117,8 +117,19 @@ export default function AdminLivechat() {
 
     const { data: contracts } = await supabase
       .from("employment_contracts")
-      .select("id, first_name, last_name, user_id")
+      .select("id, first_name, last_name, user_id, chat_active_at")
       .in("id", contractIds);
+
+    // Compute online status from chat_active_at
+    const now = Date.now();
+    const onlineIds = new Set<string>();
+    for (const c of contracts ?? []) {
+      const activeAt = (c as any).chat_active_at;
+      if (activeAt && (now - new Date(activeAt).getTime()) < 2 * 60 * 1000) {
+        onlineIds.add(c.id);
+      }
+    }
+    setOnlineContractIds(onlineIds);
 
     const convs: Conversation[] = (contracts ?? [])
       .filter((c) => map.has(c.id))
