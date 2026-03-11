@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { url } = await req.json();
+    let { url } = await req.json();
 
     const lower = url?.toLowerCase() ?? "";
     if (!url || !(lower.includes("anosim.net/api/v1/orderbookingshare") || lower.includes("anosim.net/share/orderbooking"))) {
@@ -19,6 +19,9 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Convert share URL to API URL
+    url = url.replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
 
     const res = await fetch(url);
     const data = await res.json();

@@ -115,7 +115,8 @@ export function SmsWatch({ contractId }: SmsWatchProps) {
       toast({ title: "Ungültiger Link", description: "Muss ein anosim.net Share-Link sein.", variant: "destructive" });
       return;
     }
-    addMutation.mutate(trimmed);
+    const apiUrl = trimmed.replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
+    addMutation.mutate(apiUrl);
   };
 
   return (
