@@ -15,6 +15,7 @@ import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 export default function AdminKunden() {
   const queryClient = useQueryClient();
+  const userId = useUserQueryKey();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
