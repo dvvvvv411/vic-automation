@@ -110,6 +110,7 @@ const templates: TemplateDefinition[] = [
     ],
     buttonText: "Gesprächstermin buchen",
     buttonUrl: "https://example.com/bewerbungsgespraech/abc123",
+    footerLines: ['Schauen Sie sich noch einmal die Stellenanzeige an: <a href="https://example.com/karriere" target="_blank" style="color:#3B82F6;text-decoration:underline;">https://example.com/karriere</a>'],
   },
   {
     eventType: "bewerbung_abgelehnt",
