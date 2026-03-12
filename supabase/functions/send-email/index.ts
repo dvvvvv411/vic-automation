@@ -145,6 +145,7 @@ Deno.serve(async (req) => {
       bodyLines: body_lines || [],
       buttonText: button_text,
       buttonUrl: button_url,
+      footerLines: footer_lines,
       footerAddress,
     });
 

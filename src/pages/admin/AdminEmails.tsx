@@ -59,6 +59,7 @@ function buildEmailHtml(opts: {
     <h1 style="margin:0 0 20px 0;font-size:20px;font-weight:700;color:#111827;line-height:1.3;">${bodyTitle}</h1>
     ${linesHtml}
     ${buttonHtml}
+    ${(footerLines || []).map((line) => `<p style="margin:12px 0 0 0;font-size:14px;line-height:1.6;color:#374151;">${line}</p>`).join("\n")}
     <p style="margin:32px 0 0 0;padding:20px 0 0 0;font-size:14px;line-height:1.5;color:#6b7280;">${companyName}${footerAddress ? ` · ${footerAddress}` : ""}</p>
   </td>
 </tr>
