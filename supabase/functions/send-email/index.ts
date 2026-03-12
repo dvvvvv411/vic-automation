@@ -14,6 +14,7 @@ interface EmailRequest {
   body_lines: string[];
   button_text?: string;
   button_url?: string;
+  footer_lines?: string[];
   branding_id?: string;
   event_type: string;
   metadata?: Record<string, unknown>;
