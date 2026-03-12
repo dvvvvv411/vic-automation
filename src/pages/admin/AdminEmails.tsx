@@ -21,9 +21,10 @@ function buildEmailHtml(opts: {
   bodyLines: string[];
   buttonText?: string;
   buttonUrl?: string;
+  footerLines?: string[];
   footerAddress: string;
 }): string {
-  const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerAddress } = opts;
+  const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress } = opts;
 
   const linesHtml = bodyLines
     .map((line) => `<p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#374151;">${line}</p>`)
