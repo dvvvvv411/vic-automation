@@ -227,6 +227,37 @@ export default function AdminBewerbungsgespraeche() {
     setPage(0);
   };
 
+  const handleResendContractEmail = async (item: any) => {
+    const app = item.applications;
+    if (!app?.email) {
+      toast.error("Keine E-Mail-Adresse vorhanden");
+      return;
+    }
+    try {
+      const contractLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
+      await sendEmail({
+        to: app.email,
+        recipient_name: `${app.first_name} ${app.last_name}`,
+        subject: "Ihr Bewerbungsgespräch war erfolgreich",
+        body_title: "Bewerbungsgespräch erfolgreich",
+        body_lines: [
+          `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
+          "Ihr Bewerbungsgespräch war erfolgreich. Wir freuen uns, Sie im nächsten Schritt willkommen zu heißen.",
+          "Bitte füllen Sie nun Ihren Arbeitsvertrag über den folgenden Link aus.",
+        ],
+        button_text: "Arbeitsvertrag ausfüllen",
+        button_url: contractLink,
+        branding_id: app.brandings?.id || null,
+        event_type: "gespraech_erfolgreich",
+        metadata: { appointment_id: item.id, application_id: item.application_id },
+      });
+      toast.success("Arbeitsvertrag-E-Mail erneut gesendet!");
+    } catch (err) {
+      console.error("Resend contract email error:", err);
+      toast.error("Fehler beim Senden der E-Mail");
+    }
+  };
+
   const statusBadge = (status: string) => {
     switch (status) {
       case "erfolgreich":
