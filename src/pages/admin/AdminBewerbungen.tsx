@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, FileText, Trash2, Check, X, Copy, CalendarCheck, ExternalLink, Upload } from "lucide-react";
+import { Plus, FileText, Trash2, Check, X, Copy, CalendarCheck, ExternalLink, Upload, CheckCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -156,6 +158,8 @@ export default function AdminBewerbungen() {
   const [isMassImport, setIsMassImport] = useState(false);
   const [massImportText, setMassImportText] = useState("");
   const [massImportErrors, setMassImportErrors] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState<{ total: number; current: number; inProgress: boolean }>({ total: 0, current: 0, inProgress: false });
   const queryClient = useQueryClient();
   const userId = useUserQueryKey();
 
@@ -300,8 +304,12 @@ export default function AdminBewerbungen() {
         }
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    onSuccess: (_data, app) => {
+      // Optimistic update: change status in cache without refetching
+      queryClient.setQueryData(["applications", userId], (old: any[] | undefined) => {
+        if (!old) return old;
+        return old.map((a: any) => a.id === app.id ? { ...a, status: "bewerbungsgespraech" } : a);
+      });
       toast.success("Bewerbung akzeptiert");
     },
     onError: () => toast.error("Fehler beim Akzeptieren"),
@@ -332,8 +340,11 @@ export default function AdminBewerbungen() {
         });
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    onSuccess: (_data, app) => {
+      queryClient.setQueryData(["applications", userId], (old: any[] | undefined) => {
+        if (!old) return old;
+        return old.map((a: any) => a.id === app.id ? { ...a, status: "abgelehnt" } : a);
+      });
       toast.success("Bewerbung abgelehnt");
     },
     onError: () => toast.error("Fehler beim Ablehnen"),
@@ -386,6 +397,54 @@ export default function AdminBewerbungen() {
     },
     onError: () => toast.error("Fehler beim Importieren"),
   });
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const neuApplications = applications?.filter((a: any) => (a.status || "neu") === "neu") || [];
+  const allNeuSelected = neuApplications.length > 0 && neuApplications.every((a: any) => selectedIds.has(a.id));
+
+  const toggleSelectAll = useCallback(() => {
+    if (allNeuSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(neuApplications.map((a: any) => a.id)));
+    }
+  }, [allNeuSelected, neuApplications]);
+
+  const handleBulkAccept = async () => {
+    const ids = Array.from(selectedIds);
+    const apps = ids.map((id) => applications?.find((a: any) => a.id === id)).filter(Boolean);
+    if (!apps.length) return;
+
+    setBulkProcessing({ total: apps.length, current: 0, inProgress: true });
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const app of apps) {
+      try {
+        await acceptMutation.mutateAsync(app);
+        successCount++;
+      } catch {
+        errorCount++;
+      }
+      setBulkProcessing((prev) => ({ ...prev, current: prev.current + 1 }));
+    }
+
+    setBulkProcessing({ total: 0, current: 0, inProgress: false });
+    setSelectedIds(new Set());
+
+    if (errorCount === 0) {
+      toast.success(`${successCount} Bewerbungen erfolgreich akzeptiert`);
+    } else {
+      toast.warning(`${successCount} akzeptiert, ${errorCount} fehlgeschlagen`);
+    }
+  };
 
   const handleSubmit = () => {
     if (isIndeed && isMassImport) {
@@ -768,9 +827,42 @@ export default function AdminBewerbungen() {
           </div>
         ) : (
           <div className="border border-border rounded-lg overflow-hidden">
+            {/* Bulk accept bar */}
+            {(selectedIds.size > 0 || bulkProcessing.inProgress) && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b border-border">
+                {bulkProcessing.inProgress ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm font-medium">
+                      {bulkProcessing.current} / {bulkProcessing.total} verarbeitet...
+                    </span>
+                    <Progress value={(bulkProcessing.current / bulkProcessing.total) * 100} className="flex-1 h-2" />
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm text-muted-foreground">{selectedIds.size} ausgewählt</span>
+                    <Button size="sm" onClick={handleBulkAccept} disabled={acceptMutation.isPending}>
+                      <CheckCheck className="h-4 w-4 mr-1" />
+                      Ausgewählte akzeptieren
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                      Auswahl aufheben
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allNeuSelected && neuApplications.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Alle neuen auswählen"
+                      disabled={bulkProcessing.inProgress}
+                    />
+                  </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>E-Mail</TableHead>
                   <TableHead>Telefon</TableHead>
@@ -787,8 +879,19 @@ export default function AdminBewerbungen() {
                 {applications.map((a: any) => {
                   const status = a.status || "neu";
                   const cfg = statusConfig[status] || statusConfig.neu;
+                  const isNeu = status === "neu";
                   return (
                     <TableRow key={a.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetailApp(a)}>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        {isNeu ? (
+                          <Checkbox
+                            checked={selectedIds.has(a.id)}
+                            onCheckedChange={() => toggleSelect(a.id)}
+                            disabled={bulkProcessing.inProgress}
+                            aria-label={`${a.first_name} ${a.last_name} auswählen`}
+                          />
+                        ) : null}
+                      </TableCell>
                       <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
                       <TableCell className="text-muted-foreground">{a.email || "–"}</TableCell>
                       <TableCell className="text-muted-foreground">

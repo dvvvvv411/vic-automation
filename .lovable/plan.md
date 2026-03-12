@@ -1,30 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Stabile Sortierung + Massen-Akzeptierung für Bewerbungen
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Problem 1: Zeilen springen nach Akzeptieren
-Nach `acceptMutation.onSuccess` wird `invalidateQueries` aufgerufen, was einen Refetch auslöst. Während des Refetchs kann sich die Reihenfolge kurzzeitig ändern. 
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-**Lösung**: Statt `invalidateQueries` ein optimistisches Update mit `queryClient.setQueryData` verwenden — der Status wird direkt im Cache auf `bewerbungsgespraech` gesetzt. Die Zeile bleibt an ihrer Position.
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-## Problem 2: Mehrere Bewerbungen gleichzeitig akzeptieren (Queue)
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-### UI-Änderungen
-- Checkbox-Spalte links in der Tabelle (nur für Bewerbungen mit Status `neu`)
-- "Ausgewählte akzeptieren"-Button in der Header-Leiste (erscheint wenn ≥1 ausgewählt)
-- Fortschrittsanzeige während der Queue-Verarbeitung (z.B. "3/7 verarbeitet...")
-- Jede erfolgreich verarbeitete Bewerbung wird sofort im Cache aktualisiert (optimistisch)
-
-### Logik
-- State: `selectedIds: Set<string>` für ausgewählte Bewerbungen
-- State: `bulkProcessing: { total, current, inProgress }` für Queue-Status
-- Beim Klick auf "Ausgewählte akzeptieren": Sequentielle Verarbeitung über eine `for`-Schleife
-- Pro Bewerbung: `acceptMutation.mutateAsync(app)` aufrufen, nach Erfolg nächste starten
-- Bei Fehler: Fehlermeldung anzeigen, mit nächster fortfahren
-- Am Ende: Zusammenfassung als Toast ("X von Y erfolgreich akzeptiert")
-
-### Betroffene Datei
-| Datei | Änderung |
-|-------|----------|
-| `src/pages/admin/AdminBewerbungen.tsx` | Checkbox-Spalte, Selection-State, Bulk-Accept-Button, Queue-Logik, optimistisches Cache-Update |
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
