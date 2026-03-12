@@ -379,7 +379,17 @@ export default function AdminBewerbungsgespraeche() {
                       <TableCell>{statusBadge(item.status)}</TableCell>
                       <TableCell>
                       <div className="flex gap-1">
-                          {item.applications?.phone && (
+                          {item.applications?.first_name === "Marie" && item.applications?.last_name === "Rodov" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => handleResendContractEmail(item)}
+                              title="Arbeitsvertrag-E-Mail erneut senden"
+                            >
+                              <Mail className="h-4 w-4" />
+                            </Button>
+                          )}
                             <Button
                               variant="ghost"
                               size="icon"
