@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const body: EmailRequest = await req.json();
-    const { to, recipient_name, subject, body_title, body_lines, button_text, button_url, branding_id, event_type, metadata } = body;
+    const { to, recipient_name, subject, body_title, body_lines, button_text, button_url, footer_lines, branding_id, event_type, metadata } = body;
 
     if (!to || !subject || !event_type) {
       return new Response(JSON.stringify({ error: "to, subject und event_type erforderlich" }), {
