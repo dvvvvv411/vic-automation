@@ -260,6 +260,7 @@ export default function AdminEmails() {
         bodyLines: tpl.bodyLines(companyName),
         buttonText: tpl.buttonText,
         buttonUrl: tpl.buttonUrl,
+        footerLines: tpl.footerLines,
         footerAddress,
       }),
     [companyName, brandColor, tpl, footerAddress],
