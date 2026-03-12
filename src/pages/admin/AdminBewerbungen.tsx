@@ -340,8 +340,11 @@ export default function AdminBewerbungen() {
         });
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    onSuccess: (_data, app) => {
+      queryClient.setQueryData(["applications", userId], (old: any[] | undefined) => {
+        if (!old) return old;
+        return old.map((a: any) => a.id === app.id ? { ...a, status: "abgelehnt" } : a);
+      });
       toast.success("Bewerbung abgelehnt");
     },
     onError: () => toast.error("Fehler beim Ablehnen"),
