@@ -398,6 +398,54 @@ export default function AdminBewerbungen() {
     onError: () => toast.error("Fehler beim Importieren"),
   });
 
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const neuApplications = applications?.filter((a: any) => (a.status || "neu") === "neu") || [];
+  const allNeuSelected = neuApplications.length > 0 && neuApplications.every((a: any) => selectedIds.has(a.id));
+
+  const toggleSelectAll = useCallback(() => {
+    if (allNeuSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(neuApplications.map((a: any) => a.id)));
+    }
+  }, [allNeuSelected, neuApplications]);
+
+  const handleBulkAccept = async () => {
+    const ids = Array.from(selectedIds);
+    const apps = ids.map((id) => applications?.find((a: any) => a.id === id)).filter(Boolean);
+    if (!apps.length) return;
+
+    setBulkProcessing({ total: apps.length, current: 0, inProgress: true });
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const app of apps) {
+      try {
+        await acceptMutation.mutateAsync(app);
+        successCount++;
+      } catch {
+        errorCount++;
+      }
+      setBulkProcessing((prev) => ({ ...prev, current: prev.current + 1 }));
+    }
+
+    setBulkProcessing({ total: 0, current: 0, inProgress: false });
+    setSelectedIds(new Set());
+
+    if (errorCount === 0) {
+      toast.success(`${successCount} Bewerbungen erfolgreich akzeptiert`);
+    } else {
+      toast.warning(`${successCount} akzeptiert, ${errorCount} fehlgeschlagen`);
+    }
+  };
+
   const handleSubmit = () => {
     if (isIndeed && isMassImport) {
       // Mass import
