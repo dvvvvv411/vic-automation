@@ -241,6 +241,7 @@ export default function AdminBewerbungen() {
             ],
             button_text: "Termin buchen",
             button_url: interviewLink,
+            footer_lines: footerLines,
             branding_id: app.branding_id || null,
             event_type: "bewerbung_angenommen",
             metadata: { application_id: app.id },
