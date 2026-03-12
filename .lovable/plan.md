@@ -1,16 +1,40 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# Bug: Kein Button in "Gespräch erfolgreich"-E-Mail
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Ursache
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+In `AdminBewerbungsgespraeche.tsx` (Zeile 123-128) wird nach dem Status-Update der Arbeitsvertrag per Query gesucht:
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+```typescript
+const { data: contract } = await supabase
+  .from("employment_contracts")
+  .select("id")
+  .eq("application_id", item.application_id)
+  .maybeSingle();
+const contractLink = contract ? await buildBrandingUrl(...) : null;
+```
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+**Problem:** Die RLS-Policy für `employment_contracts` erlaubt Admins nur den Zugriff auf Verträge mit `created_by = auth.uid()`. Der Vertrag wurde aber vom Trigger mit `created_by` des Appointment-Erstellers angelegt (User `d981ca8d`), nicht vom aktuellen Admin (User `7f509e3d`). Die Query gibt `null` zurück → kein Button.
+
+## Lösung
+
+Die Contract-Query ist unnötig. Der Trigger erstellt den Vertrag garantiert, und der Link basiert nur auf der `application_id`, die bereits bekannt ist. Die Query kann entfernt und der Link direkt gebaut werden:
+
+```typescript
+// Vorher: Query + Conditional
+const { data: contract } = await supabase...
+const contractLink = contract ? await buildBrandingUrl(...) : null;
+
+// Nachher: Direkt bauen
+const contractLink = await buildBrandingUrl(
+  app.brandings?.id, 
+  `/arbeitsvertrag/${item.application_id}`
+);
+```
+
+### Betroffene Datei
+| Datei | Änderung |
+|-------|----------|
+| `src/pages/admin/AdminBewerbungsgespraeche.tsx` | Zeilen 123-128: Contract-Query entfernen, Link direkt bauen |
+
