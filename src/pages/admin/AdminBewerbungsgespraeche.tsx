@@ -390,6 +390,7 @@ export default function AdminBewerbungsgespraeche() {
                               <Mail className="h-4 w-4" />
                             </Button>
                           )}
+                          {item.applications?.phone && (
                             <Button
                               variant="ghost"
                               size="icon"
