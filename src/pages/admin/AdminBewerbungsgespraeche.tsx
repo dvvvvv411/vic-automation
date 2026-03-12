@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, MessageSquare, Search } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, MessageSquare, Search, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
