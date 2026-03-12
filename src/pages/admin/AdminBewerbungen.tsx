@@ -209,6 +209,23 @@ export default function AdminBewerbungen() {
       const shortLink = await createShortLink(interviewLink, app.branding_id);
       const fullName = `${app.first_name} ${app.last_name}`;
 
+      // Build career page link (without web. subdomain)
+      let careerLink = "";
+      if (app.branding_id) {
+        const { data: domainData } = await supabase
+          .from("brandings")
+          .select("domain")
+          .eq("id", app.branding_id)
+          .single();
+        if (domainData?.domain) {
+          const domain = domainData.domain.replace(/^https?:\/\//, "").replace(/^web\./, "").replace(/\/$/, "");
+          careerLink = `https://${domain}/karriere`;
+        }
+      }
+      const footerLines = careerLink
+        ? [`Schauen Sie sich noch einmal die Stellenanzeige an: <a href="${careerLink}" target="_blank" style="color:#3B82F6;text-decoration:underline;">${careerLink}</a>`]
+        : [];
+
       if (app.is_indeed) {
         // Indeed: Email + SMS
         if (app.email) {
@@ -224,6 +241,7 @@ export default function AdminBewerbungen() {
             ],
             button_text: "Termin buchen",
             button_url: interviewLink,
+            footer_lines: footerLines,
             branding_id: app.branding_id || null,
             event_type: "bewerbung_angenommen",
             metadata: { application_id: app.id },
@@ -259,6 +277,7 @@ export default function AdminBewerbungen() {
           ],
           button_text: "Termin buchen",
           button_url: interviewLink,
+          footer_lines: footerLines,
           branding_id: app.branding_id || null,
           event_type: "bewerbung_angenommen",
           metadata: { application_id: app.id },

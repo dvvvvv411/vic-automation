@@ -1,37 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Stellenanzeigen-Link unter dem Button in der "Bewerbung angenommen"-E-Mail
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Änderung
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-In `src/pages/admin/AdminBewerbungen.tsx` wird in beiden E-Mail-Aufrufen (Indeed und Normal, Zeilen 220-223 und 255-258) eine zusätzliche `body_line` nach dem Button-Text eingefügt. Dazu muss vorher die Branding-Domain geladen werden (analog zu `buildBrandingUrl`, aber ohne `web.`-Prefix).
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-### Code-Änderung
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-**Beide `sendEmail`-Aufrufe** (Zeile ~214 und ~250): Die Branding-Domain wird abgefragt und ein Karriere-Link gebaut (`https://{domain}/karriere`). Dann wird eine zusätzliche Zeile in `body_lines` ergänzt:
-
-```
-Schauen Sie sich noch einmal die Stellenanzeige an: https://guvi.solutions/karriere
-```
-
-Da `body_lines` **vor** dem Button gerendert werden (im HTML-Template), muss der Karriere-Link **nach** dem Button erscheinen. Dafür gibt es zwei Optionen:
-
-1. **Einfach als letzte `body_line`** — wird dann über dem Button angezeigt (nicht ideal)
-2. **HTML-Template erweitern** um einen `footer_lines`-Parameter, der nach dem Button gerendert wird
-
-Ich werde Option 2 umsetzen: Sowohl die Edge Function (`send-email/index.ts`) als auch die Client-Funktion (`sendEmail.ts`) bekommen einen optionalen Parameter `footer_lines: string[]`, der nach dem Button im E-Mail-Body gerendert wird.
-
-### Betroffene Dateien
-
-| Datei | Änderung |
-|-------|----------|
-| `supabase/functions/send-email/index.ts` | `footer_lines` Parameter + HTML nach Button rendern |
-| `src/lib/sendEmail.ts` | `footer_lines` zum Interface hinzufügen |
-| `src/pages/admin/AdminBewerbungen.tsx` | Branding-Domain laden, Karriere-Link bauen, `footer_lines` übergeben |
-| `src/pages/admin/AdminEmails.tsx` | Template-Vorschau für "bewerbung_angenommen" um Karriere-Zeile erweitern |
-
-### Karriere-Link-Logik
-- Branding-Domain aus `brandings.domain` laden (bereits in `buildBrandingUrl` vorhanden)
-- Domain ohne `web.`-Prefix verwenden: `https://{domain}/karriere`
-- Fallback: Link weglassen wenn keine Domain konfiguriert
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe

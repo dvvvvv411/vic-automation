@@ -14,6 +14,7 @@ interface EmailRequest {
   body_lines: string[];
   button_text?: string;
   button_url?: string;
+  footer_lines?: string[];
   branding_id?: string;
   event_type: string;
   metadata?: Record<string, unknown>;
@@ -27,9 +28,10 @@ function buildEmailHtml(opts: {
   bodyLines: string[];
   buttonText?: string;
   buttonUrl?: string;
+  footerLines?: string[];
   footerAddress: string;
 }): string {
-  const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerAddress } = opts;
+  const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress } = opts;
 
   const linesHtml = bodyLines
     .map((line) => `<p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#374151;">${line}</p>`)
@@ -68,6 +70,7 @@ function buildEmailHtml(opts: {
     <h1 style="margin:0 0 20px 0;font-size:20px;font-weight:700;color:#111827;line-height:1.3;">${bodyTitle}</h1>
     ${linesHtml}
     ${buttonHtml}
+    ${(footerLines || []).map((line) => `<p style="margin:12px 0 0 0;font-size:14px;line-height:1.6;color:#374151;">${line}</p>`).join("\n")}
     <p style="margin:32px 0 0 0;padding:20px 0 0 0;font-size:14px;line-height:1.5;color:#6b7280;">${companyName}${footerAddress ? ` · ${footerAddress}` : ""}</p>
   </td>
 </tr>
@@ -90,7 +93,7 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const body: EmailRequest = await req.json();
-    const { to, recipient_name, subject, body_title, body_lines, button_text, button_url, branding_id, event_type, metadata } = body;
+    const { to, recipient_name, subject, body_title, body_lines, button_text, button_url, footer_lines, branding_id, event_type, metadata } = body;
 
     if (!to || !subject || !event_type) {
       return new Response(JSON.stringify({ error: "to, subject und event_type erforderlich" }), {
@@ -142,6 +145,7 @@ Deno.serve(async (req) => {
       bodyLines: body_lines || [],
       buttonText: button_text,
       buttonUrl: button_url,
+      footerLines: footer_lines,
       footerAddress,
     });
 
