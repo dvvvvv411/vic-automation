@@ -120,12 +120,7 @@ export default function AdminBewerbungsgespraeche() {
     if (newStatus === "erfolgreich" && item.applications?.email) {
       const app = item.applications;
       // Get the contract for this application to build link
-      const { data: contract } = await supabase
-        .from("employment_contracts")
-        .select("id")
-        .eq("application_id", item.application_id)
-        .maybeSingle();
-      const contractLink = contract ? await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`) : null;
+      const contractLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
 
       await sendEmail({
         to: app.email,
