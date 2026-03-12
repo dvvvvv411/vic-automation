@@ -158,6 +158,8 @@ export default function AdminBewerbungen() {
   const [isMassImport, setIsMassImport] = useState(false);
   const [massImportText, setMassImportText] = useState("");
   const [massImportErrors, setMassImportErrors] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState<{ total: number; current: number; inProgress: boolean }>({ total: 0, current: 0, inProgress: false });
   const queryClient = useQueryClient();
   const userId = useUserQueryKey();
 
