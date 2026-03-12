@@ -1,30 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# "Arbeitsvertrag-E-Mail erneut senden" Button für Marie Rodov
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Änderung
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-In `src/pages/admin/AdminBewerbungsgespraeche.tsx` wird in der Aktionen-Spalte ein neuer Button hinzugefügt, der **nur bei Marie Rodov** erscheint (Name-Check auf `first_name === "Marie"` und `last_name === "Rodov"`).
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-Der Button nutzt ein Mail-Icon (`Mail` aus lucide-react) und löst beim Klick dieselbe E-Mail-Logik aus wie in `handleStatusUpdate` bei `erfolgreich` (Zeilen 120-141) — also die "Arbeitsvertrag ausfüllen"-E-Mail mit Button-Link.
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-### Neue Funktion
-```typescript
-const handleResendContractEmail = async (item: any) => {
-  const app = item.applications;
-  const contractLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
-  await sendEmail({ /* gleiche Parameter wie Zeile 125-140 */ });
-  toast.success("Arbeitsvertrag-E-Mail erneut gesendet!");
-};
-```
-
-### Neuer Button (nur bei Marie Rodov, in der Aktionen-Spalte)
-- Bedingung: `item.applications?.first_name === "Marie" && item.applications?.last_name === "Rodov"`
-- Icon: `Mail`, blau, ghost-Variante
-- Titel: "Arbeitsvertrag-E-Mail erneut senden"
-
-### Betroffene Datei
-| Datei | Änderung |
-|-------|----------|
-| `src/pages/admin/AdminBewerbungsgespraeche.tsx` | `Mail` Import, `handleResendContractEmail` Funktion, konditionaler Button |
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
