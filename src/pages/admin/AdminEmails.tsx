@@ -82,6 +82,7 @@ interface TemplateDefinition {
   bodyLines: (company: string) => string[];
   buttonText?: string;
   buttonUrl?: string;
+  footerLines?: string[];
 }
 
 const templates: TemplateDefinition[] = [
