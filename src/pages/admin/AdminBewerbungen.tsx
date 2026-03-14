@@ -866,8 +866,6 @@ export default function AdminBewerbungen() {
                   <TableHead>Name</TableHead>
                   <TableHead>E-Mail</TableHead>
                   <TableHead>Telefon</TableHead>
-                  <TableHead>Ort</TableHead>
-                  <TableHead>Anstellungsart</TableHead>
                   <TableHead>Branding</TableHead>
                   <TableHead>CV</TableHead>
                   <TableHead>Status</TableHead>
