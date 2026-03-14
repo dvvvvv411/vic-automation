@@ -498,7 +498,19 @@ export default function Bewerbungsgespraech() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-1.5 max-h-[340px] overflow-y-auto pr-1">
+                <div
+                  className="grid grid-cols-2 gap-1.5 max-h-[340px] overflow-y-auto pr-1"
+                  style={{
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: `${brandColor}66 transparent`,
+                  }}
+                >
+                  <style>{`
+                    .brand-scrollbar::-webkit-scrollbar { width: 5px; }
+                    .brand-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                    .brand-scrollbar::-webkit-scrollbar-thumb { background-color: ${brandColor}66; border-radius: 10px; }
+                    .brand-scrollbar::-webkit-scrollbar-thumb:hover { background-color: ${brandColor}99; }
+                  `}</style>
                   {availableTimeSlots.length === 0 ? (
                     <p className="text-sm text-muted-foreground col-span-2 py-8 text-center">
                       Keine verfügbaren Zeiten.
