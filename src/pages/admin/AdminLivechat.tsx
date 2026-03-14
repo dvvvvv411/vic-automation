@@ -607,7 +607,7 @@ export default function AdminLivechat() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOrderDialogOpen(false)}>Abbrechen</Button>
+            <Button variant="ghost" onClick={() => setOrderDialogOpen(false)}>Abbrechen</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
