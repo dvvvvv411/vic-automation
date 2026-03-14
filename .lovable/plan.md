@@ -1,49 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Mitarbeiter-Detail: Tab-Layout + Zugangsdaten + Notizen
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Referenz-Analyse
-Profil-Header mit Avatar + Name + Badges, darunter Tabs. Übersicht zeigt Persönliche Daten + Adresse, Zugangsdaten-Card, Admin-Notizen, Bankverbindung.
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-## Geplante Änderungen
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-### 1. Profil-Header
-Avatar-Kreis mit Initialen, Name + Status-Badges, E-Mail + Branding. Action-Buttons rechts (Livechat, Auftrag zuweisen, Genehmigen, Sperren).
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-### 2. Tab-Navigation (4 Tabs)
-- **Übersicht** — Persönliche Daten, Kontakt, Adresse, Bank, Steuer (inline-editierbar) + Zugangsdaten-Card + Admin-Notizen
-- **Personalausweis** — ID-Bilder mit Vorschau
-- **Aufträge** — Aufträge-Tabelle
-- **Bewertungen** — Reviews mit Collapsible
-
-### 3. Übersicht-Tab Layout
-```text
-┌──────────────────────────────────┐  ┌──────────────────────┐
-│ PERSÖNLICHE DATEN  │  ADRESSE    │  │ Zugangsdaten         │
-│ Vorname, Nachname  │  Straße     │  │ E-Mail [copy]        │
-│ Geburtsdatum etc.  │  PLZ, Stadt │  │ Passwort [show][copy]│
-│──────────────────────────────────│  ├──────────────────────┤
-│ BANKVERBINDUNG     │  STEUER     │  │ Admin-Notizen        │
-│ IBAN, BIC, Bank    │  StID, SV   │  │ [Textarea]  [Speich.]│
-└──────────────────────────────────┘  └──────────────────────┘
-```
-
-### 4. Editierbare Daten
-"Bearbeiten"-Button pro Card-Section → Felder werden Inputs → "Speichern" updated `employment_contracts`.
-
-### 5. Admin-Notizen
-Neues DB-Feld `admin_notes text` auf `employment_contracts`. Textarea mit Speichern-Button.
-
-### 6. Zugangsdaten-Card
-- E-Mail mit Copy-Button
-- Temp. Passwort mit Show/Hide Toggle + Copy-Button
-
-### Betroffene Dateien
-| Datei | Änderung |
-|-------|----------|
-| `AdminMitarbeiterDetail.tsx` | Kompletter Umbau: Tab-Layout, editierbare Felder, Zugangsdaten-Card, Notizen-Card |
-| Supabase Migration | `ALTER TABLE employment_contracts ADD COLUMN admin_notes text;` |
-
-### Styling
-Premium-Cards mit `rounded-2xl`, `shadow-md`, uppercase Section-Headers. Field labels in `text-xs uppercase tracking-wider text-muted-foreground`.
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe

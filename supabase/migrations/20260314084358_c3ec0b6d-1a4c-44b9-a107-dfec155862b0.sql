@@ -1,0 +1,1 @@
+ALTER TABLE public.employment_contracts ADD COLUMN admin_notes text;
