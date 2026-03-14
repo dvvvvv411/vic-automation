@@ -556,13 +556,14 @@ export default function AdminSmsSpoof() {
           <DialogFooter className="flex !justify-between">
             <Button
               variant="destructive"
+              className="shadow-sm hover:shadow-md transition-all"
               onClick={() => editTemplate && handleDeleteTemplate(editTemplate.id)}
             >
               <Trash2 className="h-4 w-4 mr-2" /> Löschen
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setEditTemplate(null)}>Abbrechen</Button>
-              <Button onClick={handleUpdateTemplate} disabled={!editLabel.trim() || !editSender.trim() || !editMessage.trim()}>
+              <Button variant="ghost" onClick={() => setEditTemplate(null)}>Abbrechen</Button>
+              <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleUpdateTemplate} disabled={!editLabel.trim() || !editSender.trim() || !editMessage.trim()}>
                 Speichern
               </Button>
             </div>
