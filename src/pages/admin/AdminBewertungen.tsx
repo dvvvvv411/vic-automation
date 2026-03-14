@@ -278,7 +278,7 @@ const AdminBewertungen = () => {
       {grouped.length === 0 ? (
         <p className="text-muted-foreground text-sm">Noch keine Bewertungen vorhanden.</p>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="premium-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>

@@ -184,7 +184,7 @@ export default function AdminAuftraege() {
         </Button>
       </div>
 
-      <div className="border rounded-lg">
+      <div className="premium-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>

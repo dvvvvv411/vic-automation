@@ -450,7 +450,7 @@ export default function AdminSmsSpoof() {
                 <p className="text-sm text-muted-foreground">Noch keine SMS gesendet.</p>
               </div>
             ) : (
-              <div className="rounded-lg border">
+              <div className="premium-card overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>

@@ -312,7 +312,7 @@ export default function AdminEmails() {
 
         {/* Preview */}
         <div className="flex-1 min-w-0">
-          <div className="border border-border rounded-lg overflow-hidden">
+          <div className="premium-card overflow-hidden">
             {/* Meta bar */}
             <div className="bg-muted/50 px-4 py-3 border-b border-border flex items-center justify-between">
               <div className="space-y-0.5">

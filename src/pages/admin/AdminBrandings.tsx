@@ -427,7 +427,7 @@ export default function AdminBrandings() {
             </Button>
           </div>
         ) : (
-          <div className="border border-border rounded-lg overflow-hidden">
+          <div className="premium-card overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>

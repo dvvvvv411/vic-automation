@@ -256,7 +256,7 @@ export default function AdminTelefonnummern() {
       ) : entries.length === 0 ? (
         <p className="text-muted-foreground">Noch keine Telefonnummern hinzugefügt.</p>
       ) : (
-        <div className="rounded-md border">
+        <div className="premium-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>

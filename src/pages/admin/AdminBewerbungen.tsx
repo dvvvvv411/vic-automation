@@ -826,7 +826,7 @@ export default function AdminBewerbungen() {
             </Button>
           </div>
         ) : (
-          <div className="border border-border rounded-lg overflow-hidden">
+          <div className="premium-card overflow-hidden">
             {/* Bulk accept bar */}
             {(selectedIds.size > 0 || bulkProcessing.inProgress) && (
               <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b border-border">
