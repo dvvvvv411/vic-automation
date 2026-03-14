@@ -281,8 +281,9 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
             </ScrollArea>
           </>
         )}
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 pb-6">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
           <Button disabled={isLoading || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
             {saveMutation.isPending ? "Speichern..." : "Speichern"}

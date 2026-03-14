@@ -151,7 +151,8 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl h-[85vh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+          <div className="h-1.5 rounded-t-2xl bg-gradient-to-r from-primary to-primary/60 shrink-0" />
+          <DialogHeader className="px-6 pt-5 pb-4 border-b border-border/50 shrink-0">
             <DialogTitle className="flex items-center gap-3">
               <span className="text-xl">{fullName || "Mitarbeiter Details"}</span>
               {contract && statusBadge(contract.status, contract.is_suspended)}
