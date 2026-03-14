@@ -326,8 +326,7 @@ const AdminBewertungen = () => {
                               <TooltipTrigger asChild>
                                 <Button
                                   size="icon"
-                                  variant="outline"
-                                  className="text-green-600 border-green-300 hover:bg-green-50"
+                                  className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all"
                                   disabled={isProcessing}
                                   onClick={() => handleApprove(g)}
                                 >
