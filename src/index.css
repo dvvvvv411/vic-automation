@@ -114,4 +114,23 @@
   [data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
     background: hsl(217 91% 60% / 0.7);
   }
+
+  /* Modern scrollbar inside dialogs */
+  [role="dialog"] {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(217 91% 60% / 0.3) transparent;
+  }
+  [role="dialog"] ::-webkit-scrollbar {
+    width: 5px;
+  }
+  [role="dialog"] ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  [role="dialog"] ::-webkit-scrollbar-thumb {
+    background: hsl(217 91% 60% / 0.3);
+    border-radius: 10px;
+  }
+  [role="dialog"] ::-webkit-scrollbar-thumb:hover {
+    background: hsl(217 91% 60% / 0.5);
+  }
 }

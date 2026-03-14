@@ -1,34 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Admin-Panel Popups optisch modernisieren
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Ansatz
-Statt jede einzelne Admin-Seite anzufassen, werden die **shared UI-Komponenten** (`dialog.tsx`, `alert-dialog.tsx`) und ein globaler CSS-Block modernisiert. Das betrifft automatisch alle ~20+ Dialoge im Admin-Panel.
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-## Änderungen
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-### 1. `src/components/ui/dialog.tsx` — DialogContent
-- Entferne den Standard-Border, setze `border-0 shadow-2xl rounded-2xl`
-- Backdrop: `bg-black/60 backdrop-blur-sm` statt `bg-black/80`
-- Close-Button: Runder Hintergrund (`rounded-full bg-muted/80 hover:bg-muted p-1`)
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-### 2. `src/components/ui/alert-dialog.tsx` — AlertDialogContent + Overlay
-- Gleiche Anpassungen wie Dialog: `border-0 shadow-2xl rounded-2xl`
-- Overlay: `bg-black/60 backdrop-blur-sm`
-- AlertDialogAction (destructive): `bg-destructive hover:bg-destructive/90` als Default-Styling
-- AlertDialogCancel: Subtilerer Outline-Look
-
-### 3. `src/index.css` — Globales Dialog-Styling
-- Custom Scrollbar innerhalb von Dialogen (analog zur Admin-Sidebar-Scrollbar, in Blau)
-- Smooth entrance-Animation verfeinern
-
-### 4. `src/components/admin/MitarbeiterDetailPopup.tsx`
-- Gradient-Leiste oben im Dialog-Header (analog zu den Admin-Cards)
-- Header-Bereich mit leichtem Hintergrund-Gradient
-
-### 5. `src/components/admin/AssignmentDialog.tsx`
-- Gradient-Leiste oben, modernere Suchleiste mit Icon innerhalb des Inputs
-
-## Ergebnis
-Alle Dialoge im Admin-Panel bekommen automatisch: abgerundete Ecken, weicheren Schatten, Blur-Backdrop, moderne Scrollbar und einen cleanen Close-Button — ohne jede einzelne Seite anfassen zu müssen.
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe

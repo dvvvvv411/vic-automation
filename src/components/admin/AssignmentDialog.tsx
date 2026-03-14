@@ -215,12 +215,16 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{sourceLabel}</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-md p-0 overflow-hidden">
+        <div className="h-1.5 bg-gradient-to-r from-primary to-primary/60" />
+        <div className="px-6 pt-5">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{sourceLabel}</DialogDescription>
+          </DialogHeader>
+        </div>
 
+        <div className="px-6 pb-2">
         {isLoading ? (
           <div className="py-8 text-center text-muted-foreground">Laden...</div>
         ) : !items?.length ? (
@@ -239,7 +243,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
               />
             </div>
             <ScrollArea className="max-h-[50vh]">
-              <div className="space-y-2 pr-3">
+              <div className="space-y-2 pr-3 mt-2">
                 {filteredItems.length === 0 ? (
                   <div className="py-6 text-center text-sm text-muted-foreground">Keine Ergebnisse für „{search}"</div>
                 ) : (
@@ -278,8 +282,9 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
             </ScrollArea>
           </>
         )}
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 pb-6">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
           <Button disabled={isLoading || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
             {saveMutation.isPending ? "Speichern..." : "Speichern"}
