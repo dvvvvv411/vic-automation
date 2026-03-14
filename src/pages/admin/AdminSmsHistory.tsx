@@ -147,7 +147,7 @@ export default function AdminSmsHistory() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">SMS History</h1>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">SMS History</h2>
         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
           <SelectTrigger className="w-[200px]">
             <SelectValue />

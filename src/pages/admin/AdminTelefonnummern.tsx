@@ -237,7 +237,7 @@ export default function AdminTelefonnummern() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Telefonnummern</h1>
+      <h2 className="text-2xl font-bold tracking-tight text-foreground">Telefonnummern</h2>
 
       <div className="flex gap-2 max-w-2xl">
         <Input

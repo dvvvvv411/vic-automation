@@ -151,7 +151,7 @@ export default function AdminTelegram() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Telegram-Benachrichtigungen</h1>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">Telegram-Benachrichtigungen</h2>
         <p className="text-muted-foreground text-sm mt-1">
           Verwalten Sie Telegram Chat-IDs und legen Sie fest, welche Ereignisse eine Nachricht auslösen.
         </p>
