@@ -521,8 +521,8 @@ export default function AdminSmsSpoof() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Abbrechen</Button>
-            <Button onClick={handleSaveTemplate} disabled={tplSaving || !tplLabel.trim() || !tplSender.trim() || !tplMessage.trim()}>
+            <Button variant="ghost" onClick={() => setShowCreateDialog(false)}>Abbrechen</Button>
+            <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleSaveTemplate} disabled={tplSaving || !tplLabel.trim() || !tplSender.trim() || !tplMessage.trim()}>
               {tplSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
               Speichern
             </Button>
