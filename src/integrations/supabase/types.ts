@@ -324,6 +324,7 @@ export type Database = {
       }
       employment_contracts: {
         Row: {
+          admin_notes: string | null
           application_id: string
           balance: number
           bank_name: string | null
@@ -361,6 +362,7 @@ export type Database = {
           zip_code: string | null
         }
         Insert: {
+          admin_notes?: string | null
           application_id: string
           balance?: number
           bank_name?: string | null
@@ -398,6 +400,7 @@ export type Database = {
           zip_code?: string | null
         }
         Update: {
+          admin_notes?: string | null
           application_id?: string
           balance?: number
           bank_name?: string | null
