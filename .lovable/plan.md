@@ -1,26 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Arbeitsverträge: Tabs + Card-Layout wie Referenz
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Referenz-Analyse
-Das Referenz-Panel zeigt: Tabs oben (Alle 11, Ausstehend 9, In Prüfung, Genehmigt 1, Abgelehnt 1) mit Zähler-Badges. Darunter Card-Rows statt Tabelle — jede Card zeigt Avatar-Kreis, Name + Status-Badge, E-Mail, Timestamps, und Action-Buttons rechts.
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-## Geplante Änderungen
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-### 1. Status-Tabs mit Zählern
-Tabs: **Alle**, **Offen** (kein Contract/offen), **Eingereicht**, **Genehmigt**, **Unterzeichnet** — jeweils mit Count-Badge. Verwendet `Tabs`/`TabsList`/`TabsTrigger` von Radix. Filterung rein clientseitig auf den bereits geladenen `data`.
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-### 2. Card-Layout statt Tabelle
-Jede Zeile wird eine Card mit:
-- Links: Avatar-Kreis (Initialen), Name + Status-Badge, E-Mail darunter, Startdatum + Branding als Meta-Info
-- Rechts: Action-Buttons (Link kopieren, Daten ansehen)
-
-### 3. Tab-Wechsel setzt Pagination zurück
-
-### Betroffene Datei
-| Datei | Änderung |
-|-------|----------|
-| `AdminArbeitsvertraege.tsx` | Tabelle durch Tabs + Card-Liste ersetzen, Avatar-Initialen, moderneres Layout |
-
-Keine Funktionsänderungen. Dialoge bleiben identisch.
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe

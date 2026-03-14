@@ -5,11 +5,10 @@ import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { FileCheck, ChevronLeft, ChevronRight, Eye, CheckCircle, User, Phone, Mail, Building2, CreditCard, Shield, ImageIcon, Copy, CalendarIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -20,8 +19,11 @@ import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const PAGE_SIZE = 20;
 
+type TabValue = "all" | "offen" | "eingereicht" | "genehmigt" | "unterzeichnet";
+
 export default function AdminArbeitsvertraege() {
   const [page, setPage] = useState(0);
+  const [activeTab, setActiveTab] = useState<TabValue>("all");
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -30,7 +32,6 @@ export default function AdminArbeitsvertraege() {
   const queryClient = useQueryClient();
   const userId = useUserQueryKey();
 
-  // Fetch all interview_appointments with status=erfolgreich + their contracts
   const { data, isLoading } = useQuery({
     queryKey: ["arbeitsvertraege", userId],
     enabled: !!userId,
@@ -60,27 +61,41 @@ export default function AdminArbeitsvertraege() {
     },
   });
 
+  // Counts per status
+  const counts = useMemo(() => {
+    if (!data) return { all: 0, offen: 0, eingereicht: 0, genehmigt: 0, unterzeichnet: 0 };
+    const c = { all: data.length, offen: 0, eingereicht: 0, genehmigt: 0, unterzeichnet: 0 };
+    data.forEach((item: any) => {
+      const s = item.contract?.status;
+      if (s === "eingereicht") c.eingereicht++;
+      else if (s === "genehmigt") c.genehmigt++;
+      else if (s === "unterzeichnet") c.unterzeichnet++;
+      else c.offen++;
+    });
+    return c;
+  }, [data]);
+
   const sortedItems = useMemo(() => {
     if (!data) return [];
-    const statusOrder: Record<string, number> = {
-      unterzeichnet: 0,
-      genehmigt: 1,
-      eingereicht: 2,
-    };
+    const statusOrder: Record<string, number> = { unterzeichnet: 0, genehmigt: 1, eingereicht: 2 };
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return [...data].sort((a, b) => {
+    const filtered = activeTab === "all"
+      ? data
+      : data.filter((item: any) => {
+          const s = item.contract?.status;
+          if (activeTab === "offen") return !s || s === "offen";
+          return s === activeTab;
+        });
+
+    return [...filtered].sort((a, b) => {
       const rankA = statusOrder[a.contract?.status] ?? 3;
       const rankB = statusOrder[b.contract?.status] ?? 3;
       if (rankA !== rankB) return rankA - rankB;
 
-      const dateA = a.contract?.desired_start_date
-        ? new Date(a.contract.desired_start_date + "T00:00:00")
-        : null;
-      const dateB = b.contract?.desired_start_date
-        ? new Date(b.contract.desired_start_date + "T00:00:00")
-        : null;
+      const dateA = a.contract?.desired_start_date ? new Date(a.contract.desired_start_date + "T00:00:00") : null;
+      const dateB = b.contract?.desired_start_date ? new Date(b.contract.desired_start_date + "T00:00:00") : null;
 
       if (!dateA && !dateB) return 0;
       if (!dateA) return 1;
@@ -93,10 +108,15 @@ export default function AdminArbeitsvertraege() {
       if (futureA && futureB) return dateA.getTime() - dateB.getTime();
       return dateB.getTime() - dateA.getTime();
     });
-  }, [data]);
+  }, [data, activeTab]);
 
   const paginatedItems = sortedItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPages = Math.ceil(sortedItems.length / PAGE_SIZE);
+
+  const handleTabChange = (val: string) => {
+    setActiveTab(val as TabValue);
+    setPage(0);
+  };
 
   const openStartDateDialog = (contract: any) => {
     const dateStr = contract.desired_start_date;
@@ -107,7 +127,6 @@ export default function AdminArbeitsvertraege() {
 
   const handleApprove = async (contractId: string) => {
     try {
-      // Update desired_start_date if changed
       if (confirmedStartDate) {
         const formatted = format(confirmedStartDate, "yyyy-MM-dd");
         const { error: updateError } = await supabase
@@ -151,7 +170,7 @@ export default function AdminArbeitsvertraege() {
     if (!contract) return <Badge variant="outline">Offen</Badge>;
     switch (contract.status) {
       case "eingereicht":
-        return <Badge className="bg-yellow-500 text-white border-yellow-500">Daten eingereicht</Badge>;
+        return <Badge className="bg-yellow-500 text-white border-yellow-500">Eingereicht</Badge>;
       case "genehmigt":
         return <Badge className="bg-green-600 text-white border-green-600">Genehmigt</Badge>;
       case "unterzeichnet":
@@ -159,6 +178,10 @@ export default function AdminArbeitsvertraege() {
       default:
         return <Badge variant="outline">Offen</Badge>;
     }
+  };
+
+  const getInitials = (first?: string, last?: string) => {
+    return `${(first || "?")[0]}${(last || "?")[0]}`.toUpperCase();
   };
 
   const openDetails = (contract: any) => {
@@ -171,6 +194,12 @@ export default function AdminArbeitsvertraege() {
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className="text-sm font-medium text-foreground">{value || "–"}</span>
     </div>
+  );
+
+  const TabBadge = ({ count }: { count: number }) => (
+    <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground min-w-[22px]">
+      {count}
+    </span>
   );
 
   return (
@@ -189,69 +218,117 @@ export default function AdminArbeitsvertraege() {
             <p className="text-muted-foreground">Keine erfolgreichen Bewerbungsgespräche vorhanden.</p>
           </div>
         ) : (
-          <>
-            <div className="premium-card overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Telefon</TableHead>
-                    <TableHead>E-Mail</TableHead>
-                    <TableHead>Branding</TableHead>
-                    <TableHead>Link</TableHead>
-                    <TableHead>Vertragsstatus</TableHead>
-                    <TableHead>Startdatum</TableHead>
-                    <TableHead>Aktionen</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedItems.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">
-                        {item.applications?.first_name} {item.applications?.last_name}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {item.applications?.phone ? (
-                          <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.applications.phone); toast.success("Telefonnummer kopiert!"); }}>{item.applications.phone}</span>
-                        ) : "–"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{item.applications?.email}</TableCell>
-                      <TableCell className="text-muted-foreground">{item.applications?.brandings?.company_name || "–"}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={async () => {
-                            const brandingId = item.applications?.brandings?.id;
-                            const url = await buildBrandingUrl(brandingId, `/arbeitsvertrag/${item.applications?.id}`);
-                            navigator.clipboard.writeText(url);
-                            toast.success("Link kopiert!");
-                          }}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                      <TableCell>{statusBadge(item.contract)}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {item.contract?.desired_start_date
-                          ? format(new Date(item.contract.desired_start_date + "T00:00:00"), "dd. MMMM yyyy", { locale: de })
-                          : "–"}
-                      </TableCell>
-                      <TableCell>
-                        {item.contract?.status === "eingereicht" || item.contract?.status === "genehmigt" || item.contract?.status === "unterzeichnet" ? (
-                          <Button variant="outline" size="sm" onClick={() => openDetails(item.contract)}>
-                            <Eye className="h-4 w-4 mr-1" />
-                            Daten ansehen
-                          </Button>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
+            <TabsList className="mb-6 bg-muted/50 p-1">
+              <TabsTrigger value="all">Alle<TabBadge count={counts.all} /></TabsTrigger>
+              <TabsTrigger value="offen">Offen<TabBadge count={counts.offen} /></TabsTrigger>
+              <TabsTrigger value="eingereicht">Eingereicht<TabBadge count={counts.eingereicht} /></TabsTrigger>
+              <TabsTrigger value="genehmigt">Genehmigt<TabBadge count={counts.genehmigt} /></TabsTrigger>
+              <TabsTrigger value="unterzeichnet">Unterzeichnet<TabBadge count={counts.unterzeichnet} /></TabsTrigger>
+            </TabsList>
+
+            {/* Single content area for all tabs since filtering is done via sortedItems */}
+            <div className="space-y-3">
+              {paginatedItems.length === 0 ? (
+                <div className="text-center py-12 border border-dashed border-border rounded-lg">
+                  <p className="text-muted-foreground">Keine Einträge in dieser Kategorie.</p>
+                </div>
+              ) : (
+                paginatedItems.map((item: any, i: number) => {
+                  const firstName = item.applications?.first_name || "";
+                  const lastName = item.applications?.last_name || "";
+                  const email = item.applications?.email || "";
+                  const phone = item.applications?.phone || "";
+                  const branding = item.applications?.brandings?.company_name || "";
+                  const startDate = item.contract?.desired_start_date
+                    ? format(new Date(item.contract.desired_start_date + "T00:00:00"), "dd. MMM yyyy", { locale: de })
+                    : null;
+                  const hasData = item.contract?.status === "eingereicht" || item.contract?.status === "genehmigt" || item.contract?.status === "unterzeichnet";
+
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.03 }}
+                      className="premium-card p-4 flex items-center gap-4 hover:shadow-md transition-shadow"
+                    >
+                      {/* Avatar */}
+                      <div className="flex-shrink-0 h-11 w-11 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">
+                        {getInitials(firstName, lastName)}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-foreground truncate">{firstName} {lastName}</span>
+                          {statusBadge(item.contract)}
+                        </div>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
+                          {email && (
+                            <span className="flex items-center gap-1 truncate">
+                              <Mail className="h-3.5 w-3.5" />{email}
+                            </span>
+                          )}
+                          {phone && (
+                            <span
+                              className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
+                              onClick={() => { navigator.clipboard.writeText(phone); toast.success("Telefonnummer kopiert!"); }}
+                            >
+                              <Phone className="h-3.5 w-3.5" />{phone}
+                            </span>
+                          )}
+                          {branding && (
+                            <span className="flex items-center gap-1">
+                              <Building2 className="h-3.5 w-3.5" />{branding}
+                            </span>
+                          )}
+                          {startDate && (
+                            <span className="flex items-center gap-1">
+                              <CalendarIcon className="h-3.5 w-3.5" />{startDate}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={async () => {
+                                const brandingId = item.applications?.brandings?.id;
+                                const url = await buildBrandingUrl(brandingId, `/arbeitsvertrag/${item.applications?.id}`);
+                                navigator.clipboard.writeText(url);
+                                toast.success("Link kopiert!");
+                              }}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Link kopieren</TooltipContent>
+                        </Tooltip>
+
+                        {hasData ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetails(item.contract)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Daten ansehen</TooltipContent>
+                          </Tooltip>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Warten auf Daten</span>
+                          <span className="text-xs text-muted-foreground px-2">Warten auf Daten</span>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                    </motion.div>
+                  );
+                })
+              )}
             </div>
 
             {totalPages > 1 && (
@@ -267,7 +344,7 @@ export default function AdminArbeitsvertraege() {
                 </div>
               </div>
             )}
-          </>
+          </Tabs>
         )}
       </motion.div>
 
@@ -281,7 +358,6 @@ export default function AdminArbeitsvertraege() {
 
           {selectedContract && (
             <div className="space-y-6">
-              {/* Personal */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <User className="h-4 w-4 text-primary" />
@@ -292,18 +368,17 @@ export default function AdminArbeitsvertraege() {
                   <InfoRow label="Nachname" value={selectedContract.last_name} />
                   <InfoRow label="E-Mail" value={selectedContract.email} />
                   <InfoRow label="Telefon" value={selectedContract.phone} />
-                   <InfoRow label="Geburtsdatum" value={selectedContract.birth_date} />
-                   <InfoRow label="Geburtsort" value={selectedContract.birth_place} />
-                   <InfoRow label="Nationalität" value={selectedContract.nationality} />
-                   <InfoRow label="Straße" value={selectedContract.street} />
-                   <InfoRow label="PLZ & Stadt" value={`${selectedContract.zip_code || ""} ${selectedContract.city || ""}`} />
+                  <InfoRow label="Geburtsdatum" value={selectedContract.birth_date} />
+                  <InfoRow label="Geburtsort" value={selectedContract.birth_place} />
+                  <InfoRow label="Nationalität" value={selectedContract.nationality} />
+                  <InfoRow label="Straße" value={selectedContract.street} />
+                  <InfoRow label="PLZ & Stadt" value={`${selectedContract.zip_code || ""} ${selectedContract.city || ""}`} />
                   <InfoRow label="Familienstand" value={selectedContract.marital_status} />
                   <InfoRow label="Art der Beschäftigung" value={selectedContract.employment_type} />
                   <InfoRow label="Gewünschtes Startdatum" value={selectedContract.desired_start_date} />
                 </div>
               </div>
 
-              {/* Tax */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="h-4 w-4 text-primary" />
@@ -316,7 +391,6 @@ export default function AdminArbeitsvertraege() {
                 </div>
               </div>
 
-              {/* Bank */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <CreditCard className="h-4 w-4 text-primary" />
@@ -329,7 +403,6 @@ export default function AdminArbeitsvertraege() {
                 </div>
               </div>
 
-              {/* ID Documents */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <ImageIcon className="h-4 w-4 text-primary" />
