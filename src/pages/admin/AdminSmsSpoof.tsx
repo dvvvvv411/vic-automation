@@ -652,8 +652,8 @@ export default function AdminSmsSpoof() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>Abbrechen</Button>
-            <Button onClick={handleConfirmSend} disabled={confirmSending}>
+            <Button variant="ghost" onClick={() => setShowConfirmDialog(false)}>Abbrechen</Button>
+            <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleConfirmSend} disabled={confirmSending}>
               {confirmSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
               Senden
             </Button>

@@ -492,9 +492,9 @@ export default function AdminArbeitsvertraege() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setStartDateDialogOpen(false)}>Abbrechen</Button>
+            <Button variant="ghost" onClick={() => setStartDateDialogOpen(false)}>Abbrechen</Button>
             <Button
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all"
               disabled={!confirmedStartDate}
               onClick={() => selectedContract && handleApprove(selectedContract.id)}
             >

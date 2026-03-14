@@ -342,8 +342,12 @@ export default function AdminAuftraege() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Abbrechen</Button>
-            <Button disabled={!canSave || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+            <Button variant="ghost" onClick={closeDialog}>Abbrechen</Button>
+            <Button 
+              className="shadow-sm hover:shadow-md transition-all"
+              disabled={!canSave || saveMutation.isPending} 
+              onClick={() => saveMutation.mutate()}
+            >
               {saveMutation.isPending ? "Speichern..." : "Speichern"}
             </Button>
           </DialogFooter>

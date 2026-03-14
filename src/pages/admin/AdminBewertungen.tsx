@@ -339,8 +339,8 @@ const AdminBewertungen = () => {
                               <TooltipTrigger asChild>
                                 <Button
                                   size="icon"
-                                  variant="outline"
-                                  className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                                  variant="destructive"
+                                  className="shadow-sm hover:shadow-md transition-all"
                                   disabled={isProcessing}
                                   onClick={() => handleReject(g)}
                                 >

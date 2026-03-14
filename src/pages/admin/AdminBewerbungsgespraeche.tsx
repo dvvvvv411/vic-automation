@@ -482,8 +482,8 @@ export default function AdminBewerbungsgespraeche() {
             <p className="text-xs text-muted-foreground">SMS + E-Mail werden gesendet.</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setReminderPreview(null)}>Abbrechen</Button>
-            <Button onClick={handleConfirmReminder} disabled={sendingReminder === reminderPreview?.item?.id}>
+            <Button variant="ghost" onClick={() => setReminderPreview(null)}>Abbrechen</Button>
+            <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleConfirmReminder} disabled={sendingReminder === reminderPreview?.item?.id}>
               Senden
             </Button>
           </DialogFooter>

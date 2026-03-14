@@ -285,8 +285,12 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
         </div>
 
         <DialogFooter className="px-6 pb-6">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
-          <Button disabled={isLoading || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Abbrechen</Button>
+          <Button 
+            className="shadow-sm hover:shadow-md transition-all"
+            disabled={isLoading || saveMutation.isPending} 
+            onClick={() => saveMutation.mutate()}
+          >
             {saveMutation.isPending ? "Speichern..." : "Speichern"}
           </Button>
         </DialogFooter>
