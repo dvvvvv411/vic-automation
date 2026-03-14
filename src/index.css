@@ -95,4 +95,23 @@
     letter-spacing: 0.05em;
     color: hsl(220 10% 46%);
   }
+
+  /* Modern blue scrollbar for admin sidebar */
+  [data-sidebar="content"] {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(217 91% 60% / 0.4) transparent;
+  }
+  [data-sidebar="content"]::-webkit-scrollbar {
+    width: 6px;
+  }
+  [data-sidebar="content"]::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  [data-sidebar="content"]::-webkit-scrollbar-thumb {
+    background: hsl(217 91% 60% / 0.4);
+    border-radius: 3px;
+  }
+  [data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
+    background: hsl(217 91% 60% / 0.7);
+  }
 }
