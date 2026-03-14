@@ -254,7 +254,7 @@ function AdminNotesCard({ notes, onAdd }: { notes: NoteEntry[]; onAdd: (text: st
           <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Admin-Notizen</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 space-y-3">
+      <CardContent className="pt-4 space-y-3">
         <div className="flex gap-2">
           <Textarea
             className="min-h-[70px] text-sm flex-1"
