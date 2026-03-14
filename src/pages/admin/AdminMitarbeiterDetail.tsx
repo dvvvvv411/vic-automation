@@ -147,16 +147,9 @@ function EditableDualSection({
   return (
     <Card className="rounded-2xl shadow-md border-border/60 overflow-hidden">
       <CardHeader className="pb-3 flex flex-row items-center justify-between bg-gradient-to-r from-muted/30 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            {leftIcon}
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{leftTitle}</span>
-          </div>
-          <span className="text-muted-foreground/40">|</span>
-          <div className="flex items-center gap-2">
-            {rightIcon}
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{rightTitle}</span>
-          </div>
+        <div className="flex items-center gap-2">
+          {leftIcon}
+          <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{leftTitle}</span>
         </div>
         {!editing ? (
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={startEdit}>
