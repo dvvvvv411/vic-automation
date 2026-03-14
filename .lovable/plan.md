@@ -1,16 +1,51 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# Optisches Upgrade des Admin-Panels
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+Basierend auf dem Referenz-Screenshot (MagicVics Panel) werden folgende visuelle Verbesserungen umgesetzt. Keine Funktionen oder Workflows werden geändert.
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+## Referenz-Analyse
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+Das Referenz-Panel hat: dunkle Sidebar (dunkelblau/schwarz), farbige Top-Borders an Stat-Cards (blau, gruen, lila, rot, gelb), Suchleiste im Header, Avatar + Notification-Icons im Header, farbige Badge-Zähler in der Sidebar, großzügigere Abstände, premium Schriftgewichte.
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+## Geplante Änderungen
+
+### 1. Dunkle Sidebar (`AdminSidebar.tsx` + `index.css`)
+- Sidebar bekommt dunklen Hintergrund (slate-900/950)
+- Nav-Text wird hell (slate-300), aktiver State wird ein farbiger Pill (primary-Hintergrund, weißer Text)
+- Gruppenüberschriften in gedämpftem Weiß (uppercase, smaller)
+- Badge-Zähler in farbigen Kreisen (rot/orange) statt default
+- Footer-Bereich mit Avatar-Kreis + Email
+- CSS-Variablen für `--sidebar-background`, `--sidebar-foreground` etc. anpassen
+
+### 2. Premium Header (`AdminLayout.tsx`)
+- Höherer Header (h-16 statt h-14)
+- Suchleiste in der Mitte (visuell, Platzhalter "Suchen...")
+- Rechte Seite: Notification-Bell-Icon, Settings-Icon, Avatar-Kreis mit Initiale
+- Subtiler Bottom-Shadow
+
+### 3. Dashboard Stat-Cards (`AdminDashboard.tsx`)
+- Farbiger Top-Border (4px) pro Card (blau, grün, orange, violett, rosa) — wie im Referenz-Panel
+- Größere Icon-Container mit stärkeren Farben
+- Subtilere Hover-Animation (scale + shadow)
+
+### 4. Tabellen-Styling (globale Verbesserung in `index.css`)
+- Abgerundete Tabellencontainer
+- Alternating Row Colors (zebra-striping sehr dezent)
+- Hover-Highlight auf Rows
+- Badges mit stärkeren Farben und abgerundeten Pills
+
+### 5. Allgemeine Polish (`index.css`)
+- Leicht getönter Seitenhintergrund (slate-50 statt reines Weiß)
+- Stärkere Card-Schatten (shadow-md statt shadow-sm)
+- Smoothere Transitions global
+
+### Betroffene Dateien
+
+| Datei | Änderung |
+|-------|----------|
+| `src/index.css` | Sidebar CSS-Variablen auf dunkle Farben, Tabellen-Styling, Background-Tint |
+| `src/components/admin/AdminSidebar.tsx` | Dunkle Klassen, farbige aktive States, farbige Badges, Avatar im Footer |
+| `src/components/admin/AdminLayout.tsx` | Premium Header mit Suchleiste, Icons, Avatar |
+| `src/pages/admin/AdminDashboard.tsx` | Farbige Top-Border auf Stat-Cards, größere Icons, bessere Hover |
+
