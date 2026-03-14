@@ -1,38 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Bewerbungsgespräch-Seite modernisieren
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-## Aktuelle Situation
-Die Seite ist funktional sauber, aber optisch schlicht — flache weiße Cards, keine Farbakzente, keine Animationen. Im Vergleich zum Admin-Panel fehlen Gradient-Header, farbige Akzente, motion-Animationen und der Premium-Look.
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-## Geplante Änderungen
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-### 1. Booking-Seite aufwerten
-- **Card mit Gradient-Header**: Oben ein farbiger Gradient-Streifen (basierend auf `brandColor`) mit Titel + Beschreibung in Weiß
-- **Applicant-Pills modernisieren**: Leicht farbig getönte Badges statt grauem `bg-slate-100`, mit subtiler Border
-- **Calendar-Bereich**: Leichte Hintergrundfarbe, abgerundete Container
-- **Time-Slot-Buttons**: Hover-Effekte verbessern, ausgewählter Slot mit Schatten + Scale-Effekt
-- **Book-Button**: Gradient statt flat color, `hover:scale` + `shadow-lg`
-- **Motion-Animationen**: `framer-motion` für Card-Entrance, Slot-Liste und Button-Erscheinen
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-### 2. Bestätigungs-Ansicht aufwerten
-- Größerer Success-Icon mit Puls-Animation
-- Termin-Info-Box mit farbigem Left-Border (brandColor)
-- Telefon-Hinweis mit Icon-Badge statt flachem Layout
-- Confetti-artige Checkmark-Animation beim Laden
-
-### 3. Error/Loading States
-- Loading: Skeleton-Shimmer statt einfachem Text
-- Error: Farbiger Alert mit Icon-Badge
-
-### 4. Allgemeines Styling
-- Background: `from-slate-50 via-blue-50/20 to-indigo-50/30` (reicherer Gradient)
-- Card: `shadow-xl` statt `shadow-md`, `border-0` für cleaner Look
-- Logo: Größer (h-12) mit subtle Shadow
-- Footer: Dezenter mit Separator-Linie
-
-### Betroffene Datei
-| Datei | Änderung |
-|-------|----------|
-| `Bewerbungsgespraech.tsx` | Komplettes visuelles Upgrade — Styling, Animationen, Gradient-Header |
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
