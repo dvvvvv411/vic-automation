@@ -147,16 +147,9 @@ function EditableDualSection({
   return (
     <Card className="rounded-2xl shadow-md border-border/60 overflow-hidden">
       <CardHeader className="pb-3 flex flex-row items-center justify-between bg-gradient-to-r from-muted/30 to-transparent">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            {leftIcon}
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{leftTitle}</span>
-          </div>
-          <span className="text-muted-foreground/40">|</span>
-          <div className="flex items-center gap-2">
-            {rightIcon}
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{rightTitle}</span>
-          </div>
+        <div className="flex items-center gap-2">
+          {leftIcon}
+          <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{leftTitle}</span>
         </div>
         {!editing ? (
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={startEdit}>
@@ -200,7 +193,7 @@ function CredentialsCard({ email, tempPassword }: { email?: string | null; tempP
           <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Zugangsdaten</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 pt-0">
+      <CardContent className="space-y-3 pt-4">
         <div>
           <span className="text-xs uppercase tracking-wider text-muted-foreground">E-Mail</span>
           <div className="flex items-center gap-2 mt-1">
@@ -261,7 +254,7 @@ function AdminNotesCard({ notes, onAdd }: { notes: NoteEntry[]; onAdd: (text: st
           <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Admin-Notizen</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="pt-0 space-y-3">
+      <CardContent className="pt-4 space-y-3">
         <div className="flex gap-2">
           <Textarea
             className="min-h-[70px] text-sm flex-1"
@@ -755,13 +748,13 @@ export default function AdminMitarbeiterDetail() {
                     { key: "birth_date", label: "Geburtsdatum", format: formatDate },
                     { key: "birth_place", label: "Geburtsort" },
                     { key: "nationality", label: "Nationalität" },
+                  ]}
+                  rightTitle=""
+                  rightIcon={null}
+                  rightFields={[
                     { key: "marital_status", label: "Familienstand" },
                     { key: "employment_type", label: "Beschäftigungsart" },
                     { key: "desired_start_date", label: "Startdatum", format: formatDate },
-                  ]}
-                  rightTitle="Adresse"
-                  rightIcon={<IdCard className="h-4 w-4 text-blue-500" />}
-                  rightFields={[
                     { key: "street", label: "Straße" },
                     { key: "zip_code", label: "PLZ" },
                     { key: "city", label: "Stadt" },
