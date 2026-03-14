@@ -1,14 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
 import { toast } from "sonner";
-import { Shield, CheckCircle, Building2, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Shield, CheckCircle, Building2 } from "lucide-react";
 import { hexToHSL } from "@/lib/hexToHSL";
 
 const trustPoints = [
@@ -24,7 +26,6 @@ const Auth = () => {
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
   const [brandingColor, setBrandingColor] = useState<string | null>(null);
@@ -119,7 +120,7 @@ const Auth = () => {
             <img
               src={brandingLogoUrl}
               alt="Logo"
-              className="max-h-20 w-auto object-contain"
+              className="max-h-16 w-auto object-contain"
             />
           ) : (
             <h1 className="text-4xl font-bold tracking-tight mb-2">Mitarbeiterportal</h1>
@@ -135,12 +136,12 @@ const Auth = () => {
                 initial={{ opacity: 0, y: 15, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.4, delay: 0.3 + i * 0.15 }}
-                className="flex items-center gap-4 bg-white/10 border border-white/20 rounded-2xl p-5 hover:bg-white/15 transition-all duration-300 cursor-default"
+                className="flex items-center gap-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-5 hover:bg-white/15 hover:-translate-y-1 transition-all duration-300 cursor-default"
               >
                 <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-white/25 to-white/5">
                   <point.icon className="w-6 h-6" />
                 </div>
-                <div className="text-left">
+                <div>
                   <p className="font-semibold text-sm">{point.title}</p>
                   <p className="text-sm text-white/60">{point.desc}</p>
                 </div>
@@ -151,16 +152,15 @@ const Auth = () => {
       </div>
 
       {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-background to-muted/30 px-6">
+      <div className="flex-1 flex items-center justify-center bg-background px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          {/* Mobile logo + accent line */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="h-1 w-16 mx-auto rounded-full bg-primary mb-6" />
+          {/* Mobile logo */}
+          <div className="lg:hidden text-center mb-10">
             {brandingLogoUrl ? (
               <img src={brandingLogoUrl} alt="Logo" className="max-h-12 w-auto object-contain mx-auto" />
             ) : (
@@ -169,61 +169,40 @@ const Auth = () => {
             <p className="text-muted-foreground text-sm mt-1">Mitarbeiterportal</p>
           </div>
 
-          {/* Card wrapper */}
-          <div className="bg-card border border-border rounded-2xl shadow-lg p-8 sm:p-10">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold tracking-tight text-foreground">Willkommen</h2>
-              <p className="text-muted-foreground mt-2">Melden Sie sich an, um fortzufahren.</p>
-            </div>
-
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="login-email">E-Mail</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="ihre@email.de"
-                    className="h-12 rounded-xl pl-10"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="login-password">Passwort</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="login-password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    className="h-12 rounded-xl pl-10 pr-12"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              <Button
-                type="submit"
-                className="w-full h-12 rounded-xl text-base font-semibold shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-200"
-                disabled={loading}
-              >
-                {loading ? "Wird angemeldet..." : "Anmelden"}
-              </Button>
-            </form>
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">Willkommen</h2>
+            <p className="text-muted-foreground mt-1">Melden Sie sich an.</p>
           </div>
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="login-email">E-Mail</Label>
+              <Input
+                id="login-email"
+                type="email"
+                placeholder="ihre@email.de"
+                className="h-12 rounded-lg"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="login-password">Passwort</Label>
+              <Input
+                id="login-password"
+                type="password"
+                placeholder="••••••••"
+                className="h-12 rounded-lg"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full h-12 rounded-lg text-base font-semibold" disabled={loading}>
+              {loading ? "Wird angemeldet..." : "Anmelden"}
+            </Button>
+          </form>
         </motion.div>
       </div>
     </div>
