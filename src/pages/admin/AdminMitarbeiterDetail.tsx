@@ -748,13 +748,13 @@ export default function AdminMitarbeiterDetail() {
                     { key: "birth_date", label: "Geburtsdatum", format: formatDate },
                     { key: "birth_place", label: "Geburtsort" },
                     { key: "nationality", label: "Nationalität" },
+                  ]}
+                  rightTitle=""
+                  rightIcon={null}
+                  rightFields={[
                     { key: "marital_status", label: "Familienstand" },
                     { key: "employment_type", label: "Beschäftigungsart" },
                     { key: "desired_start_date", label: "Startdatum", format: formatDate },
-                  ]}
-                  rightTitle="Adresse"
-                  rightIcon={<IdCard className="h-4 w-4 text-blue-500" />}
-                  rightFields={[
                     { key: "street", label: "Straße" },
                     { key: "zip_code", label: "PLZ" },
                     { key: "city", label: "Stadt" },
