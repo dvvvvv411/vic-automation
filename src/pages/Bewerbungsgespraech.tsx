@@ -499,7 +499,7 @@ export default function Bewerbungsgespraech() {
                 </div>
               ) : (
                 <div
-                  className="grid grid-cols-2 gap-1.5 max-h-[340px] overflow-y-auto pr-1"
+                  className="brand-scrollbar grid grid-cols-2 gap-1.5 max-h-[340px] overflow-y-auto pr-1"
                   style={{
                     scrollbarWidth: 'thin',
                     scrollbarColor: `${brandColor}66 transparent`,
