@@ -268,9 +268,13 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
                                      ) : a.review_unlocked ? (
                                        <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">Freigeschaltet</Badge>
                                      ) : (
-                                       <Button variant="outline" size="sm" onClick={() => toggleReviewUnlocked(a.id, false)}>
-                                         Freischalten
-                                       </Button>
+                                        <Button 
+                                          size="sm" 
+                                          className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all"
+                                          onClick={() => toggleReviewUnlocked(a.id, false)}
+                                        >
+                                          Freischalten
+                                        </Button>
                                      )}
                                    </TableCell>
                                   <TableCell className="text-muted-foreground">

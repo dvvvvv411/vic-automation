@@ -400,7 +400,7 @@ export default function AdminBrandings() {
               </div>
             </div>
 
-            <Button onClick={handleSubmit} disabled={isPending} className="w-full mt-2">
+            <Button onClick={handleSubmit} disabled={isPending} className="w-full mt-2 shadow-sm hover:shadow-md transition-all">
               {isPending
                 ? (isEditing ? "Wird gespeichert..." : "Wird erstellt...")
                 : (isEditing ? "Branding speichern" : "Branding erstellen")}

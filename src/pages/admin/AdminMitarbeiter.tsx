@@ -325,7 +325,12 @@ export default function AdminMitarbeiter() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={handleToggleSuspend}>
+            <AlertDialogAction 
+              onClick={handleToggleSuspend}
+              className={suspendTarget?.isSuspended 
+                ? "bg-green-600 hover:bg-green-700 shadow-sm hover:shadow-md transition-all" 
+                : "bg-destructive hover:bg-destructive/90 shadow-sm hover:shadow-md transition-all"}
+            >
               {suspendTarget?.isSuspended ? "Entsperren" : "Sperren"}
             </AlertDialogAction>
           </AlertDialogFooter>

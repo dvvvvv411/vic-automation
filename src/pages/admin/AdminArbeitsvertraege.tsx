@@ -428,7 +428,7 @@ export default function AdminArbeitsvertraege() {
 
           <DialogFooter>
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => {
                 const c = selectedContract;
                 if (!c) return;
@@ -442,9 +442,9 @@ export default function AdminArbeitsvertraege() {
             >
               <Copy className="h-4 w-4 mr-1" /> Daten kopieren
             </Button>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Schließen</Button>
+            <Button variant="ghost" onClick={() => setDialogOpen(false)}>Schließen</Button>
             {selectedContract?.status === "eingereicht" && (
-              <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => openStartDateDialog(selectedContract)}>
+              <Button className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all" onClick={() => openStartDateDialog(selectedContract)}>
                 <CheckCircle className="h-4 w-4 mr-1" /> Genehmigen
               </Button>
             )}
@@ -492,9 +492,9 @@ export default function AdminArbeitsvertraege() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setStartDateDialogOpen(false)}>Abbrechen</Button>
+            <Button variant="ghost" onClick={() => setStartDateDialogOpen(false)}>Abbrechen</Button>
             <Button
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all"
               disabled={!confirmedStartDate}
               onClick={() => selectedContract && handleApprove(selectedContract.id)}
             >

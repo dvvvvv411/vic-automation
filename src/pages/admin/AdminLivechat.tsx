@@ -607,7 +607,7 @@ export default function AdminLivechat() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOrderDialogOpen(false)}>Abbrechen</Button>
+            <Button variant="ghost" onClick={() => setOrderDialogOpen(false)}>Abbrechen</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -637,8 +637,8 @@ export default function AdminLivechat() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNotifySmsDialogOpen(false)}>Abbrechen</Button>
-            <Button onClick={handleSendNotifySms} disabled={notifySmsSending || !notifySmsText.trim()}>
+            <Button variant="ghost" onClick={() => setNotifySmsDialogOpen(false)}>Abbrechen</Button>
+            <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleSendNotifySms} disabled={notifySmsSending || !notifySmsText.trim()}>
               {notifySmsSending ? "Wird gesendet..." : "SMS senden"}
             </Button>
           </DialogFooter>

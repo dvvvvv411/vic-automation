@@ -159,7 +159,7 @@ export default function AdminKunden() {
                   <Input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Passwort" type="text" />
                 </div>
                 <Button
-                  className="w-full"
+                  className="w-full shadow-sm hover:shadow-md transition-all"
                   onClick={() => createMutation.mutate()}
                   disabled={!email || !password || createMutation.isPending}
                 >

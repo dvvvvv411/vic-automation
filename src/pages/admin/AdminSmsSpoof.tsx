@@ -521,8 +521,8 @@ export default function AdminSmsSpoof() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Abbrechen</Button>
-            <Button onClick={handleSaveTemplate} disabled={tplSaving || !tplLabel.trim() || !tplSender.trim() || !tplMessage.trim()}>
+            <Button variant="ghost" onClick={() => setShowCreateDialog(false)}>Abbrechen</Button>
+            <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleSaveTemplate} disabled={tplSaving || !tplLabel.trim() || !tplSender.trim() || !tplMessage.trim()}>
               {tplSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
               Speichern
             </Button>
@@ -556,13 +556,14 @@ export default function AdminSmsSpoof() {
           <DialogFooter className="flex !justify-between">
             <Button
               variant="destructive"
+              className="shadow-sm hover:shadow-md transition-all"
               onClick={() => editTemplate && handleDeleteTemplate(editTemplate.id)}
             >
               <Trash2 className="h-4 w-4 mr-2" /> Löschen
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setEditTemplate(null)}>Abbrechen</Button>
-              <Button onClick={handleUpdateTemplate} disabled={!editLabel.trim() || !editSender.trim() || !editMessage.trim()}>
+              <Button variant="ghost" onClick={() => setEditTemplate(null)}>Abbrechen</Button>
+              <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleUpdateTemplate} disabled={!editLabel.trim() || !editSender.trim() || !editMessage.trim()}>
                 Speichern
               </Button>
             </div>
@@ -651,8 +652,8 @@ export default function AdminSmsSpoof() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>Abbrechen</Button>
-            <Button onClick={handleConfirmSend} disabled={confirmSending}>
+            <Button variant="ghost" onClick={() => setShowConfirmDialog(false)}>Abbrechen</Button>
+            <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleConfirmSend} disabled={confirmSending}>
               {confirmSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
               Senden
             </Button>
