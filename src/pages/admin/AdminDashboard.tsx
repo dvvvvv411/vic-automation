@@ -13,11 +13,18 @@ import { useUserQueryKey } from "@/hooks/useUserQueryKey";
 
 const today = () => format(new Date(), "yyyy-MM-dd");
 
+const STAT_BORDERS = [
+  "border-t-[hsl(var(--stat-blue))]",
+  "border-t-[hsl(var(--stat-green))]",
+  "border-t-[hsl(var(--stat-orange))]",
+  "border-t-[hsl(var(--stat-violet))]",
+  "border-t-[hsl(var(--stat-rose))]",
+];
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const userId = useUserQueryKey();
 
-  // --- Stat queries ---
   const { data: neuCount, isLoading: l1 } = useQuery({
     queryKey: ["dash-bewerbungen-neu", userId],
     queryFn: async () => {
@@ -68,7 +75,6 @@ export default function AdminDashboard() {
     refetchInterval: 10000,
   });
 
-  // --- Detail list queries ---
   const { data: recentApps } = useQuery({
     queryKey: ["dash-recent-apps", userId],
     queryFn: async () => {
@@ -110,28 +116,28 @@ export default function AdminDashboard() {
   });
 
   const stats = [
-    { label: "Neue Bewerbungen", value: neuCount, loading: l1, icon: FileText, link: "/admin/bewerbungen", accent: "text-blue-600 bg-blue-100" },
-    { label: "Gespräche heute", value: interviewTodayCount, loading: l2, icon: Calendar, link: "/admin/bewerbungsgespraeche", accent: "text-emerald-600 bg-emerald-100" },
-    { label: "Offene Verträge", value: contractCount, loading: l3, icon: FileCheck, link: "/admin/arbeitsvertraege", accent: "text-orange-600 bg-orange-100" },
-    { label: "Termine heute", value: appointmentTodayCount, loading: l4, icon: CalendarClock, link: "/admin/auftragstermine", accent: "text-violet-600 bg-violet-100" },
-    { label: "Ungelesene Chats", value: unreadChatCount, loading: l5, icon: MessageCircle, link: "/admin/livechat", accent: "text-rose-600 bg-rose-100" },
+    { label: "Neue Bewerbungen", value: neuCount, loading: l1, icon: FileText, link: "/admin/bewerbungen", accent: "text-blue-600 bg-blue-50" },
+    { label: "Gespräche heute", value: interviewTodayCount, loading: l2, icon: Calendar, link: "/admin/bewerbungsgespraeche", accent: "text-emerald-600 bg-emerald-50" },
+    { label: "Offene Verträge", value: contractCount, loading: l3, icon: FileCheck, link: "/admin/arbeitsvertraege", accent: "text-orange-600 bg-orange-50" },
+    { label: "Termine heute", value: appointmentTodayCount, loading: l4, icon: CalendarClock, link: "/admin/auftragstermine", accent: "text-violet-600 bg-violet-50" },
+    { label: "Ungelesene Chats", value: unreadChatCount, loading: l5, icon: MessageCircle, link: "/admin/livechat", accent: "text-rose-600 bg-rose-50" },
   ];
 
   const statusConfig: Record<string, { label: string; className: string }> = {
-    neu: { label: "Neu", className: "border-blue-300 bg-blue-50 text-blue-700" },
-    eingeladen: { label: "Eingeladen", className: "border-amber-300 bg-amber-50 text-amber-700" },
-    bewerbungsgespraech: { label: "Bewerbungsgespräch", className: "border-yellow-300 bg-yellow-50 text-yellow-700" },
-    termin_gebucht: { label: "Termin gebucht", className: "border-emerald-300 bg-emerald-50 text-emerald-700" },
-    erfolgreich: { label: "Erfolgreich", className: "border-green-300 bg-green-50 text-green-700" },
-    abgelehnt: { label: "Abgelehnt", className: "border-red-300 bg-red-50 text-red-700" },
-    ausstehend: { label: "Ausstehend", className: "border-amber-300 bg-amber-50 text-amber-700" },
+    neu: { label: "Neu", className: "border-blue-200 bg-blue-50 text-blue-700" },
+    eingeladen: { label: "Eingeladen", className: "border-amber-200 bg-amber-50 text-amber-700" },
+    bewerbungsgespraech: { label: "Bewerbungsgespräch", className: "border-yellow-200 bg-yellow-50 text-yellow-700" },
+    termin_gebucht: { label: "Termin gebucht", className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+    erfolgreich: { label: "Erfolgreich", className: "border-green-200 bg-green-50 text-green-700" },
+    abgelehnt: { label: "Abgelehnt", className: "border-red-200 bg-red-50 text-red-700" },
+    ausstehend: { label: "Ausstehend", className: "border-amber-200 bg-amber-50 text-amber-700" },
   };
 
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <h2 className="text-3xl font-bold tracking-tight text-foreground mb-1">Willkommen zurück</h2>
-        <p className="text-muted-foreground mb-8">Übersicht aller wichtigen Aktivitäten.</p>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground mb-0.5">Willkommen zurück</h2>
+        <p className="text-muted-foreground text-sm mb-8">Übersicht aller wichtigen Aktivitäten.</p>
       </motion.div>
 
       {/* Stat Cards */}
@@ -139,20 +145,20 @@ export default function AdminDashboard() {
         {stats.map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.07 }}>
             <Card
-              className="cursor-pointer shadow-sm hover:shadow-md transition-shadow"
+              className={`cursor-pointer border-t-4 ${STAT_BORDERS[i]} hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}
               onClick={() => navigate(s.link)}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
-                <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${s.accent}`}>
-                  <s.icon className="h-4 w-4" />
+                <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{s.label}</CardTitle>
+                <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${s.accent}`}>
+                  <s.icon className="h-5 w-5" />
                 </div>
               </CardHeader>
               <CardContent>
                 {s.loading ? (
-                  <Skeleton className="h-8 w-12" />
+                  <Skeleton className="h-9 w-14" />
                 ) : (
-                  <div className="text-3xl font-bold text-foreground">{s.value}</div>
+                  <div className="text-3xl font-extrabold text-foreground">{s.value}</div>
                 )}
               </CardContent>
             </Card>
@@ -164,12 +170,10 @@ export default function AdminDashboard() {
 
       {/* Detail Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column */}
         <div className="space-y-6">
-          {/* Recent Applications */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Neueste Bewerbungen</CardTitle>
+              <CardTitle className="text-sm font-semibold">Neueste Bewerbungen</CardTitle>
             </CardHeader>
             <CardContent>
               {!recentApps?.length ? (
@@ -180,7 +184,7 @@ export default function AdminDashboard() {
                     <div key={a.id} className="flex items-center justify-between text-sm">
                       <span className="font-medium text-foreground">{a.first_name} {a.last_name}</span>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={`text-xs ${statusConfig[a.status]?.className ?? ""}`}>{statusConfig[a.status]?.label ?? a.status}</Badge>
+                        <Badge variant="outline" className={`text-[10px] font-semibold ${statusConfig[a.status]?.className ?? ""}`}>{statusConfig[a.status]?.label ?? a.status}</Badge>
                         <span className="text-muted-foreground text-xs">{format(new Date(a.created_at), "dd.MM.yy", { locale: de })}</span>
                       </div>
                     </div>
@@ -190,10 +194,9 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Today's Interviews */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Heutige Gespräche</CardTitle>
+              <CardTitle className="text-sm font-semibold">Heutige Gespräche</CardTitle>
             </CardHeader>
             <CardContent>
               {!todayInterviews?.length ? (
@@ -206,7 +209,7 @@ export default function AdminDashboard() {
                         {iv.applications?.first_name} {iv.applications?.last_name}
                       </span>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={`text-xs ${statusConfig[iv.status]?.className ?? ""}`}>{statusConfig[iv.status]?.label ?? iv.status}</Badge>
+                        <Badge variant="outline" className={`text-[10px] font-semibold ${statusConfig[iv.status]?.className ?? ""}`}>{statusConfig[iv.status]?.label ?? iv.status}</Badge>
                         <span className="text-muted-foreground text-xs">{iv.appointment_time?.slice(0, 5)} Uhr</span>
                       </div>
                     </div>
@@ -217,12 +220,10 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* Right Column */}
         <div className="space-y-6">
-          {/* Submitted Contracts */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Eingereichte Verträge</CardTitle>
+              <CardTitle className="text-sm font-semibold">Eingereichte Verträge</CardTitle>
             </CardHeader>
             <CardContent>
               {!submittedContracts?.length ? (
@@ -242,10 +243,9 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Today's Order Appointments */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Heutige Auftragstermine</CardTitle>
+              <CardTitle className="text-sm font-semibold">Heutige Auftragstermine</CardTitle>
             </CardHeader>
             <CardContent>
               {!todayOrderAppts?.length ? (
