@@ -392,8 +392,7 @@ const AdminBewertungen = () => {
                   <TooltipTrigger asChild>
                     <Button
                       size="icon"
-                      variant="outline"
-                      className="text-green-600 border-green-300 hover:bg-green-50"
+                      className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all"
                       disabled={!!processing}
                       onClick={() => selected && handleApprove(selected)}
                     >
@@ -406,8 +405,8 @@ const AdminBewertungen = () => {
                   <TooltipTrigger asChild>
                     <Button
                       size="icon"
-                      variant="outline"
-                      className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                      variant="destructive"
+                      className="shadow-sm hover:shadow-md transition-all"
                       disabled={!!processing}
                       onClick={() => selected && handleReject(selected)}
                     >
