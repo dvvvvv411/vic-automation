@@ -215,11 +215,14 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{sourceLabel}</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-md p-0 overflow-hidden">
+        <div className="h-1.5 bg-gradient-to-r from-primary to-primary/60" />
+        <div className="px-6 pt-5">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{sourceLabel}</DialogDescription>
+          </DialogHeader>
+        </div>
 
         {isLoading ? (
           <div className="py-8 text-center text-muted-foreground">Laden...</div>
