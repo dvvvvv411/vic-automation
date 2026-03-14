@@ -193,7 +193,7 @@ function CredentialsCard({ email, tempPassword }: { email?: string | null; tempP
           <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Zugangsdaten</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 pt-0">
+      <CardContent className="space-y-3 pt-4">
         <div>
           <span className="text-xs uppercase tracking-wider text-muted-foreground">E-Mail</span>
           <div className="flex items-center gap-2 mt-1">
