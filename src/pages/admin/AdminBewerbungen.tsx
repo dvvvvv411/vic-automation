@@ -898,16 +898,6 @@ export default function AdminBewerbungen() {
                         ) : "–"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {a.zip_code || a.city ? `${a.zip_code || ""} ${a.city || ""}`.trim() : "–"}
-                      </TableCell>
-                      <TableCell>
-                        {a.employment_type ? (
-                          <Badge variant="secondary">{employmentLabels[a.employment_type] || a.employment_type}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">–</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
                         {a.brandings?.company_name || "–"}
                       </TableCell>
                       <TableCell>
