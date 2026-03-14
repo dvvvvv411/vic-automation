@@ -1,16 +1,29 @@
 
-# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
+# Auth-Seite (/auth) optisch aufbessern
 
-## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
+## Aktueller Stand
+Split-Screen mit Branding-Panel links (Gradient + Trust-Points) und Login-Formular rechts. Funktional solide, aber das Formular wirkt noch plain — keine Card, kein visueller Rahmen, Standard-Inputs ohne Icons, kein Fokus-Akzent.
 
-1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
+## Geplante Verbesserungen
 
-2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
+### Rechte Seite (Login-Formular)
+- **Form in eine Card wrappen**: Subtiler `shadow-lg`, `rounded-2xl`, `border` — hebt das Formular vom Hintergrund ab
+- **Input-Felder mit Icons**: Mail-Icon im E-Mail-Feld, Lock-Icon im Passwort-Feld (als Prefix innerhalb des Inputs via relative/absolute Positionierung)
+- **Passwort anzeigen/verbergen**: Eye/EyeOff Toggle-Button rechts im Passwort-Input
+- **Login-Button**: `shadow-sm hover:shadow-md transition-all` + leichter Hover-Scale, konsistent mit dem Admin-Panel-Button-Konzept
+- **Hintergrund**: Sehr subtiles Pattern oder leichter Gradient (`bg-gradient-to-br from-background to-muted/30`) statt flachem `bg-background`
+- **Willkommen-Text**: Größerer Titel (`text-3xl`), Subtitel mit mehr Abstand
 
-### Konkret:
-- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
-- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
-- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
-- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
+### Linke Seite (Branding-Panel)
+- **Logo größer**: `max-h-20` statt `max-h-16`
+- **Trust-Point Icons**: Leichte Animationspulse auf Hover entfernen (da `backdrop-blur-sm` Lag verursachen kann) — stattdessen `opacity`-Transition
+- **Entferne `backdrop-blur-sm`** von den Trust-Point-Cards (Performance, konsistent mit der Popup-Optimierung)
+
+### Mobile
+- **Mobile Logo**: Card-Wrapper auch hier anwenden
+- **Subtilere mobile Darstellung**: Brandingfarbe als Akzentlinie über dem Formular
+
+### Betroffene Datei
+- `src/pages/Auth.tsx` — einzige Datei
+
