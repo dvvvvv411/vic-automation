@@ -6,8 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sidebar,
   SidebarContent,
@@ -21,7 +20,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 
-// Paths hidden from kunde role
 const KUNDE_HIDDEN_PATHS = [
   "/admin/brandings",
   "/admin/emails",
@@ -80,10 +78,7 @@ export function AdminSidebar() {
   const { data: neuCount } = useQuery({
     queryKey: ["badge-bewerbungen-neu"],
     queryFn: async () => {
-      const { count } = await supabase
-        .from("applications")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "neu");
+      const { count } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("status", "neu");
       return count ?? 0;
     },
     refetchInterval: 30000,
@@ -95,11 +90,7 @@ export function AdminSidebar() {
       const now = new Date();
       const today = format(now, "yyyy-MM-dd");
       const nowTime = format(now, "HH:mm:ss");
-      const { count } = await supabase
-        .from("interview_appointments")
-        .select("*", { count: "exact", head: true })
-        .eq("appointment_date", today)
-        .gte("appointment_time", nowTime);
+      const { count } = await supabase.from("interview_appointments").select("*", { count: "exact", head: true }).eq("appointment_date", today).gte("appointment_time", nowTime);
       return count ?? 0;
     },
     refetchInterval: 30000,
@@ -108,10 +99,7 @@ export function AdminSidebar() {
   const { data: eingereichtCount } = useQuery({
     queryKey: ["badge-vertraege-eingereicht"],
     queryFn: async () => {
-      const { count } = await supabase
-        .from("employment_contracts")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "eingereicht");
+      const { count } = await supabase.from("employment_contracts").select("*", { count: "exact", head: true }).eq("status", "eingereicht");
       return count ?? 0;
     },
     refetchInterval: 30000,
@@ -120,11 +108,7 @@ export function AdminSidebar() {
   const { data: chatUnreadCount } = useQuery({
     queryKey: ["badge-chat-unread"],
     queryFn: async () => {
-      const { count } = await supabase
-        .from("chat_messages")
-        .select("*", { count: "exact", head: true })
-        .eq("sender_role", "user")
-        .eq("read", false);
+      const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false);
       return count ?? 0;
     },
     refetchInterval: 10000,
@@ -133,10 +117,7 @@ export function AdminSidebar() {
   const { data: inPruefungCount } = useQuery({
     queryKey: ["badge-bewertungen-pruefung"],
     queryFn: async () => {
-      const { count } = await supabase
-        .from("order_assignments")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "in_pruefung");
+      const { count } = await supabase.from("order_assignments").select("*", { count: "exact", head: true }).eq("status", "in_pruefung");
       return count ?? 0;
     },
     refetchInterval: 30000,
@@ -146,10 +127,7 @@ export function AdminSidebar() {
     queryKey: ["badge-auftragstermine-heute"],
     queryFn: async () => {
       const today = format(new Date(), "yyyy-MM-dd");
-      const { count } = await supabase
-        .from("order_appointments")
-        .select("*", { count: "exact", head: true })
-        .eq("appointment_date", today);
+      const { count } = await supabase.from("order_appointments").select("*", { count: "exact", head: true }).eq("appointment_date", today);
       return count ?? 0;
     },
     refetchInterval: 30000,
@@ -164,14 +142,17 @@ export function AdminSidebar() {
     "/admin/bewertungen": inPruefungCount ?? 0,
   };
 
+  const initials = user?.email?.slice(0, 2).toUpperCase() ?? "AD";
+
   return (
-    <Sidebar className="border-r border-border">
-      <SidebarContent>
-        <div className="px-4 py-5">
-          <h2 className="text-lg font-bold tracking-tight text-foreground">
-            Vic <span className="text-primary">{isKunde ? "Kunde" : "Admin"}</span>
+    <Sidebar className="border-r-0">
+      <SidebarContent className="bg-[hsl(var(--sidebar-background))] px-3 pt-2">
+        {/* Brand */}
+        <div className="px-3 py-5 mb-1">
+          <h2 className="text-lg font-bold tracking-tight text-white">
+            Vic <span className="text-[hsl(var(--sidebar-primary))]">{isKunde ? "Kunde" : "Admin"}</span>
           </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Kontrollpanel</p>
+          <p className="text-[11px] text-[hsl(var(--sidebar-foreground))] mt-0.5 opacity-60">Kontrollpanel</p>
         </div>
 
         {!permissionsLoading && navGroups.map((group, groupIndex) => {
@@ -183,9 +164,15 @@ export function AdminSidebar() {
           if (visibleItems.length === 0) return null;
           return (
             <div key={group.label ?? "overview"}>
-              {groupIndex > 0 && <Separator className="mx-4 my-2" />}
+              {groupIndex > 0 && (
+                <div className="mx-3 my-3 border-t border-[hsl(var(--sidebar-border))]" />
+              )}
               <SidebarGroup>
-                {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+                {group.label && (
+                  <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[hsl(var(--sidebar-foreground))] opacity-50 px-3 mb-1">
+                    {group.label}
+                  </SidebarGroupLabel>
+                )}
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {visibleItems.map((item) => (
@@ -194,15 +181,15 @@ export function AdminSidebar() {
                           <NavLink
                             to={item.url}
                             end
-                            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
-                            activeClassName="bg-primary/10 text-primary font-medium"
+                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[hsl(var(--sidebar-foreground))] hover:bg-[hsl(var(--sidebar-muted))] transition-all duration-150"
+                            activeClassName="!bg-[hsl(var(--sidebar-primary))] !text-white font-medium shadow-md shadow-[hsl(var(--sidebar-primary))]/25"
                           >
-                            <item.icon className="h-4 w-4" />
-                            <span className="flex-1">{item.title}</span>
+                            <item.icon className="h-4 w-4 shrink-0" />
+                            <span className="flex-1 truncate">{item.title}</span>
                             {badgeCounts[item.url] > 0 && (
-                              <Badge className="ml-auto text-xs px-1.5 py-0 min-w-[1.25rem] h-5 flex items-center justify-center">
+                              <span className="ml-auto text-[10px] font-bold min-w-[1.25rem] h-5 flex items-center justify-center rounded-full bg-destructive text-white px-1.5">
                                 {badgeCounts[item.url]}
-                              </Badge>
+                              </span>
                             )}
                           </NavLink>
                         </SidebarMenuButton>
@@ -216,9 +203,21 @@ export function AdminSidebar() {
         })}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border p-4">
-        <p className="text-xs text-muted-foreground truncate mb-2">{user?.email}</p>
-        <Button variant="outline" size="sm" className="w-full" onClick={signOut}>
+      <SidebarFooter className="bg-[hsl(var(--sidebar-background))] border-t border-[hsl(var(--sidebar-border))] p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <Avatar className="h-9 w-9 shrink-0">
+            <AvatarFallback className="bg-[hsl(var(--sidebar-primary))] text-white text-xs font-semibold">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <p className="text-xs text-[hsl(var(--sidebar-foreground))] truncate flex-1">{user?.email}</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full border-[hsl(var(--sidebar-border))] text-[hsl(var(--sidebar-foreground))] hover:bg-[hsl(var(--sidebar-muted))] hover:text-white bg-transparent"
+          onClick={signOut}
+        >
           <LogOut className="h-4 w-4 mr-2" />
           Abmelden
         </Button>
