@@ -1,32 +1,16 @@
 
+# Verlauf-Card Höhe an Nachricht-senden-Card binden
 
-# Moderne Scrollbar für Admin-Sidebar
+Die Verlauf-Card (rechts) soll nie höher als die Nachricht-senden-Card (links) sein. Überlaufende History-Einträge werden scrollbar.
 
-Custom CSS-Scrollbar in der Sidebar: schmal, blau, abgerundet — passend zum dunklen Sidebar-Theme.
+## Änderungen in `src/pages/admin/AdminSmsSpoof.tsx`
 
-### Änderung
+1. **Grid-Container**: `items-start` hinzufügen damit Karten nicht gleich hoch gestreckt werden → eigentlich brauchen wir das Gegenteil: Die rechte Card soll sich an die linke anpassen.
 
-**`src/index.css`** — Neue CSS-Regeln für `[data-sidebar="content"]`:
+2. **Ansatz**: Das 50/50-Grid bekommt `items-stretch` (default bei CSS Grid), aber die rechte Card bekommt intern `h-full` mit `flex flex-col` und der Content-Bereich bekommt `overflow-auto min-h-0 flex-1`. Dadurch passt sich die rechte Card an die Höhe der linken an und der Inhalt scrollt bei Überlauf.
 
-```css
-[data-sidebar="content"]::-webkit-scrollbar {
-  width: 6px;
-}
-[data-sidebar="content"]::-webkit-scrollbar-track {
-  background: transparent;
-}
-[data-sidebar="content"]::-webkit-scrollbar-thumb {
-  background: hsl(var(--sidebar-primary) / 0.4);
-  border-radius: 3px;
-}
-[data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--sidebar-primary) / 0.7);
-}
-```
-
-Plus Firefox-Support via `scrollbar-width: thin; scrollbar-color`.
-
-| Datei | Änderung |
-|-------|----------|
-| `src/index.css` | Scrollbar-Styling für Sidebar-Content |
-
+### Konkret:
+- **Rechte Card** (`<Card>` bei Zeile 436): `className="h-full flex flex-col"` hinzufügen
+- **CardContent** (Zeile 442): `className="flex-1 min-h-0 overflow-auto"` hinzufügen  
+- **Bestehenden `max-h-[420px]`** auf dem Table-Container (Zeile 453) entfernen, da das Scrolling jetzt vom CardContent gesteuert wird
+- **Linke Card** bleibt unverändert – sie bestimmt die natürliche Höhe
