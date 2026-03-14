@@ -826,7 +826,7 @@ export default function AdminBewerbungen() {
             </Button>
           </div>
         ) : (
-          <div className="border border-border rounded-lg overflow-hidden">
+          <div className="premium-card overflow-hidden">
             {/* Bulk accept bar */}
             {(selectedIds.size > 0 || bulkProcessing.inProgress) && (
               <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b border-border">
@@ -866,8 +866,6 @@ export default function AdminBewerbungen() {
                   <TableHead>Name</TableHead>
                   <TableHead>E-Mail</TableHead>
                   <TableHead>Telefon</TableHead>
-                  <TableHead>Ort</TableHead>
-                  <TableHead>Anstellungsart</TableHead>
                   <TableHead>Branding</TableHead>
                   <TableHead>CV</TableHead>
                   <TableHead>Status</TableHead>
@@ -898,16 +896,6 @@ export default function AdminBewerbungen() {
                         {a.phone ? (
                           <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(a.phone); toast.success("Telefonnummer kopiert!"); }}>{a.phone}</span>
                         ) : "–"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {a.zip_code || a.city ? `${a.zip_code || ""} ${a.city || ""}`.trim() : "–"}
-                      </TableCell>
-                      <TableCell>
-                        {a.employment_type ? (
-                          <Badge variant="secondary">{employmentLabels[a.employment_type] || a.employment_type}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">–</span>
-                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {a.brandings?.company_name || "–"}

@@ -237,7 +237,7 @@ export default function AdminTelefonnummern() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Telefonnummern</h1>
+      <h2 className="text-2xl font-bold tracking-tight text-foreground">Telefonnummern</h2>
 
       <div className="flex gap-2 max-w-2xl">
         <Input
@@ -256,7 +256,7 @@ export default function AdminTelefonnummern() {
       ) : entries.length === 0 ? (
         <p className="text-muted-foreground">Noch keine Telefonnummern hinzugefügt.</p>
       ) : (
-        <div className="rounded-md border">
+        <div className="premium-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>

@@ -177,14 +177,17 @@ export default function AdminAuftraege() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Aufträge</h1>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">Aufträge</h2>
+          <p className="text-muted-foreground mt-1">Alle Aufträge verwalten und Mitarbeiter zuweisen.</p>
+        </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4 mr-2" />
           Auftrag hinzufügen
         </Button>
       </div>
 
-      <div className="border rounded-lg">
+      <div className="premium-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>

@@ -318,7 +318,7 @@ export default function AdminSmsSpoof() {
             <Zap className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">SMS Spoof</h1>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">SMS Spoof</h2>
             <p className="text-sm text-muted-foreground">Versende SMS mit benutzerdefiniertem Absendernamen</p>
           </div>
         </div>
@@ -450,7 +450,7 @@ export default function AdminSmsSpoof() {
                 <p className="text-sm text-muted-foreground">Noch keine SMS gesendet.</p>
               </div>
             ) : (
-              <div className="rounded-lg border">
+              <div className="premium-card overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>

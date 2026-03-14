@@ -273,12 +273,12 @@ const AdminBewertungen = () => {
   return (
     <TooltipProvider>
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Bewertungen</h1>
+      <h2 className="text-2xl font-bold tracking-tight text-foreground">Bewertungen</h2>
 
       {grouped.length === 0 ? (
         <p className="text-muted-foreground text-sm">Noch keine Bewertungen vorhanden.</p>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="premium-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
