@@ -12,11 +12,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { AlertCircle, Briefcase, Check, CheckCircle2, Pencil, Phone, User } from "lucide-react";
+import { AlertCircle, Briefcase, Check, CheckCircle2, Pencil, Phone, User, CalendarDays, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { format, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
-import { AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 function generateTimeSlots(start: string, end: string, interval: number) {
@@ -70,7 +71,6 @@ export default function Bewerbungsgespraech() {
     },
   });
 
-  // Load schedule settings
   const { data: scheduleSettings } = useQuery({
     queryKey: ["schedule-settings-public"],
     queryFn: async () => {
@@ -84,7 +84,6 @@ export default function Bewerbungsgespraech() {
     },
   });
 
-  // Load blocked slots
   const { data: blockedSlotsData } = useQuery({
     queryKey: ["schedule-blocked-slots-public"],
     queryFn: async () => {
@@ -158,7 +157,6 @@ export default function Bewerbungsgespraech() {
     mutationFn: async () => {
       const dateStr = format(selectedDate!, "yyyy-MM-dd");
       const timeStr = selectedTime! + ":00";
-      // Get the application's created_by (branding owner) to propagate ownership
       const { data: appData } = await supabase
         .from("applications")
         .select("created_by")
@@ -173,7 +171,6 @@ export default function Bewerbungsgespraech() {
       });
       if (rpcError) throw rpcError;
 
-      // Telegram notification
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
       await sendTelegram("gespraech_gebucht", `📅 Bewerbungsgespräch gebucht\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`);
     },
@@ -191,14 +188,26 @@ export default function Bewerbungsgespraech() {
   // --- Error state ---
   if (!isLoading && (error || !application)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50/30 p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200/80 shadow-md p-8 text-center">
-          <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-4" />
-          <h2 className="text-lg font-semibold mb-1">Ungültiger Link</h2>
-          <p className="text-sm text-muted-foreground">
-            Dieser Bewerbungslink ist ungültig oder nicht mehr aktiv.
-          </p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+          className="max-w-md w-full"
+        >
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden">
+            <div className="h-1.5" style={{ background: `linear-gradient(135deg, #EF4444, #F97316)` }} />
+            <div className="p-8 text-center">
+              <div className="h-14 w-14 rounded-2xl bg-red-50 mx-auto flex items-center justify-center mb-4">
+                <AlertCircle className="h-7 w-7 text-red-500" />
+              </div>
+              <h2 className="text-lg font-semibold mb-2">Ungültiger Link</h2>
+              <p className="text-sm text-muted-foreground">
+                Dieser Bewerbungslink ist ungültig oder nicht mehr aktiv.
+              </p>
+            </div>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -206,8 +215,25 @@ export default function Bewerbungsgespraech() {
   // --- Loading ---
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
-        <div className="animate-pulse text-muted-foreground text-sm">Laden...</div>
+      <div className="min-h-screen flex items-start justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8">
+        <div className="max-w-2xl w-full mt-8 md:mt-16 space-y-6">
+          <Skeleton className="h-12 w-32 mx-auto rounded-xl" />
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden">
+            <Skeleton className="h-1.5 w-full" />
+            <div className="p-6 space-y-4">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-4 w-72" />
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-28 rounded-full" />
+                <Skeleton className="h-8 w-32 rounded-full" />
+              </div>
+            </div>
+            <div className="p-6 grid md:grid-cols-2 gap-6">
+              <Skeleton className="h-64 rounded-xl" />
+              <Skeleton className="h-64 rounded-xl" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -222,50 +248,127 @@ export default function Bewerbungsgespraech() {
       : existingAppointment.appointment_time?.slice(0, 5);
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50/30 p-4">
-        <div className="max-w-lg w-full">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-lg w-full"
+        >
           {logoUrl && (
-            <img src={logoUrl} alt={companyName || "Logo"} className="h-10 mx-auto object-contain mb-6" />
+            <motion.img
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              src={logoUrl}
+              alt={companyName || "Logo"}
+              className="h-12 mx-auto object-contain mb-8 drop-shadow-sm"
+            />
           )}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md p-8 space-y-6">
-            <div className="text-center space-y-3">
-              <div className="h-14 w-14 rounded-full mx-auto flex items-center justify-center" style={{ backgroundColor: `${brandColor}15` }}>
-                <CheckCircle2 className="h-8 w-8" style={{ color: brandColor }} />
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden">
+            {/* Gradient top bar */}
+            <div className="h-1.5" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
+
+            <div className="p-8 space-y-6">
+              {/* Success icon with pulse */}
+              <div className="text-center space-y-4">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.3 }}
+                  className="h-16 w-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg"
+                  style={{ backgroundColor: `${brandColor}15` }}
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.5, type: "spring" }}
+                  >
+                    <CheckCircle2 className="h-9 w-9" style={{ color: brandColor }} />
+                  </motion.div>
+                </motion.div>
+                <div>
+                  <h2 className="text-xl font-semibold">Termin bestätigt</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {applicantName}, Ihr Bewerbungsgespräch wurde erfolgreich gebucht.
+                  </p>
+                </div>
               </div>
-              <h2 className="text-xl font-semibold">Termin bestätigt</h2>
-              <p className="text-sm text-muted-foreground">
-                {applicantName}, Ihr Bewerbungsgespräch wurde erfolgreich gebucht.
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 space-y-1 text-center">
-              <p className="font-medium">{appDate}</p>
-              <p className="font-medium">{appTime} Uhr</p>
-            </div>
-            <div className="flex items-start gap-3 bg-slate-50/70 border border-slate-200/80 rounded-xl p-4">
-              <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-              <p className="text-sm text-muted-foreground">
-                Bitte seien Sie unter <span className="font-semibold text-foreground">{applicantPhone}</span> telefonisch erreichbar. Wir rufen Sie unter dieser Nummer an.
-              </p>
+
+              {/* Date/Time info with brand-colored left border */}
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.6 }}
+                className="rounded-xl bg-slate-50/80 p-4 space-y-2 border-l-4"
+                style={{ borderLeftColor: brandColor }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <p className="font-medium text-sm">{appDate}</p>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <p className="font-medium text-sm">{appTime} Uhr</p>
+                </div>
+              </motion.div>
+
+              {/* Phone hint with icon badge */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                className="flex items-start gap-3 bg-slate-50/80 rounded-xl p-4"
+              >
+                <div
+                  className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: `${brandColor}15` }}
+                >
+                  <Phone className="h-4 w-4" style={{ color: brandColor }} />
+                </div>
+                <p className="text-sm text-muted-foreground pt-1">
+                  Bitte seien Sie unter <span className="font-semibold text-foreground">{applicantPhone}</span> telefonisch erreichbar. Wir rufen Sie unter dieser Nummer an.
+                </p>
+              </motion.div>
             </div>
           </div>
           {companyName && (
-            <p className="text-xs text-muted-foreground/70 text-center mt-6">Powered by {companyName}</p>
+            <div className="mt-8 flex items-center justify-center gap-2">
+              <div className="h-px w-8 bg-slate-200" />
+              <p className="text-xs text-muted-foreground/60">Powered by {companyName}</p>
+              <div className="h-px w-8 bg-slate-200" />
+            </div>
           )}
-        </div>
+        </motion.div>
       </div>
     );
   }
 
-  // --- Booking page: ONE unified card ---
+  // --- Booking page ---
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 p-4 md:p-8 flex items-start justify-center">
-      <div className="max-w-2xl w-full mt-8 md:mt-16">
-        {/* Logo centered above card */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8 flex items-start justify-center">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-2xl w-full mt-8 md:mt-16"
+      >
+        {/* Logo */}
         {logoUrl && (
-          <img src={logoUrl} alt={companyName || "Logo"} className="h-10 mx-auto object-contain mb-6" />
+          <motion.img
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            src={logoUrl}
+            alt={companyName || "Logo"}
+            className="h-12 mx-auto object-contain mb-8 drop-shadow-sm"
+          />
         )}
 
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden">
+          {/* Gradient top bar */}
+          <div className="h-1.5" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
+
           {/* Header section */}
           <div className="p-6 pb-0 space-y-4">
             <div>
@@ -275,15 +378,21 @@ export default function Bewerbungsgespraech() {
                 {companyName ? ` bei ${companyName}` : ""}.
               </p>
             </div>
-            {/* Applicant info row */}
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5 bg-slate-100 rounded-full px-3 py-1">
-                <User className="h-3.5 w-3.5" />
-                <span className="font-medium text-foreground">{applicantName}</span>
+            {/* Applicant info pills */}
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 border font-medium text-foreground"
+                style={{ backgroundColor: `${brandColor}08`, borderColor: `${brandColor}25` }}
+              >
+                <User className="h-3.5 w-3.5" style={{ color: brandColor }} />
+                {applicantName}
               </span>
               {applicantPhone && (
-                <span className="inline-flex items-center gap-1.5 bg-slate-100 rounded-full px-3 py-1">
-                  <Phone className="h-3.5 w-3.5" />
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 border"
+                  style={{ backgroundColor: `${brandColor}08`, borderColor: `${brandColor}25` }}
+                >
+                  <Phone className="h-3.5 w-3.5" style={{ color: brandColor }} />
                   {isEditingPhone ? (
                     <>
                       <Input
@@ -310,13 +419,13 @@ export default function Bewerbungsgespraech() {
                     </>
                   ) : (
                     <>
-                      <span>{applicantPhone}</span>
+                      <span className="text-muted-foreground">{applicantPhone}</span>
                       <button
                         onClick={() => {
                           setEditedPhone(applicantPhone || "");
                           setIsEditingPhone(true);
                         }}
-                        className="hover:text-foreground transition-colors"
+                        className="hover:text-foreground transition-colors text-muted-foreground"
                       >
                         <Pencil className="h-3 w-3" />
                       </button>
@@ -325,22 +434,28 @@ export default function Bewerbungsgespraech() {
                 </span>
               )}
               {employmentType && (
-                <span className="inline-flex items-center gap-1.5 bg-slate-100 rounded-full px-3 py-1">
-                  <Briefcase className="h-3.5 w-3.5" />
-                  <span>{employmentLabels[employmentType] || employmentType}</span>
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 border text-muted-foreground"
+                  style={{ backgroundColor: `${brandColor}08`, borderColor: `${brandColor}25` }}
+                >
+                  <Briefcase className="h-3.5 w-3.5" style={{ color: brandColor }} />
+                  {employmentLabels[employmentType] || employmentType}
                 </span>
               )}
             </div>
           </div>
 
           {/* Divider */}
-          <div className="border-t border-slate-200/80 mx-6 mt-4" />
+          <div className="border-t border-slate-200/60 mx-6 mt-5" />
 
           {/* Calendar + Time slots */}
-          <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+          <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200/60">
             {/* Calendar */}
             <div className="p-6">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Datum</p>
+              <div className="flex items-center gap-2 mb-3">
+                <CalendarDays className="h-4 w-4" style={{ color: brandColor }} />
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Datum</p>
+              </div>
               <Calendar
                 mode="single"
                 selected={selectedDate}
@@ -349,7 +464,6 @@ export default function Bewerbungsgespraech() {
                   setSelectedTime(null);
                 }}
                 disabled={(date) => {
-                  // date-fns getDay: 0=Sun, 1=Mon... convert to 1=Mon, 7=Sun
                   const dow = date.getDay();
                   const isoDay = dow === 0 ? 7 : dow;
                   return !availableDays.includes(isoDay) || isBefore(date, startOfDay(new Date()));
@@ -367,41 +481,55 @@ export default function Bewerbungsgespraech() {
 
             {/* Time slots */}
             <div className="p-6">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Uhrzeit</p>
+              <div className="flex items-center gap-2 mb-3">
+                <Clock className="h-4 w-4" style={{ color: brandColor }} />
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Uhrzeit</p>
+              </div>
               {!selectedDate ? (
-                <p className="text-sm text-muted-foreground py-8 text-center">
-                  Bitte wählen Sie zuerst ein Datum.
-                </p>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div
+                    className="h-12 w-12 rounded-xl flex items-center justify-center mb-3"
+                    style={{ backgroundColor: `${brandColor}10` }}
+                  >
+                    <CalendarDays className="h-5 w-5" style={{ color: `${brandColor}80` }} />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Bitte wählen Sie zuerst ein Datum.
+                  </p>
+                </div>
               ) : (
-                <div className="grid grid-cols-2 gap-1.5 max-h-[340px] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-1.5 max-h-[340px] overflow-y-auto pr-1">
                   {availableTimeSlots.length === 0 ? (
-                    <p className="text-sm text-muted-foreground col-span-2 py-4 text-center">
+                    <p className="text-sm text-muted-foreground col-span-2 py-8 text-center">
                       Keine verfügbaren Zeiten.
                     </p>
-                  ) : availableTimeSlots.map((time) => {
+                  ) : availableTimeSlots.map((time, idx) => {
                     const isBooked = bookedTimesForDate.has(time);
                     const isSelected = selectedTime === time;
                     return (
-                      <button
+                      <motion.button
                         key={time}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.02, duration: 0.2 }}
                         disabled={isBooked}
                         onClick={() => setSelectedTime(time)}
                         className={cn(
-                          "py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 border",
+                          "py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 border",
                           isBooked
                             ? "bg-slate-50 text-slate-300 cursor-not-allowed border-transparent"
                             : isSelected
-                            ? "text-white border-transparent shadow-sm"
-                            : "bg-white border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-foreground"
+                            ? "text-white border-transparent shadow-md scale-[1.03]"
+                            : "bg-white border-slate-200/80 hover:border-slate-300 hover:shadow-sm hover:scale-[1.02] text-foreground"
                         )}
                         style={
                           isSelected && !isBooked
-                            ? { backgroundColor: brandColor }
+                            ? { backgroundColor: brandColor, boxShadow: `0 4px 14px -3px ${brandColor}50` }
                             : undefined
                         }
                       >
                         {time}
-                      </button>
+                      </motion.button>
                     );
                   })}
                 </div>
@@ -412,30 +540,43 @@ export default function Bewerbungsgespraech() {
           {/* Book button */}
           <AnimatePresence>
             {selectedDate && selectedTime && (
-              <div className="p-6 pt-0">
-                <div className="border-t border-slate-200/80 pt-5">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.3 }}
+                className="p-6 pt-0"
+              >
+                <div className="border-t border-slate-200/60 pt-5">
                   <Button
-                    className="w-full text-white rounded-xl shadow-md hover:shadow-lg hover:scale-[1.01] transition-all duration-200"
-                    style={{ backgroundColor: brandColor }}
+                    className="w-full text-white rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all duration-200 h-12 text-sm font-semibold"
+                    style={{
+                      background: `linear-gradient(135deg, ${brandColor}, ${brandColor}DD)`,
+                      boxShadow: `0 8px 24px -6px ${brandColor}40`,
+                    }}
                     onClick={() => setConfirmOpen(true)}
                   >
                     Termin buchen: {format(selectedDate, "dd.MM.yyyy")} um {selectedTime} Uhr
                   </Button>
                 </div>
-              </div>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Powered by footer */}
+        {/* Footer */}
         {companyName && (
-          <p className="text-xs text-muted-foreground/70 text-center mt-6">Powered by {companyName}</p>
+          <div className="mt-8 flex items-center justify-center gap-2">
+            <div className="h-px w-8 bg-slate-200" />
+            <p className="text-xs text-muted-foreground/60">Powered by {companyName}</p>
+            <div className="h-px w-8 bg-slate-200" />
+          </div>
         )}
-      </div>
+      </motion.div>
 
       {/* Confirmation Dialog */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md border-0 shadow-2xl">
           <DialogHeader>
             <DialogTitle>Termin bestätigen</DialogTitle>
           </DialogHeader>
@@ -443,22 +584,33 @@ export default function Bewerbungsgespraech() {
             <p className="text-sm text-muted-foreground">
               Möchten Sie folgenden Termin verbindlich buchen?
             </p>
-            <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 space-y-1 text-sm">
-              <p className="font-medium">
-                {selectedDate && format(selectedDate, "EEEE, dd. MMMM yyyy", { locale: de })}
-              </p>
-              <p className="font-medium">{selectedTime} Uhr</p>
+            <div
+              className="rounded-xl bg-slate-50/80 p-4 space-y-2 border-l-4"
+              style={{ borderLeftColor: brandColor }}
+            >
+              <div className="flex items-center gap-2.5">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <p className="font-medium text-sm">
+                  {selectedDate && format(selectedDate, "EEEE, dd. MMMM yyyy", { locale: de })}
+                </p>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <p className="font-medium text-sm">{selectedTime} Uhr</p>
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} className="rounded-xl">
               Abbrechen
             </Button>
             <Button
               onClick={() => bookMutation.mutate()}
               disabled={bookMutation.isPending}
-              className="text-white"
-              style={{ backgroundColor: brandColor }}
+              className="text-white rounded-xl"
+              style={{
+                background: `linear-gradient(135deg, ${brandColor}, ${brandColor}DD)`,
+              }}
             >
               {bookMutation.isPending ? "Wird gebucht..." : "Bestätigen"}
             </Button>
