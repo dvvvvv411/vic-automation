@@ -22,11 +22,11 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Calendar } from "@/components/ui/calendar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ArrowLeft, MessageCircle, ClipboardList, CheckCircle, XCircle, Lock, Unlock,
   Star, ChevronDown, Copy, Eye, EyeOff, Pencil, Save, X, User, CreditCard,
-  KeyRound, StickyNote, IdCard, ShoppingBag, StarIcon, ImageIcon,
+  KeyRound, StickyNote, IdCard, ShoppingBag, ImageIcon, Plus, Package,
+  Clock, CheckCheck,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -80,23 +80,29 @@ const assignmentStatusBadge = (status: string) => {
   }
 };
 
-// ─── Editable Info Section ───────────────────────────────────────────
+// ─── Editable Dual Section (2-column card) ──────────────────────────
 interface FieldDef {
   key: string;
   label: string;
   format?: (v: string | null) => string;
 }
 
-function EditableSection({
-  title,
-  icon,
-  fields,
+function EditableDualSection({
+  leftTitle,
+  leftIcon,
+  leftFields,
+  rightTitle,
+  rightIcon,
+  rightFields,
   data,
   onSave,
 }: {
-  title: string;
-  icon: React.ReactNode;
-  fields: FieldDef[];
+  leftTitle: string;
+  leftIcon: React.ReactNode;
+  leftFields: FieldDef[];
+  rightTitle: string;
+  rightIcon: React.ReactNode;
+  rightFields: FieldDef[];
   data: Record<string, any>;
   onSave: (updates: Record<string, string>) => Promise<void>;
 }) {
@@ -104,9 +110,11 @@ function EditableSection({
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
+  const allFields = [...leftFields, ...rightFields];
+
   const startEdit = () => {
     const d: Record<string, string> = {};
-    fields.forEach((f) => (d[f.key] = data[f.key] ?? ""));
+    allFields.forEach((f) => (d[f.key] = data[f.key] ?? ""));
     setDraft(d);
     setEditing(true);
   };
@@ -118,12 +126,37 @@ function EditableSection({
     setEditing(false);
   };
 
+  const renderFields = (fields: FieldDef[]) =>
+    fields.map((f) => (
+      <div key={f.key} className="flex justify-between items-center py-2.5 border-b border-border/40 last:border-0 gap-4">
+        <span className="text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">{f.label}</span>
+        {editing ? (
+          <Input
+            className="h-8 text-sm max-w-[200px] text-right"
+            value={draft[f.key] ?? ""}
+            onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
+          />
+        ) : (
+          <span className="text-sm font-medium text-foreground text-right break-all max-w-[60%]">
+            {f.format ? f.format(data[f.key]) : (data[f.key] || "–")}
+          </span>
+        )}
+      </div>
+    ));
+
   return (
-    <Card className="rounded-2xl shadow-md border-border/60">
-      <CardHeader className="pb-3 flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          {icon}
-          <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{title}</CardTitle>
+    <Card className="rounded-2xl shadow-md border-border/60 overflow-hidden">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between bg-gradient-to-r from-muted/30 to-transparent">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {leftIcon}
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{leftTitle}</span>
+          </div>
+          <span className="text-muted-foreground/40">|</span>
+          <div className="flex items-center gap-2">
+            {rightIcon}
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{rightTitle}</span>
+          </div>
         </div>
         {!editing ? (
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={startEdit}>
@@ -140,23 +173,11 @@ function EditableSection({
           </div>
         )}
       </CardHeader>
-      <CardContent className="space-y-0 pt-0">
-        {fields.map((f) => (
-          <div key={f.key} className="flex justify-between items-center py-2 border-b border-border/40 last:border-0 gap-4">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">{f.label}</span>
-            {editing ? (
-              <Input
-                className="h-8 text-sm max-w-[200px] text-right"
-                value={draft[f.key] ?? ""}
-                onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
-              />
-            ) : (
-              <span className="text-sm font-medium text-foreground text-right break-all max-w-[60%]">
-                {f.format ? f.format(data[f.key]) : (data[f.key] || "–")}
-              </span>
-            )}
-          </div>
-        ))}
+      <CardContent className="pt-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+          <div>{renderFields(leftFields)}</div>
+          <div>{renderFields(rightFields)}</div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -172,10 +193,10 @@ function CredentialsCard({ email, tempPassword }: { email?: string | null; tempP
   };
 
   return (
-    <Card className="rounded-2xl shadow-md border-border/60">
-      <CardHeader className="pb-3">
+    <Card className="rounded-2xl shadow-md border-border/60 overflow-hidden">
+      <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/5 to-transparent">
         <div className="flex items-center gap-2">
-          <KeyRound className="h-4 w-4 text-muted-foreground" />
+          <KeyRound className="h-4 w-4 text-amber-600" />
           <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Zugangsdaten</CardTitle>
         </div>
       </CardHeader>
@@ -214,54 +235,87 @@ function CredentialsCard({ email, tempPassword }: { email?: string | null; tempP
   );
 }
 
-// ─── Admin Notes Card ────────────────────────────────────────────────
-function AdminNotesCard({ notes, onSave }: { notes: string; onSave: (val: string) => Promise<void> }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(notes);
+// ─── Admin Notes Card (append-only with + button) ────────────────────
+interface NoteEntry {
+  text: string;
+  date: string;
+}
+
+function AdminNotesCard({ notes, onAdd }: { notes: NoteEntry[]; onAdd: (text: string) => Promise<void> }) {
+  const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const save = async () => {
+  const add = async () => {
+    if (!draft.trim()) return;
     setSaving(true);
-    await onSave(draft);
+    await onAdd(draft.trim());
+    setDraft("");
     setSaving(false);
-    setEditing(false);
   };
 
   return (
-    <Card className="rounded-2xl shadow-md border-border/60">
-      <CardHeader className="pb-3 flex flex-row items-center justify-between">
+    <Card className="rounded-2xl shadow-md border-border/60 overflow-hidden">
+      <CardHeader className="pb-3 bg-gradient-to-r from-violet-500/5 to-transparent">
         <div className="flex items-center gap-2">
-          <StickyNote className="h-4 w-4 text-muted-foreground" />
+          <StickyNote className="h-4 w-4 text-violet-600" />
           <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Admin-Notizen</CardTitle>
         </div>
-        {!editing ? (
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setDraft(notes); setEditing(true); }}>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-        ) : (
-          <div className="flex gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(false)}>
-              <X className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600" onClick={save} disabled={saving}>
-              <Save className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        )}
       </CardHeader>
-      <CardContent className="pt-0">
-        {editing ? (
+      <CardContent className="pt-0 space-y-3">
+        <div className="flex gap-2">
           <Textarea
-            className="min-h-[120px] text-sm"
+            className="min-h-[70px] text-sm flex-1"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Notizen zum Mitarbeiter..."
+            placeholder="Neue Notiz hinzufügen..."
           />
-        ) : (
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap min-h-[60px]">
-            {notes || "Keine Notizen vorhanden."}
-          </p>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 shrink-0 self-end border-violet-300 text-violet-600 hover:bg-violet-50"
+            onClick={add}
+            disabled={saving || !draft.trim()}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+        {notes.length > 0 && (
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {notes.map((n, i) => (
+              <div key={i} className="bg-muted/50 rounded-lg p-3 border border-border/40">
+                <p className="text-sm text-foreground whitespace-pre-wrap">{n.text}</p>
+                <span className="text-[10px] text-muted-foreground mt-1 block">
+                  {n.date}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
+        {notes.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-2">Keine Notizen vorhanden.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Stats Card ──────────────────────────────────────────────────────
+function StatCard({ title, value, icon: Icon, color }: { title: string; value: number; icon: any; color: string }) {
+  const colorMap: Record<string, string> = {
+    blue: "from-blue-500/10 to-blue-500/5 text-blue-600",
+    green: "from-green-500/10 to-green-500/5 text-green-600",
+    amber: "from-amber-500/10 to-amber-500/5 text-amber-600",
+  };
+  return (
+    <Card className="rounded-2xl shadow-sm border-border/60 overflow-hidden">
+      <CardContent className={`p-4 bg-gradient-to-br ${colorMap[color] || colorMap.blue}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">{title}</p>
+            <p className="text-2xl font-semibold mt-1">{value}</p>
+          </div>
+          <Icon className="h-8 w-8 opacity-40" />
+        </div>
       </CardContent>
     </Card>
   );
@@ -350,6 +404,20 @@ export default function AdminMitarbeiterDetail() {
 
   const getAssignmentForOrder = (orderId: string) =>
     (assignments ?? []).find((a: any) => a.order_id === orderId);
+
+  // ─── Parse admin_notes as JSON array ────────────────────────────────
+  const parseNotes = (raw: string | null): NoteEntry[] => {
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+      // legacy: plain text → single entry
+      return [{ text: raw, date: "–" }];
+    } catch {
+      if (raw.trim()) return [{ text: raw, date: "–" }];
+      return [];
+    }
+  };
 
   // ─── Save field updates ─────────────────────────────────────────────
   const saveFields = async (updates: Record<string, string>) => {
@@ -575,6 +643,13 @@ export default function AdminMitarbeiterDetail() {
   const branding = (contract as any).applications?.brandings?.company_name ?? "–";
   const initials = `${(contract.first_name ?? "?")[0]}${(contract.last_name ?? "?")[0]}`.toUpperCase();
 
+  const adminNotes = parseNotes((contract as any).admin_notes ?? null);
+
+  // Orders stats
+  const totalOrders = (assignments ?? []).length;
+  const pendingOrders = (assignments ?? []).filter((a: any) => a.status === "offen" || a.status === "in_pruefung").length;
+  const completedOrders = (assignments ?? []).filter((a: any) => a.status === "erfolgreich").length;
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -584,10 +659,10 @@ export default function AdminMitarbeiterDetail() {
         </Button>
 
         {/* ─── Profile Header ──────────────────────────────────────────── */}
-        <div className="rounded-2xl border border-border/60 bg-card shadow-md p-6 mb-6">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-r from-card via-card to-primary/5 shadow-md p-6 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-5">
             {/* Avatar */}
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary shrink-0">
+            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-xl font-bold text-primary shrink-0 ring-2 ring-primary/20">
               {initials}
             </div>
 
@@ -608,66 +683,57 @@ export default function AdminMitarbeiterDetail() {
               )}
             </div>
 
-            {/* Action Buttons */}
-            <TooltipProvider>
-              <div className="flex flex-wrap gap-2 shrink-0">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={() => navigate(`/admin/livechat?contract=${contract.id}`)}>
-                      <MessageCircle className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Livechat</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={() => setAssignDialogOpen(true)}>
-                      <ClipboardList className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Auftrag zuweisen</TooltipContent>
-                </Tooltip>
-                {contract.status === "eingereicht" && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button size="icon" onClick={openApproveDialog}>
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Genehmigen</TooltipContent>
-                  </Tooltip>
-                )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={contract.is_suspended ? "outline" : "destructive"}
-                      size="icon"
-                      onClick={() => setSuspendTarget({ isSuspended: contract.is_suspended })}
-                    >
-                      {contract.is_suspended ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{contract.is_suspended ? "Entsperren" : "Sperren"}</TooltipContent>
-                </Tooltip>
-              </div>
-            </TooltipProvider>
+            {/* Action Buttons with Text */}
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={() => navigate(`/admin/livechat?contract=${contract.id}`)}>
+                <MessageCircle className="h-4 w-4 mr-1.5" /> Livechat
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setAssignDialogOpen(true)}>
+                <ClipboardList className="h-4 w-4 mr-1.5" /> Auftrag zuweisen
+              </Button>
+              {contract.status === "eingereicht" && (
+                <Button size="sm" onClick={openApproveDialog}>
+                  <CheckCircle className="h-4 w-4 mr-1.5" /> Genehmigen
+                </Button>
+              )}
+              <Button
+                variant={contract.is_suspended ? "outline" : "destructive"}
+                size="sm"
+                onClick={() => setSuspendTarget({ isSuspended: contract.is_suspended })}
+              >
+                {contract.is_suspended ? <Unlock className="h-4 w-4 mr-1.5" /> : <Lock className="h-4 w-4 mr-1.5" />}
+                {contract.is_suspended ? "Entsperren" : "Sperren"}
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* ─── Tabs ────────────────────────────────────────────────────── */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-muted/50 p-1">
-            <TabsTrigger value="overview" className="gap-1.5">
+          <TabsList className="bg-muted/50 p-1 h-auto flex-wrap">
+            <TabsTrigger
+              value="overview"
+              className="gap-1.5 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md"
+            >
               <User className="h-3.5 w-3.5" /> Übersicht
             </TabsTrigger>
-            <TabsTrigger value="id" className="gap-1.5">
+            <TabsTrigger
+              value="id"
+              className="gap-1.5 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md"
+            >
               <IdCard className="h-3.5 w-3.5" /> Personalausweis
             </TabsTrigger>
-            <TabsTrigger value="orders" className="gap-1.5">
+            <TabsTrigger
+              value="orders"
+              className="gap-1.5 data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-md"
+            >
               <ShoppingBag className="h-3.5 w-3.5" /> Aufträge
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{(assignments ?? []).length}</Badge>
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{totalOrders}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="reviews" className="gap-1.5">
+            <TabsTrigger
+              value="reviews"
+              className="gap-1.5 data-[state=active]:bg-yellow-500 data-[state=active]:text-white data-[state=active]:shadow-md"
+            >
               <Star className="h-3.5 w-3.5" /> Bewertungen
               <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{(reviews ?? []).length}</Badge>
             </TabsTrigger>
@@ -678,78 +744,71 @@ export default function AdminMitarbeiterDetail() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left 2/3 */}
               <div className="lg:col-span-2 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <EditableSection
-                    title="Persönliche Daten"
-                    icon={<User className="h-4 w-4 text-muted-foreground" />}
-                    fields={[
-                      { key: "first_name", label: "Vorname" },
-                      { key: "last_name", label: "Nachname" },
-                      { key: "email", label: "E-Mail" },
-                      { key: "phone", label: "Telefon" },
-                      { key: "birth_date", label: "Geburtsdatum", format: formatDate },
-                      { key: "birth_place", label: "Geburtsort" },
-                      { key: "nationality", label: "Nationalität" },
-                      { key: "marital_status", label: "Familienstand" },
-                      { key: "employment_type", label: "Beschäftigungsart" },
-                      { key: "desired_start_date", label: "Startdatum", format: formatDate },
-                    ]}
-                    data={contract}
-                    onSave={saveFields}
-                  />
-                  <EditableSection
-                    title="Adresse"
-                    icon={<IdCard className="h-4 w-4 text-muted-foreground" />}
-                    fields={[
-                      { key: "street", label: "Straße" },
-                      { key: "zip_code", label: "PLZ" },
-                      { key: "city", label: "Stadt" },
-                    ]}
-                    data={contract}
-                    onSave={saveFields}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <EditableSection
-                    title="Bankverbindung"
-                    icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
-                    fields={[
-                      { key: "iban", label: "IBAN" },
-                      { key: "bic", label: "BIC" },
-                      { key: "bank_name", label: "Bank" },
-                    ]}
-                    data={contract}
-                    onSave={saveFields}
-                  />
-                  <EditableSection
-                    title="Steuer & Soziales"
-                    icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
-                    fields={[
-                      { key: "tax_id", label: "Steuer-ID" },
-                      { key: "social_security_number", label: "SV-Nr" },
-                      { key: "health_insurance", label: "Krankenkasse" },
-                    ]}
-                    data={contract}
-                    onSave={saveFields}
-                  />
-                </div>
+                <EditableDualSection
+                  leftTitle="Persönliche Daten"
+                  leftIcon={<User className="h-4 w-4 text-blue-500" />}
+                  leftFields={[
+                    { key: "first_name", label: "Vorname" },
+                    { key: "last_name", label: "Nachname" },
+                    { key: "email", label: "E-Mail" },
+                    { key: "phone", label: "Telefon" },
+                    { key: "birth_date", label: "Geburtsdatum", format: formatDate },
+                    { key: "birth_place", label: "Geburtsort" },
+                    { key: "nationality", label: "Nationalität" },
+                    { key: "marital_status", label: "Familienstand" },
+                    { key: "employment_type", label: "Beschäftigungsart" },
+                    { key: "desired_start_date", label: "Startdatum", format: formatDate },
+                  ]}
+                  rightTitle="Adresse"
+                  rightIcon={<IdCard className="h-4 w-4 text-blue-500" />}
+                  rightFields={[
+                    { key: "street", label: "Straße" },
+                    { key: "zip_code", label: "PLZ" },
+                    { key: "city", label: "Stadt" },
+                  ]}
+                  data={contract}
+                  onSave={saveFields}
+                />
+                <EditableDualSection
+                  leftTitle="Bankverbindung"
+                  leftIcon={<CreditCard className="h-4 w-4 text-green-500" />}
+                  leftFields={[
+                    { key: "iban", label: "IBAN" },
+                    { key: "bic", label: "BIC" },
+                    { key: "bank_name", label: "Bank" },
+                  ]}
+                  rightTitle="Steuer & Soziales"
+                  rightIcon={<CreditCard className="h-4 w-4 text-green-500" />}
+                  rightFields={[
+                    { key: "tax_id", label: "Steuer-ID" },
+                    { key: "social_security_number", label: "SV-Nr" },
+                    { key: "health_insurance", label: "Krankenkasse" },
+                  ]}
+                  data={contract}
+                  onSave={saveFields}
+                />
               </div>
 
               {/* Right 1/3 */}
               <div className="space-y-6">
                 <CredentialsCard email={contract.email} tempPassword={contract.temp_password} />
                 <AdminNotesCard
-                  notes={(contract as any).admin_notes ?? ""}
-                  onSave={async (val) => {
+                  notes={adminNotes}
+                  onAdd={async (text) => {
+                    const newEntry: NoteEntry = {
+                      text,
+                      date: format(new Date(), "dd.MM.yyyy HH:mm"),
+                    };
+                    const updated = [newEntry, ...adminNotes];
                     const { error } = await supabase
                       .from("employment_contracts")
-                      .update({ admin_notes: val } as any)
+                      .update({ admin_notes: JSON.stringify(updated) } as any)
                       .eq("id", contract.id);
                     if (error) {
                       toast.error("Fehler beim Speichern.");
                       return;
                     }
-                    toast.success("Notiz gespeichert!");
+                    toast.success("Notiz hinzugefügt!");
                     invalidateAll();
                   }}
                 />
@@ -759,10 +818,10 @@ export default function AdminMitarbeiterDetail() {
 
           {/* ─── PERSONALAUSWEIS ───────────────────────────────────────── */}
           <TabsContent value="id">
-            <Card className="rounded-2xl shadow-md border-border/60">
-              <CardHeader>
+            <Card className="rounded-2xl shadow-md border-border/60 overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-amber-500/5 to-transparent">
                 <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
-                  <IdCard className="h-4 w-4" /> Personalausweis
+                  <IdCard className="h-4 w-4 text-amber-600" /> Personalausweis
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -793,20 +852,27 @@ export default function AdminMitarbeiterDetail() {
 
           {/* ─── AUFTRÄGE ──────────────────────────────────────────────── */}
           <TabsContent value="orders">
-            <Card className="rounded-2xl shadow-md border-border/60">
-              <CardHeader>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <StatCard title="Gesamt Aufträge" value={totalOrders} icon={Package} color="blue" />
+              <StatCard title="Ausstehend" value={pendingOrders} icon={Clock} color="amber" />
+              <StatCard title="Abgeschlossen" value={completedOrders} icon={CheckCheck} color="green" />
+            </div>
+
+            <Card className="rounded-2xl shadow-md border-border/60 overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-green-500/5 to-transparent">
                 <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
-                  <ShoppingBag className="h-4 w-4" /> Aufträge ({(assignments ?? []).length})
+                  <ShoppingBag className="h-4 w-4 text-green-600" /> Aufträge ({totalOrders})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {!(assignments ?? []).length ? (
+                {!totalOrders ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">Keine Aufträge zugewiesen.</p>
                 ) : (
                   <div className="border border-border rounded-lg overflow-hidden">
                     <Table>
                       <TableHeader>
-                        <TableRow>
+                        <TableRow className="bg-muted/30">
                           <TableHead>Auftragsnr.</TableHead>
                           <TableHead>Titel</TableHead>
                           <TableHead>Anbieter</TableHead>
@@ -817,11 +883,13 @@ export default function AdminMitarbeiterDetail() {
                       </TableHeader>
                       <TableBody>
                         {(assignments ?? []).map((a: any) => (
-                          <TableRow key={a.id}>
+                          <TableRow key={a.id} className="hover:bg-muted/30 transition-colors">
                             <TableCell className="font-mono text-xs">{a.orders?.order_number ?? "–"}</TableCell>
                             <TableCell className="font-medium">{a.orders?.title ?? "–"}</TableCell>
                             <TableCell className="text-muted-foreground">{a.orders?.provider ?? "–"}</TableCell>
-                            <TableCell className="text-muted-foreground">{a.orders?.reward ?? "–"}</TableCell>
+                            <TableCell>
+                              <span className="font-medium text-green-600">{a.orders?.reward ?? "–"}</span>
+                            </TableCell>
                             <TableCell>{assignmentStatusBadge(a.status)}</TableCell>
                             <TableCell className="text-muted-foreground">
                               {a.appointment
@@ -840,10 +908,10 @@ export default function AdminMitarbeiterDetail() {
 
           {/* ─── BEWERTUNGEN ───────────────────────────────────────────── */}
           <TabsContent value="reviews">
-            <Card className="rounded-2xl shadow-md border-border/60">
-              <CardHeader>
+            <Card className="rounded-2xl shadow-md border-border/60 overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-yellow-500/5 to-transparent">
                 <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
-                  <Star className="h-4 w-4" /> Bewertungen ({(reviews ?? []).length})
+                  <Star className="h-4 w-4 text-yellow-600" /> Bewertungen ({(reviews ?? []).length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
