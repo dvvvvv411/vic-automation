@@ -224,6 +224,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           </DialogHeader>
         </div>
 
+        <div className="px-6 pb-2">
         {isLoading ? (
           <div className="py-8 text-center text-muted-foreground">Laden...</div>
         ) : !items?.length ? (
@@ -242,7 +243,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
               />
             </div>
             <ScrollArea className="max-h-[50vh]">
-              <div className="space-y-2 pr-3">
+              <div className="space-y-2 pr-3 mt-2">
                 {filteredItems.length === 0 ? (
                   <div className="py-6 text-center text-sm text-muted-foreground">Keine Ergebnisse für „{search}"</div>
                 ) : (
