@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Package, ExternalLink, Clock, CheckCircle, XCircle, RefreshCw, CalendarCheck, Eye, Paperclip } from "lucide-react";
+import { Package, ExternalLink, Clock, CheckCircle, XCircle, RefreshCw, Paperclip } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string } | null;
