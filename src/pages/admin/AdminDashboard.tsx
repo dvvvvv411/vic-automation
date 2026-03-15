@@ -99,9 +99,9 @@ export default function AdminDashboard() {
   });
 
   const { data: submittedContracts } = useQuery({
-    queryKey: ["dash-submitted-contracts", brandingIds],
+    queryKey: ["dash-submitted-contracts", activeBrandingId],
     queryFn: async () => {
-      const { data } = await supabase.from("employment_contracts").select("id, first_name, last_name, submitted_at").eq("status", "eingereicht").order("submitted_at", { ascending: false }).limit(5);
+      const { data } = await supabase.from("employment_contracts").select("id, first_name, last_name, submitted_at, applications!inner(branding_id)").eq("status", "eingereicht").eq("applications.branding_id", activeBrandingId!).order("submitted_at", { ascending: false }).limit(5);
       return data ?? [];
     },
     enabled: ready,
