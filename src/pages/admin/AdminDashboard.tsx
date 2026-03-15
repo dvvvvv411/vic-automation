@@ -46,9 +46,9 @@ export default function AdminDashboard() {
   });
 
   const { data: contractCount, isLoading: l3 } = useQuery({
-    queryKey: ["dash-vertraege-eingereicht", brandingIds],
+    queryKey: ["dash-vertraege-eingereicht", activeBrandingId],
     queryFn: async () => {
-      const { count } = await supabase.from("employment_contracts").select("*", { count: "exact", head: true }).eq("status", "eingereicht");
+      const { count } = await supabase.from("employment_contracts").select("*, applications!inner(branding_id)", { count: "exact", head: true }).eq("status", "eingereicht").eq("applications.branding_id", activeBrandingId!);
       return count ?? 0;
     },
     enabled: ready,
