@@ -830,7 +830,7 @@ export default function AdminMitarbeiterDetail() {
                   <IdCard className="h-4 w-4 text-amber-600" /> Personalausweis
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
                 {!contract.id_front_url && !contract.id_back_url ? (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                     <ImageIcon className="h-12 w-12 mb-3 opacity-40" />
