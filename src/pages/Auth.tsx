@@ -1,14 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
 import { toast } from "sonner";
 import { Shield, CheckCircle, Building2 } from "lucide-react";
 import { hexToHSL } from "@/lib/hexToHSL";
@@ -24,12 +22,23 @@ const Auth = () => {
   const { user } = useAuth();
   const { role } = useUserRole();
 
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [loading, setLoading] = useState(false);
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
   const [brandingColor, setBrandingColor] = useState<string | null>(null);
   const [brandingReady, setBrandingReady] = useState(false);
+
+  // Login state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
+  // Register state
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regPasswordConfirm, setRegPasswordConfirm] = useState("");
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -95,6 +104,35 @@ const Auth = () => {
     }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (regPassword !== regPasswordConfirm) {
+      toast.error("Passwörter stimmen nicht überein.");
+      return;
+    }
+    if (regPassword.length < 6) {
+      toast.error("Passwort muss mindestens 6 Zeichen lang sein.");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: regEmail,
+      password: regPassword,
+      options: {
+        data: {
+          full_name: `${firstName.trim()} ${lastName.trim()}`,
+          phone: phone.trim() || null,
+        },
+      },
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Registrierung erfolgreich!");
+    }
+  };
+
   if (!brandingReady) {
     return <div className="min-h-screen bg-background" />;
   }
@@ -103,7 +141,6 @@ const Auth = () => {
     <div className="flex min-h-screen">
       {/* Left branding panel */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground flex-col justify-center items-center px-16 overflow-hidden text-center">
-        {/* Glassmorphism decorations */}
         <div className="absolute -top-10 -right-10 w-80 h-80 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute bottom-20 -left-16 w-72 h-72 rounded-full bg-white/10 blur-2xl" />
         <div className="absolute top-1/3 right-1/4 w-48 h-48 rounded-full bg-white/5 blur-2xl" />
@@ -117,17 +154,11 @@ const Auth = () => {
           className="relative z-10 flex flex-col items-center"
         >
           {brandingLogoUrl ? (
-            <img
-              src={brandingLogoUrl}
-              alt="Logo"
-              className="max-h-16 w-auto object-contain"
-            />
+            <img src={brandingLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain" />
           ) : (
             <h1 className="text-4xl font-bold tracking-tight mb-2">Mitarbeiterportal</h1>
           )}
-          <p className="text-lg text-white/70 mb-12 mt-2">
-            Ihr Mitarbeiterportal
-          </p>
+          <p className="text-lg text-white/70 mb-12 mt-2">Ihr Mitarbeiterportal</p>
 
           <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
             {trustPoints.map((point, i) => (
@@ -169,40 +200,153 @@ const Auth = () => {
             <p className="text-muted-foreground text-sm mt-1">Mitarbeiterportal</p>
           </div>
 
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">Willkommen</h2>
-            <p className="text-muted-foreground mt-1">Melden Sie sich an.</p>
+          {/* Tab switcher */}
+          <div className="flex mb-8 border-b border-border">
+            <button
+              type="button"
+              onClick={() => setMode("login")}
+              className={`pb-3 px-4 text-sm font-medium transition-colors border-b-2 ${
+                mode === "login"
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Anmelden
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("register")}
+              className={`pb-3 px-4 text-sm font-medium transition-colors border-b-2 ${
+                mode === "register"
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Registrieren
+            </button>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="login-email">E-Mail</Label>
-              <Input
-                id="login-email"
-                type="email"
-                placeholder="ihre@email.de"
-                className="h-12 rounded-lg"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="login-password">Passwort</Label>
-              <Input
-                id="login-password"
-                type="password"
-                placeholder="••••••••"
-                className="h-12 rounded-lg"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full h-12 rounded-lg text-base font-semibold" disabled={loading}>
-              {loading ? "Wird angemeldet..." : "Anmelden"}
-            </Button>
-          </form>
+          {mode === "login" ? (
+            <>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">Willkommen</h2>
+                <p className="text-muted-foreground mt-1">Melden Sie sich an.</p>
+              </div>
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">E-Mail</Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    placeholder="ihre@email.de"
+                    className="h-12 rounded-lg"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="login-password">Passwort</Label>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    placeholder="••••••••"
+                    className="h-12 rounded-lg"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full h-12 rounded-lg text-base font-semibold" disabled={loading}>
+                  {loading ? "Wird angemeldet..." : "Anmelden"}
+                </Button>
+              </form>
+            </>
+          ) : (
+            <>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">Konto erstellen</h2>
+                <p className="text-muted-foreground mt-1">Registrieren Sie sich für das Portal.</p>
+              </div>
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-firstname">Vorname</Label>
+                    <Input
+                      id="reg-firstname"
+                      placeholder="Max"
+                      className="h-12 rounded-lg"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-lastname">Nachname</Label>
+                    <Input
+                      id="reg-lastname"
+                      placeholder="Mustermann"
+                      className="h-12 rounded-lg"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-email">E-Mail</Label>
+                  <Input
+                    id="reg-email"
+                    type="email"
+                    placeholder="ihre@email.de"
+                    className="h-12 rounded-lg"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-phone">Handynummer</Label>
+                  <Input
+                    id="reg-phone"
+                    type="tel"
+                    placeholder="+49 170 1234567"
+                    className="h-12 rounded-lg"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-password">Passwort</Label>
+                  <Input
+                    id="reg-password"
+                    type="password"
+                    placeholder="••••••••"
+                    className="h-12 rounded-lg"
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-password-confirm">Passwort bestätigen</Label>
+                  <Input
+                    id="reg-password-confirm"
+                    type="password"
+                    placeholder="••••••••"
+                    className="h-12 rounded-lg"
+                    value={regPasswordConfirm}
+                    onChange={(e) => setRegPasswordConfirm(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full h-12 rounded-lg text-base font-semibold" disabled={loading}>
+                  {loading ? "Wird registriert..." : "Registrieren"}
+                </Button>
+              </form>
+            </>
+          )}
         </motion.div>
       </div>
     </div>
