@@ -23,7 +23,7 @@ export default function AdminKunden() {
 
   // Fetch all kunden
   const { data: kunden, isLoading } = useQuery({
-    queryKey: ["admin-kunden", brandingIds],
+    queryKey: ["admin-kunden", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       // Get all users with rolle 'kunde'
