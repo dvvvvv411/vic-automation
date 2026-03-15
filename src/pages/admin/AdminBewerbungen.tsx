@@ -164,8 +164,8 @@ export default function AdminBewerbungen() {
   const { brandingIds, ready } = useBrandingFilter();
 
   const { data: applications, isLoading } = useQuery({
-    queryKey: ["applications", userId],
-    enabled: !!userId,
+    queryKey: ["applications", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
