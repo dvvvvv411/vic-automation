@@ -242,44 +242,46 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                 className="pl-9"
               />
             </div>
-            <ScrollArea className="max-h-[340px]">
-              <div className="space-y-2 pr-3 mt-2">
-                {filteredItems.length === 0 ? (
-                  <div className="py-6 text-center text-sm text-muted-foreground">Keine Ergebnisse für „{search}"</div>
-                ) : (
-                  filteredItems.map((item) => (
-                    <label
-                      key={item.id}
-                      className="flex items-center gap-3 rounded-md border border-border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                    >
-                      <Checkbox
-                        checked={selected.has(item.id)}
-                        onCheckedChange={() => toggle(item.id)}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm truncate">{item.label}</span>
-                          {mode === "order" && assignmentCounts && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
-                              {assignmentCounts[item.id] || 0} {(assignmentCounts[item.id] || 0) === 1 ? "Auftrag" : "Aufträge"}
-                            </Badge>
-                          )}
+            <div className="rounded-lg border mt-2">
+              <ScrollArea className={filteredItems.length > 5 ? "h-[340px]" : ""}>
+                <div className="space-y-2 p-2">
+                  {filteredItems.length === 0 ? (
+                    <div className="py-6 text-center text-sm text-muted-foreground">Keine Ergebnisse für „{search}"</div>
+                  ) : (
+                    filteredItems.map((item) => (
+                      <label
+                        key={item.id}
+                        className="flex items-center gap-3 rounded-md border border-border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <Checkbox
+                          checked={selected.has(item.id)}
+                          onCheckedChange={() => toggle(item.id)}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm truncate">{item.label}</span>
+                            {mode === "order" && assignmentCounts && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
+                                {assignmentCounts[item.id] || 0} {(assignmentCounts[item.id] || 0) === 1 ? "Auftrag" : "Aufträge"}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {item.sublabel && <span className="truncate">{item.sublabel}</span>}
+                            {item.employmentType && (
+                              <>
+                                {item.sublabel && <span>·</span>}
+                                <span className="shrink-0">{item.employmentType}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          {item.sublabel && <span className="truncate">{item.sublabel}</span>}
-                          {item.employmentType && (
-                            <>
-                              {item.sublabel && <span>·</span>}
-                              <span className="shrink-0">{item.employmentType}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </label>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
           </>
         )}
         </div>

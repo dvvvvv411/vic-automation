@@ -1,29 +1,47 @@
 
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-# Fix: Mitarbeiter-Liste Scrollbar im Zuweisungs-Popup
+## Was wurde gemacht
 
-## Problem
-`ScrollArea` mit `max-h-[340px]` funktioniert nicht korrekt, da Radix ScrollArea eine feste Höhe (`h-[...]`) auf dem Root-Element braucht, nicht `max-h`.
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-## Lösung
-Die Mitarbeiterliste in eine Card (border + rounded container) wrappen und der ScrollArea eine feste Höhe geben:
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-### Änderungen in `AssignmentDialog.tsx` (Zeilen 245-282)
-- Die Liste in einen `rounded-lg border` Container wrappen (Card-Look)
-- `ScrollArea` bekommt `h-[340px]` statt `max-h-[340px]`
-- Innerer Container bekommt `p-2` Padding für den Card-Look
-- Wenn weniger als 5 Einträge: kein fester Height-Constraint nötig, also dynamisch mit `className={filteredItems.length > 5 ? "h-[340px]" : ""}` 
+---
 
-```tsx
-<div className="rounded-lg border mt-2">
-  <ScrollArea className={filteredItems.length > 5 ? "h-[340px]" : ""}>
-    <div className="space-y-2 p-2">
-      {/* items */}
-    </div>
-  </ScrollArea>
-</div>
-```
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-### Betroffene Datei
-- `src/components/admin/AssignmentDialog.tsx`
+## Was wurde gemacht
 
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
+
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
