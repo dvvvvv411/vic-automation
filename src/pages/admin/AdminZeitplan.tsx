@@ -330,7 +330,7 @@ export default function AdminZeitplan() {
       {blockedByDate.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Blockierte Zeitfenster</CardTitle>
+            <CardTitle className="text-lg">Blockierte Bewerbungsgespräch-Zeitfenster</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {blockedByDate.map(({ date, slots }) => (
