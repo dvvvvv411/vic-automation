@@ -182,7 +182,7 @@ export default function AdminTelefonnummern() {
   const [url, setUrl] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, activeBrandingId, ready } = useBrandingFilter();
 
   const { data: entries = [], isLoading } = useQuery<PhoneEntry[]>({
     queryKey: ["phone_numbers", userId],
