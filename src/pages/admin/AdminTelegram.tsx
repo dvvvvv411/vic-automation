@@ -11,7 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Send, Info } from "lucide-react";
 import { toast } from "sonner";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const EVENT_TYPES = [
   { key: "gespraech_gebucht", label: "Bewerbungsgespräch gebucht", desc: "Bewerber bucht ein Bewerbungsgespräch" },
