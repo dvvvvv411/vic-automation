@@ -23,7 +23,7 @@ export default function AdminProbetag() {
   const [viewMode, setViewMode] = useState<ViewMode>("default");
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
