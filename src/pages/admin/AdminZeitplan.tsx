@@ -242,9 +242,9 @@ export default function AdminZeitplan() {
       {/* Block Slots */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Zeiten blockieren</CardTitle>
+          <CardTitle className="text-lg">Bewerbungsgespräch Zeiten blockieren</CardTitle>
           <CardDescription>
-            Wählen Sie ein Datum und blockieren Sie einzelne Zeitfenster.
+            Wählen Sie ein Datum und blockieren Sie einzelne Zeitfenster für Bewerbungsgespräche.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -330,7 +330,7 @@ export default function AdminZeitplan() {
       {blockedByDate.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Blockierte Zeitfenster</CardTitle>
+            <CardTitle className="text-lg">Blockierte Bewerbungsgespräch-Zeitfenster</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {blockedByDate.map(({ date, slots }) => (
