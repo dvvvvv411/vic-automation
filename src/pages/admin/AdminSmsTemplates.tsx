@@ -44,7 +44,7 @@ export default function AdminSmsTemplates() {
   const [saving, setSaving] = useState<string | null>(null);
 
   const { data: templates, isLoading } = useQuery({
-    queryKey: ["sms-templates", brandingIds],
+    queryKey: ["sms-templates", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
