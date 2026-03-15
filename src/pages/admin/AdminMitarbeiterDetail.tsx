@@ -866,31 +866,38 @@ export default function AdminMitarbeiterDetail() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/30">
-                          <TableHead>Auftragsnr.</TableHead>
                           <TableHead>Titel</TableHead>
-                          <TableHead>Anbieter</TableHead>
                           <TableHead>Prämie</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Anhänge</TableHead>
                           <TableHead>Termin</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(assignments ?? []).map((a: any) => (
-                          <TableRow key={a.id} className="hover:bg-muted/30 transition-colors">
-                            <TableCell className="font-mono text-xs">{a.orders?.order_number ?? "–"}</TableCell>
-                            <TableCell className="font-medium">{a.orders?.title ?? "–"}</TableCell>
-                            <TableCell className="text-muted-foreground">{a.orders?.provider ?? "–"}</TableCell>
-                            <TableCell>
-                              <span className="font-medium text-green-600">{a.orders?.reward ?? "–"}</span>
-                            </TableCell>
-                            <TableCell>{assignmentStatusBadge(a.status)}</TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {a.appointment
-                                ? `${format(parseISO(a.appointment.appointment_date), "dd.MM.yyyy")} ${a.appointment.appointment_time?.slice(0, 5)}`
-                                : "–"}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {(assignments ?? []).map((a: any) => {
+                          const attachmentsPending = a.attachments_pending ?? false;
+                          return (
+                            <TableRow key={a.id} className="hover:bg-muted/30 transition-colors">
+                              <TableCell className="font-medium">{a.orders?.title ?? "–"}</TableCell>
+                              <TableCell>
+                                <span className="font-medium text-green-600">{a.orders?.reward ?? "–"}</span>
+                              </TableCell>
+                              <TableCell>{assignmentStatusBadge(a.status)}</TableCell>
+                              <TableCell>
+                                {attachmentsPending ? (
+                                  <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">Ausstehend</Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">–</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {a.appointment
+                                  ? `${format(parseISO(a.appointment.appointment_date), "dd.MM.yyyy")} ${a.appointment.appointment_time?.slice(0, 5)}`
+                                  : "–"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
