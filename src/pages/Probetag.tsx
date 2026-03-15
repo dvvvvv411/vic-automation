@@ -100,7 +100,7 @@ export default function Probetag() {
         .from("trial_day_blocked_slots" as any)
         .select("blocked_date, blocked_time");
       if (error) throw error;
-      return (data || []) as Array<{ blocked_date: string; blocked_time: string }>;
+      return (data || []) as unknown as Array<{ blocked_date: string; blocked_time: string }>;
     },
   });
 
