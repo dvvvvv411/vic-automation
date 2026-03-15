@@ -322,6 +322,25 @@ const AuftragDetails = () => {
     setUploading(null);
   };
 
+  const handleSubmitAttachments = async () => {
+    if (!contract || !order) return;
+    setSubmittingAttachments(true);
+    const { error: updateErr } = await supabase
+      .from("order_attachments" as any)
+      .update({ status: "eingereicht" } as any)
+      .eq("order_id", order.id)
+      .eq("contract_id", contract.id)
+      .eq("status", "entwurf");
+    if (updateErr) {
+      toast.error("Fehler beim Absenden der Anhänge.");
+      setSubmittingAttachments(false);
+      return;
+    }
+    await loadAttachments();
+    toast.success("Anhänge erfolgreich eingereicht!");
+    setSubmittingAttachments(false);
+  };
+
   if (layoutLoading || loading) {
     return (
       <div className="space-y-6 max-w-3xl">
