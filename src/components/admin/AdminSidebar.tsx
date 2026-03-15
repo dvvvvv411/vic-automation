@@ -41,6 +41,7 @@ const navGroups = [
     items: [
       { title: "Bewerbungen", url: "/admin/bewerbungen", icon: FileText },
       { title: "Bewerbungsgespräche", url: "/admin/bewerbungsgespraeche", icon: Calendar },
+      { title: "Probetage", url: "/admin/probetag", icon: Building2 },
       { title: "Arbeitsverträge", url: "/admin/arbeitsvertraege", icon: FileCheck },
     ],
   },
