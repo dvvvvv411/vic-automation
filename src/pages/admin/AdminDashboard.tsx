@@ -89,9 +89,9 @@ export default function AdminDashboard() {
   });
 
   const { data: todayInterviews } = useQuery({
-    queryKey: ["dash-today-interviews", brandingIds],
+    queryKey: ["dash-today-interviews", activeBrandingId],
     queryFn: async () => {
-      const { data } = await supabase.from("interview_appointments").select("id, appointment_time, status, application_id, applications(first_name, last_name)").eq("appointment_date", today()).order("appointment_time", { ascending: true });
+      const { data } = await supabase.from("interview_appointments").select("id, appointment_time, status, application_id, applications!inner(first_name, last_name, branding_id)").eq("appointment_date", today()).eq("applications.branding_id", activeBrandingId!).order("appointment_time", { ascending: true });
       return data ?? [];
     },
     enabled: ready,
