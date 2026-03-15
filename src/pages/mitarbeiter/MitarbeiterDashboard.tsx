@@ -302,6 +302,38 @@ const MitarbeiterDashboard = () => {
         </p>
       </motion.div>
 
+      {/* Contract data hint */}
+      {contract && !contractSubmittedAt && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15 }}
+        >
+          <Card className="border-l-4 border-l-amber-500 bg-background shadow-md rounded-2xl">
+            <CardContent className="py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-100 shrink-0">
+                  <FileText className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground text-sm">Arbeitsvertragsdaten ausfüllen</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Fülle deine persönlichen Daten aus, damit wir deinen Arbeitsvertrag erstellen können.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="rounded-xl shrink-0"
+                onClick={() => navigate("/mitarbeiter/arbeitsvertrag")}
+              >
+                Jetzt ausfüllen
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {stats.map((stat, i) => (
