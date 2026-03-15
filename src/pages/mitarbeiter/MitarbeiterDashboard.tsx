@@ -167,6 +167,7 @@ const MitarbeiterDashboard = () => {
       if (contractDetails) {
         setBalance(Number(contractDetails.balance) || 0);
         setEmploymentType(contractDetails.employment_type || null);
+        setContractSubmittedAt(contractDetails.submitted_at || null);
       }
 
       // Fetch assignments
