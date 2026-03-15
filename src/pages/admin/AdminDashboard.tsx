@@ -9,7 +9,7 @@ import { de } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import UpcomingStartDates from "@/components/admin/UpcomingStartDates";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const today = () => format(new Date(), "yyyy-MM-dd");
 
