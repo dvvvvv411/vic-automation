@@ -383,8 +383,8 @@ export default function AdminBewerbungsgespraeche() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={() => handleResendContractEmail(item)}
-                              title="Arbeitsvertrag-E-Mail erneut senden"
+                              onClick={() => handleResendProbetagEmail(item)}
+                              title="Probetag-E-Mail erneut senden"
                             >
                               <Mail className="h-4 w-4" />
                             </Button>

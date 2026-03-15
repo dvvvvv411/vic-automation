@@ -364,6 +364,9 @@ export default function AdminZeitplan() {
 
       {/* Order Appointment Blocking */}
       <OrderAppointmentBlocker />
+
+      {/* Trial Day Blocking */}
+      <TrialDayBlocker />
     </div>
   );
 }
