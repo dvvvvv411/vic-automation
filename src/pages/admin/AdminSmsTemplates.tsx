@@ -20,7 +20,7 @@ import {
 import { Smartphone, Send, Save, TestTube } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const PLACEHOLDER_INFO: Record<string, string[]> = {
   bewerbung_angenommen: ["{name}", "{link}"],
