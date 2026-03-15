@@ -185,8 +185,8 @@ export default function AdminTelefonnummern() {
   const { brandingIds, activeBrandingId, ready } = useBrandingFilter();
 
   const { data: entries = [], isLoading } = useQuery<PhoneEntry[]>({
-    queryKey: ["phone_numbers", userId],
-    enabled: !!userId,
+    queryKey: ["phone_numbers", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("phone_numbers" as any)
