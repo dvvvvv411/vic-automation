@@ -24,8 +24,6 @@ interface Assignment {
   title: string;
   provider: string;
   reward: string;
-  is_placeholder: boolean;
-  appointment?: { appointment_date: string; appointment_time: string } | null;
   hasRequiredAttachments: boolean;
   attachmentsPending: boolean;
 }
