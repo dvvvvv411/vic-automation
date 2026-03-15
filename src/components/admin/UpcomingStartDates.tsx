@@ -18,7 +18,7 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
 
 export default function UpcomingStartDates() {
   const today = new Date().toISOString().split("T")[0];
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const { data: upcoming } = useQuery({
     queryKey: ["upcoming-start-dates", today, userId],
