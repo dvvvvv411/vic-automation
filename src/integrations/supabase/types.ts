@@ -1276,6 +1276,10 @@ export type Database = {
         Returns: undefined
       }
       user_branding_ids: { Args: { _user_id: string }; Returns: string[] }
+      user_can_read_branding: {
+        Args: { _branding_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_has_any_branding: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
