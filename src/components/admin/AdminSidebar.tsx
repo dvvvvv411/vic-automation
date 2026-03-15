@@ -149,6 +149,7 @@ export function AdminSidebar() {
   const badgeCounts: Record<string, number> = {
     "/admin/bewerbungen": neuCount ?? 0,
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
+    "/admin/probetag": probetagTodayCount ?? 0,
     "/admin/arbeitsvertraege": eingereichtCount ?? 0,
     "/admin/auftragstermine": todayAppointmentsCount ?? 0,
     "/admin/livechat": chatUnreadCount ?? 0,
