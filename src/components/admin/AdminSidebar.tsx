@@ -134,6 +134,18 @@ export function AdminSidebar() {
     refetchInterval: 30000,
   });
 
+  const { data: probetagTodayCount } = useQuery({
+    queryKey: ["badge-probetag-heute"],
+    queryFn: async () => {
+      const now = new Date();
+      const today = format(now, "yyyy-MM-dd");
+      const nowTime = format(now, "HH:mm:ss");
+      const { count } = await supabase.from("trial_day_appointments" as any).select("*", { count: "exact", head: true }).eq("appointment_date", today).gte("appointment_time", nowTime);
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
   const badgeCounts: Record<string, number> = {
     "/admin/bewerbungen": neuCount ?? 0,
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
