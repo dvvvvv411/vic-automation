@@ -57,8 +57,8 @@ export default function AdminSmsTemplates() {
   });
 
   const { data: brandings } = useQuery({
-    queryKey: ["brandings-sms", userId],
-    enabled: !!userId,
+    queryKey: ["brandings-sms", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")

@@ -100,7 +100,7 @@ export default function AdminAuftraege() {
         const { error } = await supabase.from("orders").update(payload).eq("id", editingId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("orders").insert(payload);
+        const { error } = await supabase.from("orders").insert({ ...payload, branding_id: activeBrandingId });
         if (error) throw error;
       }
     },

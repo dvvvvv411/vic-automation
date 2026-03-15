@@ -31,8 +31,8 @@ export default function AdminProbetag() {
   const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["trial-day-appointments-admin", page, viewMode, userId],
-    enabled: !!userId,
+    queryKey: ["trial-day-appointments-admin", page, viewMode, brandingIds],
+    enabled: ready,
     queryFn: async () => {
       let query = supabase
         .from("trial_day_appointments" as any)

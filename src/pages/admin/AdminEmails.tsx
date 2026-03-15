@@ -251,8 +251,8 @@ export default function AdminEmails() {
   const { brandingIds, ready } = useBrandingFilter();
 
   const { data: brandings } = useQuery({
-    queryKey: ["brandings-for-preview", userId],
-    enabled: !!userId,
+    queryKey: ["brandings-for-preview", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")

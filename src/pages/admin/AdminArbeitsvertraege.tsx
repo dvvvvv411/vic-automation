@@ -33,8 +33,8 @@ export default function AdminArbeitsvertraege() {
   const { brandingIds, ready } = useBrandingFilter();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["arbeitsvertraege", userId],
-    enabled: !!userId,
+    queryKey: ["arbeitsvertraege", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data: appointments, error } = await supabase
         .from("interview_appointments")

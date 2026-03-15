@@ -62,8 +62,8 @@ const AdminBewertungen = () => {
   const { brandingIds, ready } = useBrandingFilter();
 
   const { data: grouped = [], isLoading } = useQuery({
-    queryKey: ["admin-bewertungen", userId],
-    enabled: !!userId,
+    queryKey: ["admin-bewertungen", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data: reviews, error } = await supabase
         .from("order_reviews")

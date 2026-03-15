@@ -21,8 +21,8 @@ export default function UpcomingStartDates() {
   const { brandingIds, ready } = useBrandingFilter();
 
   const { data: upcoming } = useQuery({
-    queryKey: ["upcoming-start-dates", today, userId],
-    enabled: !!userId,
+    queryKey: ["upcoming-start-dates", today, brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employment_contracts")

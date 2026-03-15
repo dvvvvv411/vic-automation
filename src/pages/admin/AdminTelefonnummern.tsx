@@ -199,7 +199,7 @@ export default function AdminTelefonnummern() {
 
   const addMutation = useMutation({
     mutationFn: async (apiUrl: string) => {
-      const { error } = await supabase.from("phone_numbers" as any).insert({ api_url: apiUrl } as any);
+      const { error } = await supabase.from("phone_numbers" as any).insert({ api_url: apiUrl, branding_id: activeBrandingId } as any);
       if (error) throw error;
     },
     onSuccess: () => {

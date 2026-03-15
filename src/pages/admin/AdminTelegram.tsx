@@ -53,8 +53,8 @@ export default function AdminTelegram() {
   });
 
   const { data: brandings = [] } = useQuery({
-    queryKey: ["brandings", userId],
-    enabled: !!userId,
+    queryKey: ["brandings", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")

@@ -75,8 +75,8 @@ export default function AdminSmsHistory() {
 
   // Fetch sms_spoof_logs
   const { data: spoofLogs, isLoading: spoofLoading } = useQuery({
-    queryKey: ["sms-history-spoof", selectedMonth, userId],
-    enabled: !!userId,
+    queryKey: ["sms-history-spoof", selectedMonth, brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data } = await supabase
         .from("sms_spoof_logs")
