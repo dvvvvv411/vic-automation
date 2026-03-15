@@ -281,12 +281,20 @@ const MitarbeiterAuftraege = () => {
               <Card className="bg-white border border-border/40 shadow-md rounded-2xl hover:shadow-lg transition-all duration-200 flex flex-col h-full border-l-4 border-l-primary">
 
                 <CardHeader className="pb-3 pt-5">
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
-                      #{a.order_number}
-                    </Badge>
-                    <StatusBadge status={a.status} />
-                  </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
+                        #{a.order_number}
+                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        {(a.status === "in_pruefung" || a.status === "erfolgreich") && a.attachmentsPending && (
+                          <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
+                            <Paperclip className="h-3 w-3 mr-1" />
+                            Anhänge ausstehend
+                          </Badge>
+                        )}
+                        <StatusBadge status={a.status} />
+                      </div>
+                    </div>
                   <CardTitle className="text-base font-semibold leading-snug text-foreground line-clamp-2">
                     {a.title}
                   </CardTitle>
