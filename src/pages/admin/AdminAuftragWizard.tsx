@@ -111,7 +111,7 @@ export default function AdminAuftragWizard() {
         title: form.title,
         description: form.description || null,
         order_type: form.order_type,
-        reward: form.reward,
+        reward: isFixedSalary ? "0" : form.reward,
         estimated_hours: form.estimated_hours || null,
         appstore_url: form.appstore_url || null,
         playstore_url: form.playstore_url || null,
