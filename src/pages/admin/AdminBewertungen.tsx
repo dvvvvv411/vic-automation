@@ -59,7 +59,7 @@ const AdminBewertungen = () => {
   const [selected, setSelected] = useState<GroupedReview | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
 
   const { data: grouped = [], isLoading } = useQuery({
     queryKey: ["admin-bewertungen", brandingIds],
