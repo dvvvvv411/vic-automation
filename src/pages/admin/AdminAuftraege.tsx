@@ -54,12 +54,13 @@ export default function AdminAuftraege() {
   const [assignOrder, setAssignOrder] = useState<Order | null>(null);
 
   const { data: orders, isLoading } = useQuery({
-    queryKey: ["orders", brandingIds],
+    queryKey: ["orders", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
         .select("*")
+        .eq("branding_id", activeBrandingId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as Order[];
