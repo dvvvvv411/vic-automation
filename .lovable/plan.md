@@ -1,43 +1,66 @@
 
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-# Auftragstermin-Buchungslogik komplett entfernen
+## Was wurde gemacht
 
-## Übersicht
-Die gesamte Auftragstermin-Buchungslogik wird entfernt, da User Aufträge nun eigenständig bearbeiten.
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-## Änderungen
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-### 1. `src/pages/mitarbeiter/AuftragDetails.tsx`
-- Entfernen: `Appointment` Interface, `TIME_SLOTS`, States (`appointment`, `selectedDate`, `selectedTime`, `booking`)
-- Entfernen: `order_appointments` Fetch (Zeilen 124-132)
-- Entfernen: `blockedOrderSlots` Query + `availableTimeSlots` Memo
-- Entfernen: `handleBookAppointment` Funktion (Zeilen 197-275)
-- Entfernen: Gesamter "Non-Placeholder: Appointment Booking" Block (Zeilen 482-566)
-- Entfernen: Nicht mehr benötigte Imports (`Calendar`, `CalendarCheck`, `MessageCircle`, `sendEmail`, `sendSms`, `sendTelegram`, `isWeekend`, `isBefore`, `startOfDay`, `isToday`, `Separator`, `useQuery`)
+---
 
-### 2. `src/pages/admin/AdminAuftragstermine.tsx`
-- Datei kann bestehen bleiben, aber Route + Sidebar-Eintrag werden entfernt
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-### 3. `src/App.tsx`
-- Zeile 23: Import `AdminAuftragstermine` entfernen
-- Zeile 80: Route `auftragstermine` entfernen
+## Was wurde gemacht
 
-### 4. `src/components/admin/AdminSidebar.tsx`
-- Zeile 60: `{ title: "Auftragstermine", ... }` aus `navGroups` entfernen
-- Zeilen 157-166: `todayAppointmentsCount` Query entfernen
-- Zeile 186: Badge-Count für `/admin/auftragstermine` entfernen
-- Import `CalendarClock` entfernen
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-### 5. `src/pages/admin/AdminZeitplan.tsx`
-- Zeile 18: Import `OrderAppointmentBlocker` entfernen
-- Zeile 366: `<OrderAppointmentBlocker />` entfernen
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
-### 6. `src/components/admin/OrderAppointmentBlocker.tsx`
-- Kann gelöscht oder belassen werden (wird nicht mehr importiert)
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
 
-## Betroffene Dateien
-1. `src/pages/mitarbeiter/AuftragDetails.tsx` — Terminbuchung entfernen
-2. `src/App.tsx` — Route entfernen
-3. `src/components/admin/AdminSidebar.tsx` — Nav-Eintrag + Badge entfernen
-4. `src/pages/admin/AdminZeitplan.tsx` — OrderAppointmentBlocker entfernen
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
 
+---
+
+# Vergütungsmodell pro Branding (abgeschlossen)
+
+## Was wurde gemacht
+
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary

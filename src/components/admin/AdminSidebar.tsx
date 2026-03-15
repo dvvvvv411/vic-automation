@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
@@ -57,7 +57,7 @@ const navGroups = [
     items: [
       { title: "Mitarbeiter", url: "/admin/mitarbeiter", icon: Users },
       { title: "Aufträge", url: "/admin/auftraege", icon: ClipboardList },
-      { title: "Auftragstermine", url: "/admin/auftragstermine", icon: CalendarClock },
+      
       { title: "Livechat", url: "/admin/livechat", icon: MessageCircle },
       { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
       { title: "Anhänge", url: "/admin/anhaenge", icon: Paperclip },
@@ -154,16 +154,6 @@ export function AdminSidebar() {
     refetchInterval: 30000,
   });
 
-  const { data: todayAppointmentsCount } = useQuery({
-    queryKey: ["badge-auftragstermine-heute", activeBrandingId],
-    enabled: !!activeBrandingId,
-    queryFn: async () => {
-      const today = format(new Date(), "yyyy-MM-dd");
-      const { count } = await supabase.from("order_appointments").select("*, orders!inner(branding_id)", { count: "exact", head: true }).eq("appointment_date", today).eq("orders.branding_id", activeBrandingId!);
-      return count ?? 0;
-    },
-    refetchInterval: 30000,
-  });
 
   const { data: probetagTodayCount } = useQuery({
     queryKey: ["badge-probetag-heute", activeBrandingId],
@@ -183,7 +173,7 @@ export function AdminSidebar() {
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
     "/admin/probetag": probetagTodayCount ?? 0,
     "/admin/arbeitsvertraege": eingereichtCount ?? 0,
-    "/admin/auftragstermine": todayAppointmentsCount ?? 0,
+    
     "/admin/livechat": chatUnreadCount ?? 0,
     "/admin/bewertungen": inPruefungCount ?? 0,
   };

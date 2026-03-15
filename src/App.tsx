@@ -20,7 +20,7 @@ import AdminAuftragWizard from "./pages/admin/AdminAuftragWizard";
 import AdminAnhaenge from "./pages/admin/AdminAnhaenge";
 import AdminLivechat from "./pages/admin/AdminLivechat";
 import AdminBewertungen from "./pages/admin/AdminBewertungen";
-import AdminAuftragstermine from "./pages/admin/AdminAuftragstermine";
+
 import AdminEmails from "./pages/admin/AdminEmails";
 import AdminSmsTemplates from "./pages/admin/AdminSmsTemplates";
 import AdminTelegram from "./pages/admin/AdminTelegram";
@@ -77,7 +77,7 @@ const App = () => (
               <Route path="auftraege/neu" element={<AdminAuftragWizard />} />
               <Route path="auftraege/:id/bearbeiten" element={<AdminAuftragWizard />} />
               <Route path="anhaenge" element={<AdminAnhaenge />} />
-              <Route path="auftragstermine" element={<AdminAuftragstermine />} />
+              
               <Route path="livechat" element={<AdminLivechat />} />
               <Route path="bewertungen" element={<AdminBewertungen />} />
               <Route path="emails" element={<AdminEmails />} />
