@@ -129,8 +129,8 @@ export function AdminSidebar() {
       // Get contract IDs for active branding
       const { data: contracts } = await supabase
         .from("employment_contracts")
-        .select("id, applications!inner(branding_id)")
-        .eq("applications.branding_id", activeBrandingId!);
+        .select("id")
+        .eq("branding_id", activeBrandingId!);
       const contractIds = (contracts ?? []).map((c) => c.id);
       if (!contractIds.length) return 0;
       const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false).in("contract_id", contractIds);
