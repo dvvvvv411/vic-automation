@@ -28,6 +28,7 @@ import AdminSmsSpoof from "./pages/admin/AdminSmsSpoof";
 import AdminKunden from "./pages/admin/AdminKunden";
 import AdminSmsHistory from "./pages/admin/AdminSmsHistory";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
+import Probetag from "./pages/Probetag";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
 import MitarbeiterLayout from "./components/mitarbeiter/MitarbeiterLayout";
 import MitarbeiterDashboard from "./pages/mitarbeiter/MitarbeiterDashboard";
