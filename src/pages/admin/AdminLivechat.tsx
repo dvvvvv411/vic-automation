@@ -12,6 +12,7 @@ import { useChatTyping } from "@/components/chat/useChatTyping";
 import { sendSms } from "@/lib/sendSms";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
 import { SmsWatch } from "@/components/chat/SmsWatch";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import MitarbeiterDetailPopup from "@/components/admin/MitarbeiterDetailPopup";
 import { Switch } from "@/components/ui/switch";
 import { MessageCircle, Pencil, Check, Plus, Bell, PencilLine, X } from "lucide-react";
@@ -36,6 +37,7 @@ import { toast } from "sonner";
 
 export default function AdminLivechat() {
   const { user } = useAuth();
+  const { activeBrandingId, ready } = useBrandingFilter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [active, setActive] = useState<Conversation | null>(null);
   const [search, setSearch] = useState("");
@@ -97,11 +99,29 @@ export default function AdminLivechat() {
     setEditingName(false);
   };
 
-  // Load conversations + online status
+  // Load conversations + online status (filtered by branding)
   const loadConversations = useCallback(async () => {
+    if (!ready) return;
+
+    // Step 1: Get contract IDs for the active branding
+    let contractQuery = supabase
+      .from("employment_contracts")
+      .select("id, first_name, last_name, user_id, chat_active_at, applications!inner(branding_id)");
+
+    if (activeBrandingId) {
+      contractQuery = contractQuery.eq("applications.branding_id", activeBrandingId);
+    }
+
+    const { data: contracts } = await contractQuery;
+    if (!contracts?.length) { setConversations([]); setOnlineContractIds(new Set()); return; }
+
+    const contractIds = contracts.map((c) => c.id);
+
+    // Step 2: Load chat messages only for those contracts
     const { data: msgs } = await supabase
       .from("chat_messages")
       .select("contract_id, content, created_at, read, sender_role")
+      .in("contract_id", contractIds)
       .order("created_at", { ascending: false });
 
     if (!msgs) return;
@@ -115,18 +135,10 @@ export default function AdminLivechat() {
       if (m.sender_role === "user" && !m.read) entry.unread_count++;
     }
 
-    const contractIds = Array.from(map.keys());
-    if (!contractIds.length) { setConversations([]); return; }
-
-    const { data: contracts } = await supabase
-      .from("employment_contracts")
-      .select("id, first_name, last_name, user_id, chat_active_at")
-      .in("id", contractIds);
-
     // Compute online status from chat_active_at
     const now = Date.now();
     const onlineIds = new Set<string>();
-    for (const c of contracts ?? []) {
+    for (const c of contracts) {
       const activeAt = (c as any).chat_active_at;
       if (activeAt && (now - new Date(activeAt).getTime()) < 2 * 60 * 1000) {
         onlineIds.add(c.id);
@@ -134,13 +146,13 @@ export default function AdminLivechat() {
     }
     setOnlineContractIds(onlineIds);
 
-    const convs: Conversation[] = (contracts ?? [])
+    const convs: Conversation[] = contracts
       .filter((c) => map.has(c.id))
       .map((c) => ({ contract_id: c.id, first_name: c.first_name, last_name: c.last_name, ...map.get(c.id)! }))
       .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
 
     setConversations(convs);
-  }, []);
+  }, [ready, activeBrandingId]);
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
@@ -291,10 +303,16 @@ export default function AdminLivechat() {
       .eq("contract_id", active.contract_id);
     const assignedIds = (existing ?? []).map((e: any) => e.order_id);
 
-    const { data: allOrders } = await supabase
+    let orderQuery = supabase
       .from("orders")
       .select("id, title, order_number, reward, is_placeholder")
       .order("created_at", { ascending: false });
+
+    if (activeBrandingId) {
+      orderQuery = orderQuery.eq("branding_id", activeBrandingId);
+    }
+
+    const { data: allOrders } = await orderQuery;
 
     setAvailableOrders((allOrders ?? []).filter((o: any) => !assignedIds.includes(o.id)));
     setOrderLoading(false);
