@@ -127,10 +127,23 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 const MitarbeiterDashboard = () => {
   const navigate = useNavigate();
-  const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
+  const { contract, branding, loading: layoutLoading } = useOutletContext<ContextType>();
   const [orders, setOrders] = useState<OrderWithStatus[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [balance, setBalance] = useState<number>(0);
+  const [employmentType, setEmploymentType] = useState<string | null>(null);
+
+  const isFixedSalary = branding?.payment_model === "fixed_salary";
+
+  const getFixedSalary = () => {
+    if (!branding) return 0;
+    switch (employmentType?.toLowerCase()) {
+      case "minijob": return Number(branding.salary_minijob) || 0;
+      case "teilzeit": return Number(branding.salary_teilzeit) || 0;
+      case "vollzeit": return Number(branding.salary_vollzeit) || 0;
+      default: return 0;
+    }
+  };
   const [avgRating, setAvgRating] = useState<number>(0);
   const [reviewCount, setReviewCount] = useState<number>(0);
   const [recentReviews, setRecentReviews] = useState<{order_title: string; avg: number; date: string}[]>([]);
