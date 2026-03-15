@@ -56,7 +56,7 @@ const DashboardPayoutSummary = ({ balance, isFixedSalary }: Props) => {
                 <Euro className="h-4 w-4 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground">Voraussichtlicher Betrag</p>
+                <p className="text-xs text-muted-foreground">{isFixedSalary ? "Festgehalt" : "Voraussichtlicher Betrag"}</p>
                 <p className="text-lg font-bold text-primary">{balance.toFixed(2)} €</p>
               </div>
             </div>

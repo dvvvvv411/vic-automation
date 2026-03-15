@@ -401,6 +401,60 @@ export default function AdminBrandings() {
               {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
             </div>
 
+            {/* Vergütungsmodell */}
+            <div className="pt-2">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-sm font-medium text-muted-foreground">Vergütungsmodell</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <RadioGroup
+                value={form.payment_model}
+                onValueChange={(v) => setForm((prev) => ({ ...prev, payment_model: v as "per_order" | "fixed_salary" }))}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="per_order" id="per_order" />
+                  <Label htmlFor="per_order" className="cursor-pointer">Vergütung pro Auftrag</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="fixed_salary" id="fixed_salary" />
+                  <Label htmlFor="fixed_salary" className="cursor-pointer">Festgehalt</Label>
+                </div>
+              </RadioGroup>
+
+              {form.payment_model === "fixed_salary" && (
+                <div className="grid grid-cols-3 gap-4 mt-3">
+                  <div className="space-y-2">
+                    <Label>Minijob (€)</Label>
+                    <Input
+                      placeholder="520"
+                      value={form.salary_minijob}
+                      onChange={(e) => updateField("salary_minijob", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teilzeit (€)</Label>
+                    <Input
+                      placeholder="1500"
+                      value={form.salary_teilzeit}
+                      onChange={(e) => updateField("salary_teilzeit", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Vollzeit (€)</Label>
+                    <Input
+                      placeholder="3000"
+                      value={form.salary_vollzeit}
+                      onChange={(e) => updateField("salary_vollzeit", e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Brand Color */}
             <div className="space-y-2">
               <Label>Brandingfarbe</Label>

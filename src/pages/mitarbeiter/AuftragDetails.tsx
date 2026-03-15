@@ -402,10 +402,12 @@ const AuftragDetails = () => {
                 <p className="font-medium text-foreground">{order.provider}</p>
               </div>
             )}
-            <div>
-              <span className="text-muted-foreground">Prämie</span>
-              <p className="font-semibold text-primary">{order.reward}{order.reward.includes("€") ? "" : " €"}</p>
-            </div>
+            {!isFixedSalary && (
+              <div>
+                <span className="text-muted-foreground">Prämie</span>
+                <p className="font-semibold text-primary">{order.reward}{order.reward.includes("€") ? "" : " €"}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

@@ -220,7 +220,7 @@ export default function AdminAuftragWizard() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className={cn("grid gap-4", isFixedSalary ? "grid-cols-1" : "grid-cols-2")}>
               <div className="space-y-2">
                 <Label>Typ *</Label>
                 <Select value={form.order_type} onValueChange={(v) => setForm((f) => ({ ...f, order_type: v }))}>
@@ -235,14 +235,16 @@ export default function AdminAuftragWizard() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Vergütungsbetrag (€) *</Label>
-                <Input
-                  placeholder="0.00"
-                  value={form.reward}
-                  onChange={(e) => setForm((f) => ({ ...f, reward: e.target.value }))}
-                />
-              </div>
+              {!isFixedSalary && (
+                <div className="space-y-2">
+                  <Label>Vergütungsbetrag (€) *</Label>
+                  <Input
+                    placeholder="0.00"
+                    value={form.reward}
+                    onChange={(e) => setForm((f) => ({ ...f, reward: e.target.value }))}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
