@@ -1198,6 +1198,11 @@ export type Database = {
         Args: { _contract_id: string }
         Returns: undefined
       }
+      apps_for_branding_ids: { Args: { _user_id: string }; Returns: string[] }
+      contracts_for_branding_ids: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1275,6 +1280,7 @@ export type Database = {
         Args: { _appointment_id: string; _status: string }
         Returns: undefined
       }
+      user_application_ids: { Args: { _user_id: string }; Returns: string[] }
       user_branding_ids: { Args: { _user_id: string }; Returns: string[] }
       user_can_read_branding: {
         Args: { _branding_id: string; _user_id: string }
