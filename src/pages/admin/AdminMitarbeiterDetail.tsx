@@ -353,7 +353,7 @@ export default function AdminMitarbeiterDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_assignments")
-        .select("*, orders(order_number, title, provider, reward)")
+        .select("*, orders(order_number, title, provider, reward, required_attachments)")
         .eq("contract_id", id!)
         .order("assigned_at", { ascending: false });
       if (error) throw error;
@@ -361,10 +361,23 @@ export default function AdminMitarbeiterDetail() {
         .from("order_appointments")
         .select("*")
         .eq("contract_id", id!);
-      return (data ?? []).map((a: any) => ({
-        ...a,
-        appointment: (appointments ?? []).find((ap: any) => ap.order_id === a.order_id),
-      }));
+      // Check for pending attachments per assignment
+      const { data: allAttachments } = await supabase
+        .from("order_attachments" as any)
+        .select("order_id, status")
+        .eq("contract_id", id!);
+      return (data ?? []).map((a: any) => {
+        const reqAttachments = Array.isArray(a.orders?.required_attachments) ? a.orders.required_attachments : [];
+        const orderAttachments = (allAttachments ?? []).filter((att: any) => att.order_id === a.order_id);
+        const allApproved = reqAttachments.length > 0 && reqAttachments.every((_: any, idx: number) =>
+          orderAttachments.some((att: any) => att.attachment_index === idx && att.status === "genehmigt")
+        );
+        return {
+          ...a,
+          appointment: (appointments ?? []).find((ap: any) => ap.order_id === a.order_id),
+          attachments_pending: reqAttachments.length > 0 && !allApproved,
+        };
+      });
     },
     enabled: !!id,
   });
