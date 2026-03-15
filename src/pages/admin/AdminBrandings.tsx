@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, Palette, Trash2, Copy, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
