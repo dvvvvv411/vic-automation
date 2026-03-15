@@ -20,7 +20,7 @@ import { toast } from "sonner";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string } | null;
-  branding: { logo_url: string | null; company_name: string; brand_color: string | null } | null;
+  branding: { logo_url: string | null; company_name: string; brand_color: string | null; payment_model?: string | null } | null;
   loading: boolean;
 }
 
