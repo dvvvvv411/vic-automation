@@ -143,7 +143,11 @@ export function AdminSidebar() {
     queryKey: ["badge-bewertungen-pruefung", activeBrandingId],
     enabled: !!activeBrandingId,
     queryFn: async () => {
-      const { count } = await supabase.from("order_assignments").select("*, orders!inner(branding_id)", { count: "exact", head: true }).eq("status", "in_pruefung").eq("orders.branding_id", activeBrandingId!);
+      // Get contract IDs for active branding, then count in_pruefung assignments
+      const { data: contracts } = await supabase.from("employment_contracts").select("id").eq("branding_id", activeBrandingId!);
+      const contractIds = (contracts ?? []).map((c) => c.id);
+      if (!contractIds.length) return 0;
+      const { count } = await supabase.from("order_assignments").select("*", { count: "exact", head: true }).eq("status", "in_pruefung").in("contract_id", contractIds);
       return count ?? 0;
     },
     refetchInterval: 30000,
