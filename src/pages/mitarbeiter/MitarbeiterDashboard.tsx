@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Apple, Play, Package, Clock, CheckCircle, XCircle, RefreshCw, CalendarCheck, Eye, FileText } from "lucide-react";
+import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Apple, Play, Package, Clock, CheckCircle, XCircle, RefreshCw, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
