@@ -48,8 +48,8 @@ export default function AdminMitarbeiter() {
     queryFn: async () => {
       const { data: contracts, error, count } = await supabase
         .from("employment_contracts")
-        .select("id, first_name, last_name, email, phone, temp_password, user_id, application_id, status, desired_start_date, is_suspended, applications!inner(branding_id, brandings(company_name))", { count: "exact" })
-        .eq("applications.branding_id", activeBrandingId!)
+        .select("id, first_name, last_name, email, phone, temp_password, user_id, application_id, status, desired_start_date, is_suspended, branding_id", { count: "exact" })
+        .eq("branding_id", activeBrandingId!)
         .in("status", ["genehmigt", "unterzeichnet"])
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);

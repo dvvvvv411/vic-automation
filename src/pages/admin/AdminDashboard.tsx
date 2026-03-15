@@ -48,7 +48,7 @@ export default function AdminDashboard() {
   const { data: contractCount, isLoading: l3 } = useQuery({
     queryKey: ["dash-vertraege-eingereicht", activeBrandingId],
     queryFn: async () => {
-      const { count } = await supabase.from("employment_contracts").select("*, applications!inner(branding_id)", { count: "exact", head: true }).eq("status", "eingereicht").eq("applications.branding_id", activeBrandingId!);
+      const { count } = await supabase.from("employment_contracts").select("*", { count: "exact", head: true }).eq("status", "eingereicht").eq("branding_id", activeBrandingId!);
       return count ?? 0;
     },
     enabled: ready,
@@ -68,7 +68,7 @@ export default function AdminDashboard() {
   const { data: unreadChatCount, isLoading: l5 } = useQuery({
     queryKey: ["dash-chat-unread", activeBrandingId],
     queryFn: async () => {
-      const { data: contracts } = await supabase.from("employment_contracts").select("id, applications!inner(branding_id)").eq("applications.branding_id", activeBrandingId!);
+      const { data: contracts } = await supabase.from("employment_contracts").select("id").eq("branding_id", activeBrandingId!);
       const ids = (contracts ?? []).map((c) => c.id);
       if (!ids.length) return 0;
       const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false).in("contract_id", ids);
@@ -101,7 +101,7 @@ export default function AdminDashboard() {
   const { data: submittedContracts } = useQuery({
     queryKey: ["dash-submitted-contracts", activeBrandingId],
     queryFn: async () => {
-      const { data } = await supabase.from("employment_contracts").select("id, first_name, last_name, submitted_at, applications!inner(branding_id)").eq("status", "eingereicht").eq("applications.branding_id", activeBrandingId!).order("submitted_at", { ascending: false }).limit(5);
+      const { data } = await supabase.from("employment_contracts").select("id, first_name, last_name, submitted_at").eq("status", "eingereicht").eq("branding_id", activeBrandingId!).order("submitted_at", { ascending: false }).limit(5);
       return data ?? [];
     },
     enabled: ready,

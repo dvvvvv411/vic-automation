@@ -65,35 +65,35 @@ const AdminBewertungen = () => {
     queryKey: ["admin-bewertungen", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      // Step 1: Get orders for the active branding
-      let ordersQuery = supabase.from("orders").select("id, title, reward");
+      // Step 1: Get contract IDs for the active branding
+      let contractQuery = supabase.from("employment_contracts").select("id, first_name, last_name");
       if (activeBrandingId) {
-        ordersQuery = ordersQuery.eq("branding_id", activeBrandingId);
+        contractQuery = contractQuery.eq("branding_id", activeBrandingId);
       }
-      const { data: orders } = await ordersQuery;
-      if (!orders?.length) return [];
+      const { data: contracts } = await contractQuery;
+      if (!contracts?.length) return [];
 
-      const brandingOrderIds = orders.map((o) => o.id);
+      const contractIds = contracts.map((c) => c.id);
+      const contractMap = Object.fromEntries(
+        contracts.map((c) => [c.id, [c.first_name, c.last_name].filter(Boolean).join(" ") || "Unbekannt"])
+      );
 
-      // Step 2: Get reviews only for those orders
+      // Step 2: Get reviews for those contracts
       const { data: reviews, error } = await supabase
         .from("order_reviews")
         .select("order_id, contract_id, question, rating, comment, created_at")
-        .in("order_id", brandingOrderIds);
+        .in("contract_id", contractIds);
 
       if (error || !reviews?.length) return [];
 
-      const contractIds = [...new Set(reviews.map((r) => r.contract_id))];
+      const orderIds = [...new Set(reviews.map((r) => r.order_id))];
 
-      const [{ data: contracts }, { data: assignments }] = await Promise.all([
-        supabase.from("employment_contracts").select("id, first_name, last_name").in("id", contractIds),
-        supabase.from("order_assignments").select("order_id, contract_id, status").in("order_id", brandingOrderIds).in("contract_id", contractIds),
+      const [{ data: orders }, { data: assignments }] = await Promise.all([
+        supabase.from("orders").select("id, title, reward").in("id", orderIds),
+        supabase.from("order_assignments").select("order_id, contract_id, status").in("contract_id", contractIds).in("order_id", orderIds),
       ]);
 
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
-      const contractMap = Object.fromEntries(
-        (contracts ?? []).map((c) => [c.id, [c.first_name, c.last_name].filter(Boolean).join(" ") || "Unbekannt"])
-      );
       const statusMap = Object.fromEntries(
         (assignments ?? []).map((a) => [`${a.order_id}_${a.contract_id}`, a.status ?? "offen"])
       );
