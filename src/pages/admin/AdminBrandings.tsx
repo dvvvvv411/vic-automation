@@ -131,9 +131,13 @@ export default function AdminBrandings() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: BrandingForm & { logo_url?: string } }) => {
-      const cleaned: Record<string, string | null> = {};
+      const cleaned: Record<string, any> = {};
       Object.entries(data).forEach(([key, value]) => {
-        cleaned[key] = value === "" ? null : (value as string);
+        if (key === "salary_minijob" || key === "salary_teilzeit" || key === "salary_vollzeit") {
+          cleaned[key] = value ? parseFloat(value as string) : null;
+        } else {
+          cleaned[key] = value === "" ? null : (value as string);
+        }
       });
       const { error } = await supabase.from("brandings").update(cleaned as any).eq("id", id);
       if (error) throw error;
