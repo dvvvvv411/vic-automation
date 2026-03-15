@@ -35,7 +35,7 @@ const PLACEHOLDER_INFO: Record<string, string[]> = {
 
 export default function AdminSmsTemplates() {
   const queryClient = useQueryClient();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
   const [testPhone, setTestPhone] = useState("");
   const [testText, setTestText] = useState("");
   const [testSending, setTestSending] = useState(false);
