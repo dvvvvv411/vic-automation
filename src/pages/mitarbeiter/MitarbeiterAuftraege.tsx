@@ -272,22 +272,11 @@ const MitarbeiterAuftraege = () => {
                       <span className="font-semibold text-primary">{a.reward}{a.reward.includes("€") ? "" : " €"}</span>
                     </div>
 
-                    {/* Appointment badge for non-placeholder with booked appointment */}
-                    {!a.is_placeholder && a.appointment && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2 mt-1">
-                        <CalendarCheck className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <span>
-                          Termin: {format(new Date(a.appointment.appointment_date), "d. MMM yyyy", { locale: de })}, {a.appointment.appointment_time.slice(0, 5)} Uhr
-                        </span>
-                      </div>
-                    )}
                   </div>
 
                   <StatusButton 
                     status={a.status} 
                     orderId={a.order_id} 
-                    isPlaceholder={a.is_placeholder}
-                    hasAppointment={!!a.appointment}
                     navigate={navigate} 
                   />
                 </CardContent>
