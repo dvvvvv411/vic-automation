@@ -59,8 +59,8 @@ export default function AdminZeitplan() {
 
   // Load brandings
   const { data: brandings = [] } = useQuery({
-    queryKey: ["brandings", userId],
-    enabled: !!userId,
+    queryKey: ["brandings", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase.from("brandings").select("id, company_name").order("company_name");
       if (error) throw error;
