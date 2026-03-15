@@ -303,10 +303,16 @@ export default function AdminLivechat() {
       .eq("contract_id", active.contract_id);
     const assignedIds = (existing ?? []).map((e: any) => e.order_id);
 
-    const { data: allOrders } = await supabase
+    let orderQuery = supabase
       .from("orders")
       .select("id, title, order_number, reward, is_placeholder")
       .order("created_at", { ascending: false });
+
+    if (activeBrandingId) {
+      orderQuery = orderQuery.eq("branding_id", activeBrandingId);
+    }
+
+    const { data: allOrders } = await orderQuery;
 
     setAvailableOrders((allOrders ?? []).filter((o: any) => !assignedIds.includes(o.id)));
     setOrderLoading(false);

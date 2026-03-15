@@ -65,19 +65,29 @@ const AdminBewertungen = () => {
     queryKey: ["admin-bewertungen", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
+      // Step 1: Get orders for the active branding
+      let ordersQuery = supabase.from("orders").select("id, title, reward");
+      if (activeBrandingId) {
+        ordersQuery = ordersQuery.eq("branding_id", activeBrandingId);
+      }
+      const { data: orders } = await ordersQuery;
+      if (!orders?.length) return [];
+
+      const brandingOrderIds = orders.map((o) => o.id);
+
+      // Step 2: Get reviews only for those orders
       const { data: reviews, error } = await supabase
         .from("order_reviews")
-        .select("order_id, contract_id, question, rating, comment, created_at");
+        .select("order_id, contract_id, question, rating, comment, created_at")
+        .in("order_id", brandingOrderIds);
 
       if (error || !reviews?.length) return [];
 
-      const orderIds = [...new Set(reviews.map((r) => r.order_id))];
       const contractIds = [...new Set(reviews.map((r) => r.contract_id))];
 
-      const [{ data: orders }, { data: contracts }, { data: assignments }] = await Promise.all([
-        supabase.from("orders").select("id, title, reward").in("id", orderIds),
+      const [{ data: contracts }, { data: assignments }] = await Promise.all([
         supabase.from("employment_contracts").select("id, first_name, last_name").in("id", contractIds),
-        supabase.from("order_assignments").select("order_id, contract_id, status").in("order_id", orderIds).in("contract_id", contractIds),
+        supabase.from("order_assignments").select("order_id, contract_id, status").in("order_id", brandingOrderIds).in("contract_id", contractIds),
       ]);
 
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
