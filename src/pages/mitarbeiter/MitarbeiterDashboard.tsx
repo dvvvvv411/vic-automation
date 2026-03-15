@@ -400,10 +400,12 @@ const MitarbeiterDashboard = () => {
                               <span className="text-muted-foreground">Anbieter</span>
                               <span className="font-medium text-foreground">{order.provider}</span>
                             </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Prämie</span>
-                              <span className="font-semibold text-primary">{order.reward}{order.reward.includes("€") ? "" : " €"}</span>
-                            </div>
+                            {!isFixedSalary && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Prämie</span>
+                                <span className="font-semibold text-primary">{order.reward}{order.reward.includes("€") ? "" : " €"}</span>
+                              </div>
+                            )}
 
                             {(order.appstore_url || order.playstore_url) && (
                               <div className="flex items-center gap-2 pt-1">
