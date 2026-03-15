@@ -17,6 +17,8 @@ const statusBadge = (status: string) => {
       return <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">Genehmigt</Badge>;
     case "abgelehnt":
       return <Badge variant="outline" className="text-red-600 border-red-300 bg-red-50">Abgelehnt</Badge>;
+    case "entwurf":
+      return <Badge variant="outline" className="text-muted-foreground border-border bg-muted">Entwurf</Badge>;
     default:
       return <Badge variant="outline" className="text-blue-600 border-blue-300 bg-blue-50">Eingereicht</Badge>;
   }
