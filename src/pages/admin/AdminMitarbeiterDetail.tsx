@@ -871,7 +871,7 @@ export default function AdminMitarbeiterDetail() {
                   <ShoppingBag className="h-4 w-4 text-green-600" /> Aufträge ({totalOrders})
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
                 {!totalOrders ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">Keine Aufträge zugewiesen.</p>
                 ) : (
