@@ -151,7 +151,7 @@ const MitarbeiterAuftraege = () => {
       const orderIds = rawAssignments.map((a) => a.order_id);
       const { data: orders } = await supabase
         .from("orders")
-        .select("id, order_number, title, provider, reward, is_placeholder")
+        .select("id, order_number, title, provider, reward, is_placeholder, required_attachments")
         .in("id", orderIds);
 
       // Load appointments for this contract
@@ -160,23 +160,47 @@ const MitarbeiterAuftraege = () => {
         .select("order_id, appointment_date, appointment_time")
         .eq("contract_id", contract.id);
 
+      // Load attachments for this contract
+      const { data: attachments } = await supabase
+        .from("order_attachments")
+        .select("order_id, attachment_index, status")
+        .eq("contract_id", contract.id);
+
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
       const apptMap = Object.fromEntries((appointments ?? []).map((a: any) => [a.order_id, a]));
+
+      // Group attachments by order_id
+      const attachmentsByOrder: Record<string, Array<{ attachment_index: number; status: string }>> = {};
+      for (const att of attachments ?? []) {
+        if (!attachmentsByOrder[att.order_id]) attachmentsByOrder[att.order_id] = [];
+        attachmentsByOrder[att.order_id].push(att);
+      }
 
       setAssignments(
         rawAssignments
           .filter((a) => orderMap[a.order_id])
-          .map((a) => ({
-            order_id: a.order_id,
-            status: a.status ?? "offen",
-            assigned_at: a.assigned_at,
-            order_number: orderMap[a.order_id].order_number,
-            title: orderMap[a.order_id].title,
-            provider: orderMap[a.order_id].provider,
-            reward: orderMap[a.order_id].reward,
-            is_placeholder: orderMap[a.order_id].is_placeholder,
-            appointment: apptMap[a.order_id] || null,
-          }))
+          .map((a) => {
+            const order = orderMap[a.order_id];
+            const reqAtts = (order.required_attachments as any[] | null) ?? [];
+            const hasReq = reqAtts.length > 0;
+            const orderAtts = attachmentsByOrder[a.order_id] ?? [];
+            const allApproved = hasReq && reqAtts.every((_: any, i: number) =>
+              orderAtts.some((att) => att.attachment_index === i && att.status === "genehmigt")
+            );
+            return {
+              order_id: a.order_id,
+              status: a.status ?? "offen",
+              assigned_at: a.assigned_at,
+              order_number: order.order_number,
+              title: order.title,
+              provider: order.provider,
+              reward: order.reward,
+              is_placeholder: order.is_placeholder,
+              appointment: apptMap[a.order_id] || null,
+              hasRequiredAttachments: hasReq,
+              attachmentsPending: hasReq && !allApproved,
+            };
+          })
       );
       setLoading(false);
     };
