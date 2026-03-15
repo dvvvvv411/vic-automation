@@ -47,31 +47,50 @@ export default function MitarbeiterLayout() {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (!contractData) {
-        setLoading(false);
-        return;
-      }
-      setContract(contractData);
+      if (contractData) {
+        setContract(contractData);
 
-      // 2. Get application -> branding_id
-      const { data: appData } = await supabase
-        .from("applications")
+        // 2. Get application -> branding_id
+        const { data: appData } = await supabase
+          .from("applications")
+          .select("branding_id")
+          .eq("id", contractData.application_id)
+          .maybeSingle();
+
+        if (appData?.branding_id) {
+          const { data: brandingData } = await supabase
+            .from("brandings")
+            .select("logo_url, company_name, brand_color, payment_model, salary_minijob, salary_teilzeit, salary_vollzeit")
+            .eq("id", appData.branding_id)
+            .maybeSingle();
+
+          if (brandingData) {
+            setBranding(brandingData);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      // Fallback: load branding from profile.branding_id
+      const { data: profileData } = await supabase
+        .from("profiles")
         .select("branding_id")
-        .eq("id", contractData.application_id)
+        .eq("id", user.id)
         .maybeSingle();
 
-      if (appData?.branding_id) {
-        // 3. Get branding
+      if (profileData?.branding_id) {
         const { data: brandingData } = await supabase
           .from("brandings")
           .select("logo_url, company_name, brand_color, payment_model, salary_minijob, salary_teilzeit, salary_vollzeit")
-          .eq("id", appData.branding_id)
+          .eq("id", profileData.branding_id)
           .maybeSingle();
 
         if (brandingData) {
           setBranding(brandingData);
         }
       }
+
       setLoading(false);
     };
 

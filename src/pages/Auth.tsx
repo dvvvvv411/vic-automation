@@ -118,7 +118,7 @@ const Auth = () => {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email: regEmail,
       password: regPassword,
       options: {
@@ -128,6 +128,12 @@ const Auth = () => {
         },
       },
     });
+    if (!error && data.user && brandingId) {
+      await supabase
+        .from("profiles")
+        .update({ branding_id: brandingId })
+        .eq("id", data.user.id);
+    }
     setLoading(false);
     if (error) {
       toast.error(error.message);
