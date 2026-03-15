@@ -306,7 +306,7 @@ export default function AdminBewerbungen() {
     },
     onSuccess: (_data, app) => {
       // Optimistic update: change status in cache without refetching
-      queryClient.setQueryData(["applications", userId], (old: any[] | undefined) => {
+      queryClient.setQueryData(["applications", brandingIds], (old: any[] | undefined) => {
         if (!old) return old;
         return old.map((a: any) => a.id === app.id ? { ...a, status: "bewerbungsgespraech" } : a);
       });
