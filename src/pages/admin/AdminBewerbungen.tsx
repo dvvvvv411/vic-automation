@@ -161,7 +161,7 @@ export default function AdminBewerbungen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState<{ total: number; current: number; inProgress: boolean }>({ total: 0, current: 0, inProgress: false });
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const { data: applications, isLoading } = useQuery({
     queryKey: ["applications", userId],
