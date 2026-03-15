@@ -11,7 +11,7 @@ interface Props {
   isFixedSalary?: boolean;
 }
 
-const DashboardPayoutSummary = ({ balance }: Props) => {
+const DashboardPayoutSummary = ({ balance, isFixedSalary }: Props) => {
   const navigate = useNavigate();
   const today = new Date();
   const fifteenthThisMonth = new Date(today.getFullYear(), today.getMonth(), 15);
