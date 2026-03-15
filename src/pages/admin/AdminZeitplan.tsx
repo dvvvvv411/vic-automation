@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { Trash2, Ban, Check } from "lucide-react";
 import OrderAppointmentBlocker from "@/components/admin/OrderAppointmentBlocker";
 import TrialDayBlocker from "@/components/admin/TrialDayBlocker";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const WEEKDAYS = [
   { value: 1, label: "Mo" },
