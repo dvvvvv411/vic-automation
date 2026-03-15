@@ -67,6 +67,7 @@ const App = () => (
               <Route path="brandings" element={<AdminBrandings />} />
               <Route path="bewerbungen" element={<AdminBewerbungen />} />
               <Route path="bewerbungsgespraeche" element={<AdminBewerbungsgespraeche />} />
+              <Route path="probetag" element={<AdminProbetag />} />
               <Route path="arbeitsvertraege" element={<AdminArbeitsvertraege />} />
               <Route path="mitarbeiter" element={<AdminMitarbeiter />} />
               <Route path="mitarbeiter/:id" element={<AdminMitarbeiterDetail />} />
