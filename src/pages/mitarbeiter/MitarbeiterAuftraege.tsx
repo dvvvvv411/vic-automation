@@ -28,6 +28,8 @@ interface Assignment {
   reward: string;
   is_placeholder: boolean;
   appointment?: { appointment_date: string; appointment_time: string } | null;
+  hasRequiredAttachments: boolean;
+  attachmentsPending: boolean;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
