@@ -79,9 +79,9 @@ export default function AdminDashboard() {
   });
 
   const { data: recentApps } = useQuery({
-    queryKey: ["dash-recent-apps", brandingIds],
+    queryKey: ["dash-recent-apps", activeBrandingId],
     queryFn: async () => {
-      const { data } = await supabase.from("applications").select("id, first_name, last_name, status, created_at").order("created_at", { ascending: false }).limit(5);
+      const { data } = await supabase.from("applications").select("id, first_name, last_name, status, created_at").eq("branding_id", activeBrandingId!).order("created_at", { ascending: false }).limit(5);
       return data ?? [];
     },
     enabled: ready,
