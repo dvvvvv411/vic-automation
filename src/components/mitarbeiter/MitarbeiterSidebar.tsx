@@ -1,4 +1,4 @@
-import { LayoutDashboard, ClipboardList, Star, LogOut, User } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Star, LogOut, User, FileText } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import {
