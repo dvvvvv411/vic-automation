@@ -76,12 +76,12 @@ export default function AdminDashboard() {
   });
 
   const { data: recentApps } = useQuery({
-    queryKey: ["dash-recent-apps", userId],
+    queryKey: ["dash-recent-apps", brandingIds],
     queryFn: async () => {
       const { data } = await supabase.from("applications").select("id, first_name, last_name, status, created_at").order("created_at", { ascending: false }).limit(5);
       return data ?? [];
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 30000,
   });
 
