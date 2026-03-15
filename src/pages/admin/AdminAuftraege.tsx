@@ -102,12 +102,7 @@ export default function AdminAuftraege() {
                 {/* Header */}
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-foreground text-base truncate">{o.title}</h3>
-                      {o.is_starter_job && (
-                        <Star className="h-4 w-4 text-amber-500 fill-amber-500 shrink-0" />
-                      )}
-                    </div>
+                    <h3 className="font-semibold text-foreground text-base truncate">{o.title}</h3>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-0 text-xs">
                         {o.reward}
@@ -115,6 +110,12 @@ export default function AdminAuftraege() {
                       <Badge variant="secondary" className="text-xs">
                         {typeLabel[o.order_type] || o.order_type}
                       </Badge>
+                      {o.is_starter_job && (
+                        <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-300 text-xs">
+                          <Star className="h-3 w-3 mr-1 fill-amber-500 text-amber-500" />
+                          Starter-Job
+                        </Badge>
+                      )}
                       {count > 0 && (
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Users className="h-3 w-3" /> {count}
