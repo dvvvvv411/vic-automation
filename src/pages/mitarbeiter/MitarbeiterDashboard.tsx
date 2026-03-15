@@ -13,8 +13,8 @@ import DashboardReviewsSummary from "@/components/mitarbeiter/DashboardReviewsSu
 import DashboardPayoutSummary from "@/components/mitarbeiter/DashboardPayoutSummary";
 
 interface ContextType {
-  contract: { id: string; first_name: string | null; application_id: string } | null;
-  branding: { logo_url: string | null; company_name: string; brand_color: string | null } | null;
+  contract: { id: string; first_name: string | null; application_id: string; employment_type?: string | null } | null;
+  branding: { logo_url: string | null; company_name: string; brand_color: string | null; payment_model?: string | null; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null } | null;
   loading: boolean;
 }
 
