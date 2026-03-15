@@ -23,7 +23,7 @@ interface BrandingData {
 interface ContractData {
   id: string;
   first_name: string | null;
-  application_id: string;
+  application_id: string | null;
   status: string;
   contract_pdf_url: string | null;
   signed_contract_pdf_url: string | null;
