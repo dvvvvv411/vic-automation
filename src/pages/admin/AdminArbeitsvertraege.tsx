@@ -30,7 +30,7 @@ export default function AdminArbeitsvertraege() {
   const [startDateDialogOpen, setStartDateDialogOpen] = useState(false);
   const [confirmedStartDate, setConfirmedStartDate] = useState<Date | undefined>(undefined);
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const { data, isLoading } = useQuery({
     queryKey: ["arbeitsvertraege", userId],
