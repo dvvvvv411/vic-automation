@@ -158,8 +158,6 @@ const MitarbeiterAuftraege = () => {
               title: order.title,
               provider: order.provider,
               reward: order.reward,
-              is_placeholder: order.is_placeholder,
-              appointment: apptMap[a.order_id] || null,
               hasRequiredAttachments: hasReq,
               attachmentsPending: hasReq && !allApproved,
             };
