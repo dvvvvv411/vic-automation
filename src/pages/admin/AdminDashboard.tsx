@@ -36,12 +36,12 @@ export default function AdminDashboard() {
   });
 
   const { data: interviewTodayCount, isLoading: l2 } = useQuery({
-    queryKey: ["dash-gespraeche-heute", userId],
+    queryKey: ["dash-gespraeche-heute", brandingIds],
     queryFn: async () => {
       const { count } = await supabase.from("interview_appointments").select("*", { count: "exact", head: true }).eq("appointment_date", today());
       return count ?? 0;
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 30000,
   });
 
