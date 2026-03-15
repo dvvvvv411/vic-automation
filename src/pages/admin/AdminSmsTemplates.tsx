@@ -20,7 +20,7 @@ import {
 import { Smartphone, Send, Save, TestTube } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const PLACEHOLDER_INFO: Record<string, string[]> = {
   bewerbung_angenommen: ["{name}", "{link}"],
@@ -35,7 +35,7 @@ const PLACEHOLDER_INFO: Record<string, string[]> = {
 
 export default function AdminSmsTemplates() {
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
   const [testPhone, setTestPhone] = useState("");
   const [testText, setTestText] = useState("");
   const [testSending, setTestSending] = useState(false);
@@ -44,8 +44,8 @@ export default function AdminSmsTemplates() {
   const [saving, setSaving] = useState<string | null>(null);
 
   const { data: templates, isLoading } = useQuery({
-    queryKey: ["sms-templates", userId],
-    enabled: !!userId,
+    queryKey: ["sms-templates", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sms_templates" as any)
@@ -57,8 +57,8 @@ export default function AdminSmsTemplates() {
   });
 
   const { data: brandings } = useQuery({
-    queryKey: ["brandings-sms", userId],
-    enabled: !!userId,
+    queryKey: ["brandings-sms", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")

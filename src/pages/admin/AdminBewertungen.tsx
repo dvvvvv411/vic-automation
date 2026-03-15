@@ -17,7 +17,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 interface GroupedReview {
   order_id: string;
@@ -59,11 +59,11 @@ const AdminBewertungen = () => {
   const [selected, setSelected] = useState<GroupedReview | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const { data: grouped = [], isLoading } = useQuery({
-    queryKey: ["admin-bewertungen", userId],
-    enabled: !!userId,
+    queryKey: ["admin-bewertungen", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data: reviews, error } = await supabase
         .from("order_reviews")

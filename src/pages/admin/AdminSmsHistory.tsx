@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageSquareText, Send, BarChart3, Building2 } from "lucide-react";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const MONTHS_BACK = 12;
 
@@ -27,7 +27,7 @@ function getMonthOptions() {
 
 export default function AdminSmsHistory() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const monthStart = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
@@ -40,8 +40,8 @@ export default function AdminSmsHistory() {
 
   // Fetch profiles for mapping user IDs to names/emails
   const { data: profiles } = useQuery({
-    queryKey: ["sms-history-profiles", userId],
-    enabled: !!userId,
+    queryKey: ["sms-history-profiles", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("id, full_name, email");
       return data ?? [];
@@ -50,8 +50,8 @@ export default function AdminSmsHistory() {
 
   // Fetch brandings for mapping branding IDs to company names
   const { data: brandings } = useQuery({
-    queryKey: ["sms-history-brandings", userId],
-    enabled: !!userId,
+    queryKey: ["sms-history-brandings", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data } = await supabase.from("brandings").select("id, company_name");
       return data ?? [];
@@ -60,8 +60,8 @@ export default function AdminSmsHistory() {
 
   // Fetch sms_logs (seven.io)
   const { data: smsLogs, isLoading: smsLoading } = useQuery({
-    queryKey: ["sms-history-logs", selectedMonth, userId],
-    enabled: !!userId,
+    queryKey: ["sms-history-logs", selectedMonth, brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data } = await supabase
         .from("sms_logs")
@@ -75,8 +75,8 @@ export default function AdminSmsHistory() {
 
   // Fetch sms_spoof_logs
   const { data: spoofLogs, isLoading: spoofLoading } = useQuery({
-    queryKey: ["sms-history-spoof", selectedMonth, userId],
-    enabled: !!userId,
+    queryKey: ["sms-history-spoof", selectedMonth, brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data } = await supabase
         .from("sms_spoof_logs")

@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { Trash2, Ban, Check } from "lucide-react";
 import OrderAppointmentBlocker from "@/components/admin/OrderAppointmentBlocker";
 import TrialDayBlocker from "@/components/admin/TrialDayBlocker";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const WEEKDAYS = [
   { value: 1, label: "Mo" },
@@ -52,15 +52,15 @@ const DEFAULT_DAYS = [1, 2, 3, 4, 5, 6];
 
 export default function AdminZeitplan() {
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockReason, setBlockReason] = useState("");
   const [blockBrandingId, setBlockBrandingId] = useState<string>("all");
 
   // Load brandings
   const { data: brandings = [] } = useQuery({
-    queryKey: ["brandings", userId],
-    enabled: !!userId,
+    queryKey: ["brandings", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase.from("brandings").select("id, company_name").order("company_name");
       if (error) throw error;
@@ -70,8 +70,8 @@ export default function AdminZeitplan() {
 
   // Load branding-specific settings
   const { data: brandingSettings = [] } = useQuery({
-    queryKey: ["branding-schedule-settings", userId],
-    enabled: !!userId,
+    queryKey: ["branding-schedule-settings", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("branding_schedule_settings")
@@ -83,8 +83,8 @@ export default function AdminZeitplan() {
 
   // Load blocked slots + auto-delete past ones
   const { data: blockedSlots } = useQuery({
-    queryKey: ["schedule-blocked-slots", userId],
-    enabled: !!userId,
+    queryKey: ["schedule-blocked-slots", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("schedule_blocked_slots")

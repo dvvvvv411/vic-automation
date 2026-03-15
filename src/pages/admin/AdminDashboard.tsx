@@ -9,7 +9,7 @@ import { de } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import UpcomingStartDates from "@/components/admin/UpcomingStartDates";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const today = () => format(new Date(), "yyyy-MM-dd");
 
@@ -23,95 +23,95 @@ const STAT_BORDERS = [
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const { data: neuCount, isLoading: l1 } = useQuery({
-    queryKey: ["dash-bewerbungen-neu", userId],
+    queryKey: ["dash-bewerbungen-neu", brandingIds],
     queryFn: async () => {
       const { count } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("status", "neu");
       return count ?? 0;
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 30000,
   });
 
   const { data: interviewTodayCount, isLoading: l2 } = useQuery({
-    queryKey: ["dash-gespraeche-heute", userId],
+    queryKey: ["dash-gespraeche-heute", brandingIds],
     queryFn: async () => {
       const { count } = await supabase.from("interview_appointments").select("*", { count: "exact", head: true }).eq("appointment_date", today());
       return count ?? 0;
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 30000,
   });
 
   const { data: contractCount, isLoading: l3 } = useQuery({
-    queryKey: ["dash-vertraege-eingereicht", userId],
+    queryKey: ["dash-vertraege-eingereicht", brandingIds],
     queryFn: async () => {
       const { count } = await supabase.from("employment_contracts").select("*", { count: "exact", head: true }).eq("status", "eingereicht");
       return count ?? 0;
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 30000,
   });
 
   const { data: appointmentTodayCount, isLoading: l4 } = useQuery({
-    queryKey: ["dash-termine-heute", userId],
+    queryKey: ["dash-termine-heute", brandingIds],
     queryFn: async () => {
       const { count } = await supabase.from("order_appointments").select("*", { count: "exact", head: true }).eq("appointment_date", today());
       return count ?? 0;
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 30000,
   });
 
   const { data: unreadChatCount, isLoading: l5 } = useQuery({
-    queryKey: ["dash-chat-unread", userId],
+    queryKey: ["dash-chat-unread", brandingIds],
     queryFn: async () => {
       const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false);
       return count ?? 0;
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 10000,
   });
 
   const { data: recentApps } = useQuery({
-    queryKey: ["dash-recent-apps", userId],
+    queryKey: ["dash-recent-apps", brandingIds],
     queryFn: async () => {
       const { data } = await supabase.from("applications").select("id, first_name, last_name, status, created_at").order("created_at", { ascending: false }).limit(5);
       return data ?? [];
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 30000,
   });
 
   const { data: todayInterviews } = useQuery({
-    queryKey: ["dash-today-interviews", userId],
+    queryKey: ["dash-today-interviews", brandingIds],
     queryFn: async () => {
       const { data } = await supabase.from("interview_appointments").select("id, appointment_time, status, application_id, applications(first_name, last_name)").eq("appointment_date", today()).order("appointment_time", { ascending: true });
       return data ?? [];
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 30000,
   });
 
   const { data: submittedContracts } = useQuery({
-    queryKey: ["dash-submitted-contracts", userId],
+    queryKey: ["dash-submitted-contracts", brandingIds],
     queryFn: async () => {
       const { data } = await supabase.from("employment_contracts").select("id, first_name, last_name, submitted_at").eq("status", "eingereicht").order("submitted_at", { ascending: false }).limit(5);
       return data ?? [];
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 30000,
   });
 
   const { data: todayOrderAppts } = useQuery({
-    queryKey: ["dash-today-order-appts", userId],
+    queryKey: ["dash-today-order-appts", brandingIds],
     queryFn: async () => {
       const { data } = await supabase.from("order_appointments").select("id, appointment_time, contract_id, employment_contracts(first_name, last_name)").eq("appointment_date", today()).order("appointment_time", { ascending: true });
       return data ?? [];
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 30000,
   });
 

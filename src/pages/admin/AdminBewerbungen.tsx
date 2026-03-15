@@ -40,7 +40,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const applicationSchema = z.object({
   first_name: z.string().trim().min(1, "Vorname erforderlich").max(100),
@@ -161,11 +161,11 @@ export default function AdminBewerbungen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState<{ total: number; current: number; inProgress: boolean }>({ total: 0, current: 0, inProgress: false });
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const { data: applications, isLoading } = useQuery({
-    queryKey: ["applications", userId],
-    enabled: !!userId,
+    queryKey: ["applications", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
@@ -177,8 +177,8 @@ export default function AdminBewerbungen() {
   });
 
   const { data: brandings } = useQuery({
-    queryKey: ["brandings", userId],
-    enabled: !!userId,
+    queryKey: ["brandings", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")
@@ -306,7 +306,7 @@ export default function AdminBewerbungen() {
     },
     onSuccess: (_data, app) => {
       // Optimistic update: change status in cache without refetching
-      queryClient.setQueryData(["applications", userId], (old: any[] | undefined) => {
+      queryClient.setQueryData(["applications", brandingIds], (old: any[] | undefined) => {
         if (!old) return old;
         return old.map((a: any) => a.id === app.id ? { ...a, status: "bewerbungsgespraech" } : a);
       });
@@ -341,7 +341,7 @@ export default function AdminBewerbungen() {
       }
     },
     onSuccess: (_data, app) => {
-      queryClient.setQueryData(["applications", userId], (old: any[] | undefined) => {
+      queryClient.setQueryData(["applications", brandingIds], (old: any[] | undefined) => {
         if (!old) return old;
         return old.map((a: any) => a.id === app.id ? { ...a, status: "abgelehnt" } : a);
       });

@@ -17,7 +17,7 @@ import { Plus, Pencil, Trash2, X, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import AssignmentDialog from "@/components/admin/AssignmentDialog";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 interface Order {
   id: string;
@@ -47,15 +47,15 @@ const emptyForm = {
 
 export default function AdminAuftraege() {
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, activeBrandingId, ready } = useBrandingFilter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [assignOrder, setAssignOrder] = useState<Order | null>(null);
 
   const { data: orders, isLoading } = useQuery({
-    queryKey: ["orders", userId],
-    enabled: !!userId,
+    queryKey: ["orders", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
@@ -68,8 +68,8 @@ export default function AdminAuftraege() {
 
   // Load assignment counts per order
   const { data: assignmentCounts } = useQuery({
-    queryKey: ["order_assignments", "counts_by_order", userId],
-    enabled: !!userId,
+    queryKey: ["order_assignments", "counts_by_order", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_assignments")
@@ -100,7 +100,7 @@ export default function AdminAuftraege() {
         const { error } = await supabase.from("orders").update(payload).eq("id", editingId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("orders").insert(payload);
+        const { error } = await supabase.from("orders").insert({ ...payload, branding_id: activeBrandingId });
         if (error) throw error;
       }
     },

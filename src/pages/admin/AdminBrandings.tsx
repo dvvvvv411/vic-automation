@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { z } from "zod";
 import type { Tables } from "@/integrations/supabase/types";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const brandingSchema = z.object({
   company_name: z.string().min(1, "Unternehmensname erforderlich").max(200),
@@ -72,11 +72,11 @@ export default function AdminBrandings() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editBranding, setEditBranding] = useState<Tables<"brandings"> | null>(null);
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const { data: brandings, isLoading } = useQuery({
-    queryKey: ["brandings", userId],
-    enabled: !!userId,
+    queryKey: ["brandings", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")

@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   offen: { label: "Offen", className: "text-muted-foreground border-border" },
@@ -18,11 +18,11 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
 
 export default function UpcomingStartDates() {
   const today = new Date().toISOString().split("T")[0];
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const { data: upcoming } = useQuery({
-    queryKey: ["upcoming-start-dates", today, userId],
-    enabled: !!userId,
+    queryKey: ["upcoming-start-dates", today, brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employment_contracts")

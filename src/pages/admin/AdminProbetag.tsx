@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
 import { toast } from "sonner";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const PAGE_SIZE = 20;
 type ViewMode = "default" | "past" | "future";
@@ -23,7 +23,7 @@ export default function AdminProbetag() {
   const [viewMode, setViewMode] = useState<ViewMode>("default");
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
@@ -31,8 +31,8 @@ export default function AdminProbetag() {
   const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["trial-day-appointments-admin", page, viewMode, userId],
-    enabled: !!userId,
+    queryKey: ["trial-day-appointments-admin", page, viewMode, brandingIds],
+    enabled: ready,
     queryFn: async () => {
       let query = supabase
         .from("trial_day_appointments" as any)

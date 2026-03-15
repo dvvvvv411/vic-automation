@@ -11,11 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { UserPlus, Settings, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 export default function AdminKunden() {
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,8 +23,8 @@ export default function AdminKunden() {
 
   // Fetch all kunden
   const { data: kunden, isLoading } = useQuery({
-    queryKey: ["admin-kunden", userId],
-    enabled: !!userId,
+    queryKey: ["admin-kunden", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       // Get all users with rolle 'kunde'
       const { data: roles } = await supabase
@@ -52,8 +52,8 @@ export default function AdminKunden() {
 
   // Fetch all brandings (admin's own)
   const { data: brandings } = useQuery({
-    queryKey: ["admin-all-brandings", userId],
-    enabled: !!userId,
+    queryKey: ["admin-all-brandings", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data } = await supabase.from("brandings").select("id, company_name");
       return data ?? [];

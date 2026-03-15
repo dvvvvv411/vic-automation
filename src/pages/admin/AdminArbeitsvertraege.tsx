@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const PAGE_SIZE = 20;
 
@@ -30,11 +30,11 @@ export default function AdminArbeitsvertraege() {
   const [startDateDialogOpen, setStartDateDialogOpen] = useState(false);
   const [confirmedStartDate, setConfirmedStartDate] = useState<Date | undefined>(undefined);
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["arbeitsvertraege", userId],
-    enabled: !!userId,
+    queryKey: ["arbeitsvertraege", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data: appointments, error } = await supabase
         .from("interview_appointments")
