@@ -467,7 +467,7 @@ const AuftragDetails = () => {
                     <span className="font-medium text-foreground text-sm">{ws.title}</span>
                   </div>
                   {ws.description && (
-                    <p className="text-sm text-muted-foreground ml-8">{ws.description}</p>
+                    <p className="text-sm text-muted-foreground ml-8 whitespace-pre-line">{ws.description}</p>
                   )}
                 </div>
               ))}
