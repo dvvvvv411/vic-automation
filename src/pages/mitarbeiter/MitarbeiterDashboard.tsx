@@ -30,7 +30,6 @@ interface Order {
 
 interface OrderWithStatus extends Order {
   assignment_status: string;
-  appointment?: { appointment_date: string; appointment_time: string } | null;
 }
 
 function getGreeting(): string {
