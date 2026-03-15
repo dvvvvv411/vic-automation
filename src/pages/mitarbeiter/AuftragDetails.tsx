@@ -64,7 +64,8 @@ const TIME_SLOTS = Array.from({ length: 21 }, (_, i) => {
 const AuftragDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
+  const { contract, branding: brandingCtx, loading: layoutLoading } = useOutletContext<ContextType>();
+  const isFixedSalary = brandingCtx?.payment_model === "fixed_salary";
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
