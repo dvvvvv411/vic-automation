@@ -60,6 +60,7 @@ const navGroups = [
       { title: "Auftragstermine", url: "/admin/auftragstermine", icon: CalendarClock },
       { title: "Livechat", url: "/admin/livechat", icon: MessageCircle },
       { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
+      { title: "Anhänge", url: "/admin/anhaenge", icon: Paperclip },
       { title: "Telefonnummern", url: "/admin/telefonnummern", icon: Phone },
       { title: "SMS Spoof", url: "/admin/sms-spoof", icon: MessageSquareText },
     ],
