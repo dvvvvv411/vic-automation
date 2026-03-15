@@ -141,7 +141,7 @@ export default function AdminAuftragWizard() {
     },
   });
 
-  const canSave = form.title && form.reward;
+  const canSave = form.title && (isFixedSalary || form.reward);
 
   // Work steps helpers
   const addWorkStep = () => setForm((f) => ({ ...f, work_steps: [...f.work_steps, { title: "", description: "" }] }));
