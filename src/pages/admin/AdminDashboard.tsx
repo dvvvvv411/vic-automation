@@ -26,12 +26,12 @@ export default function AdminDashboard() {
   const { brandingIds, ready } = useBrandingFilter();
 
   const { data: neuCount, isLoading: l1 } = useQuery({
-    queryKey: ["dash-bewerbungen-neu", userId],
+    queryKey: ["dash-bewerbungen-neu", brandingIds],
     queryFn: async () => {
       const { count } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("status", "neu");
       return count ?? 0;
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 30000,
   });
 
