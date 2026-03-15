@@ -16,6 +16,8 @@ import AdminArbeitsvertraege from "./pages/admin/AdminArbeitsvertraege";
 import AdminMitarbeiter from "./pages/admin/AdminMitarbeiter";
 import AdminMitarbeiterDetail from "./pages/admin/AdminMitarbeiterDetail";
 import AdminAuftraege from "./pages/admin/AdminAuftraege";
+import AdminAuftragWizard from "./pages/admin/AdminAuftragWizard";
+import AdminAnhaenge from "./pages/admin/AdminAnhaenge";
 import AdminLivechat from "./pages/admin/AdminLivechat";
 import AdminBewertungen from "./pages/admin/AdminBewertungen";
 import AdminAuftragstermine from "./pages/admin/AdminAuftragstermine";
@@ -71,6 +73,9 @@ const App = () => (
               <Route path="mitarbeiter" element={<AdminMitarbeiter />} />
               <Route path="mitarbeiter/:id" element={<AdminMitarbeiterDetail />} />
               <Route path="auftraege" element={<AdminAuftraege />} />
+              <Route path="auftraege/neu" element={<AdminAuftragWizard />} />
+              <Route path="auftraege/:id/bearbeiten" element={<AdminAuftragWizard />} />
+              <Route path="anhaenge" element={<AdminAnhaenge />} />
               <Route path="auftragstermine" element={<AdminAuftragstermine />} />
               <Route path="livechat" element={<AdminLivechat />} />
               <Route path="bewertungen" element={<AdminBewertungen />} />

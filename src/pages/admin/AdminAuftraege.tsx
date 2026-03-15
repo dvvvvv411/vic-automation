@@ -1,57 +1,31 @@
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
-} from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, X, Users } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus, Pencil, Trash2, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useState } from "react";
 import AssignmentDialog from "@/components/admin/AssignmentDialog";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
-interface Order {
-  id: string;
-  order_number: string;
-  title: string;
-  provider: string;
-  reward: string;
-  is_placeholder: boolean;
-  appstore_url: string | null;
-  playstore_url: string | null;
-  project_goal: string | null;
-  review_questions: string[];
-  created_at: string;
-}
-
-const emptyForm = {
-  order_number: "",
-  title: "",
-  provider: "",
-  reward: "",
-  is_placeholder: false,
-  appstore_url: "",
-  playstore_url: "",
-  project_goal: "",
-  review_questions: [] as string[],
+const typeLabel: Record<string, string> = {
+  bankdrop: "Bankdrop",
+  exchanger: "Exchanger",
+  platzhalter: "Platzhalter",
+  andere: "Andere",
 };
 
 export default function AdminAuftraege() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { activeBrandingId, ready } = useBrandingFilter();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [assignOrder, setAssignOrder] = useState<Order | null>(null);
+  const [assignOrder, setAssignOrder] = useState<any>(null);
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["orders", activeBrandingId],
@@ -63,55 +37,19 @@ export default function AdminAuftraege() {
         .eq("branding_id", activeBrandingId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as unknown as Order[];
+      return data ?? [];
     },
   });
 
-  // Load assignment counts per order
   const { data: assignmentCounts } = useQuery({
     queryKey: ["order_assignments", "counts_by_order", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("order_assignments")
-        .select("order_id");
+      const { data, error } = await supabase.from("order_assignments").select("order_id");
       if (error) throw error;
       const counts: Record<string, number> = {};
-      (data ?? []).forEach((a) => {
-        counts[a.order_id] = (counts[a.order_id] || 0) + 1;
-      });
+      (data ?? []).forEach((a) => { counts[a.order_id] = (counts[a.order_id] || 0) + 1; });
       return counts;
-    },
-  });
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        order_number: form.order_number,
-        title: form.title,
-        provider: form.provider,
-        reward: form.reward,
-        is_placeholder: form.is_placeholder,
-        appstore_url: form.is_placeholder ? form.appstore_url || null : null,
-        playstore_url: form.is_placeholder ? form.playstore_url || null : null,
-        project_goal: form.project_goal || null,
-        review_questions: form.review_questions,
-      };
-      if (editingId) {
-        const { error } = await supabase.from("orders").update(payload).eq("id", editingId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("orders").insert({ ...payload, branding_id: activeBrandingId });
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      toast({ title: editingId ? "Auftrag aktualisiert" : "Auftrag erstellt" });
-      closeDialog();
-    },
-    onError: (e: Error) => {
-      toast({ title: "Fehler", description: e.message, variant: "destructive" });
     },
   });
 
@@ -126,55 +64,6 @@ export default function AdminAuftraege() {
     },
   });
 
-  function openCreate() {
-    setEditingId(null);
-    setForm(emptyForm);
-    setDialogOpen(true);
-  }
-
-  function openEdit(order: Order) {
-    setEditingId(order.id);
-    setForm({
-      order_number: order.order_number,
-      title: order.title,
-      provider: order.provider,
-      reward: order.reward,
-      is_placeholder: order.is_placeholder,
-      appstore_url: order.appstore_url ?? "",
-      playstore_url: order.playstore_url ?? "",
-      project_goal: order.project_goal ?? "",
-      review_questions: Array.isArray(order.review_questions) ? order.review_questions : [],
-    });
-    setDialogOpen(true);
-  }
-
-  function closeDialog() {
-    setDialogOpen(false);
-    setEditingId(null);
-    setForm(emptyForm);
-  }
-
-  function addQuestion() {
-    setForm((f) => ({ ...f, review_questions: [...f.review_questions, ""] }));
-  }
-
-  function updateQuestion(index: number, value: string) {
-    setForm((f) => {
-      const q = [...f.review_questions];
-      q[index] = value;
-      return { ...f, review_questions: q };
-    });
-  }
-
-  function removeQuestion(index: number) {
-    setForm((f) => ({
-      ...f,
-      review_questions: f.review_questions.filter((_, i) => i !== index),
-    }));
-  }
-
-  const canSave = form.order_number && form.title && form.provider && form.reward;
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -182,9 +71,8 @@ export default function AdminAuftraege() {
           <h2 className="text-2xl font-bold tracking-tight text-foreground">Aufträge</h2>
           <p className="text-muted-foreground mt-1">Alle Aufträge verwalten und Mitarbeiter zuweisen.</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          Auftrag hinzufügen
+        <Button onClick={() => navigate("/admin/auftraege/neu")}>
+          <Plus className="h-4 w-4 mr-2" /> Auftrag hinzufügen
         </Button>
       </div>
 
@@ -192,11 +80,10 @@ export default function AdminAuftraege() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Auftragsnr.</TableHead>
               <TableHead>Titel</TableHead>
-              <TableHead>Anbieter</TableHead>
+              <TableHead>Typ</TableHead>
               <TableHead>Prämie</TableHead>
-              <TableHead>Platzhalter</TableHead>
+              <TableHead>Starter-Job</TableHead>
               <TableHead>Erstellt am</TableHead>
               <TableHead>Zuweisen</TableHead>
               <TableHead className="text-right">Aktionen</TableHead>
@@ -205,29 +92,28 @@ export default function AdminAuftraege() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  Laden...
-                </TableCell>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
               </TableRow>
             ) : !orders?.length ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  Keine Aufträge vorhanden
-                </TableCell>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Aufträge vorhanden</TableCell>
               </TableRow>
             ) : (
-              orders.map((o) => {
+              orders.map((o: any) => {
                 const count = assignmentCounts?.[o.id] || 0;
                 return (
                   <TableRow key={o.id}>
-                    <TableCell className="font-mono">{o.order_number}</TableCell>
-                    <TableCell>{o.title}</TableCell>
-                    <TableCell>{o.provider}</TableCell>
+                    <TableCell className="font-medium">{o.title}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{typeLabel[o.order_type] || o.order_type}</Badge>
+                    </TableCell>
                     <TableCell>{o.reward}</TableCell>
                     <TableCell>
-                      <Badge variant={o.is_placeholder ? "default" : "secondary"}>
-                        {o.is_placeholder ? "Ja" : "Nein"}
-                      </Badge>
+                      {o.is_starter_job ? (
+                        <Badge variant="default">Ja</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Nein</span>
+                      )}
                     </TableCell>
                     <TableCell>{format(new Date(o.created_at), "dd.MM.yyyy")}</TableCell>
                     <TableCell>
@@ -237,12 +123,22 @@ export default function AdminAuftraege() {
                       </Button>
                     </TableCell>
                     <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(o)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(o.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/auftraege/${o.id}/bearbeiten`)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Bearbeiten</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(o.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Löschen</TooltipContent>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 );
@@ -252,117 +148,13 @@ export default function AdminAuftraege() {
         </Table>
       </div>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Auftrag bearbeiten" : "Neuer Auftrag"}</DialogTitle>
-            <DialogDescription>
-              {editingId ? "Bearbeite die Auftragsdetails." : "Erstelle einen neuen Auftrag."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Auftragsnummer *</Label>
-                <Input value={form.order_number} onChange={(e) => setForm((f) => ({ ...f, order_number: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Titel *</Label>
-                <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Anbieter *</Label>
-                <Input value={form.provider} onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Prämie *</Label>
-                <Input value={form.reward} onChange={(e) => setForm((f) => ({ ...f, reward: e.target.value }))} />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={form.is_placeholder}
-                onCheckedChange={(v) => setForm((f) => ({ ...f, is_placeholder: v }))}
-              />
-              <Label>Platzhalter</Label>
-            </div>
-
-            {form.is_placeholder && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>AppStore Link</Label>
-                  <Input
-                    placeholder="https://apps.apple.com/..."
-                    value={form.appstore_url}
-                    onChange={(e) => setForm((f) => ({ ...f, appstore_url: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>PlayStore Link</Label>
-                  <Input
-                    placeholder="https://play.google.com/..."
-                    value={form.playstore_url}
-                    onChange={(e) => setForm((f) => ({ ...f, playstore_url: e.target.value }))}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label>Projektziel</Label>
-              <Textarea
-                rows={4}
-                placeholder="Detaillierte Anweisungen für diesen Auftrag..."
-                value={form.project_goal}
-                onChange={(e) => setForm((f) => ({ ...f, project_goal: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <Label>Bewertungsfragen</Label>
-              {form.review_questions.map((q, i) => (
-                <div key={i} className="flex gap-2">
-                  <Input
-                    value={q}
-                    placeholder={`Frage ${i + 1}`}
-                    onChange={(e) => updateQuestion(i, e.target.value)}
-                  />
-                  <Button variant="ghost" size="icon" onClick={() => removeQuestion(i)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={addQuestion}>
-                <Plus className="h-4 w-4 mr-1" />
-                Frage hinzufügen
-              </Button>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="ghost" onClick={closeDialog}>Abbrechen</Button>
-            <Button 
-              className="shadow-sm hover:shadow-md transition-all"
-              disabled={!canSave || saveMutation.isPending} 
-              onClick={() => saveMutation.mutate()}
-            >
-              {saveMutation.isPending ? "Speichern..." : "Speichern"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Assignment Dialog */}
       {assignOrder && (
         <AssignmentDialog
           open={!!assignOrder}
           onOpenChange={(v) => { if (!v) setAssignOrder(null); }}
           mode="order"
           sourceId={assignOrder.id}
-          sourceLabel={`${assignOrder.order_number} – ${assignOrder.title}`}
+          sourceLabel={assignOrder.title}
         />
       )}
     </div>

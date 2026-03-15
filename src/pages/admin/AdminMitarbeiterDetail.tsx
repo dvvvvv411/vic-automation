@@ -353,7 +353,7 @@ export default function AdminMitarbeiterDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_assignments")
-        .select("*, orders(order_number, title, provider, reward)")
+        .select("*, orders(order_number, title, provider, reward, required_attachments)")
         .eq("contract_id", id!)
         .order("assigned_at", { ascending: false });
       if (error) throw error;
@@ -361,10 +361,23 @@ export default function AdminMitarbeiterDetail() {
         .from("order_appointments")
         .select("*")
         .eq("contract_id", id!);
-      return (data ?? []).map((a: any) => ({
-        ...a,
-        appointment: (appointments ?? []).find((ap: any) => ap.order_id === a.order_id),
-      }));
+      // Check for pending attachments per assignment
+      const { data: allAttachments } = await supabase
+        .from("order_attachments" as any)
+        .select("order_id, status")
+        .eq("contract_id", id!);
+      return (data ?? []).map((a: any) => {
+        const reqAttachments = Array.isArray(a.orders?.required_attachments) ? a.orders.required_attachments : [];
+        const orderAttachments = (allAttachments ?? []).filter((att: any) => att.order_id === a.order_id);
+        const allApproved = reqAttachments.length > 0 && reqAttachments.every((_: any, idx: number) =>
+          orderAttachments.some((att: any) => att.attachment_index === idx && att.status === "genehmigt")
+        );
+        return {
+          ...a,
+          appointment: (appointments ?? []).find((ap: any) => ap.order_id === a.order_id),
+          attachments_pending: reqAttachments.length > 0 && !allApproved,
+        };
+      });
     },
     enabled: !!id,
   });
@@ -866,31 +879,38 @@ export default function AdminMitarbeiterDetail() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/30">
-                          <TableHead>Auftragsnr.</TableHead>
                           <TableHead>Titel</TableHead>
-                          <TableHead>Anbieter</TableHead>
                           <TableHead>Prämie</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Anhänge</TableHead>
                           <TableHead>Termin</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {(assignments ?? []).map((a: any) => (
-                          <TableRow key={a.id} className="hover:bg-muted/30 transition-colors">
-                            <TableCell className="font-mono text-xs">{a.orders?.order_number ?? "–"}</TableCell>
-                            <TableCell className="font-medium">{a.orders?.title ?? "–"}</TableCell>
-                            <TableCell className="text-muted-foreground">{a.orders?.provider ?? "–"}</TableCell>
-                            <TableCell>
-                              <span className="font-medium text-green-600">{a.orders?.reward ?? "–"}</span>
-                            </TableCell>
-                            <TableCell>{assignmentStatusBadge(a.status)}</TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {a.appointment
-                                ? `${format(parseISO(a.appointment.appointment_date), "dd.MM.yyyy")} ${a.appointment.appointment_time?.slice(0, 5)}`
-                                : "–"}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {(assignments ?? []).map((a: any) => {
+                          const attachmentsPending = a.attachments_pending ?? false;
+                          return (
+                            <TableRow key={a.id} className="hover:bg-muted/30 transition-colors">
+                              <TableCell className="font-medium">{a.orders?.title ?? "–"}</TableCell>
+                              <TableCell>
+                                <span className="font-medium text-green-600">{a.orders?.reward ?? "–"}</span>
+                              </TableCell>
+                              <TableCell>{assignmentStatusBadge(a.status)}</TableCell>
+                              <TableCell>
+                                {attachmentsPending ? (
+                                  <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">Ausstehend</Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">–</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {a.appointment
+                                  ? `${format(parseISO(a.appointment.appointment_date), "dd.MM.yyyy")} ${a.appointment.appointment_time?.slice(0, 5)}`
+                                  : "–"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>

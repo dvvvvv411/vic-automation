@@ -660,6 +660,60 @@ export type Database = {
           },
         ]
       }
+      order_attachments: {
+        Row: {
+          attachment_index: number
+          contract_id: string
+          created_at: string
+          file_name: string | null
+          file_url: string
+          id: string
+          order_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          attachment_index: number
+          contract_id: string
+          created_at?: string
+          file_name?: string | null
+          file_url: string
+          id?: string
+          order_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          attachment_index?: number
+          contract_id?: string
+          created_at?: string
+          file_name?: string | null
+          file_url?: string
+          id?: string
+          order_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_attachments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_attachments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_reviews: {
         Row: {
           comment: string
@@ -714,45 +768,63 @@ export type Database = {
           branding_id: string | null
           created_at: string
           created_by: string | null
+          description: string | null
+          estimated_hours: string | null
           id: string
           is_placeholder: boolean
-          order_number: string
+          is_starter_job: boolean
+          order_number: string | null
+          order_type: string
           playstore_url: string | null
           project_goal: string | null
-          provider: string
+          provider: string | null
+          required_attachments: Json | null
           review_questions: Json | null
           reward: string
           title: string
+          work_steps: Json | null
         }
         Insert: {
           appstore_url?: string | null
           branding_id?: string | null
           created_at?: string
           created_by?: string | null
+          description?: string | null
+          estimated_hours?: string | null
           id?: string
           is_placeholder?: boolean
-          order_number: string
+          is_starter_job?: boolean
+          order_number?: string | null
+          order_type?: string
           playstore_url?: string | null
           project_goal?: string | null
-          provider: string
+          provider?: string | null
+          required_attachments?: Json | null
           review_questions?: Json | null
           reward: string
           title: string
+          work_steps?: Json | null
         }
         Update: {
           appstore_url?: string | null
           branding_id?: string | null
           created_at?: string
           created_by?: string | null
+          description?: string | null
+          estimated_hours?: string | null
           id?: string
           is_placeholder?: boolean
-          order_number?: string
+          is_starter_job?: boolean
+          order_number?: string | null
+          order_type?: string
           playstore_url?: string | null
           project_goal?: string | null
-          provider?: string
+          provider?: string | null
+          required_attachments?: Json | null
           review_questions?: Json | null
           reward?: string
           title?: string
+          work_steps?: Json | null
         }
         Relationships: [
           {

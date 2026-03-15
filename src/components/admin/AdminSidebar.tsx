@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
@@ -60,6 +60,7 @@ const navGroups = [
       { title: "Auftragstermine", url: "/admin/auftragstermine", icon: CalendarClock },
       { title: "Livechat", url: "/admin/livechat", icon: MessageCircle },
       { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
+      { title: "Anhänge", url: "/admin/anhaenge", icon: Paperclip },
       { title: "Telefonnummern", url: "/admin/telefonnummern", icon: Phone },
       { title: "SMS Spoof", url: "/admin/sms-spoof", icon: MessageSquareText },
     ],
