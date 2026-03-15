@@ -45,3 +45,22 @@
 
 ### Frontend - AdminMitarbeiterDetail
 - Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+
+---
+
+# Vergütungsmodell pro Branding (abgeschlossen)
+
+## Was wurde gemacht
+
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
