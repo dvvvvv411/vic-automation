@@ -348,7 +348,7 @@ export type Database = {
       employment_contracts: {
         Row: {
           admin_notes: string | null
-          application_id: string
+          application_id: string | null
           balance: number
           bank_name: string | null
           bic: string | null
@@ -387,7 +387,7 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
-          application_id: string
+          application_id?: string | null
           balance?: number
           bank_name?: string | null
           bic?: string | null
@@ -426,7 +426,7 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
-          application_id?: string
+          application_id?: string | null
           balance?: number
           bank_name?: string | null
           bic?: string | null
