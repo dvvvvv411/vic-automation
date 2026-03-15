@@ -47,12 +47,13 @@ export default function AdminBewerbungsgespraeche() {
   const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["interview-appointments", page, viewMode, brandingIds],
+    queryKey: ["interview-appointments", page, viewMode, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       let query = supabase
         .from("interview_appointments")
-        .select("*, applications(first_name, last_name, email, phone, employment_type, brandings(id, company_name))", { count: "exact" });
+        .select("*, applications!inner(first_name, last_name, email, phone, employment_type, branding_id, brandings(id, company_name))", { count: "exact" })
+        .eq("applications.branding_id", activeBrandingId!);
 
       if (viewMode === "past") {
         // All before today, plus today's that are past cutoff

@@ -75,7 +75,7 @@ export default function AdminBrandings() {
   const { activeBrandingId, ready } = useBrandingFilter();
 
   const { data: brandings, isLoading } = useQuery({
-    queryKey: ["brandings", brandingIds],
+    queryKey: ["brandings", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase

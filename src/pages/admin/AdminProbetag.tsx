@@ -31,12 +31,13 @@ export default function AdminProbetag() {
   const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["trial-day-appointments-admin", page, viewMode, brandingIds],
+    queryKey: ["trial-day-appointments-admin", page, viewMode, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       let query = supabase
         .from("trial_day_appointments" as any)
-        .select("*, applications(first_name, last_name, email, phone, employment_type, brandings(id, company_name))", { count: "exact" });
+        .select("*, applications!inner(first_name, last_name, email, phone, employment_type, branding_id, brandings(id, company_name))", { count: "exact" })
+        .eq("applications.branding_id", activeBrandingId!);
 
       if (viewMode === "past") {
         query = query.lte("appointment_date", today).order("appointment_date", { ascending: false }).order("appointment_time", { ascending: false });

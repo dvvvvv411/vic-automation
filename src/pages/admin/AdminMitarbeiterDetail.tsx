@@ -349,7 +349,7 @@ export default function AdminMitarbeiterDetail() {
 
   // Fetch assignments
   const { data: assignments } = useQuery({
-    queryKey: ["admin-contract-assignments", id, brandingIds],
+    queryKey: ["admin-contract-assignments", id, activeBrandingId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_assignments")

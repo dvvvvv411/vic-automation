@@ -21,12 +21,13 @@ export default function UpcomingStartDates() {
   const { activeBrandingId, ready } = useBrandingFilter();
 
   const { data: upcoming } = useQuery({
-    queryKey: ["upcoming-start-dates", today, brandingIds],
+    queryKey: ["upcoming-start-dates", today, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employment_contracts")
-        .select("id, first_name, last_name, status, desired_start_date, application_id, applications(brandings(company_name))")
+        .select("id, first_name, last_name, status, desired_start_date, application_id, applications!inner(branding_id, brandings(company_name))")
+        .eq("applications.branding_id", activeBrandingId!)
         .gte("desired_start_date", today)
         .order("desired_start_date", { ascending: true });
       if (error) throw error;
