@@ -85,6 +85,7 @@ const App = () => (
               <Route path="kunden" element={<AdminKunden />} />
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
+            <Route path="/probetag/:id" element={<Probetag />} />
             <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />
             <Route
               path="/mitarbeiter"
