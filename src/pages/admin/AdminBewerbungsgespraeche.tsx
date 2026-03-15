@@ -116,11 +116,10 @@ export default function AdminBewerbungsgespraeche() {
     toast.success(`Status auf "${newStatus}" gesetzt.`);
     queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
 
-    // Send email on success
+    // Send email on success — now links to trial day booking instead of contract
     if (newStatus === "erfolgreich" && item.applications?.email) {
       const app = item.applications;
-      // Get the contract for this application to build link
-      const contractLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
+      const probetagLink = await buildBrandingUrl(app.brandings?.id, `/probetag/${item.application_id}`);
 
       await sendEmail({
         to: app.email,
@@ -130,10 +129,10 @@ export default function AdminBewerbungsgespraeche() {
         body_lines: [
           `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
           "Ihr Bewerbungsgespräch war erfolgreich. Wir freuen uns, Sie im nächsten Schritt willkommen zu heißen.",
-          "Bitte füllen Sie nun Ihren Arbeitsvertrag über den folgenden Link aus.",
+          "Bitte buchen Sie nun einen Termin für Ihren Probetag über den folgenden Link.",
         ],
-        button_text: contractLink ? "Arbeitsvertrag ausfüllen" : undefined,
-        button_url: contractLink || undefined,
+        button_text: probetagLink ? "Probetag buchen" : undefined,
+        button_url: probetagLink || undefined,
         branding_id: app.brandings?.id || null,
         event_type: "gespraech_erfolgreich",
         metadata: { appointment_id: item.id, application_id: item.application_id },
