@@ -40,7 +40,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const applicationSchema = z.object({
   first_name: z.string().trim().min(1, "Vorname erforderlich").max(100),
