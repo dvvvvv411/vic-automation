@@ -66,9 +66,12 @@ export default function AdminDashboard() {
   });
 
   const { data: unreadChatCount, isLoading: l5 } = useQuery({
-    queryKey: ["dash-chat-unread", brandingIds],
+    queryKey: ["dash-chat-unread", activeBrandingId],
     queryFn: async () => {
-      const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false);
+      const { data: contracts } = await supabase.from("employment_contracts").select("id, applications!inner(branding_id)").eq("applications.branding_id", activeBrandingId!);
+      const ids = (contracts ?? []).map((c) => c.id);
+      if (!ids.length) return 0;
+      const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false).in("contract_id", ids);
       return count ?? 0;
     },
     enabled: ready,
