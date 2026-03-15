@@ -27,7 +27,9 @@ import AdminTelefonnummern from "./pages/admin/AdminTelefonnummern";
 import AdminSmsSpoof from "./pages/admin/AdminSmsSpoof";
 import AdminKunden from "./pages/admin/AdminKunden";
 import AdminSmsHistory from "./pages/admin/AdminSmsHistory";
+import AdminProbetag from "./pages/admin/AdminProbetag";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
+import Probetag from "./pages/Probetag";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
 import MitarbeiterLayout from "./components/mitarbeiter/MitarbeiterLayout";
 import MitarbeiterDashboard from "./pages/mitarbeiter/MitarbeiterDashboard";
@@ -64,6 +66,7 @@ const App = () => (
               <Route path="brandings" element={<AdminBrandings />} />
               <Route path="bewerbungen" element={<AdminBewerbungen />} />
               <Route path="bewerbungsgespraeche" element={<AdminBewerbungsgespraeche />} />
+              <Route path="probetag" element={<AdminProbetag />} />
               <Route path="arbeitsvertraege" element={<AdminArbeitsvertraege />} />
               <Route path="mitarbeiter" element={<AdminMitarbeiter />} />
               <Route path="mitarbeiter/:id" element={<AdminMitarbeiterDetail />} />
@@ -81,6 +84,7 @@ const App = () => (
               <Route path="kunden" element={<AdminKunden />} />
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
+            <Route path="/probetag/:id" element={<Probetag />} />
             <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />
             <Route
               path="/mitarbeiter"

@@ -116,11 +116,10 @@ export default function AdminBewerbungsgespraeche() {
     toast.success(`Status auf "${newStatus}" gesetzt.`);
     queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
 
-    // Send email on success
+    // Send email on success — now links to trial day booking instead of contract
     if (newStatus === "erfolgreich" && item.applications?.email) {
       const app = item.applications;
-      // Get the contract for this application to build link
-      const contractLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
+      const probetagLink = await buildBrandingUrl(app.brandings?.id, `/probetag/${item.application_id}`);
 
       await sendEmail({
         to: app.email,
@@ -130,10 +129,10 @@ export default function AdminBewerbungsgespraeche() {
         body_lines: [
           `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
           "Ihr Bewerbungsgespräch war erfolgreich. Wir freuen uns, Sie im nächsten Schritt willkommen zu heißen.",
-          "Bitte füllen Sie nun Ihren Arbeitsvertrag über den folgenden Link aus.",
+          "Bitte buchen Sie nun einen Termin für Ihren Probetag über den folgenden Link.",
         ],
-        button_text: contractLink ? "Arbeitsvertrag ausfüllen" : undefined,
-        button_url: contractLink || undefined,
+        button_text: probetagLink ? "Probetag buchen" : undefined,
+        button_url: probetagLink || undefined,
         branding_id: app.brandings?.id || null,
         event_type: "gespraech_erfolgreich",
         metadata: { appointment_id: item.id, application_id: item.application_id },
@@ -227,14 +226,14 @@ export default function AdminBewerbungsgespraeche() {
     setPage(0);
   };
 
-  const handleResendContractEmail = async (item: any) => {
+  const handleResendProbetagEmail = async (item: any) => {
     const app = item.applications;
     if (!app?.email) {
       toast.error("Keine E-Mail-Adresse vorhanden");
       return;
     }
     try {
-      const contractLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
+      const probetagLink = await buildBrandingUrl(app.brandings?.id, `/probetag/${item.application_id}`);
       await sendEmail({
         to: app.email,
         recipient_name: `${app.first_name} ${app.last_name}`,
@@ -243,17 +242,17 @@ export default function AdminBewerbungsgespraeche() {
         body_lines: [
           `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
           "Ihr Bewerbungsgespräch war erfolgreich. Wir freuen uns, Sie im nächsten Schritt willkommen zu heißen.",
-          "Bitte füllen Sie nun Ihren Arbeitsvertrag über den folgenden Link aus.",
+          "Bitte buchen Sie nun einen Termin für Ihren Probetag über den folgenden Link.",
         ],
-        button_text: "Arbeitsvertrag ausfüllen",
-        button_url: contractLink,
+        button_text: "Probetag buchen",
+        button_url: probetagLink,
         branding_id: app.brandings?.id || null,
         event_type: "gespraech_erfolgreich",
         metadata: { appointment_id: item.id, application_id: item.application_id },
       });
-      toast.success("Arbeitsvertrag-E-Mail erneut gesendet!");
+      toast.success("Probetag-E-Mail erneut gesendet!");
     } catch (err) {
-      console.error("Resend contract email error:", err);
+      console.error("Resend probetag email error:", err);
       toast.error("Fehler beim Senden der E-Mail");
     }
   };
@@ -384,8 +383,8 @@ export default function AdminBewerbungsgespraeche() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={() => handleResendContractEmail(item)}
-                              title="Arbeitsvertrag-E-Mail erneut senden"
+                              onClick={() => handleResendProbetagEmail(item)}
+                              title="Probetag-E-Mail erneut senden"
                             >
                               <Mail className="h-4 w-4" />
                             </Button>

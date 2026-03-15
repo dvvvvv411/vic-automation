@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2 } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
@@ -41,6 +41,7 @@ const navGroups = [
     items: [
       { title: "Bewerbungen", url: "/admin/bewerbungen", icon: FileText },
       { title: "Bewerbungsgespräche", url: "/admin/bewerbungsgespraeche", icon: Calendar },
+      { title: "Probetage", url: "/admin/probetag", icon: Building2 },
       { title: "Arbeitsverträge", url: "/admin/arbeitsvertraege", icon: FileCheck },
     ],
   },
@@ -133,9 +134,22 @@ export function AdminSidebar() {
     refetchInterval: 30000,
   });
 
+  const { data: probetagTodayCount } = useQuery({
+    queryKey: ["badge-probetag-heute"],
+    queryFn: async () => {
+      const now = new Date();
+      const today = format(now, "yyyy-MM-dd");
+      const nowTime = format(now, "HH:mm:ss");
+      const { count } = await supabase.from("trial_day_appointments" as any).select("*", { count: "exact", head: true }).eq("appointment_date", today).gte("appointment_time", nowTime);
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
   const badgeCounts: Record<string, number> = {
     "/admin/bewerbungen": neuCount ?? 0,
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
+    "/admin/probetag": probetagTodayCount ?? 0,
     "/admin/arbeitsvertraege": eingereichtCount ?? 0,
     "/admin/auftragstermine": todayAppointmentsCount ?? 0,
     "/admin/livechat": chatUnreadCount ?? 0,
