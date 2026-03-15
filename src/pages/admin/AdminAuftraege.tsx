@@ -3,14 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Pencil, Trash2, Users } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Eye, Users, MoreVertical, Pencil, Trash2, Star, Clock, PackageOpen } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import AssignmentDialog from "@/components/admin/AssignmentDialog";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
@@ -76,77 +77,110 @@ export default function AdminAuftraege() {
         </Button>
       </div>
 
-      <div className="premium-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Titel</TableHead>
-              <TableHead>Typ</TableHead>
-              <TableHead>Prämie</TableHead>
-              <TableHead>Starter-Job</TableHead>
-              <TableHead>Erstellt am</TableHead>
-              <TableHead>Zuweisen</TableHead>
-              <TableHead className="text-right">Aktionen</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
-              </TableRow>
-            ) : !orders?.length ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Aufträge vorhanden</TableCell>
-              </TableRow>
-            ) : (
-              orders.map((o: any) => {
-                const count = assignmentCounts?.[o.id] || 0;
-                return (
-                  <TableRow key={o.id}>
-                    <TableCell className="font-medium">{o.title}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{typeLabel[o.order_type] || o.order_type}</Badge>
-                    </TableCell>
-                    <TableCell>{o.reward}</TableCell>
-                    <TableCell>
-                      {o.is_starter_job ? (
-                        <Badge variant="default">Ja</Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Nein</span>
+      {isLoading ? (
+        <div className="text-center py-12 text-muted-foreground">Laden...</div>
+      ) : !orders?.length ? (
+        <div className="flex flex-col items-center justify-center py-16 border border-dashed rounded-xl text-muted-foreground gap-3">
+          <PackageOpen className="h-10 w-10" />
+          <p className="text-sm">Keine Aufträge vorhanden</p>
+          <Button variant="outline" size="sm" onClick={() => navigate("/admin/auftraege/neu")}>
+            <Plus className="h-4 w-4 mr-1" /> Ersten Auftrag erstellen
+          </Button>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {orders.map((o: any, i: number) => {
+            const count = assignmentCounts?.[o.id] || 0;
+            return (
+              <motion.div
+                key={o.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: i * 0.03 }}
+                className="premium-card p-5 hover:shadow-md transition-shadow"
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-foreground text-base truncate">{o.title}</h3>
+                      {o.is_starter_job && (
+                        <Star className="h-4 w-4 text-amber-500 fill-amber-500 shrink-0" />
                       )}
-                    </TableCell>
-                    <TableCell>{format(new Date(o.created_at), "dd.MM.yyyy")}</TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => setAssignOrder(o)}>
-                        <Users className="h-3.5 w-3.5 mr-1.5" />
-                        {count > 0 ? `${count} Mitarbeiter` : "Zuweisen"}
-                      </Button>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/auftraege/${o.id}/bearbeiten`)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Bearbeiten</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(o.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Löschen</TooltipContent>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-0 text-xs">
+                        {o.reward}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {typeLabel[o.order_type] || o.order_type}
+                      </Badge>
+                      {count > 0 && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Users className="h-3 w-3" /> {count}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/admin/auftraege/${o.id}/bearbeiten`)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Ansehen</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAssignOrder(o)}>
+                          <Users className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Zuweisen</TooltipContent>
+                    </Tooltip>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => navigate(`/admin/auftraege/${o.id}/bearbeiten`)}>
+                          <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteMutation.mutate(o.id)}>
+                          <Trash2 className="h-4 w-4 mr-2" /> Löschen
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                {/* Body */}
+                {o.description && (
+                  <p className="text-sm text-muted-foreground whitespace-pre-line line-clamp-3 mb-3">
+                    {o.description}
+                  </p>
+                )}
+
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-3 border-t border-border/50 text-xs text-muted-foreground">
+                  {o.estimated_hours ? (
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> {o.estimated_hours}h geschätzt
+                    </span>
+                  ) : <span />}
+                  <span>Erstellt: {format(new Date(o.created_at), "dd.MM.yyyy")}</span>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
 
       {assignOrder && (
         <AssignmentDialog
