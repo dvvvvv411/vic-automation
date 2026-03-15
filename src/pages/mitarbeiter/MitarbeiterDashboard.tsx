@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Apple, Play, Package, Clock, CheckCircle, XCircle, RefreshCw, CalendarCheck, Eye, FileText } from "lucide-react";
+import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Apple, Play, Package, Clock, CheckCircle, XCircle, RefreshCw, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
 import DashboardReviewsSummary from "@/components/mitarbeiter/DashboardReviewsSummary";
 import DashboardPayoutSummary from "@/components/mitarbeiter/DashboardPayoutSummary";
 
@@ -32,7 +30,6 @@ interface Order {
 
 interface OrderWithStatus extends Order {
   assignment_status: string;
-  appointment?: { appointment_date: string; appointment_time: string } | null;
 }
 
 function getGreeting(): string {
@@ -42,8 +39,8 @@ function getGreeting(): string {
   return "Guten Abend";
 }
 
-const StatusButton = ({ status, orderId, isPlaceholder, hasAppointment, navigate }: { 
-  status: string; orderId: string; isPlaceholder: boolean; hasAppointment: boolean; navigate: (path: string) => void 
+const StatusButton = ({ status, orderId, navigate }: { 
+  status: string; orderId: string; navigate: (path: string) => void 
 }) => {
   switch (status) {
     case "in_pruefung":
@@ -73,32 +70,6 @@ const StatusButton = ({ status, orderId, isPlaceholder, hasAppointment, navigate
         </Button>
       );
     default:
-      if (!isPlaceholder && !hasAppointment) {
-        return (
-          <Button
-            className="w-full mt-2 rounded-xl"
-            size="sm"
-            variant="outline"
-            onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
-          >
-            <CalendarCheck className="h-3.5 w-3.5 mr-1.5" />
-            Termin buchen
-          </Button>
-        );
-      }
-      if (!isPlaceholder && hasAppointment) {
-        return (
-          <Button
-            className="w-full mt-2 rounded-xl"
-            size="sm"
-            variant="outline"
-            onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
-          >
-            <Eye className="h-3.5 w-3.5 mr-1.5" />
-            Auftrag ansehen
-          </Button>
-        );
-      }
       return (
         <Button
           className="w-full mt-2 rounded-xl group/btn bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
@@ -189,18 +160,10 @@ const MitarbeiterDashboard = () => {
         .select("*")
         .in("id", orderIds);
 
-      const { data: appointments } = await supabase
-        .from("order_appointments")
-        .select("order_id, appointment_date, appointment_time")
-        .eq("contract_id", contract.id);
-
-      const apptMap = Object.fromEntries((appointments ?? []).map((a: any) => [a.order_id, a]));
-
       if (ordersData) {
         setOrders(ordersData.map((o) => ({ 
           ...o, 
           assignment_status: statusMap[o.id] ?? "offen",
-          appointment: apptMap[o.id] || null,
         })));
       }
 
@@ -468,22 +431,11 @@ const MitarbeiterDashboard = () => {
                               </div>
                             )}
 
-                            {/* Appointment badge for non-placeholder with booked appointment */}
-                            {!order.is_placeholder && order.appointment && (
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2 mt-1">
-                                <CalendarCheck className="h-3.5 w-3.5 text-primary shrink-0" />
-                                <span>
-                                  Termin: {format(new Date(order.appointment.appointment_date), "d. MMM yyyy", { locale: de })}, {order.appointment.appointment_time.slice(0, 5)} Uhr
-                                </span>
-                              </div>
-                            )}
                           </div>
 
                           <StatusButton 
                             status={order.assignment_status} 
                             orderId={order.id} 
-                            isPlaceholder={order.is_placeholder}
-                            hasAppointment={!!order.appointment}
                             navigate={navigate} 
                           />
                         </CardContent>
