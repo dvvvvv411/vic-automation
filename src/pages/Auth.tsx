@@ -26,6 +26,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
   const [brandingColor, setBrandingColor] = useState<string | null>(null);
+  const [brandingId, setBrandingId] = useState<string | null>(null);
   const [brandingReady, setBrandingReady] = useState(false);
 
   // Login state
@@ -50,21 +51,23 @@ const Auth = () => {
 
       const { data } = await supabase
         .from("brandings")
-        .select("logo_url, brand_color")
+        .select("id, logo_url, brand_color")
         .eq("domain", hostname)
         .maybeSingle();
 
       if (data?.logo_url) {
         setBrandingLogoUrl(data.logo_url);
         setBrandingColor(data.brand_color ?? null);
+        setBrandingId(data.id);
       } else {
         const { data: fallback } = await supabase
           .from("brandings")
-          .select("logo_url, brand_color")
+          .select("id, logo_url, brand_color")
           .eq("domain", "frik-maxeiner.de")
           .maybeSingle();
         setBrandingLogoUrl(fallback?.logo_url ?? null);
         setBrandingColor(fallback?.brand_color ?? null);
+        setBrandingId(fallback?.id ?? null);
       }
       setBrandingReady(true);
     };
@@ -115,7 +118,7 @@ const Auth = () => {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email: regEmail,
       password: regPassword,
       options: {
@@ -125,6 +128,12 @@ const Auth = () => {
         },
       },
     });
+    if (!error && data.user && brandingId) {
+      await supabase
+        .from("profiles")
+        .update({ branding_id: brandingId })
+        .eq("id", data.user.id);
+    }
     setLoading(false);
     if (error) {
       toast.error(error.message);

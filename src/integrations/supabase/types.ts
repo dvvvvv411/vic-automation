@@ -883,6 +883,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          branding_id: string | null
           created_at: string
           display_name: string | null
           email: string | null
@@ -893,6 +894,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          branding_id?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -903,6 +905,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          branding_id?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -911,7 +914,15 @@ export type Database = {
           is_chat_online?: boolean
           phone?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       schedule_blocked_slots: {
         Row: {

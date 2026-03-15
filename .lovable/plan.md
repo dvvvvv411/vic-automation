@@ -1,40 +1,66 @@
 
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-# Branding-Zuweisung für selbst-registrierte User (Rolle "user")
+## Was wurde gemacht
 
-## Klarstellung
-Nutzer die sich über /auth registrieren bekommen die Rolle **"user"** (Mitarbeiter-Panel), nicht "kunde". Die `kunde_brandings`-Tabelle ist daher **nicht** der richtige Ort — die ist für Admin/Kunde-Zugriffskontrolle.
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-## Problem
-Reguläre User bekommen ihr Branding aktuell über die Kette `employment_contract → application → branding_id`. Selbst-registrierte User haben aber noch keinen Arbeitsvertrag und damit keine Branding-Zuordnung.
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-## Lösung
-`branding_id` auf der `profiles`-Tabelle speichern. Damit hat jeder selbst-registrierte User direkt eine Branding-Zuordnung.
+---
 
-### 1. Migration — `branding_id` auf `profiles`
-```sql
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS branding_id uuid;
-```
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-### 2. Auth.tsx — `branding_id` im Fetch mitspeichern + nach signUp ins Profil schreiben
-- Im bestehenden `fetchBranding` die `id` mit abfragen und in State `brandingId` speichern (wird bereits für Logo genutzt)
-- Nach erfolgreichem `signUp`: das Profil updaten mit `branding_id`
+## Was wurde gemacht
 
-```tsx
-// nach signUp
-if (!error && data.user && brandingId) {
-  await supabase
-    .from("profiles")
-    .update({ branding_id: brandingId })
-    .eq("id", data.user.id);
-}
-```
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-### 3. MitarbeiterLayout — Fallback auf `profiles.branding_id`
-Wenn kein Contract/Application existiert, das Branding aus `profiles.branding_id` laden als Fallback.
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
-## Betroffene Dateien
-1. Migration — `branding_id` Spalte auf `profiles`
-2. `src/pages/Auth.tsx` — branding_id speichern bei Registrierung
-3. `src/components/mitarbeiter/MitarbeiterLayout.tsx` — Fallback-Branding aus Profil
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
 
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+
+---
+
+# Vergütungsmodell pro Branding (abgeschlossen)
+
+## Was wurde gemacht
+
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary

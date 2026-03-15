@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS branding_id uuid REFERENCES public.brandings(id);
