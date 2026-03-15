@@ -160,18 +160,10 @@ const MitarbeiterDashboard = () => {
         .select("*")
         .in("id", orderIds);
 
-      const { data: appointments } = await supabase
-        .from("order_appointments")
-        .select("order_id, appointment_date, appointment_time")
-        .eq("contract_id", contract.id);
-
-      const apptMap = Object.fromEntries((appointments ?? []).map((a: any) => [a.order_id, a]));
-
       if (ordersData) {
         setOrders(ordersData.map((o) => ({ 
           ...o, 
           assignment_status: statusMap[o.id] ?? "offen",
-          appointment: apptMap[o.id] || null,
         })));
       }
 
