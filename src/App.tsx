@@ -77,7 +77,7 @@ const App = () => (
               <Route path="auftraege/neu" element={<AdminAuftragWizard />} />
               <Route path="auftraege/:id/bearbeiten" element={<AdminAuftragWizard />} />
               <Route path="anhaenge" element={<AdminAnhaenge />} />
-              <Route path="auftragstermine" element={<AdminAuftragstermine />} />
+              
               <Route path="livechat" element={<AdminLivechat />} />
               <Route path="bewertungen" element={<AdminBewertungen />} />
               <Route path="emails" element={<AdminEmails />} />

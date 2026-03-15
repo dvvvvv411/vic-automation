@@ -362,8 +362,6 @@ export default function AdminZeitplan() {
         </Card>
       )}
 
-      {/* Order Appointment Blocking */}
-      <OrderAppointmentBlocker />
 
       {/* Trial Day Blocking */}
       <TrialDayBlocker />
