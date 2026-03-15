@@ -14,6 +14,10 @@ interface BrandingData {
   logo_url: string | null;
   company_name: string;
   brand_color: string | null;
+  payment_model: string | null;
+  salary_minijob: number | null;
+  salary_teilzeit: number | null;
+  salary_vollzeit: number | null;
 }
 
 interface ContractData {
