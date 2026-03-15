@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { de } from "date-fns/locale/de";
-import { useUserQueryKey } from "@/hooks/useUserQueryKey";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const PAGE_SIZE = 20;
 
