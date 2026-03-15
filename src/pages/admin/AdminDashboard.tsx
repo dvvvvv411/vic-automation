@@ -66,12 +66,12 @@ export default function AdminDashboard() {
   });
 
   const { data: unreadChatCount, isLoading: l5 } = useQuery({
-    queryKey: ["dash-chat-unread", userId],
+    queryKey: ["dash-chat-unread", brandingIds],
     queryFn: async () => {
       const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false);
       return count ?? 0;
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 10000,
   });
 
