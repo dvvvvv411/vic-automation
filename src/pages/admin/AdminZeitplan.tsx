@@ -70,8 +70,8 @@ export default function AdminZeitplan() {
 
   // Load branding-specific settings
   const { data: brandingSettings = [] } = useQuery({
-    queryKey: ["branding-schedule-settings", userId],
-    enabled: !!userId,
+    queryKey: ["branding-schedule-settings", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("branding_schedule_settings")
