@@ -52,7 +52,7 @@ const DEFAULT_DAYS = [1, 2, 3, 4, 5, 6];
 
 export default function AdminZeitplan() {
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockReason, setBlockReason] = useState("");
   const [blockBrandingId, setBlockBrandingId] = useState<string>("all");
