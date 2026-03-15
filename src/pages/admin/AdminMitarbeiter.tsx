@@ -60,7 +60,7 @@ export default function AdminMitarbeiter() {
   });
 
   const { data: assignmentCounts } = useQuery({
-    queryKey: ["order_assignments", "counts_by_contract", brandingIds],
+    queryKey: ["order_assignments", "counts_by_contract", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
