@@ -40,7 +40,7 @@ export default function AdminMitarbeiter() {
   const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string; isSuspended: boolean } | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
 
   const { data, isLoading } = useQuery({
     queryKey: ["mitarbeiter", page, brandingIds],
