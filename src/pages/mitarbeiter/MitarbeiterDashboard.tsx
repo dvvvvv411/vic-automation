@@ -431,22 +431,11 @@ const MitarbeiterDashboard = () => {
                               </div>
                             )}
 
-                            {/* Appointment badge for non-placeholder with booked appointment */}
-                            {!order.is_placeholder && order.appointment && (
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2 mt-1">
-                                <CalendarCheck className="h-3.5 w-3.5 text-primary shrink-0" />
-                                <span>
-                                  Termin: {format(new Date(order.appointment.appointment_date), "d. MMM yyyy", { locale: de })}, {order.appointment.appointment_time.slice(0, 5)} Uhr
-                                </span>
-                              </div>
-                            )}
                           </div>
 
                           <StatusButton 
                             status={order.assignment_status} 
                             orderId={order.id} 
-                            isPlaceholder={order.is_placeholder}
-                            hasAppointment={!!order.appointment}
                             navigate={navigate} 
                           />
                         </CardContent>
