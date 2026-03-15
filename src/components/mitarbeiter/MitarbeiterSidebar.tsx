@@ -28,6 +28,7 @@ const navItems = [
   { title: "Dashboard", url: "/mitarbeiter", icon: LayoutDashboard },
   { title: "Aufträge", url: "/mitarbeiter/auftraege", icon: ClipboardList },
   { title: "Bewertungen", url: "/mitarbeiter/bewertungen", icon: Star },
+  { title: "Arbeitsvertrag", url: "/mitarbeiter/arbeitsvertrag", icon: FileText },
   { title: "Meine Daten", url: "/mitarbeiter/meine-daten", icon: User },
 ];
 

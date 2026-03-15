@@ -153,7 +153,7 @@ export default function MitarbeiterLayout() {
               </div>
             </div>
           </header>
-          {contract?.status === "genehmigt" && contract?.contract_pdf_url ? (
+          {contract?.status === "genehmigt" && contract?.contract_pdf_url && contract?.application_id ? (
             <ContractSigningView
               contractId={contract.id}
               contractPdfUrl={contract.contract_pdf_url}
