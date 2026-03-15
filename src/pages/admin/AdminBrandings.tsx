@@ -169,6 +169,10 @@ export default function AdminBrandings() {
       resend_api_key: (branding as any).resend_api_key || "",
       sms_sender_name: (branding as any).sms_sender_name || "",
       phone: (branding as any).phone || "",
+      payment_model: ((branding as any).payment_model === "fixed_salary" ? "fixed_salary" : "per_order") as "per_order" | "fixed_salary",
+      salary_minijob: (branding as any).salary_minijob?.toString() || "",
+      salary_teilzeit: (branding as any).salary_teilzeit?.toString() || "",
+      salary_vollzeit: (branding as any).salary_vollzeit?.toString() || "",
     });
     setOpen(true);
   };
