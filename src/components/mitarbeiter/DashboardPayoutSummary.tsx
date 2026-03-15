@@ -8,6 +8,7 @@ import { de } from "date-fns/locale";
 
 interface Props {
   balance: number;
+  isFixedSalary?: boolean;
 }
 
 const DashboardPayoutSummary = ({ balance }: Props) => {
