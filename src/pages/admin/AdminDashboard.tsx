@@ -56,12 +56,12 @@ export default function AdminDashboard() {
   });
 
   const { data: appointmentTodayCount, isLoading: l4 } = useQuery({
-    queryKey: ["dash-termine-heute", userId],
+    queryKey: ["dash-termine-heute", brandingIds],
     queryFn: async () => {
       const { count } = await supabase.from("order_appointments").select("*", { count: "exact", head: true }).eq("appointment_date", today());
       return count ?? 0;
     },
-    enabled: !!userId,
+    enabled: ready,
     refetchInterval: 30000,
   });
 
