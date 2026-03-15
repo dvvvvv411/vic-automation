@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Package, ExternalLink, Clock, CheckCircle, XCircle, RefreshCw, CalendarCheck, Eye } from "lucide-react";
+import { Package, ExternalLink, Clock, CheckCircle, XCircle, RefreshCw, CalendarCheck, Eye, Paperclip } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ interface Assignment {
   reward: string;
   is_placeholder: boolean;
   appointment?: { appointment_date: string; appointment_time: string } | null;
+  hasRequiredAttachments: boolean;
+  attachmentsPending: boolean;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
@@ -149,7 +151,7 @@ const MitarbeiterAuftraege = () => {
       const orderIds = rawAssignments.map((a) => a.order_id);
       const { data: orders } = await supabase
         .from("orders")
-        .select("id, order_number, title, provider, reward, is_placeholder")
+        .select("id, order_number, title, provider, reward, is_placeholder, required_attachments")
         .in("id", orderIds);
 
       // Load appointments for this contract
@@ -158,23 +160,47 @@ const MitarbeiterAuftraege = () => {
         .select("order_id, appointment_date, appointment_time")
         .eq("contract_id", contract.id);
 
+      // Load attachments for this contract
+      const { data: attachments } = await supabase
+        .from("order_attachments")
+        .select("order_id, attachment_index, status")
+        .eq("contract_id", contract.id);
+
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
       const apptMap = Object.fromEntries((appointments ?? []).map((a: any) => [a.order_id, a]));
+
+      // Group attachments by order_id
+      const attachmentsByOrder: Record<string, Array<{ attachment_index: number; status: string }>> = {};
+      for (const att of attachments ?? []) {
+        if (!attachmentsByOrder[att.order_id]) attachmentsByOrder[att.order_id] = [];
+        attachmentsByOrder[att.order_id].push(att);
+      }
 
       setAssignments(
         rawAssignments
           .filter((a) => orderMap[a.order_id])
-          .map((a) => ({
-            order_id: a.order_id,
-            status: a.status ?? "offen",
-            assigned_at: a.assigned_at,
-            order_number: orderMap[a.order_id].order_number,
-            title: orderMap[a.order_id].title,
-            provider: orderMap[a.order_id].provider,
-            reward: orderMap[a.order_id].reward,
-            is_placeholder: orderMap[a.order_id].is_placeholder,
-            appointment: apptMap[a.order_id] || null,
-          }))
+          .map((a) => {
+            const order = orderMap[a.order_id];
+            const reqAtts = (order.required_attachments as any[] | null) ?? [];
+            const hasReq = reqAtts.length > 0;
+            const orderAtts = attachmentsByOrder[a.order_id] ?? [];
+            const allApproved = hasReq && reqAtts.every((_: any, i: number) =>
+              orderAtts.some((att) => att.attachment_index === i && att.status === "genehmigt")
+            );
+            return {
+              order_id: a.order_id,
+              status: a.status ?? "offen",
+              assigned_at: a.assigned_at,
+              order_number: order.order_number,
+              title: order.title,
+              provider: order.provider,
+              reward: order.reward,
+              is_placeholder: order.is_placeholder,
+              appointment: apptMap[a.order_id] || null,
+              hasRequiredAttachments: hasReq,
+              attachmentsPending: hasReq && !allApproved,
+            };
+          })
       );
       setLoading(false);
     };
@@ -255,12 +281,20 @@ const MitarbeiterAuftraege = () => {
               <Card className="bg-white border border-border/40 shadow-md rounded-2xl hover:shadow-lg transition-all duration-200 flex flex-col h-full border-l-4 border-l-primary">
 
                 <CardHeader className="pb-3 pt-5">
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
-                      #{a.order_number}
-                    </Badge>
-                    <StatusBadge status={a.status} />
-                  </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
+                        #{a.order_number}
+                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        {(a.status === "in_pruefung" || a.status === "erfolgreich") && a.attachmentsPending && (
+                          <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
+                            <Paperclip className="h-3 w-3 mr-1" />
+                            Anhänge ausstehend
+                          </Badge>
+                        )}
+                        <StatusBadge status={a.status} />
+                      </div>
+                    </div>
                   <CardTitle className="text-base font-semibold leading-snug text-foreground line-clamp-2">
                     {a.title}
                   </CardTitle>

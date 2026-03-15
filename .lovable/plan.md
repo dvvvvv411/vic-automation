@@ -1,26 +1,47 @@
 
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-# Badge "Anhänge erforderlich" auf Auftrags-Cards im Mitarbeiter-Panel
+## Was wurde gemacht
 
-## Was wird gemacht
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-Wenn ein Mitarbeiter die Bewertung eingereicht hat (Status `in_pruefung` oder `erfolgreich`) und der Auftrag `required_attachments` hat (Array nicht leer), soll auf der Auftrags-Card ein Badge angezeigt werden: **"Anhänge erforderlich"** — sofern noch nicht alle Anhänge genehmigt wurden.
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-## Änderungen in `MitarbeiterAuftraege.tsx`
+---
 
-### 1. Daten erweitern
-- Orders-Query: zusätzlich `required_attachments` laden
-- Neue Query: `order_attachments` für den Contract laden (Status pro Anhang)
-- Im `Assignment`-Interface: `hasRequiredAttachments: boolean`, `attachmentsPending: boolean` hinzufügen
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-### 2. Logik
-- `hasRequiredAttachments`: `required_attachments` Array hat mindestens 1 Eintrag
-- `attachmentsPending`: Nicht alle required attachments haben Status `genehmigt` in `order_attachments`
-- Badge anzeigen wenn: Bewertung eingereicht (`in_pruefung` oder `erfolgreich`) UND `hasRequiredAttachments` UND `attachmentsPending`
+## Was wurde gemacht
 
-### 3. UI
-- Orange/Amber Badge mit Paperclip-Icon unter dem Status-Badge oder im Card-Body: **"Anhänge ausstehend"**
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-### Betroffene Datei
-- `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx`
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
+
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
