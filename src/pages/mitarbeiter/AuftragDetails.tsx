@@ -601,79 +601,96 @@ const AuftragDetails = () => {
                 <FileText className="h-4 w-4 text-primary" /> Erforderliche Anhänge
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {requiredAttachments.map((ra, i) => {
-                const uploaded = attachments.find((a) => a.attachment_index === i);
-                const statusColor = uploaded?.status === "genehmigt"
-                  ? "border-green-300 bg-green-50/50"
-                  : uploaded?.status === "abgelehnt"
-                  ? "border-red-300 bg-red-50/50"
-                  : uploaded
-                  ? "border-blue-300 bg-blue-50/50"
-                  : "border-border";
+           <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {requiredAttachments.map((ra, i) => {
+                  const uploaded = attachments.find((a) => a.attachment_index === i);
+                  const isSubmitted = uploaded?.status === "eingereicht" || uploaded?.status === "genehmigt";
+                  const statusColor = uploaded?.status === "genehmigt"
+                    ? "border-green-300 bg-green-50/50"
+                    : uploaded?.status === "abgelehnt"
+                    ? "border-red-300 bg-red-50/50"
+                    : uploaded?.status === "eingereicht"
+                    ? "border-blue-300 bg-blue-50/50"
+                    : uploaded
+                    ? "border-primary/30 bg-primary/5"
+                    : "border-border";
 
-                return (
-                  <div key={i} className={cn("rounded-lg border p-4 space-y-3", statusColor)}>
-                    <div className="flex items-center justify-between">
-                      <div>
+                  return (
+                    <div key={i} className={cn("rounded-lg border p-4 flex flex-col aspect-square", statusColor)}>
+                      <div className="flex-1 min-h-0">
                         <p className="font-medium text-foreground text-sm">{ra.title}</p>
-                        {ra.description && <p className="text-xs text-muted-foreground mt-0.5">{ra.description}</p>}
+                        {ra.description && <p className="text-xs text-muted-foreground mt-1">{ra.description}</p>}
+                        {uploaded && (
+                          <Badge className="mt-2" variant={uploaded.status === "genehmigt" ? "default" : uploaded.status === "abgelehnt" ? "destructive" : uploaded.status === "eingereicht" ? "secondary" : "outline"}>
+                            {uploaded.status === "genehmigt" ? "Genehmigt" : uploaded.status === "abgelehnt" ? "Abgelehnt" : uploaded.status === "eingereicht" ? "Eingereicht" : "Entwurf"}
+                          </Badge>
+                        )}
                       </div>
-                      {uploaded && (
-                        <Badge variant={uploaded.status === "genehmigt" ? "default" : uploaded.status === "abgelehnt" ? "destructive" : "secondary"}>
-                          {uploaded.status === "genehmigt" ? "Genehmigt" : uploaded.status === "abgelehnt" ? "Abgelehnt" : "Eingereicht"}
-                        </Badge>
-                      )}
-                    </div>
 
-                    {uploaded ? (
-                      <div className="flex items-center gap-3">
-                        <a href={uploaded.file_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                          <FileText className="h-3.5 w-3.5" />
-                          {uploaded.file_name || "Datei ansehen"}
-                        </a>
-                        {(uploaded.status === "abgelehnt" || uploaded.status === "eingereicht") && (
-                          <label className="cursor-pointer">
-                            <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                      <div className="mt-4">
+                        {uploaded ? (
+                          <div className="space-y-2">
+                            <a href={uploaded.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1 truncate">
+                              <FileText className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{uploaded.file_name || "Datei ansehen"}</span>
+                            </a>
+                            {(uploaded.status === "abgelehnt" || uploaded.status === "entwurf") && (
+                              <label className="cursor-pointer block">
+                                <Button variant="outline" size="sm" className="gap-1.5 w-full text-xs" asChild>
+                                  <span>
+                                    <Upload className="h-3 w-3" />
+                                    {uploaded.status === "abgelehnt" ? "Erneut hochladen" : "Ersetzen"}
+                                  </span>
+                                </Button>
+                                <input type="file" className="hidden" accept=".png,.jpg,.jpeg,.pdf" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(i, f); }} />
+                              </label>
+                            )}
+                          </div>
+                        ) : (
+                          <label className="cursor-pointer block">
+                            <Button variant="outline" size="sm" className="gap-1.5 w-full text-xs" disabled={uploading === i} asChild>
                               <span>
-                                <Upload className="h-3.5 w-3.5" />
-                                {uploaded.status === "abgelehnt" ? "Erneut hochladen" : "Ersetzen"}
+                                <Upload className="h-3 w-3" />
+                                {uploading === i ? "Hochladen..." : "Datei hochladen"}
                               </span>
                             </Button>
-                            <input
-                              type="file"
-                              className="hidden"
-                              accept=".png,.jpg,.jpeg,.pdf"
-                              onChange={(e) => {
-                                const f = e.target.files?.[0];
-                                if (f) handleFileUpload(i, f);
-                              }}
-                            />
+                            <input type="file" className="hidden" accept=".png,.jpg,.jpeg,.pdf" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(i, f); }} />
                           </label>
                         )}
                       </div>
-                    ) : (
-                      <label className="cursor-pointer">
-                        <Button variant="outline" size="sm" className="gap-1.5" disabled={uploading === i} asChild>
-                          <span>
-                            <Upload className="h-3.5 w-3.5" />
-                            {uploading === i ? "Wird hochgeladen..." : "Datei hochladen"}
-                          </span>
-                        </Button>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept=".png,.jpg,.jpeg,.pdf"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) handleFileUpload(i, f);
-                          }}
-                        />
-                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Submit button - only if there are drafts to submit */}
+              {(() => {
+                const allUploaded = requiredAttachments.every((_, i) => attachments.find((a) => a.attachment_index === i));
+                const hasDrafts = attachments.some((a) => a.status === "entwurf");
+                const allSubmittedOrApproved = allUploaded && attachments.every((a) => a.status === "eingereicht" || a.status === "genehmigt");
+
+                if (allSubmittedOrApproved) return null;
+
+                return (
+                  <>
+                    <Separator />
+                    <Button
+                      onClick={handleSubmitAttachments}
+                      disabled={!allUploaded || !hasDrafts || submittingAttachments}
+                      className="w-full gap-2"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      {submittingAttachments ? "Wird eingereicht..." : "Anhänge absenden"}
+                    </Button>
+                    {!allUploaded && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        Bitte laden Sie alle erforderlichen Dokumente hoch, bevor Sie absenden.
+                      </p>
                     )}
-                  </div>
+                  </>
                 );
-              })}
+              })()}
             </CardContent>
           </Card>
         </motion.div>
