@@ -13,8 +13,8 @@ import DashboardReviewsSummary from "@/components/mitarbeiter/DashboardReviewsSu
 import DashboardPayoutSummary from "@/components/mitarbeiter/DashboardPayoutSummary";
 
 interface ContextType {
-  contract: { id: string; first_name: string | null; application_id: string } | null;
-  branding: { logo_url: string | null; company_name: string; brand_color: string | null } | null;
+  contract: { id: string; first_name: string | null; application_id: string; employment_type?: string | null } | null;
+  branding: { logo_url: string | null; company_name: string; brand_color: string | null; payment_model?: string | null; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null } | null;
   loading: boolean;
 }
 
@@ -127,10 +127,23 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 const MitarbeiterDashboard = () => {
   const navigate = useNavigate();
-  const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
+  const { contract, branding, loading: layoutLoading } = useOutletContext<ContextType>();
   const [orders, setOrders] = useState<OrderWithStatus[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [balance, setBalance] = useState<number>(0);
+  const [employmentType, setEmploymentType] = useState<string | null>(null);
+
+  const isFixedSalary = branding?.payment_model === "fixed_salary";
+
+  const getFixedSalary = () => {
+    if (!branding) return 0;
+    switch (employmentType?.toLowerCase()) {
+      case "minijob": return Number(branding.salary_minijob) || 0;
+      case "teilzeit": return Number(branding.salary_teilzeit) || 0;
+      case "vollzeit": return Number(branding.salary_vollzeit) || 0;
+      default: return 0;
+    }
+  };
   const [avgRating, setAvgRating] = useState<number>(0);
   const [reviewCount, setReviewCount] = useState<number>(0);
   const [recentReviews, setRecentReviews] = useState<{order_title: string; avg: number; date: string}[]>([]);
@@ -146,12 +159,13 @@ const MitarbeiterDashboard = () => {
       // Fetch contract details (balance, profile)
       const { data: contractDetails } = await supabase
         .from("employment_contracts")
-        .select("balance, first_name, last_name, email, iban")
+        .select("balance, first_name, last_name, email, iban, employment_type")
         .eq("id", contract.id)
         .maybeSingle();
 
       if (contractDetails) {
         setBalance(Number(contractDetails.balance) || 0);
+        setEmploymentType(contractDetails.employment_type || null);
       }
 
       // Fetch assignments
@@ -238,9 +252,13 @@ const MitarbeiterDashboard = () => {
 
   const isLoading = layoutLoading || dataLoading;
 
+  const fixedSalary = getFixedSalary();
+
   const stats = [
     { label: "Zugewiesene Tests", value: orders.length.toString(), icon: Smartphone, detail: orders.length === 1 ? "1 Test" : `${orders.length} Tests` },
-    { label: "Guthaben", value: `${balance.toFixed(2)} €`, icon: Euro, detail: "Aktueller Kontostand" },
+    isFixedSalary
+      ? { label: "Festgehalt", value: `${fixedSalary.toFixed(2)} €`, icon: Euro, detail: employmentType || "Festgehalt" }
+      : { label: "Guthaben", value: `${balance.toFixed(2)} €`, icon: Euro, detail: "Aktueller Kontostand" },
     { label: "Offene Aufträge", value: orders.filter((o) => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen").length.toString(), icon: ClipboardList, detail: "Handlungsbedarf" },
     { label: "Bewertung", value: avgRating > 0 ? avgRating.toFixed(1) : "—", icon: Star, detail: reviewCount > 0 ? `${reviewCount} Bewertung${reviewCount !== 1 ? "en" : ""}` : "Noch keine" },
   ];
@@ -382,10 +400,12 @@ const MitarbeiterDashboard = () => {
                               <span className="text-muted-foreground">Anbieter</span>
                               <span className="font-medium text-foreground">{order.provider}</span>
                             </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Prämie</span>
-                              <span className="font-semibold text-primary">{order.reward}{order.reward.includes("€") ? "" : " €"}</span>
-                            </div>
+                            {!isFixedSalary && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Prämie</span>
+                                <span className="font-semibold text-primary">{order.reward}{order.reward.includes("€") ? "" : " €"}</span>
+                              </div>
+                            )}
 
                             {(order.appstore_url || order.playstore_url) && (
                               <div className="flex items-center gap-2 pt-1">
@@ -446,7 +466,7 @@ const MitarbeiterDashboard = () => {
       {/* Summary Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <DashboardReviewsSummary recentReviews={recentReviews} />
-        <DashboardPayoutSummary balance={balance} />
+        <DashboardPayoutSummary balance={isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary} />
       </div>
     </div>
   );

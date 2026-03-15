@@ -14,6 +14,10 @@ interface BrandingData {
   logo_url: string | null;
   company_name: string;
   brand_color: string | null;
+  payment_model: string | null;
+  salary_minijob: number | null;
+  salary_teilzeit: number | null;
+  salary_vollzeit: number | null;
 }
 
 interface ContractData {
@@ -60,7 +64,7 @@ export default function MitarbeiterLayout() {
         // 3. Get branding
         const { data: brandingData } = await supabase
           .from("brandings")
-          .select("logo_url, company_name, brand_color")
+          .select("logo_url, company_name, brand_color, payment_model, salary_minijob, salary_teilzeit, salary_vollzeit")
           .eq("id", appData.branding_id)
           .maybeSingle();
 

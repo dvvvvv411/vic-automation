@@ -20,7 +20,7 @@ import { toast } from "sonner";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string } | null;
-  branding: { logo_url: string | null; company_name: string; brand_color: string | null } | null;
+  branding: { logo_url: string | null; company_name: string; brand_color: string | null; payment_model?: string | null } | null;
   loading: boolean;
 }
 
@@ -64,7 +64,8 @@ const TIME_SLOTS = Array.from({ length: 21 }, (_, i) => {
 const AuftragDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
+  const { contract, branding: brandingCtx, loading: layoutLoading } = useOutletContext<ContextType>();
+  const isFixedSalary = brandingCtx?.payment_model === "fixed_salary";
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -401,10 +402,12 @@ const AuftragDetails = () => {
                 <p className="font-medium text-foreground">{order.provider}</p>
               </div>
             )}
-            <div>
-              <span className="text-muted-foreground">Prämie</span>
-              <p className="font-semibold text-primary">{order.reward}{order.reward.includes("€") ? "" : " €"}</p>
-            </div>
+            {!isFixedSalary && (
+              <div>
+                <span className="text-muted-foreground">Prämie</span>
+                <p className="font-semibold text-primary">{order.reward}{order.reward.includes("€") ? "" : " €"}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

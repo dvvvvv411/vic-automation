@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, Palette, Trash2, Copy, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -42,6 +43,10 @@ const brandingSchema = z.object({
   resend_api_key: z.string().max(200).optional(),
   sms_sender_name: z.string().max(11, "Max. 11 Zeichen").optional(),
   phone: z.string().max(20, "Max. 20 Zeichen").optional(),
+  payment_model: z.enum(["per_order", "fixed_salary"]),
+  salary_minijob: z.string().optional(),
+  salary_teilzeit: z.string().optional(),
+  salary_vollzeit: z.string().optional(),
 });
 
 type BrandingForm = z.infer<typeof brandingSchema>;
@@ -63,6 +68,10 @@ const initialForm: BrandingForm = {
   resend_api_key: "",
   sms_sender_name: "",
   phone: "",
+  payment_model: "per_order" as const,
+  salary_minijob: "",
+  salary_teilzeit: "",
+  salary_vollzeit: "",
 };
 
 export default function AdminBrandings() {
@@ -101,9 +110,13 @@ export default function AdminBrandings() {
 
   const createMutation = useMutation({
     mutationFn: async (data: BrandingForm & { logo_url?: string }) => {
-      const cleaned: Record<string, string | null> = {};
+    const cleaned: Record<string, any> = {};
       Object.entries(data).forEach(([key, value]) => {
-        cleaned[key] = value === "" ? null : (value as string);
+        if (key === "salary_minijob" || key === "salary_teilzeit" || key === "salary_vollzeit") {
+          cleaned[key] = value ? parseFloat(value as string) : null;
+        } else {
+          cleaned[key] = value === "" ? null : (value as string);
+        }
       });
       const { error } = await supabase.from("brandings").insert(cleaned as any);
       if (error) throw error;
@@ -118,9 +131,13 @@ export default function AdminBrandings() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: BrandingForm & { logo_url?: string } }) => {
-      const cleaned: Record<string, string | null> = {};
+      const cleaned: Record<string, any> = {};
       Object.entries(data).forEach(([key, value]) => {
-        cleaned[key] = value === "" ? null : (value as string);
+        if (key === "salary_minijob" || key === "salary_teilzeit" || key === "salary_vollzeit") {
+          cleaned[key] = value ? parseFloat(value as string) : null;
+        } else {
+          cleaned[key] = value === "" ? null : (value as string);
+        }
       });
       const { error } = await supabase.from("brandings").update(cleaned as any).eq("id", id);
       if (error) throw error;
@@ -160,6 +177,10 @@ export default function AdminBrandings() {
       resend_api_key: (branding as any).resend_api_key || "",
       sms_sender_name: (branding as any).sms_sender_name || "",
       phone: (branding as any).phone || "",
+      payment_model: ((branding as any).payment_model === "fixed_salary" ? "fixed_salary" : "per_order") as "per_order" | "fixed_salary",
+      salary_minijob: (branding as any).salary_minijob?.toString() || "",
+      salary_teilzeit: (branding as any).salary_teilzeit?.toString() || "",
+      salary_vollzeit: (branding as any).salary_vollzeit?.toString() || "",
     });
     setOpen(true);
   };
@@ -378,6 +399,60 @@ export default function AdminBrandings() {
               />
               <p className="text-xs text-muted-foreground">Wird in SMS-Erinnerungen als Rückrufnummer verwendet.</p>
               {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+            </div>
+
+            {/* Vergütungsmodell */}
+            <div className="pt-2">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-sm font-medium text-muted-foreground">Vergütungsmodell</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <RadioGroup
+                value={form.payment_model}
+                onValueChange={(v) => setForm((prev) => ({ ...prev, payment_model: v as "per_order" | "fixed_salary" }))}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="per_order" id="per_order" />
+                  <Label htmlFor="per_order" className="cursor-pointer">Vergütung pro Auftrag</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="fixed_salary" id="fixed_salary" />
+                  <Label htmlFor="fixed_salary" className="cursor-pointer">Festgehalt</Label>
+                </div>
+              </RadioGroup>
+
+              {form.payment_model === "fixed_salary" && (
+                <div className="grid grid-cols-3 gap-4 mt-3">
+                  <div className="space-y-2">
+                    <Label>Minijob (€)</Label>
+                    <Input
+                      placeholder="520"
+                      value={form.salary_minijob}
+                      onChange={(e) => updateField("salary_minijob", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teilzeit (€)</Label>
+                    <Input
+                      placeholder="1500"
+                      value={form.salary_teilzeit}
+                      onChange={(e) => updateField("salary_teilzeit", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Vollzeit (€)</Label>
+                    <Input
+                      placeholder="3000"
+                      value={form.salary_vollzeit}
+                      onChange={(e) => updateField("salary_vollzeit", e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Brand Color */}

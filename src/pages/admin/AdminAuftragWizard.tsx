@@ -54,6 +54,23 @@ export default function AdminAuftragWizard() {
   const [form, setForm] = useState(emptyForm);
   const isEditing = !!id;
 
+  // Fetch branding payment model
+  const { data: activeBranding } = useQuery({
+    queryKey: ["branding-payment-model", activeBrandingId],
+    enabled: !!activeBrandingId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brandings")
+        .select("payment_model")
+        .eq("id", activeBrandingId!)
+        .single();
+      if (error) throw error;
+      return data as { payment_model: string };
+    },
+  });
+
+  const isFixedSalary = (activeBranding as any)?.payment_model === "fixed_salary";
+
   // Load existing order for editing
   const { data: existingOrder, isLoading } = useQuery({
     queryKey: ["order-edit", id],
@@ -94,7 +111,7 @@ export default function AdminAuftragWizard() {
         title: form.title,
         description: form.description || null,
         order_type: form.order_type,
-        reward: form.reward,
+        reward: isFixedSalary ? "0" : form.reward,
         estimated_hours: form.estimated_hours || null,
         appstore_url: form.appstore_url || null,
         playstore_url: form.playstore_url || null,
@@ -124,7 +141,7 @@ export default function AdminAuftragWizard() {
     },
   });
 
-  const canSave = form.title && form.reward;
+  const canSave = form.title && (isFixedSalary || form.reward);
 
   // Work steps helpers
   const addWorkStep = () => setForm((f) => ({ ...f, work_steps: [...f.work_steps, { title: "", description: "" }] }));
@@ -203,7 +220,7 @@ export default function AdminAuftragWizard() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className={cn("grid gap-4", isFixedSalary ? "grid-cols-1" : "grid-cols-2")}>
               <div className="space-y-2">
                 <Label>Typ *</Label>
                 <Select value={form.order_type} onValueChange={(v) => setForm((f) => ({ ...f, order_type: v }))}>
@@ -218,14 +235,16 @@ export default function AdminAuftragWizard() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Vergütungsbetrag (€) *</Label>
-                <Input
-                  placeholder="0.00"
-                  value={form.reward}
-                  onChange={(e) => setForm((f) => ({ ...f, reward: e.target.value }))}
-                />
-              </div>
+              {!isFixedSalary && (
+                <div className="space-y-2">
+                  <Label>Vergütungsbetrag (€) *</Label>
+                  <Input
+                    placeholder="0.00"
+                    value={form.reward}
+                    onChange={(e) => setForm((f) => ({ ...f, reward: e.target.value }))}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
