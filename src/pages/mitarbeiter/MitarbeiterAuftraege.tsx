@@ -131,7 +131,6 @@ const MitarbeiterAuftraege = () => {
         .eq("contract_id", contract.id);
 
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
-      const apptMap = Object.fromEntries((appointments ?? []).map((a: any) => [a.order_id, a]));
 
       // Group attachments by order_id
       const attachmentsByOrder: Record<string, Array<{ attachment_index: number; status: string }>> = {};
