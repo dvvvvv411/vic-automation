@@ -60,8 +60,8 @@ export default function AdminSmsHistory() {
 
   // Fetch sms_logs (seven.io)
   const { data: smsLogs, isLoading: smsLoading } = useQuery({
-    queryKey: ["sms-history-logs", selectedMonth, userId],
-    enabled: !!userId,
+    queryKey: ["sms-history-logs", selectedMonth, brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data } = await supabase
         .from("sms_logs")
