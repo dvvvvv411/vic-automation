@@ -75,6 +75,7 @@ const AuftragDetails = () => {
   const [booking, setBooking] = useState(false);
   const [attachments, setAttachments] = useState<OrderAttachment[]>([]);
   const [uploading, setUploading] = useState<number | null>(null);
+  const [submittingAttachments, setSubmittingAttachments] = useState(false);
 
   const loadAttachments = useCallback(async () => {
     if (!contract || !id) return;
