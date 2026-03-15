@@ -1,47 +1,24 @@
 
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
+# Erforderliche Anhänge UI-Verbesserung
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+## Änderungen in `AuftragDetails.tsx`
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+### 1. Grid-Layout statt vertikal
+Attachment-Cards nebeneinander als quadratische Cards in einem responsive Grid (`grid-cols-2 md:grid-cols-3`).
 
----
+### 2. Abstand zwischen Beschreibung und Upload-Button
+`mt-4` oder `space-y-4` zwischen dem Beschreibungstext und dem Datei-Upload-Bereich.
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+### 3. "Anhänge absenden" Button
+- Dateien werden lokal hochgeladen (in Storage + DB mit Status `entwurf` statt `eingereicht`), aber noch nicht offiziell eingereicht.
+- Alternativ (einfacher): Dateien werden weiterhin direkt hochgeladen, aber der Status bleibt `entwurf` bis der User den "Anhänge absenden" Button klickt — dann werden alle auf `eingereicht` gesetzt.
+- Der Button ist nur aktiv, wenn **alle** required attachments eine Datei haben.
+- Nach dem Absenden sind die Anhänge nicht mehr ersetzbar (bis ggf. Admin ablehnt).
 
-## Was wurde gemacht
+### Betroffene Datei
+- `src/pages/mitarbeiter/AuftragDetails.tsx` — Zeilen 575-660 (Attachments-Bereich)
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+### DB-Änderung
+- Migration: Neuer default-Status `entwurf` für `order_attachments` damit Uploads nicht sofort als eingereicht gelten. Bestehende Einträge bleiben unverändert.
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
-
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
-
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
