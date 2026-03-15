@@ -68,8 +68,8 @@ export default function AdminAuftraege() {
 
   // Load assignment counts per order
   const { data: assignmentCounts } = useQuery({
-    queryKey: ["order_assignments", "counts_by_order", userId],
-    enabled: !!userId,
+    queryKey: ["order_assignments", "counts_by_order", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_assignments")
