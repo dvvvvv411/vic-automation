@@ -253,6 +253,7 @@ export type Database = {
       }
       chat_templates: {
         Row: {
+          branding_id: string | null
           content: string
           created_at: string
           created_by: string | null
@@ -260,6 +261,7 @@ export type Database = {
           shortcode: string
         }
         Insert: {
+          branding_id?: string | null
           content: string
           created_at?: string
           created_by?: string | null
@@ -267,13 +269,22 @@ export type Database = {
           shortcode: string
         }
         Update: {
+          branding_id?: string | null
           content?: string
           created_at?: string
           created_by?: string | null
           id?: string
           shortcode?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_templates_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_logs: {
         Row: {
@@ -690,6 +701,7 @@ export type Database = {
       orders: {
         Row: {
           appstore_url: string | null
+          branding_id: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -704,6 +716,7 @@ export type Database = {
         }
         Insert: {
           appstore_url?: string | null
+          branding_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -718,6 +731,7 @@ export type Database = {
         }
         Update: {
           appstore_url?: string | null
+          branding_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -730,28 +744,47 @@ export type Database = {
           reward?: string
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       phone_numbers: {
         Row: {
           api_url: string
+          branding_id: string | null
           created_at: string
           created_by: string | null
           id: string
         }
         Insert: {
           api_url: string
+          branding_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
         }
         Update: {
           api_url?: string
+          branding_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "phone_numbers_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -924,6 +957,7 @@ export type Database = {
       }
       sms_spoof_logs: {
         Row: {
+          branding_id: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -934,6 +968,7 @@ export type Database = {
           template_id: string | null
         }
         Insert: {
+          branding_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -944,6 +979,7 @@ export type Database = {
           template_id?: string | null
         }
         Update: {
+          branding_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -955,6 +991,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "sms_spoof_logs_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sms_spoof_logs_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
@@ -965,6 +1008,7 @@ export type Database = {
       }
       sms_spoof_templates: {
         Row: {
+          branding_id: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -973,6 +1017,7 @@ export type Database = {
           sender_name: string
         }
         Insert: {
+          branding_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -981,6 +1026,7 @@ export type Database = {
           sender_name: string
         }
         Update: {
+          branding_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -988,7 +1034,15 @@ export type Database = {
           message?: string
           sender_name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sms_spoof_templates_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sms_templates: {
         Row: {
@@ -1222,6 +1276,7 @@ export type Database = {
         Returns: undefined
       }
       user_branding_ids: { Args: { _user_id: string }; Returns: string[] }
+      user_has_any_branding: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user" | "kunde"
