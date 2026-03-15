@@ -23,8 +23,8 @@ export default function AdminKunden() {
 
   // Fetch all kunden
   const { data: kunden, isLoading } = useQuery({
-    queryKey: ["admin-kunden", userId],
-    enabled: !!userId,
+    queryKey: ["admin-kunden", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       // Get all users with rolle 'kunde'
       const { data: roles } = await supabase
