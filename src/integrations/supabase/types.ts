@@ -889,6 +889,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_chat_online: boolean
+          phone: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -898,6 +899,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_chat_online?: boolean
+          phone?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -907,6 +909,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_chat_online?: boolean
+          phone?: string | null
         }
         Relationships: []
       }
