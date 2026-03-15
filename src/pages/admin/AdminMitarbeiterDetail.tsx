@@ -334,7 +334,7 @@ export default function AdminMitarbeiterDetail() {
 
   // Fetch contract with branding
   const { data: contract, isLoading } = useQuery({
-    queryKey: ["admin-contract-detail", id, brandingIds],
+    queryKey: ["admin-contract-detail", id, activeBrandingId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employment_contracts")
