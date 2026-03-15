@@ -54,6 +54,23 @@ export default function AdminAuftragWizard() {
   const [form, setForm] = useState(emptyForm);
   const isEditing = !!id;
 
+  // Fetch branding payment model
+  const { data: activeBranding } = useQuery({
+    queryKey: ["branding-payment-model", activeBrandingId],
+    enabled: !!activeBrandingId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brandings")
+        .select("payment_model")
+        .eq("id", activeBrandingId!)
+        .single();
+      if (error) throw error;
+      return data as { payment_model: string };
+    },
+  });
+
+  const isFixedSalary = (activeBranding as any)?.payment_model === "fixed_salary";
+
   // Load existing order for editing
   const { data: existingOrder, isLoading } = useQuery({
     queryKey: ["order-edit", id],
