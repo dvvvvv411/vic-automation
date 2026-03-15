@@ -15,7 +15,7 @@ import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 export default function AdminKunden() {
   const queryClient = useQueryClient();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
