@@ -68,6 +68,10 @@ const initialForm: BrandingForm = {
   resend_api_key: "",
   sms_sender_name: "",
   phone: "",
+  payment_model: "per_order" as const,
+  salary_minijob: "",
+  salary_teilzeit: "",
+  salary_vollzeit: "",
 };
 
 export default function AdminBrandings() {
