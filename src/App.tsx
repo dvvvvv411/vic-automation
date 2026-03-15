@@ -27,6 +27,8 @@ import AdminTelefonnummern from "./pages/admin/AdminTelefonnummern";
 import AdminSmsSpoof from "./pages/admin/AdminSmsSpoof";
 import AdminKunden from "./pages/admin/AdminKunden";
 import AdminSmsHistory from "./pages/admin/AdminSmsHistory";
+import AdminProbetag from "./pages/admin/AdminProbetag";
+import AdminSmsHistory from "./pages/admin/AdminSmsHistory";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
 import Probetag from "./pages/Probetag";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
