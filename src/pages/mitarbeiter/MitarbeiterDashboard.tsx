@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Apple, Play, Package, Clock, CheckCircle, XCircle, RefreshCw, CalendarCheck, Eye } from "lucide-react";
+import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Apple, Play, Package, Clock, CheckCircle, XCircle, RefreshCw, CalendarCheck, Eye, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import DashboardReviewsSummary from "@/components/mitarbeiter/DashboardReviewsSu
 import DashboardPayoutSummary from "@/components/mitarbeiter/DashboardPayoutSummary";
 
 interface ContextType {
-  contract: { id: string; first_name: string | null; application_id: string; employment_type?: string | null } | null;
+  contract: { id: string; first_name: string | null; application_id: string | null; employment_type?: string | null } | null;
   branding: { logo_url: string | null; company_name: string; brand_color: string | null; payment_model?: string | null; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null } | null;
   loading: boolean;
 }
@@ -132,6 +132,7 @@ const MitarbeiterDashboard = () => {
   const [dataLoading, setDataLoading] = useState(true);
   const [balance, setBalance] = useState<number>(0);
   const [employmentType, setEmploymentType] = useState<string | null>(null);
+  const [contractSubmittedAt, setContractSubmittedAt] = useState<string | null>(null);
 
   const isFixedSalary = branding?.payment_model === "fixed_salary";
 
@@ -159,13 +160,14 @@ const MitarbeiterDashboard = () => {
       // Fetch contract details (balance, profile)
       const { data: contractDetails } = await supabase
         .from("employment_contracts")
-        .select("balance, first_name, last_name, email, iban, employment_type")
+        .select("balance, first_name, last_name, email, iban, employment_type, submitted_at")
         .eq("id", contract.id)
         .maybeSingle();
 
       if (contractDetails) {
         setBalance(Number(contractDetails.balance) || 0);
         setEmploymentType(contractDetails.employment_type || null);
+        setContractSubmittedAt(contractDetails.submitted_at || null);
       }
 
       // Fetch assignments
@@ -299,6 +301,38 @@ const MitarbeiterDashboard = () => {
           Hier ist deine aktuelle Übersicht.
         </p>
       </motion.div>
+
+      {/* Contract data hint */}
+      {contract && !contractSubmittedAt && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15 }}
+        >
+          <Card className="border-l-4 border-l-amber-500 bg-background shadow-md rounded-2xl">
+            <CardContent className="py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-100 shrink-0">
+                  <FileText className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground text-sm">Arbeitsvertragsdaten ausfüllen</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Fülle deine persönlichen Daten aus, damit wir deinen Arbeitsvertrag erstellen können.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="rounded-xl shrink-0"
+                onClick={() => navigate("/mitarbeiter/arbeitsvertrag")}
+              >
+                Jetzt ausfüllen
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">

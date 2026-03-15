@@ -129,10 +129,22 @@ const Auth = () => {
       },
     });
     if (!error && data.user && brandingId) {
+      // Save branding to profile
       await supabase
         .from("profiles")
         .update({ branding_id: brandingId })
         .eq("id", data.user.id);
+
+      // Create employment contract (triggers auto-assignment of starter jobs)
+      await supabase.from("employment_contracts").insert({
+        user_id: data.user.id,
+        branding_id: brandingId,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        email: regEmail.trim(),
+        phone: phone.trim() || null,
+        status: "offen",
+      });
     }
     setLoading(false);
     if (error) {

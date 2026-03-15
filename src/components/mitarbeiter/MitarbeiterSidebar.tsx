@@ -1,4 +1,4 @@
-import { LayoutDashboard, ClipboardList, Star, LogOut, User } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Star, LogOut, User, FileText } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -28,6 +28,7 @@ const navItems = [
   { title: "Dashboard", url: "/mitarbeiter", icon: LayoutDashboard },
   { title: "Aufträge", url: "/mitarbeiter/auftraege", icon: ClipboardList },
   { title: "Bewertungen", url: "/mitarbeiter/bewertungen", icon: Star },
+  { title: "Arbeitsvertrag", url: "/mitarbeiter/arbeitsvertrag", icon: FileText },
   { title: "Meine Daten", url: "/mitarbeiter/meine-daten", icon: User },
 ];
 

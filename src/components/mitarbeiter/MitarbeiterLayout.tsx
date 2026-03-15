@@ -23,7 +23,7 @@ interface BrandingData {
 interface ContractData {
   id: string;
   first_name: string | null;
-  application_id: string;
+  application_id: string | null;
   status: string;
   contract_pdf_url: string | null;
   signed_contract_pdf_url: string | null;
@@ -153,7 +153,7 @@ export default function MitarbeiterLayout() {
               </div>
             </div>
           </header>
-          {contract?.status === "genehmigt" && contract?.contract_pdf_url ? (
+          {contract?.status === "genehmigt" && contract?.contract_pdf_url && contract?.application_id ? (
             <ContractSigningView
               contractId={contract.id}
               contractPdfUrl={contract.contract_pdf_url}

@@ -40,6 +40,7 @@ import Bewertung from "./pages/mitarbeiter/Bewertung";
 import MitarbeiterAuftraege from "./pages/mitarbeiter/MitarbeiterAuftraege";
 import MitarbeiterBewertungen from "./pages/mitarbeiter/MitarbeiterBewertungen";
 import MeineDaten from "./pages/mitarbeiter/MeineDaten";
+import MitarbeiterArbeitsvertrag from "./pages/mitarbeiter/MitarbeiterArbeitsvertrag";
 import NotFound from "./pages/NotFound";
 import ShortRedirect from "./pages/ShortRedirect";
 
@@ -104,6 +105,7 @@ const App = () => (
               <Route path="auftragdetails/:id" element={<AuftragDetails />} />
               <Route path="bewertung/:id" element={<Bewertung />} />
               <Route path="bewertungen" element={<MitarbeiterBewertungen />} />
+              <Route path="arbeitsvertrag" element={<MitarbeiterArbeitsvertrag />} />
               <Route path="meine-daten" element={<MeineDaten />} />
             </Route>
             <Route path="/r/:code" element={<ShortRedirect />} />
