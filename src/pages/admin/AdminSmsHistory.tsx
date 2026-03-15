@@ -27,7 +27,7 @@ function getMonthOptions() {
 
 export default function AdminSmsHistory() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
 
   const monthStart = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
