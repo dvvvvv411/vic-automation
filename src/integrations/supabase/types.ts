@@ -342,6 +342,7 @@ export type Database = {
           bic: string | null
           birth_date: string | null
           birth_place: string | null
+          branding_id: string | null
           chat_active_at: string | null
           city: string | null
           contract_pdf_url: string | null
@@ -380,6 +381,7 @@ export type Database = {
           bic?: string | null
           birth_date?: string | null
           birth_place?: string | null
+          branding_id?: string | null
           chat_active_at?: string | null
           city?: string | null
           contract_pdf_url?: string | null
@@ -418,6 +420,7 @@ export type Database = {
           bic?: string | null
           birth_date?: string | null
           birth_place?: string | null
+          branding_id?: string | null
           chat_active_at?: string | null
           city?: string | null
           contract_pdf_url?: string | null
@@ -454,6 +457,13 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: true
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employment_contracts_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
             referencedColumns: ["id"]
           },
         ]
