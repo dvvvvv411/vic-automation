@@ -23,7 +23,7 @@ const STAT_BORDERS = [
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const { data: neuCount, isLoading: l1 } = useQuery({
     queryKey: ["dash-bewerbungen-neu", userId],
