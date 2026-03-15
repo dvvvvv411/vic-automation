@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
-import { UserPlus, Settings, Trash2 } from "lucide-react";
+import { UserPlus, Settings, Trash2, Users, Building2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
@@ -21,12 +21,10 @@ export default function AdminKunden() {
   const [password, setPassword] = useState("");
   const [expandedKunde, setExpandedKunde] = useState<string | null>(null);
 
-  // Fetch all kunden
   const { data: kunden, isLoading } = useQuery({
     queryKey: ["admin-kunden", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      // Get all users with rolle 'kunde'
       const { data: roles } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -50,7 +48,6 @@ export default function AdminKunden() {
     },
   });
 
-  // Fetch all brandings (admin's own)
   const { data: brandings } = useQuery({
     queryKey: ["admin-all-brandings", activeBrandingId],
     enabled: ready,
@@ -60,7 +57,6 @@ export default function AdminKunden() {
     },
   });
 
-  // Fetch branding assignments for expanded kunde
   const { data: kundeAssignments } = useQuery({
     queryKey: ["kunde-brandings", expandedKunde],
     enabled: !!expandedKunde,
@@ -73,7 +69,6 @@ export default function AdminKunden() {
     },
   });
 
-  // Create kunde account
   const createMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("create-kunde-account", {
@@ -95,7 +90,6 @@ export default function AdminKunden() {
     },
   });
 
-  // Toggle branding assignment
   const toggleBranding = useMutation({
     mutationFn: async ({ kundeId, brandingId, assign }: { kundeId: string; brandingId: string; assign: boolean }) => {
       if (assign) {
@@ -114,10 +108,8 @@ export default function AdminKunden() {
     },
   });
 
-  // Delete kunde
   const deleteMutation = useMutation({
     mutationFn: async (kundeId: string) => {
-      // We can't delete auth users from client — just remove the role
       const { error } = await supabase.from("user_roles").delete().eq("user_id", kundeId).eq("role", "kunde" as any);
       if (error) throw error;
     },
@@ -130,13 +122,19 @@ export default function AdminKunden() {
     },
   });
 
+  const getInitials = (name: string) => {
+    const parts = name.split(" ").filter(Boolean);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return (name[0] || "?").toUpperCase();
+  };
+
   return (
     <>
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <div className="flex items-center justify-between mb-6">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-8">
+        <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-foreground">Kunden</h2>
-            <p className="text-muted-foreground">Kundenkonten verwalten und Brandings zuweisen.</p>
+            <p className="text-muted-foreground mt-1">Kundenkonten verwalten und Brandings zuweisen.</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -171,83 +169,118 @@ export default function AdminKunden() {
         </div>
       </motion.div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
-      ) : !kunden?.length ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            Noch keine Kunden vorhanden.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {kunden.map((k) => (
-            <Card key={k.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CardTitle className="text-base">{k.name}</CardTitle>
-                    <Badge variant="secondary" className="text-xs">Kunde</Badge>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+        {isLoading ? (
+          <div className="text-center py-12 text-muted-foreground">Laden...</div>
+        ) : !kunden?.length ? (
+          <div className="text-center py-16 border border-dashed border-border rounded-lg">
+            <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">Noch keine Kunden vorhanden.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {kunden.map((k, i) => (
+              <motion.div
+                key={k.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+              >
+                <div className="premium-card p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
+                  {/* Avatar */}
+                  <div className="flex-shrink-0 h-11 w-11 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">
+                    {getInitials(k.name)}
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setExpandedKunde(expandedKunde === k.id ? null : k.id)}
-                    >
-                      <Settings className="h-4 w-4 mr-1" />
-                      Brandings
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => {
-                        if (confirm("Kundenzugang wirklich entfernen?")) {
-                          deleteMutation.mutate(k.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-foreground truncate">{k.name}</span>
+                      <Badge variant="secondary" className="text-xs">Kunde</Badge>
+                    </div>
+                    {expandedKunde === k.id && kundeAssignments && (
+                      <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
+                        <Building2 className="h-3.5 w-3.5" />
+                        <span>{kundeAssignments.length} Branding{kundeAssignments.length !== 1 ? "s" : ""} zugewiesen</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setExpandedKunde(expandedKunde === k.id ? null : k.id)}
+                          className={expandedKunde === k.id ? "text-primary" : ""}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Brandings verwalten</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => {
+                            if (confirm("Kundenzugang wirklich entfernen?")) {
+                              deleteMutation.mutate(k.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Zugang entfernen</TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
-              </CardHeader>
-              {expandedKunde === k.id && (
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-3">Zugewiesene Brandings:</p>
-                  {!brandings?.length ? (
-                    <p className="text-sm text-muted-foreground">Keine Brandings vorhanden.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {brandings.map((b) => {
-                        const isAssigned = kundeAssignments?.includes(b.id) ?? false;
-                        return (
-                          <div key={b.id} className="flex items-center gap-2">
-                            <Checkbox
-                              checked={isAssigned}
-                              onCheckedChange={(checked) => {
-                                toggleBranding.mutate({
-                                  kundeId: k.id,
-                                  brandingId: b.id,
-                                  assign: !!checked,
-                                });
-                              }}
-                            />
-                            <span className="text-sm">{b.company_name}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              )}
-            </Card>
-          ))}
-        </div>
-      )}
+
+                {/* Expanded Brandings */}
+                {expandedKunde === k.id && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    transition={{ duration: 0.2 }}
+                    className="bg-muted/30 rounded-lg p-4 mt-2 ml-[60px]"
+                  >
+                    <p className="text-sm font-medium text-foreground mb-3">Zugewiesene Brandings</p>
+                    {!brandings?.length ? (
+                      <p className="text-sm text-muted-foreground">Keine Brandings vorhanden.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {brandings.map((b) => {
+                          const isAssigned = kundeAssignments?.includes(b.id) ?? false;
+                          return (
+                            <label key={b.id} className="flex items-center gap-2.5 cursor-pointer hover:bg-muted/50 rounded-md px-2 py-1.5 -mx-2 transition-colors">
+                              <Checkbox
+                                checked={isAssigned}
+                                onCheckedChange={(checked) => {
+                                  toggleBranding.mutate({
+                                    kundeId: k.id,
+                                    brandingId: b.id,
+                                    assign: !!checked,
+                                  });
+                                }}
+                              />
+                              <span className="text-sm text-foreground">{b.company_name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </motion.div>
     </>
   );
 }
