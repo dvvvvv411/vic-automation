@@ -50,8 +50,8 @@ export default function AdminSmsHistory() {
 
   // Fetch brandings for mapping branding IDs to company names
   const { data: brandings } = useQuery({
-    queryKey: ["sms-history-brandings", userId],
-    enabled: !!userId,
+    queryKey: ["sms-history-brandings", brandingIds],
+    enabled: ready,
     queryFn: async () => {
       const { data } = await supabase.from("brandings").select("id, company_name");
       return data ?? [];
