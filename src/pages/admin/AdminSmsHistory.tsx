@@ -27,7 +27,7 @@ function getMonthOptions() {
 
 export default function AdminSmsHistory() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
 
   const monthStart = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
@@ -40,7 +40,7 @@ export default function AdminSmsHistory() {
 
   // Fetch profiles for mapping user IDs to names/emails
   const { data: profiles } = useQuery({
-    queryKey: ["sms-history-profiles", brandingIds],
+    queryKey: ["sms-history-profiles", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("id, full_name, email");
@@ -50,7 +50,7 @@ export default function AdminSmsHistory() {
 
   // Fetch brandings for mapping branding IDs to company names
   const { data: brandings } = useQuery({
-    queryKey: ["sms-history-brandings", brandingIds],
+    queryKey: ["sms-history-brandings", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data } = await supabase.from("brandings").select("id, company_name");
@@ -60,7 +60,7 @@ export default function AdminSmsHistory() {
 
   // Fetch sms_logs (seven.io)
   const { data: smsLogs, isLoading: smsLoading } = useQuery({
-    queryKey: ["sms-history-logs", selectedMonth, brandingIds],
+    queryKey: ["sms-history-logs", selectedMonth, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data } = await supabase
@@ -75,7 +75,7 @@ export default function AdminSmsHistory() {
 
   // Fetch sms_spoof_logs
   const { data: spoofLogs, isLoading: spoofLoading } = useQuery({
-    queryKey: ["sms-history-spoof", selectedMonth, brandingIds],
+    queryKey: ["sms-history-spoof", selectedMonth, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data } = await supabase

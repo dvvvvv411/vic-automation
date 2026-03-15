@@ -47,19 +47,20 @@ const emptyForm = {
 
 export default function AdminAuftraege() {
   const queryClient = useQueryClient();
-  const { brandingIds, activeBrandingId, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [assignOrder, setAssignOrder] = useState<Order | null>(null);
 
   const { data: orders, isLoading } = useQuery({
-    queryKey: ["orders", brandingIds],
+    queryKey: ["orders", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
         .select("*")
+        .eq("branding_id", activeBrandingId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as Order[];
@@ -68,7 +69,7 @@ export default function AdminAuftraege() {
 
   // Load assignment counts per order
   const { data: assignmentCounts } = useQuery({
-    queryKey: ["order_assignments", "counts_by_order", brandingIds],
+    queryKey: ["order_assignments", "counts_by_order", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase

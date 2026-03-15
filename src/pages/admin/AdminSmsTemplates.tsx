@@ -35,7 +35,7 @@ const PLACEHOLDER_INFO: Record<string, string[]> = {
 
 export default function AdminSmsTemplates() {
   const queryClient = useQueryClient();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
   const [testPhone, setTestPhone] = useState("");
   const [testText, setTestText] = useState("");
   const [testSending, setTestSending] = useState(false);
@@ -44,7 +44,7 @@ export default function AdminSmsTemplates() {
   const [saving, setSaving] = useState<string | null>(null);
 
   const { data: templates, isLoading } = useQuery({
-    queryKey: ["sms-templates", brandingIds],
+    queryKey: ["sms-templates", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -57,7 +57,7 @@ export default function AdminSmsTemplates() {
   });
 
   const { data: brandings } = useQuery({
-    queryKey: ["brandings-sms", brandingIds],
+    queryKey: ["brandings-sms", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase

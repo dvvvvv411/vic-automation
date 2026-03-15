@@ -52,14 +52,14 @@ const DEFAULT_DAYS = [1, 2, 3, 4, 5, 6];
 
 export default function AdminZeitplan() {
   const queryClient = useQueryClient();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockReason, setBlockReason] = useState("");
   const [blockBrandingId, setBlockBrandingId] = useState<string>("all");
 
   // Load brandings
   const { data: brandings = [] } = useQuery({
-    queryKey: ["brandings", brandingIds],
+    queryKey: ["brandings", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase.from("brandings").select("id, company_name").order("company_name");
@@ -70,7 +70,7 @@ export default function AdminZeitplan() {
 
   // Load branding-specific settings
   const { data: brandingSettings = [] } = useQuery({
-    queryKey: ["branding-schedule-settings", brandingIds],
+    queryKey: ["branding-schedule-settings", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -83,7 +83,7 @@ export default function AdminZeitplan() {
 
   // Load blocked slots + auto-delete past ones
   const { data: blockedSlots } = useQuery({
-    queryKey: ["schedule-blocked-slots", brandingIds],
+    queryKey: ["schedule-blocked-slots", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase

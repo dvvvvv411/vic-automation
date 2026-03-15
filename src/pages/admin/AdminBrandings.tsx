@@ -72,10 +72,10 @@ export default function AdminBrandings() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editBranding, setEditBranding] = useState<Tables<"brandings"> | null>(null);
   const queryClient = useQueryClient();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
 
   const { data: brandings, isLoading } = useQuery({
-    queryKey: ["brandings", brandingIds],
+    queryKey: ["brandings", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase

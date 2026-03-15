@@ -15,7 +15,7 @@ import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 export default function AdminKunden() {
   const queryClient = useQueryClient();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +23,7 @@ export default function AdminKunden() {
 
   // Fetch all kunden
   const { data: kunden, isLoading } = useQuery({
-    queryKey: ["admin-kunden", brandingIds],
+    queryKey: ["admin-kunden", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       // Get all users with rolle 'kunde'
@@ -52,7 +52,7 @@ export default function AdminKunden() {
 
   // Fetch all brandings (admin's own)
   const { data: brandings } = useQuery({
-    queryKey: ["admin-all-brandings", brandingIds],
+    queryKey: ["admin-all-brandings", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data } = await supabase.from("brandings").select("id, company_name");

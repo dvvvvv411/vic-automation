@@ -23,12 +23,12 @@ const STAT_BORDERS = [
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
 
   const { data: neuCount, isLoading: l1 } = useQuery({
-    queryKey: ["dash-bewerbungen-neu", brandingIds],
+    queryKey: ["dash-bewerbungen-neu", activeBrandingId],
     queryFn: async () => {
-      const { count } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("status", "neu");
+      const { count } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("status", "neu").eq("branding_id", activeBrandingId!);
       return count ?? 0;
     },
     enabled: ready,
@@ -36,9 +36,9 @@ export default function AdminDashboard() {
   });
 
   const { data: interviewTodayCount, isLoading: l2 } = useQuery({
-    queryKey: ["dash-gespraeche-heute", brandingIds],
+    queryKey: ["dash-gespraeche-heute", activeBrandingId],
     queryFn: async () => {
-      const { count } = await supabase.from("interview_appointments").select("*", { count: "exact", head: true }).eq("appointment_date", today());
+      const { count } = await supabase.from("interview_appointments").select("*, applications!inner(branding_id)", { count: "exact", head: true }).eq("appointment_date", today()).eq("applications.branding_id", activeBrandingId!);
       return count ?? 0;
     },
     enabled: ready,
@@ -46,9 +46,9 @@ export default function AdminDashboard() {
   });
 
   const { data: contractCount, isLoading: l3 } = useQuery({
-    queryKey: ["dash-vertraege-eingereicht", brandingIds],
+    queryKey: ["dash-vertraege-eingereicht", activeBrandingId],
     queryFn: async () => {
-      const { count } = await supabase.from("employment_contracts").select("*", { count: "exact", head: true }).eq("status", "eingereicht");
+      const { count } = await supabase.from("employment_contracts").select("*, applications!inner(branding_id)", { count: "exact", head: true }).eq("status", "eingereicht").eq("applications.branding_id", activeBrandingId!);
       return count ?? 0;
     },
     enabled: ready,
@@ -56,9 +56,9 @@ export default function AdminDashboard() {
   });
 
   const { data: appointmentTodayCount, isLoading: l4 } = useQuery({
-    queryKey: ["dash-termine-heute", brandingIds],
+    queryKey: ["dash-termine-heute", activeBrandingId],
     queryFn: async () => {
-      const { count } = await supabase.from("order_appointments").select("*", { count: "exact", head: true }).eq("appointment_date", today());
+      const { count } = await supabase.from("order_appointments").select("*, orders!inner(branding_id)", { count: "exact", head: true }).eq("appointment_date", today()).eq("orders.branding_id", activeBrandingId!);
       return count ?? 0;
     },
     enabled: ready,
@@ -66,9 +66,12 @@ export default function AdminDashboard() {
   });
 
   const { data: unreadChatCount, isLoading: l5 } = useQuery({
-    queryKey: ["dash-chat-unread", brandingIds],
+    queryKey: ["dash-chat-unread", activeBrandingId],
     queryFn: async () => {
-      const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false);
+      const { data: contracts } = await supabase.from("employment_contracts").select("id, applications!inner(branding_id)").eq("applications.branding_id", activeBrandingId!);
+      const ids = (contracts ?? []).map((c) => c.id);
+      if (!ids.length) return 0;
+      const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false).in("contract_id", ids);
       return count ?? 0;
     },
     enabled: ready,
@@ -76,9 +79,9 @@ export default function AdminDashboard() {
   });
 
   const { data: recentApps } = useQuery({
-    queryKey: ["dash-recent-apps", brandingIds],
+    queryKey: ["dash-recent-apps", activeBrandingId],
     queryFn: async () => {
-      const { data } = await supabase.from("applications").select("id, first_name, last_name, status, created_at").order("created_at", { ascending: false }).limit(5);
+      const { data } = await supabase.from("applications").select("id, first_name, last_name, status, created_at").eq("branding_id", activeBrandingId!).order("created_at", { ascending: false }).limit(5);
       return data ?? [];
     },
     enabled: ready,
@@ -86,9 +89,9 @@ export default function AdminDashboard() {
   });
 
   const { data: todayInterviews } = useQuery({
-    queryKey: ["dash-today-interviews", brandingIds],
+    queryKey: ["dash-today-interviews", activeBrandingId],
     queryFn: async () => {
-      const { data } = await supabase.from("interview_appointments").select("id, appointment_time, status, application_id, applications(first_name, last_name)").eq("appointment_date", today()).order("appointment_time", { ascending: true });
+      const { data } = await supabase.from("interview_appointments").select("id, appointment_time, status, application_id, applications!inner(first_name, last_name, branding_id)").eq("appointment_date", today()).eq("applications.branding_id", activeBrandingId!).order("appointment_time", { ascending: true });
       return data ?? [];
     },
     enabled: ready,
@@ -96,9 +99,9 @@ export default function AdminDashboard() {
   });
 
   const { data: submittedContracts } = useQuery({
-    queryKey: ["dash-submitted-contracts", brandingIds],
+    queryKey: ["dash-submitted-contracts", activeBrandingId],
     queryFn: async () => {
-      const { data } = await supabase.from("employment_contracts").select("id, first_name, last_name, submitted_at").eq("status", "eingereicht").order("submitted_at", { ascending: false }).limit(5);
+      const { data } = await supabase.from("employment_contracts").select("id, first_name, last_name, submitted_at, applications!inner(branding_id)").eq("status", "eingereicht").eq("applications.branding_id", activeBrandingId!).order("submitted_at", { ascending: false }).limit(5);
       return data ?? [];
     },
     enabled: ready,
@@ -106,9 +109,9 @@ export default function AdminDashboard() {
   });
 
   const { data: todayOrderAppts } = useQuery({
-    queryKey: ["dash-today-order-appts", brandingIds],
+    queryKey: ["dash-today-order-appts", activeBrandingId],
     queryFn: async () => {
-      const { data } = await supabase.from("order_appointments").select("id, appointment_time, contract_id, employment_contracts(first_name, last_name)").eq("appointment_date", today()).order("appointment_time", { ascending: true });
+      const { data } = await supabase.from("order_appointments").select("id, appointment_time, contract_id, orders!inner(branding_id), employment_contracts(first_name, last_name)").eq("appointment_date", today()).eq("orders.branding_id", activeBrandingId!).order("appointment_time", { ascending: true });
       return data ?? [];
     },
     enabled: ready,

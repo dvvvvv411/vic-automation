@@ -19,14 +19,14 @@ export default function AdminAuftragstermine() {
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("default");
   const queryClient = useQueryClient();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
   const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["order-appointments-admin", page, viewMode, brandingIds],
+    queryKey: ["order-appointments-admin", page, viewMode, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       let query = supabase

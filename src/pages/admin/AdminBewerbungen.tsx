@@ -161,15 +161,16 @@ export default function AdminBewerbungen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState<{ total: number; current: number; inProgress: boolean }>({ total: 0, current: 0, inProgress: false });
   const queryClient = useQueryClient();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
 
   const { data: applications, isLoading } = useQuery({
-    queryKey: ["applications", brandingIds],
+    queryKey: ["applications", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
         .select("*, brandings(company_name, sms_sender_name), interview_appointments(appointment_date, appointment_time)")
+        .eq("branding_id", activeBrandingId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -177,7 +178,7 @@ export default function AdminBewerbungen() {
   });
 
   const { data: brandings } = useQuery({
-    queryKey: ["brandings", brandingIds],
+    queryKey: ["brandings", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -306,7 +307,7 @@ export default function AdminBewerbungen() {
     },
     onSuccess: (_data, app) => {
       // Optimistic update: change status in cache without refetching
-      queryClient.setQueryData(["applications", brandingIds], (old: any[] | undefined) => {
+      queryClient.setQueryData(["applications", activeBrandingId], (old: any[] | undefined) => {
         if (!old) return old;
         return old.map((a: any) => a.id === app.id ? { ...a, status: "bewerbungsgespraech" } : a);
       });
@@ -341,7 +342,7 @@ export default function AdminBewerbungen() {
       }
     },
     onSuccess: (_data, app) => {
-      queryClient.setQueryData(["applications", brandingIds], (old: any[] | undefined) => {
+      queryClient.setQueryData(["applications", activeBrandingId], (old: any[] | undefined) => {
         if (!old) return old;
         return old.map((a: any) => a.id === app.id ? { ...a, status: "abgelehnt" } : a);
       });

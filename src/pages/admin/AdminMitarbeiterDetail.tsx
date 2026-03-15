@@ -318,7 +318,7 @@ export default function AdminMitarbeiterDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { brandingIds } = useBrandingFilter();
+  const { activeBrandingId } = useBrandingFilter();
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [suspendTarget, setSuspendTarget] = useState<{ isSuspended: boolean } | null>(null);
   const [startDateDialogOpen, setStartDateDialogOpen] = useState(false);
@@ -334,7 +334,7 @@ export default function AdminMitarbeiterDetail() {
 
   // Fetch contract with branding
   const { data: contract, isLoading } = useQuery({
-    queryKey: ["admin-contract-detail", id, brandingIds],
+    queryKey: ["admin-contract-detail", id, activeBrandingId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employment_contracts")
@@ -349,7 +349,7 @@ export default function AdminMitarbeiterDetail() {
 
   // Fetch assignments
   const { data: assignments } = useQuery({
-    queryKey: ["admin-contract-assignments", id, brandingIds],
+    queryKey: ["admin-contract-assignments", id, activeBrandingId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_assignments")
@@ -371,7 +371,7 @@ export default function AdminMitarbeiterDetail() {
 
   // Fetch reviews
   const { data: reviews } = useQuery({
-    queryKey: ["admin-contract-reviews", id, brandingIds],
+    queryKey: ["admin-contract-reviews", id, activeBrandingId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_reviews")

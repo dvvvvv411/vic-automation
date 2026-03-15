@@ -182,15 +182,16 @@ export default function AdminTelefonnummern() {
   const [url, setUrl] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { brandingIds, activeBrandingId, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
 
   const { data: entries = [], isLoading } = useQuery<PhoneEntry[]>({
-    queryKey: ["phone_numbers", brandingIds],
+    queryKey: ["phone_numbers", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("phone_numbers" as any)
         .select("*")
+        .eq("branding_id", activeBrandingId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any;

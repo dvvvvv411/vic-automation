@@ -1,8 +1,9 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2 } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, CalendarClock, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBranding } from "@/contexts/BrandingContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -18,7 +19,13 @@ import {
   SidebarMenuItem,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 const KUNDE_HIDDEN_PATHS = [
   "/admin/brandings",
@@ -75,72 +82,92 @@ export function AdminSidebar() {
   const { user, signOut } = useAuth();
   const { hasAccess, loading: permissionsLoading } = useAdminPermissions();
   const { isKunde } = useUserRole();
+  const { brandings, activeBrandingId, setActiveBrandingId } = useBranding();
+  const [brandingOpen, setBrandingOpen] = useState(false);
+
+  const activeBranding = brandings.find((b) => b.id === activeBrandingId);
+
+  // --- Badge counts (filtered by activeBrandingId) ---
 
   const { data: neuCount } = useQuery({
-    queryKey: ["badge-bewerbungen-neu"],
+    queryKey: ["badge-bewerbungen-neu", activeBrandingId],
+    enabled: !!activeBrandingId,
     queryFn: async () => {
-      const { count } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("status", "neu");
+      const { count } = await supabase.from("applications").select("*", { count: "exact", head: true }).eq("status", "neu").eq("branding_id", activeBrandingId!);
       return count ?? 0;
     },
     refetchInterval: 30000,
   });
 
   const { data: todayCount } = useQuery({
-    queryKey: ["badge-gespraeche-heute"],
+    queryKey: ["badge-gespraeche-heute", activeBrandingId],
+    enabled: !!activeBrandingId,
     queryFn: async () => {
       const now = new Date();
       const today = format(now, "yyyy-MM-dd");
       const nowTime = format(now, "HH:mm:ss");
-      const { count } = await supabase.from("interview_appointments").select("*", { count: "exact", head: true }).eq("appointment_date", today).gte("appointment_time", nowTime);
+      const { count } = await supabase.from("interview_appointments").select("*, applications!inner(branding_id)", { count: "exact", head: true }).eq("appointment_date", today).gte("appointment_time", nowTime).eq("applications.branding_id", activeBrandingId!);
       return count ?? 0;
     },
     refetchInterval: 30000,
   });
 
   const { data: eingereichtCount } = useQuery({
-    queryKey: ["badge-vertraege-eingereicht"],
+    queryKey: ["badge-vertraege-eingereicht", activeBrandingId],
+    enabled: !!activeBrandingId,
     queryFn: async () => {
-      const { count } = await supabase.from("employment_contracts").select("*", { count: "exact", head: true }).eq("status", "eingereicht");
+      const { count } = await supabase.from("employment_contracts").select("*, applications!inner(branding_id)", { count: "exact", head: true }).eq("status", "eingereicht").eq("applications.branding_id", activeBrandingId!);
       return count ?? 0;
     },
     refetchInterval: 30000,
   });
 
   const { data: chatUnreadCount } = useQuery({
-    queryKey: ["badge-chat-unread"],
+    queryKey: ["badge-chat-unread", activeBrandingId],
+    enabled: !!activeBrandingId,
     queryFn: async () => {
-      const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false);
+      // Get contract IDs for active branding
+      const { data: contracts } = await supabase
+        .from("employment_contracts")
+        .select("id, applications!inner(branding_id)")
+        .eq("applications.branding_id", activeBrandingId!);
+      const contractIds = (contracts ?? []).map((c) => c.id);
+      if (!contractIds.length) return 0;
+      const { count } = await supabase.from("chat_messages").select("*", { count: "exact", head: true }).eq("sender_role", "user").eq("read", false).in("contract_id", contractIds);
       return count ?? 0;
     },
     refetchInterval: 10000,
   });
 
   const { data: inPruefungCount } = useQuery({
-    queryKey: ["badge-bewertungen-pruefung"],
+    queryKey: ["badge-bewertungen-pruefung", activeBrandingId],
+    enabled: !!activeBrandingId,
     queryFn: async () => {
-      const { count } = await supabase.from("order_assignments").select("*", { count: "exact", head: true }).eq("status", "in_pruefung");
+      const { count } = await supabase.from("order_assignments").select("*, orders!inner(branding_id)", { count: "exact", head: true }).eq("status", "in_pruefung").eq("orders.branding_id", activeBrandingId!);
       return count ?? 0;
     },
     refetchInterval: 30000,
   });
 
   const { data: todayAppointmentsCount } = useQuery({
-    queryKey: ["badge-auftragstermine-heute"],
+    queryKey: ["badge-auftragstermine-heute", activeBrandingId],
+    enabled: !!activeBrandingId,
     queryFn: async () => {
       const today = format(new Date(), "yyyy-MM-dd");
-      const { count } = await supabase.from("order_appointments").select("*", { count: "exact", head: true }).eq("appointment_date", today);
+      const { count } = await supabase.from("order_appointments").select("*, orders!inner(branding_id)", { count: "exact", head: true }).eq("appointment_date", today).eq("orders.branding_id", activeBrandingId!);
       return count ?? 0;
     },
     refetchInterval: 30000,
   });
 
   const { data: probetagTodayCount } = useQuery({
-    queryKey: ["badge-probetag-heute"],
+    queryKey: ["badge-probetag-heute", activeBrandingId],
+    enabled: !!activeBrandingId,
     queryFn: async () => {
       const now = new Date();
       const today = format(now, "yyyy-MM-dd");
       const nowTime = format(now, "HH:mm:ss");
-      const { count } = await supabase.from("trial_day_appointments" as any).select("*", { count: "exact", head: true }).eq("appointment_date", today).gte("appointment_time", nowTime);
+      const { count } = await supabase.from("trial_day_appointments" as any).select("*, applications!inner(branding_id)", { count: "exact", head: true }).eq("appointment_date", today).gte("appointment_time", nowTime).eq("applications.branding_id", activeBrandingId!);
       return count ?? 0;
     },
     refetchInterval: 30000,
@@ -168,6 +195,54 @@ export function AdminSidebar() {
           </h2>
           <p className="text-[11px] text-[hsl(var(--sidebar-foreground))] mt-0.5 opacity-60">Kontrollpanel</p>
         </div>
+
+        {/* Branding Switcher */}
+        {brandings.length > 0 && (
+          <div className="px-2 mb-3">
+            <Popover open={brandingOpen} onOpenChange={setBrandingOpen}>
+              <PopoverTrigger asChild>
+                <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[hsl(var(--sidebar-muted))] hover:bg-[hsl(var(--sidebar-muted))]/80 transition-colors text-left">
+                  {activeBranding?.logo_url ? (
+                    <img src={activeBranding.logo_url} alt="" className="h-6 w-6 rounded object-contain bg-white shrink-0" />
+                  ) : (
+                    <div className="h-6 w-6 rounded bg-[hsl(var(--sidebar-primary))] flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                      {activeBranding?.company_name?.charAt(0) ?? "?"}
+                    </div>
+                  )}
+                  <span className="flex-1 text-sm font-medium text-white truncate">
+                    {activeBranding?.company_name ?? "Branding wählen"}
+                  </span>
+                  <ChevronsUpDown className="h-4 w-4 text-[hsl(var(--sidebar-foreground))] opacity-50 shrink-0" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-1" align="start" side="bottom">
+                {brandings.map((b) => (
+                  <button
+                    key={b.id}
+                    onClick={() => {
+                      setActiveBrandingId(b.id);
+                      setBrandingOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                      b.id === activeBrandingId
+                        ? "bg-primary text-primary-foreground font-medium"
+                        : "text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {b.logo_url ? (
+                      <img src={b.logo_url} alt="" className="h-5 w-5 rounded object-contain bg-white shrink-0" />
+                    ) : (
+                      <div className="h-5 w-5 rounded bg-muted flex items-center justify-center text-[9px] font-bold shrink-0">
+                        {b.company_name?.charAt(0)}
+                      </div>
+                    )}
+                    <span className="truncate">{b.company_name}</span>
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
 
         {!permissionsLoading && navGroups.map((group, groupIndex) => {
           const visibleItems = group.items.filter((item) => {

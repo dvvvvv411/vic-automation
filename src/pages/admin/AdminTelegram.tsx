@@ -33,14 +33,14 @@ interface TelegramChat {
 
 export default function AdminTelegram() {
   const queryClient = useQueryClient();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
   const [newChatId, setNewChatId] = useState("");
   const [newLabel, setNewLabel] = useState("");
   const [newEvents, setNewEvents] = useState<string[]>([]);
   const [newBrandingIds, setNewBrandingIds] = useState<string[]>([]);
 
   const { data: chats = [], isLoading } = useQuery({
-    queryKey: ["telegram-chats", brandingIds],
+    queryKey: ["telegram-chats", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -53,7 +53,7 @@ export default function AdminTelegram() {
   });
 
   const { data: brandings = [] } = useQuery({
-    queryKey: ["brandings", brandingIds],
+    queryKey: ["brandings", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       const { data, error } = await supabase
