@@ -37,6 +37,7 @@ import { toast } from "sonner";
 
 export default function AdminLivechat() {
   const { user } = useAuth();
+  const { activeBrandingId, ready } = useBrandingFilter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [active, setActive] = useState<Conversation | null>(null);
   const [search, setSearch] = useState("");
