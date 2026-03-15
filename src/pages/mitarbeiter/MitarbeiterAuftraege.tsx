@@ -123,11 +123,6 @@ const MitarbeiterAuftraege = () => {
         .select("id, order_number, title, provider, reward, is_placeholder, required_attachments")
         .in("id", orderIds);
 
-      // Load appointments for this contract
-      const { data: appointments } = await supabase
-        .from("order_appointments")
-        .select("order_id, appointment_date, appointment_time")
-        .eq("contract_id", contract.id);
 
       // Load attachments for this contract
       const { data: attachments } = await supabase
