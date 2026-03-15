@@ -391,7 +391,7 @@ const AuftragDetails = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-xl font-bold tracking-tight text-foreground">{order.title}</CardTitle>
             {order.description && (
-              <p className="text-sm text-muted-foreground mt-1">{order.description}</p>
+              <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{order.description}</p>
             )}
           </CardHeader>
           <CardContent className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
@@ -467,7 +467,7 @@ const AuftragDetails = () => {
                     <span className="font-medium text-foreground text-sm">{ws.title}</span>
                   </div>
                   {ws.description && (
-                    <p className="text-sm text-muted-foreground ml-8">{ws.description}</p>
+                    <p className="text-sm text-muted-foreground ml-8 whitespace-pre-line">{ws.description}</p>
                   )}
                 </div>
               ))}
