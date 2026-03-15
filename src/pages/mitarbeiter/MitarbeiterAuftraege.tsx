@@ -54,8 +54,8 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-const StatusButton = ({ status, orderId, isPlaceholder, hasAppointment, navigate }: { 
-  status: string; orderId: string; isPlaceholder: boolean; hasAppointment: boolean; navigate: (path: string) => void 
+const StatusButton = ({ status, orderId, navigate }: { 
+  status: string; orderId: string; navigate: (path: string) => void 
 }) => {
   switch (status) {
     case "in_pruefung":
@@ -85,33 +85,6 @@ const StatusButton = ({ status, orderId, isPlaceholder, hasAppointment, navigate
         </Button>
       );
     default:
-      // Non-placeholder without appointment: "Termin buchen"
-      if (!isPlaceholder && !hasAppointment) {
-        return (
-          <Button
-            className="w-full mt-2 rounded-xl"
-            size="sm"
-            variant="outline"
-            onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
-          >
-            <CalendarCheck className="h-3.5 w-3.5 mr-1.5" />
-            Termin buchen
-          </Button>
-        );
-      }
-      if (!isPlaceholder && hasAppointment) {
-        return (
-          <Button
-            className="w-full mt-2 rounded-xl"
-            size="sm"
-            variant="outline"
-            onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
-          >
-            <Eye className="h-3.5 w-3.5 mr-1.5" />
-            Auftrag ansehen
-          </Button>
-        );
-      }
       return (
         <Button
           className="w-full mt-2 rounded-xl group/btn bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
