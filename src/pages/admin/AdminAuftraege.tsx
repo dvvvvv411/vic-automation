@@ -133,14 +133,9 @@ export default function AdminAuftraege() {
                       <TooltipContent>Ansehen</TooltipContent>
                     </Tooltip>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAssignOrder(o)}>
-                          <Users className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Zuweisen</TooltipContent>
-                    </Tooltip>
+                    <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => setAssignOrder(o)}>
+                      <Users className="h-4 w-4" /> Zuweisen
+                    </Button>
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
