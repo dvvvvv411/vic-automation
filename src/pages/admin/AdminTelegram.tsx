@@ -33,7 +33,7 @@ interface TelegramChat {
 
 export default function AdminTelegram() {
   const queryClient = useQueryClient();
-  const { brandingIds, ready } = useBrandingFilter();
+  const { activeBrandingId, ready } = useBrandingFilter();
   const [newChatId, setNewChatId] = useState("");
   const [newLabel, setNewLabel] = useState("");
   const [newEvents, setNewEvents] = useState<string[]>([]);
