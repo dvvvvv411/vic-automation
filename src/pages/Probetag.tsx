@@ -76,7 +76,7 @@ export default function Probetag() {
         .from("trial_day_appointments" as any)
         .select("appointment_date, appointment_time");
       if (error) throw error;
-      return (data || []) as Array<{ appointment_date: string; appointment_time: string }>;
+      return (data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>;
     },
   });
 
