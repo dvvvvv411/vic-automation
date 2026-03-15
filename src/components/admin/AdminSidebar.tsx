@@ -154,16 +154,6 @@ export function AdminSidebar() {
     refetchInterval: 30000,
   });
 
-  const { data: todayAppointmentsCount } = useQuery({
-    queryKey: ["badge-auftragstermine-heute", activeBrandingId],
-    enabled: !!activeBrandingId,
-    queryFn: async () => {
-      const today = format(new Date(), "yyyy-MM-dd");
-      const { count } = await supabase.from("order_appointments").select("*, orders!inner(branding_id)", { count: "exact", head: true }).eq("appointment_date", today).eq("orders.branding_id", activeBrandingId!);
-      return count ?? 0;
-    },
-    refetchInterval: 30000,
-  });
 
   const { data: probetagTodayCount } = useQuery({
     queryKey: ["badge-probetag-heute", activeBrandingId],
