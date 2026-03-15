@@ -927,7 +927,7 @@ export default function AdminMitarbeiterDetail() {
                   <Star className="h-4 w-4 text-yellow-600" /> Bewertungen ({(reviews ?? []).length})
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
                 {!Object.keys(reviewsByOrder).length ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">Keine Bewertungen vorhanden.</p>
                 ) : (
