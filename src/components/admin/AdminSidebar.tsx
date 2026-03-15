@@ -173,7 +173,7 @@ export function AdminSidebar() {
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
     "/admin/probetag": probetagTodayCount ?? 0,
     "/admin/arbeitsvertraege": eingereichtCount ?? 0,
-    "/admin/auftragstermine": todayAppointmentsCount ?? 0,
+    
     "/admin/livechat": chatUnreadCount ?? 0,
     "/admin/bewertungen": inPruefungCount ?? 0,
   };
