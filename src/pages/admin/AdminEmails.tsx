@@ -248,7 +248,7 @@ const templates: TemplateDefinition[] = [
 export default function AdminEmails() {
   const [selectedBrandingId, setSelectedBrandingId] = useState<string>("none");
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const userId = useUserQueryKey();
+  const { brandingIds, ready } = useBrandingFilter();
 
   const { data: brandings } = useQuery({
     queryKey: ["brandings-for-preview", userId],
