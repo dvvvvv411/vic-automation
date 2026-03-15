@@ -40,6 +40,7 @@ import Bewertung from "./pages/mitarbeiter/Bewertung";
 import MitarbeiterAuftraege from "./pages/mitarbeiter/MitarbeiterAuftraege";
 import MitarbeiterBewertungen from "./pages/mitarbeiter/MitarbeiterBewertungen";
 import MeineDaten from "./pages/mitarbeiter/MeineDaten";
+import MitarbeiterArbeitsvertrag from "./pages/mitarbeiter/MitarbeiterArbeitsvertrag";
 import NotFound from "./pages/NotFound";
 import ShortRedirect from "./pages/ShortRedirect";
 
