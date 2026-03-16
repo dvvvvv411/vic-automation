@@ -192,12 +192,13 @@ export function AdminSidebar() {
         .eq("branding_id", activeBrandingId!);
       const contractIds = (contracts ?? []).map((c) => c.id);
       if (!contractIds.length) return 0;
-      const { count } = await supabase
+      const { data } = await supabase
         .from("order_attachments")
-        .select("*", { count: "exact", head: true })
+        .select("contract_id, order_id")
         .eq("status", "eingereicht")
         .in("contract_id", contractIds);
-      return count ?? 0;
+      const groups = new Set((data ?? []).map((a: any) => `${a.contract_id}__${a.order_id}`));
+      return groups.size;
     },
     refetchInterval: 30000,
   });
