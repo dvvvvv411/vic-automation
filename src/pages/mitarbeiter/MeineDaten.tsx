@@ -1,18 +1,21 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, MapPin, Star, ClipboardCheck, Euro, CreditCard, CalendarClock, History, FileDown } from "lucide-react";
+import { User, Mail, Phone, MapPin, Star, ClipboardCheck, Euro, CreditCard, CalendarClock, History, FileDown, Eye } from "lucide-react";
 import { addMonths, startOfMonth, format, startOfDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 interface ContextType {
-  contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null } | null;
-  branding: { logo_url: string | null; company_name: string; brand_color: string | null } | null;
+  contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null; signature_data?: string | null; template_id?: string | null } | null;
+  branding: { logo_url: string | null; company_name: string; brand_color: string | null; signature_image_url?: string | null; signer_name?: string | null; signer_title?: string | null } | null;
   loading: boolean;
 }
 
@@ -37,6 +40,9 @@ const MeineDaten = () => {
   const [pendingPayout, setPendingPayout] = useState(0);
   const [rewardHistory, setRewardHistory] = useState<{ title: string; reward: string; date: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contractViewOpen, setContractViewOpen] = useState(false);
+  const [templateContent, setTemplateContent] = useState<string | null>(null);
+  const [brandingSig, setBrandingSig] = useState<any>(null);
 
   useEffect(() => {
     if (!contract?.id) return;
@@ -140,6 +146,7 @@ const MeineDaten = () => {
   };
 
   return (
+    <>
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <h2 className="text-2xl font-bold tracking-tight text-foreground">Meine Daten</h2>
@@ -169,7 +176,7 @@ const MeineDaten = () => {
       </motion.div>
 
       {/* Arbeitsvertrag */}
-      {contract?.signed_contract_pdf_url && (
+      {contract && (contract.status === "genehmigt" || contract.status === "eingereicht" || contract?.signed_contract_pdf_url) && (
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
           <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
             <CardHeader className="pb-4">
@@ -185,17 +192,35 @@ const MeineDaten = () => {
                     <FileDown className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">Vertrag unterzeichnet</p>
-                    <p className="text-xs text-muted-foreground">Dein unterschriebener Arbeitsvertrag steht zum Download bereit</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {contract.status === "genehmigt" ? "Vertrag genehmigt" : "Vertrag eingereicht"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Dein Arbeitsvertrag kann hier eingesehen werden</p>
                   </div>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.open(contract.signed_contract_pdf_url!, '_blank')}
+                  onClick={async () => {
+                    // Load template content + branding signature
+                    const { data: ec } = await supabase
+                      .from("employment_contracts")
+                      .select("template_id, signature_data, first_name, last_name, birth_date, street, zip_code, city, employment_type, branding_id")
+                      .eq("id", contract.id)
+                      .maybeSingle();
+                    if (ec?.template_id) {
+                      const { data: tpl } = await supabase.from("contract_templates" as any).select("content, salary").eq("id", ec.template_id).maybeSingle();
+                      setTemplateContent((tpl as any)?.content || null);
+                    }
+                    if (ec?.branding_id) {
+                      const { data: bd } = await supabase.from("brandings").select("signature_image_url, signer_name, signer_title, company_name").eq("id", ec.branding_id).maybeSingle();
+                      setBrandingSig(bd);
+                    }
+                    setContractViewOpen(true);
+                  }}
                 >
-                  <FileDown className="h-4 w-4 mr-1" />
-                  Herunterladen
+                  <Eye className="h-4 w-4 mr-1" />
+                  Anzeigen
                 </Button>
               </div>
             </CardContent>
@@ -308,6 +333,57 @@ const MeineDaten = () => {
         </Card>
       </motion.div>
     </div>
+
+      <Dialog open={contractViewOpen} onOpenChange={setContractViewOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Arbeitsvertrag</DialogTitle>
+          </DialogHeader>
+          <div id="contract-pdf-content">
+            {templateContent ? (
+              <div className="prose prose-sm max-w-none border border-border rounded-lg p-6 bg-white" dangerouslySetInnerHTML={{ __html: templateContent }} />
+            ) : (
+              <p className="text-muted-foreground text-sm">Kein Vertragstext verfügbar.</p>
+            )}
+            <div className="grid grid-cols-2 gap-8 mt-8 pt-6 border-t border-border">
+              {brandingSig?.signature_image_url && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Firmenunterschrift</p>
+                  <img src={brandingSig.signature_image_url} alt="Firmenunterschrift" className="h-16 object-contain" />
+                  <p className="text-sm font-medium mt-1">{brandingSig.signer_name}</p>
+                  {brandingSig.signer_title && <p className="text-xs text-muted-foreground">{brandingSig.signer_title}</p>}
+                </div>
+              )}
+              {(contract as any)?.signature_data && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Ihre Unterschrift</p>
+                  <img src={(contract as any).signature_data} alt="Unterschrift" className="h-16 object-contain" />
+                  <p className="text-sm font-medium mt-1">{contractDetails?.first_name} {contractDetails?.last_name}</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={async () => {
+                const el = document.getElementById("contract-pdf-content");
+                if (!el) return;
+                const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+                const imgData = canvas.toDataURL("image/png");
+                const pdf = new jsPDF("p", "mm", "a4");
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+                pdf.save("arbeitsvertrag.pdf");
+              }}
+            >
+              <FileDown className="h-4 w-4 mr-1" /> Als PDF speichern
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

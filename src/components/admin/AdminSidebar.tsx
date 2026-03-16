@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video, ScrollText } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
@@ -73,6 +73,7 @@ const navGroups = [
       { title: "SMS", url: "/admin/sms", icon: Smartphone },
       { title: "SMS History", url: "/admin/sms-history", icon: History },
       { title: "Telegram", url: "/admin/telegram", icon: Send },
+      { title: "Vertragsvorlagen", url: "/admin/vertragsvorlagen", icon: ScrollText },
       { title: "Zeitplan", url: "/admin/zeitplan", icon: Clock },
       { title: "Kunden", url: "/admin/kunden", icon: UserPlus },
     ],

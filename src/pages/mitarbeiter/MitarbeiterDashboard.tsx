@@ -136,6 +136,8 @@ const MitarbeiterDashboard = () => {
   const [balance, setBalance] = useState<number>(0);
   const [employmentType, setEmploymentType] = useState<string | null>(null);
   const [contractSubmittedAt, setContractSubmittedAt] = useState<string | null>(null);
+  const [contractStatus, setContractStatus] = useState<string | null>(null);
+  const [contractDismissed, setContractDismissed] = useState(false);
 
   const isFixedSalary = branding?.payment_model === "fixed_salary";
 
@@ -163,7 +165,7 @@ const MitarbeiterDashboard = () => {
       // Fetch contract details (balance, profile)
       const { data: contractDetails } = await supabase
         .from("employment_contracts")
-        .select("balance, first_name, last_name, email, iban, employment_type, submitted_at")
+        .select("balance, first_name, last_name, email, iban, employment_type, submitted_at, status, contract_dismissed")
         .eq("id", contract.id)
         .maybeSingle();
 
@@ -171,6 +173,8 @@ const MitarbeiterDashboard = () => {
         setBalance(Number(contractDetails.balance) || 0);
         setEmploymentType(contractDetails.employment_type || null);
         setContractSubmittedAt(contractDetails.submitted_at || null);
+        setContractStatus(contractDetails.status || null);
+        setContractDismissed((contractDetails as any).contract_dismissed || false);
       }
 
       // Fetch assignments
@@ -368,6 +372,31 @@ const MitarbeiterDashboard = () => {
                 onClick={() => navigate("/mitarbeiter/arbeitsvertrag")}
               >
                 Jetzt ausfüllen
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Contract approved card */}
+      {contract && contractStatus === "genehmigt" && !contractDismissed && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
+          <Card className="border-l-4 border-l-green-500 bg-background shadow-md rounded-2xl">
+            <CardContent className="py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-green-100 shrink-0">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground text-sm">Arbeitsvertrag genehmigt</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">Dein Arbeitsvertrag wurde genehmigt. Du kannst ihn unter "Meine Daten" einsehen.</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={async () => {
+                await supabase.from("employment_contracts").update({ contract_dismissed: true } as any).eq("id", contract.id);
+                setContractDismissed(true);
+              }}>
+                <XCircle className="h-5 w-5 text-muted-foreground" />
               </Button>
             </CardContent>
           </Card>

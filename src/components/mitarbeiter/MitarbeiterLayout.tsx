@@ -153,17 +153,9 @@ export default function MitarbeiterLayout() {
               </div>
             </div>
           </header>
-          {contract?.status === "genehmigt" && contract?.contract_pdf_url && contract?.application_id ? (
-            <ContractSigningView
-              contractId={contract.id}
-              contractPdfUrl={contract.contract_pdf_url}
-              brandColor={branding?.brand_color}
-            />
-          ) : (
-            <main className="flex-1 p-6 lg:p-8 bg-slate-50">
-              <Outlet context={{ contract, branding, loading }} />
-            </main>
-          )}
+          <main className="flex-1 p-6 lg:p-8 bg-slate-50">
+            <Outlet context={{ contract, branding, loading }} />
+          </main>
         </div>
         <ChatWidget contractId={contract?.id ?? null} brandColor={branding?.brand_color} />
       </div>
