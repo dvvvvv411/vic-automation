@@ -24,6 +24,7 @@ interface Assignment {
   title: string;
   provider: string;
   reward: string;
+  description: string | null;
   hasRequiredAttachments: boolean;
   attachmentsPending: boolean;
   attachmentsSubmitted: boolean;
