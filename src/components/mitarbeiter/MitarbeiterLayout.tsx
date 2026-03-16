@@ -44,7 +44,7 @@ export default function MitarbeiterLayout() {
       // 1. Get employment contract
       const { data: contractData } = await supabase
         .from("employment_contracts")
-        .select("id, first_name, application_id, status, contract_pdf_url, signed_contract_pdf_url, is_suspended")
+        .select("id, first_name, application_id, status, contract_pdf_url, signed_contract_pdf_url, is_suspended, submitted_at")
         .eq("user_id", user.id)
         .maybeSingle();
 
