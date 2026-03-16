@@ -171,53 +171,7 @@ Deno.serve(async (req) => {
       console.error("generate-contract call failed:", genErr);
     }
 
-    // Email removed — vertrag_genehmigt is now sent from AdminArbeitsvertraege.tsx
-
-    // Send SMS
-    const phone = contract.phone || (contract as any).applications?.phone;
-    if (phone) {
-      try {
-        // Load SMS template
-        const { data: tpl } = await adminClient
-          .from("sms_templates")
-          .select("message")
-          .eq("event_type", "vertrag_genehmigt")
-          .single();
-
-        // Load branding sms_sender_name
-        const brandingId = (contract as any).applications?.branding_id;
-        let smsSender = "Vic";
-        if (brandingId) {
-          const { data: branding } = await adminClient
-            .from("brandings")
-            .select("sms_sender_name")
-            .eq("id", brandingId)
-            .single();
-          if (branding?.sms_sender_name) smsSender = branding.sms_sender_name;
-        }
-
-        // loginUrl already uses branding domain from above
-        const name = `${firstName} ${lastName}`;
-        const smsText = tpl?.message
-          ? (tpl.message as string).replace("{name}", name).replace("{link}", loginUrl)
-          : `Hallo ${name}, Ihr Arbeitsvertrag wurde genehmigt. Loggen Sie sich ein: ${loginUrl}`;
-
-        const sendSmsUrl = `${supabaseUrl}/functions/v1/send-sms`;
-        await fetch(sendSmsUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
-          body: JSON.stringify({
-            to: phone,
-            text: smsText,
-            event_type: "vertrag_genehmigt",
-            recipient_name: name,
-            from: smsSender,
-          }),
-        });
-      } catch (smsErr) {
-        console.error("send-sms call failed:", smsErr);
-      }
-    }
+    // Email & SMS removed — both are now sent from AdminArbeitsvertraege.tsx
 
     return new Response(
       JSON.stringify({ success: true, temp_password: tempPassword, user_id: newUser.user.id }),

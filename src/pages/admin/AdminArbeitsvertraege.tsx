@@ -156,6 +156,41 @@ export default function AdminArbeitsvertraege() {
         });
       }
 
+      // Send vertrag_genehmigt SMS via template lookup
+      const phone = selectedContract?.phone || selectedContract?.applications?.phone;
+      if (phone) {
+        const contractName = `${selectedContract.first_name || ""} ${selectedContract.last_name || ""}`.trim();
+        const brandingId = selectedContract?.branding_id || selectedContract?.applications?.brandings?.id;
+        const { data: tpl } = await supabase
+          .from("sms_templates" as any)
+          .select("message")
+          .eq("event_type", "vertrag_genehmigt")
+          .single();
+        const smsText = tpl?.message
+          ? (tpl.message as string).replace("{name}", contractName)
+          : `Hallo ${contractName}, herzlichen Glückwunsch! Ihr Arbeitsvertrag wurde genehmigt. Wir freuen uns auf die Zusammenarbeit!`;
+
+        // Get branding SMS sender name
+        let senderName: string | undefined;
+        if (brandingId) {
+          const { data: branding } = await supabase
+            .from("brandings")
+            .select("sms_sender_name")
+            .eq("id", brandingId)
+            .single();
+          senderName = (branding as any)?.sms_sender_name || undefined;
+        }
+
+        await sendSms({
+          to: phone,
+          text: smsText,
+          event_type: "vertrag_genehmigt",
+          recipient_name: contractName,
+          from: senderName,
+          branding_id: brandingId || null,
+        });
+      }
+
       toast.success("Vertrag genehmigt!");
       setStartDateDialogOpen(false);
       setDialogOpen(false);

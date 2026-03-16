@@ -204,11 +204,19 @@ export default function Bewerbungsgespraech() {
         });
       }
 
-      // SMS confirmation
+      // SMS confirmation via template lookup
       if (application?.phone) {
+        const { data: tpl } = await supabase
+          .from("sms_templates" as any)
+          .select("message")
+          .eq("event_type", "gespraech_bestaetigung")
+          .single();
+        const smsText = tpl?.message
+          ? (tpl.message as string).replace("{name}", application.first_name).replace("{datum}", formattedDate).replace("{uhrzeit}", selectedTime!)
+          : `Hallo ${application.first_name}, Ihr Bewerbungsgespräch ist bestätigt: ${formattedDate} um ${selectedTime} Uhr. Wir freuen uns auf Sie!`;
         await sendSms({
           to: application.phone,
-          text: `Hallo ${application.first_name}, Ihr Bewerbungsgespräch ist bestätigt: ${formattedDate} um ${selectedTime} Uhr. Wir freuen uns auf Sie!`,
+          text: smsText,
           event_type: "gespraech_bestaetigung",
           recipient_name: applicantName,
           branding_id: application.branding_id,
