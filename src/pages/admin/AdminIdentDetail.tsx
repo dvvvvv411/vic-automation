@@ -219,6 +219,8 @@ function IdentDetailContent({
   useEffect(() => {
     setPhoneUrl(session.phone_api_url ?? "");
     setTestData(session.test_data?.length > 0 ? session.test_data : DEFAULT_FIELDS.map(f => ({ label: f, value: "" })));
+    setEmailTanEnabled(session.email_tan_enabled ?? false);
+    setEmailTans(session.email_tans ?? []);
   }, [session.id, session.updated_at]);
 
   const handleSave = async () => {
