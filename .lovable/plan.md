@@ -1,37 +1,66 @@
 
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-# Passwort-Management in der Mitarbeiter-Detailseite
+## Was wurde gemacht
 
-## Änderungen
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-### 1. `src/pages/admin/AdminMitarbeiterDetail.tsx` — CredentialsCard umbauen
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-- Label "Temporäres Passwort" → "Passwort"
-- `temp_password` wird zensiert angezeigt (••••••••), mit Auge-Button zum Aufdecken
-- Neuer Button "Passwort zurücksetzen" öffnet einen Dialog
-- **Reset-Dialog**:
-  - Zeigt ein neu generiertes Passwort (nur Buchstaben + Zahlen, 8 Zeichen)
-  - Button "Neu generieren" um ein anderes zu erzeugen
-  - Button "Bestätigen" ruft die neue Edge Function auf
-  - Nach Erfolg: `temp_password` im Contract wird aktualisiert, Dialog schließt, Card zeigt neues Passwort (zensiert)
+---
 
-### 2. Neue Edge Function `supabase/functions/reset-employee-password/index.ts`
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-- Empfängt `{ contract_id, new_password }`
-- Verifiziert Caller ist Admin/Kunde
-- Liest `user_id` aus `employment_contracts`
-- Setzt Passwort via `adminClient.auth.admin.updateUserById(userId, { password })`
-- Speichert `new_password` als `temp_password` in `employment_contracts`
-- Gibt `{ success: true }` zurück
+## Was wurde gemacht
 
-### 3. `supabase/config.toml` — JWT-Verifizierung deaktivieren
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-```toml
-[functions.reset-employee-password]
-verify_jwt = false
-```
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
-## Passwort-Generator
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
 
-Nur `A-Z`, `a-z`, `0-9`, 8 Zeichen Länge. Funktion wird client-seitig im Dialog verwendet und der generierte Wert an die Edge Function geschickt.
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
 
+---
+
+# Vergütungsmodell pro Branding (abgeschlossen)
+
+## Was wurde gemacht
+
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
