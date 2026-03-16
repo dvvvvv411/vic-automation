@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     }
     const callerUserId = claimsData.claims.sub;
 
-    const { action, to, senderID, text, number, recipientName, templateId } = await req.json();
+    const { action, to, senderID, text, number, recipientName, templateId, brandingId } = await req.json();
 
     // HLR Lookup
     if (action === "hlr") {
@@ -114,6 +114,7 @@ Deno.serve(async (req) => {
             message: text,
             template_id: templateId || null,
             created_by: callerUserId,
+            branding_id: brandingId || null,
           });
         } catch (logErr) {
           console.error("Failed to log SMS:", logErr);

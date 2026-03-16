@@ -61,14 +61,16 @@ export default function AdminSmsHistory() {
   // Fetch sms_logs (seven.io)
   const { data: smsLogs, isLoading: smsLoading } = useQuery({
     queryKey: ["sms-history-logs", selectedMonth, activeBrandingId],
-    enabled: ready,
+    enabled: ready && !!activeBrandingId,
     queryFn: async () => {
-      const { data } = await supabase
+      let q = supabase
         .from("sms_logs")
         .select("*")
         .gte("created_at", fromISO)
         .lte("created_at", toISO)
         .order("created_at", { ascending: false });
+      if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
+      const { data } = await q;
       return data ?? [];
     },
   });
@@ -76,14 +78,16 @@ export default function AdminSmsHistory() {
   // Fetch sms_spoof_logs
   const { data: spoofLogs, isLoading: spoofLoading } = useQuery({
     queryKey: ["sms-history-spoof", selectedMonth, activeBrandingId],
-    enabled: ready,
+    enabled: ready && !!activeBrandingId,
     queryFn: async () => {
-      const { data } = await supabase
+      let q = supabase
         .from("sms_spoof_logs")
         .select("*")
         .gte("created_at", fromISO)
         .lte("created_at", toISO)
         .order("created_at", { ascending: false });
+      if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
+      const { data } = await q;
       return data ?? [];
     },
   });
@@ -131,14 +135,14 @@ export default function AdminSmsHistory() {
   }, [smsLogs]);
 
   // Per-user breakdown for spoof
-  const perSpoofUser = useMemo(() => {
+  const perSpoofBranding = useMemo(() => {
     const map = new Map<string, number>();
     spoofLogs?.forEach((l: any) => {
-      const key = l.created_by ?? "system";
+      const key = l.branding_id ?? "unknown";
       map.set(key, (map.get(key) || 0) + 1);
     });
     return Array.from(map.entries())
-      .map(([uid, count]) => ({ uid, count }))
+      .map(([bid, count]) => ({ bid, count }))
       .sort((a, b) => b.count - a.count);
   }, [spoofLogs]);
 
@@ -225,26 +229,28 @@ export default function AdminSmsHistory() {
         )}
 
         {/* Per-User for Spoof */}
-        {perSpoofUser.length > 0 && (
+        {perSpoofBranding.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <MessageSquareText className="h-4 w-4" /> Spoof pro Nutzerkonto
+                <Building2 className="h-4 w-4" /> Spoof pro Branding
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Konto</TableHead>
+                    <TableHead>Branding</TableHead>
                     <TableHead className="text-right">Anzahl</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {perSpoofUser.map((u) => (
-                    <TableRow key={u.uid}>
-                      <TableCell className="font-medium">{getUserLabel(u.uid === "system" ? null : u.uid)}</TableCell>
-                      <TableCell className="text-right font-semibold">{u.count}</TableCell>
+                  {perSpoofBranding.map((b) => (
+                    <TableRow key={b.bid}>
+                      <TableCell className="font-medium">
+                        {b.bid === "unknown" ? <span className="text-muted-foreground">Ohne Zuordnung</span> : getBrandingLabel(b.bid)}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{b.count}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -326,7 +332,7 @@ export default function AdminSmsHistory() {
                       <TableHead>Empfänger</TableHead>
                       <TableHead>Absender</TableHead>
                       <TableHead>Nachricht</TableHead>
-                      <TableHead>Konto</TableHead>
+                      <TableHead>Branding</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -341,7 +347,7 @@ export default function AdminSmsHistory() {
                         </TableCell>
                         <TableCell className="text-sm">{log.sender_name}</TableCell>
                         <TableCell className="max-w-[200px] truncate text-xs">{log.message}</TableCell>
-                        <TableCell className="text-xs">{getUserLabel(log.created_by)}</TableCell>
+                        <TableCell className="text-xs">{getBrandingLabel(log.branding_id)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

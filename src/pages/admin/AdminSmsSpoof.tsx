@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -57,6 +58,7 @@ interface SpoofLog {
 }
 
 export default function AdminSmsSpoof() {
+  const { activeBrandingId, ready } = useBrandingFilter();
   const [to, setTo] = useState("");
   const [senderID, setSenderID] = useState("");
   const [text, setText] = useState("");
@@ -98,26 +100,31 @@ export default function AdminSmsSpoof() {
   const [previewLog, setPreviewLog] = useState<SpoofLog | null>(null);
 
   useEffect(() => {
+    if (!ready) return;
     fetchTemplates();
     fetchLogs();
-  }, []);
+  }, [activeBrandingId, ready]);
 
   const fetchLogs = async () => {
     setLogsLoading(true);
-    const { data } = await supabase
+    let q = supabase
       .from("sms_spoof_logs" as any)
       .select("*")
       .order("created_at", { ascending: false })
       .limit(100);
+    if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
+    const { data } = await q;
     if (data) setLogs(data as any);
     setLogsLoading(false);
   };
 
   const fetchTemplates = async () => {
-    const { data } = await supabase
+    let q = supabase
       .from("sms_spoof_templates" as any)
       .select("*")
       .order("created_at", { ascending: false });
+    if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
+    const { data } = await q;
     if (data) setTemplates(data as any);
   };
 
@@ -194,7 +201,7 @@ export default function AdminSmsSpoof() {
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("sms-spoof", {
-        body: { action: "send", to: to.trim(), senderID: senderID.trim(), text: text.trim() },
+        body: { action: "send", to: to.trim(), senderID: senderID.trim(), text: text.trim(), brandingId: activeBrandingId },
       });
       if (error) throw error;
       if (data?.error) {
@@ -219,7 +226,7 @@ export default function AdminSmsSpoof() {
     setTplSaving(true);
     const { error } = await supabase
       .from("sms_spoof_templates" as any)
-      .insert({ label: tplLabel.trim(), sender_name: tplSender.trim(), message: tplMessage.trim() } as any);
+      .insert({ label: tplLabel.trim(), sender_name: tplSender.trim(), message: tplMessage.trim(), branding_id: activeBrandingId } as any);
     if (error) {
       toast({ title: "Fehler", description: error.message, variant: "destructive" });
     } else {
@@ -290,6 +297,7 @@ export default function AdminSmsSpoof() {
           text: resolvedText,
           recipientName: `${selectedEmployee.first_name || ""} ${selectedEmployee.last_name || ""}`.trim(),
           templateId: selectedTemplate.id,
+          brandingId: activeBrandingId,
         },
       });
       if (error) throw error;
