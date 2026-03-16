@@ -28,6 +28,8 @@ interface IdentSession {
   created_at: string;
   updated_at: string;
   branding_id: string | null;
+  email_tan_enabled: boolean;
+  email_tans: Array<{ code: string; created_at: string }>;
 }
 
 interface AnosimSms {
