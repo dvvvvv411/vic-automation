@@ -21,6 +21,7 @@ import AdminAnhaenge from "./pages/admin/AdminAnhaenge";
 import AdminLivechat from "./pages/admin/AdminLivechat";
 import AdminBewertungen from "./pages/admin/AdminBewertungen";
 import AdminIdents from "./pages/admin/AdminIdents";
+import AdminIdentDetail from "./pages/admin/AdminIdentDetail";
 
 import AdminEmails from "./pages/admin/AdminEmails";
 import AdminSmsTemplates from "./pages/admin/AdminSmsTemplates";
@@ -80,6 +81,7 @@ const App = () => (
               <Route path="anhaenge" element={<AdminAnhaenge />} />
               
               <Route path="idents" element={<AdminIdents />} />
+              <Route path="idents/:id" element={<AdminIdentDetail />} />
               <Route path="livechat" element={<AdminLivechat />} />
               <Route path="bewertungen" element={<AdminBewertungen />} />
               <Route path="emails" element={<AdminEmails />} />
