@@ -159,6 +159,10 @@ export type Database = {
           salary_minijob: number | null
           salary_teilzeit: number | null
           salary_vollzeit: number | null
+          signature_font: string | null
+          signature_image_url: string | null
+          signer_name: string | null
+          signer_title: string | null
           sms_sender_name: string | null
           street: string | null
           trade_register: string | null
@@ -185,6 +189,10 @@ export type Database = {
           salary_minijob?: number | null
           salary_teilzeit?: number | null
           salary_vollzeit?: number | null
+          signature_font?: string | null
+          signature_image_url?: string | null
+          signer_name?: string | null
+          signer_title?: string | null
           sms_sender_name?: string | null
           street?: string | null
           trade_register?: string | null
@@ -211,6 +219,10 @@ export type Database = {
           salary_minijob?: number | null
           salary_teilzeit?: number | null
           salary_vollzeit?: number | null
+          signature_font?: string | null
+          signature_image_url?: string | null
+          signer_name?: string | null
+          signer_title?: string | null
           sms_sender_name?: string | null
           street?: string | null
           trade_register?: string | null
@@ -298,6 +310,53 @@ export type Database = {
           },
         ]
       }
+      contract_templates: {
+        Row: {
+          branding_id: string
+          content: string
+          created_at: string
+          created_by: string | null
+          employment_type: string
+          id: string
+          is_active: boolean
+          salary: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          branding_id: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          employment_type: string
+          id?: string
+          is_active?: boolean
+          salary?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          branding_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          employment_type?: string
+          id?: string
+          is_active?: boolean
+          salary?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_templates_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_logs: {
         Row: {
           branding_id: string | null
@@ -357,6 +416,7 @@ export type Database = {
           branding_id: string | null
           chat_active_at: string | null
           city: string | null
+          contract_dismissed: boolean
           contract_pdf_url: string | null
           created_at: string
           created_by: string | null
@@ -382,6 +442,7 @@ export type Database = {
           submitted_at: string | null
           tax_id: string | null
           temp_password: string | null
+          template_id: string | null
           user_id: string | null
           zip_code: string | null
         }
@@ -396,6 +457,7 @@ export type Database = {
           branding_id?: string | null
           chat_active_at?: string | null
           city?: string | null
+          contract_dismissed?: boolean
           contract_pdf_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -421,6 +483,7 @@ export type Database = {
           submitted_at?: string | null
           tax_id?: string | null
           temp_password?: string | null
+          template_id?: string | null
           user_id?: string | null
           zip_code?: string | null
         }
@@ -435,6 +498,7 @@ export type Database = {
           branding_id?: string | null
           chat_active_at?: string | null
           city?: string | null
+          contract_dismissed?: boolean
           contract_pdf_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -460,6 +524,7 @@ export type Database = {
           submitted_at?: string | null
           tax_id?: string | null
           temp_password?: string | null
+          template_id?: string | null
           user_id?: string | null
           zip_code?: string | null
         }
@@ -476,6 +541,13 @@ export type Database = {
             columns: ["branding_id"]
             isOneToOne: false
             referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employment_contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
             referencedColumns: ["id"]
           },
         ]
