@@ -12,7 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Video, Clock, ArrowLeft, Plus, X, Save, MessageSquare, Loader2, StopCircle, User } from "lucide-react";
+import { Video, Clock, ArrowLeft, Plus, X, Save, MessageSquare, Loader2, StopCircle, User, Mail, Send } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 
