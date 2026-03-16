@@ -138,9 +138,33 @@ const AdminBewertungen = () => {
 
     const reward = parseReward(g.order_reward);
 
+    // Check if order has required attachments and if they're all approved
+    const { data: order } = await supabase
+      .from("orders")
+      .select("required_attachments")
+      .eq("id", g.order_id)
+      .single();
+
+    const requiredAttachments = (order as any)?.required_attachments ?? [];
+    const hasRequiredAttachments = Array.isArray(requiredAttachments) && requiredAttachments.length > 0;
+
+    let allAttachmentsApproved = true;
+    if (hasRequiredAttachments) {
+      const { data: attachments } = await supabase
+        .from("order_attachments")
+        .select("status")
+        .eq("order_id", g.order_id)
+        .eq("contract_id", g.contract_id);
+
+      const approvedCount = (attachments ?? []).filter((a) => a.status === "genehmigt").length;
+      allAttachmentsApproved = approvedCount >= requiredAttachments.length;
+    }
+
+    const finalStatus = allAttachmentsApproved ? "erfolgreich" : "in_pruefung";
+
     const { error: statusErr } = await supabase
       .from("order_assignments")
-      .update({ status: "erfolgreich" })
+      .update({ status: finalStatus })
       .eq("order_id", g.order_id)
       .eq("contract_id", g.contract_id);
 
@@ -150,7 +174,8 @@ const AdminBewertungen = () => {
       return;
     }
 
-    if (reward > 0) {
+    // Only credit reward and send notifications if fully completed
+    if (finalStatus === "erfolgreich" && reward > 0) {
       const { data: contract } = await supabase
         .from("employment_contracts")
         .select("balance, email, first_name, last_name, phone, applications(branding_id)")
@@ -197,7 +222,11 @@ const AdminBewertungen = () => {
       }
     }
 
-    toast.success("Bewertung genehmigt und Prämie gutgeschrieben!");
+    if (finalStatus === "erfolgreich") {
+      toast.success("Bewertung genehmigt und Prämie gutgeschrieben!");
+    } else {
+      toast.success("Bewertung genehmigt. Anhänge stehen noch aus.");
+    }
     queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
     setProcessing(null);
     setSelected(null);
