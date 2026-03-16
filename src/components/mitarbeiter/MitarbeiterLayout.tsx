@@ -35,12 +35,31 @@ export default function MitarbeiterLayout() {
   const { user } = useAuth();
   const [branding, setBranding] = useState<BrandingData | null>(null);
   const [contract, setContract] = useState<ContractData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [panelReady, setPanelReady] = useState(false);
 
   useEffect(() => {
     if (!user) return;
 
+    const preloadImage = (src: string): Promise<void> =>
+      new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+        img.src = src;
+      });
+
+    const applyBrandColor = (color: string) => {
+      const hsl = hexToHSL(color);
+      if (hsl) {
+        document.documentElement.style.setProperty("--primary", hsl);
+        document.documentElement.style.setProperty("--ring", hsl);
+      }
+    };
+
     const fetchData = async () => {
+      let resolvedBranding: BrandingData | null = null;
+      let resolvedContract: ContractData | null = null;
+
       // 1. Get employment contract
       const { data: contractData } = await supabase
         .from("employment_contracts")
@@ -49,7 +68,7 @@ export default function MitarbeiterLayout() {
         .maybeSingle();
 
       if (contractData) {
-        setContract(contractData);
+        resolvedContract = contractData;
 
         // 2. Get application -> branding_id
         const { data: appData } = await supabase
@@ -65,63 +84,62 @@ export default function MitarbeiterLayout() {
             .eq("id", appData.branding_id)
             .maybeSingle();
 
-          if (brandingData) {
-            setBranding(brandingData);
-            setLoading(false);
-            return;
-          }
+          if (brandingData) resolvedBranding = brandingData;
         }
       }
 
       // Fallback: load branding from profile.branding_id
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("branding_id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profileData?.branding_id) {
-        const { data: brandingData } = await supabase
-          .from("brandings")
-          .select("logo_url, company_name, brand_color, payment_model, salary_minijob, salary_teilzeit, salary_vollzeit")
-          .eq("id", profileData.branding_id)
+      if (!resolvedBranding) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("branding_id")
+          .eq("id", user.id)
           .maybeSingle();
 
-        if (brandingData) {
-          setBranding(brandingData);
+        if (profileData?.branding_id) {
+          const { data: brandingData } = await supabase
+            .from("brandings")
+            .select("logo_url, company_name, brand_color, payment_model, salary_minijob, salary_teilzeit, salary_vollzeit")
+            .eq("id", profileData.branding_id)
+            .maybeSingle();
+
+          if (brandingData) resolvedBranding = brandingData;
         }
       }
 
-      setLoading(false);
+      // Apply branding color BEFORE rendering
+      if (resolvedBranding?.brand_color) {
+        applyBrandColor(resolvedBranding.brand_color);
+      }
+
+      // Preload logo BEFORE rendering
+      if (resolvedBranding?.logo_url) {
+        await preloadImage(resolvedBranding.logo_url);
+      }
+
+      // Set state and mark ready
+      setContract(resolvedContract);
+      setBranding(resolvedBranding);
+      setPanelReady(true);
     };
 
     fetchData();
-  }, [user]);
 
-  // Dynamically set brand color as CSS custom property
-  useEffect(() => {
-    if (branding?.brand_color) {
-      const color = branding.brand_color;
-      // Convert hex to HSL for CSS variable
-      const hsl = hexToHSL(color);
-      if (hsl) {
-        document.documentElement.style.setProperty("--primary", hsl);
-      }
-    }
     return () => {
       document.documentElement.style.removeProperty("--primary");
+      document.documentElement.style.removeProperty("--ring");
     };
-  }, [branding?.brand_color]);
+  }, [user]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = "/";
   };
 
-  if (loading) {
+  if (!panelReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground/60" />
       </div>
     );
   }
@@ -152,7 +170,7 @@ export default function MitarbeiterLayout() {
           '--sidebar-ring': '217 91% 60%',
           '--sidebar-muted': '220 14% 96%',
         } as React.CSSProperties}>
-        <MitarbeiterSidebar branding={branding} brandingLoading={loading} contractStatus={contract?.status} />
+        <MitarbeiterSidebar branding={branding} brandingLoading={false} contractStatus={contract?.status} />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="border-b border-border/20 bg-background sticky top-0 z-50 h-16 flex items-center justify-between px-5 shadow-sm relative">
             <SidebarTrigger />
@@ -172,8 +190,8 @@ export default function MitarbeiterLayout() {
               </div>
             </div>
           </header>
-          <main className="flex-1 p-6 lg:p-8 bg-slate-50">
-            <Outlet context={{ contract, branding, loading }} />
+          <main className="flex-1 p-6 lg:p-8 bg-muted/20">
+            <Outlet context={{ contract, branding }} />
           </main>
         </div>
         <ChatWidget contractId={contract?.id ?? null} brandColor={branding?.brand_color} />

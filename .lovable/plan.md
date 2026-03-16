@@ -1,88 +1,66 @@
 
-Ziel: Das Mitarbeiter-Panel darf erst sichtbar werden, wenn Branding-Farbe, Logo und Vertragsstatus vollständig bereit sind. Bis dahin nur ein neutraler Ladebildschirm – kein blaues Default-UI, kein kurzes Aufblitzen von Sidebar/Logo.
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was ich ändern würde
+## Was wurde gemacht
 
-### 1. `src/components/mitarbeiter/MitarbeiterLayout.tsx`
-Die bisherige Logik reicht nicht, weil `loading` schon auf `false` geht, bevor die Branding-Farbe wirklich im DOM aktiv ist.
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-Geplante Anpassung:
-- Einen echten `panelReady`/`brandingReady`-Schritt einführen
-- Contract + Branding laden
-- `brand_color` sofort in HSL umrechnen
-- Logo vorab preladen (`new Image()`)
-- Erst wenn
-  - Contract/Branding geladen,
-  - Branding-Farbe vorbereitet,
-  - Logo geladen/fehlgeschlagen
-  sind, wird das Panel gerendert
-- Bis dahin: Fullscreen-Loading-Screen
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-Wichtig:
-- Die Branding-Farbe nicht mehr erst in einem normalen `useEffect` nachträglich setzen
-- Stattdessen vor dem ersten sichtbaren Render anwenden:
-  - entweder über `useLayoutEffect`
-  - und/oder direkt als CSS-Variablen am Layout-Wrapper (`--primary`, `--ring`)
+---
 
-Damit hat der erste sichtbare Paint bereits die richtige Branding-Farbe.
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-## 2. Loader neutral machen
-### `src/components/ProtectedRoute.tsx`
-Aktuell nutzt der Spinner `border-primary` und ist deshalb zuerst blau.
+## Was wurde gemacht
 
-Geplante Anpassung:
-- Für den Auth-/Role-Loader eine neutrale Farbe verwenden, z. B. Grau/Foreground mit Opacity
-- Kein `primary`, solange Branding noch nicht bekannt ist
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-Damit sieht der Mitarbeiter nie mehr die blaue Standardfarbe vor dem Branding.
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
-## 3. Sidebar/Logo erst nach vollständigem Ready rendern
-### `src/components/mitarbeiter/MitarbeiterSidebar.tsx`
-Die Sidebar soll nicht mehr „halb geladen“ erscheinen.
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
 
-Geplante Wirkung:
-- Kein Skeleton mehr sichtbar beim initialen Panel-Start
-- Kein kurzes Aufblitzen des Arbeitsvertrag-Menüpunkts
-- Kein leeres oder verspätet erscheinendes Logo
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
 
-Die Sidebar wird einfach erst dann gemountet, wenn `panelReady === true`.
+---
 
-## Technische Details
-Root Cause:
-```text
-fetchData -> setBranding(...)
-         -> setLoading(false)
-         -> React rendert Panel
-         -> useEffect setzt erst danach --primary
-         -> Browser zeigt einen Frame mit Default-Blau
-```
+# Vergütungsmodell pro Branding (abgeschlossen)
 
-Neue Reihenfolge:
-```text
-fetchData
--> Branding laden
--> brand_color in HSL umrechnen
--> Logo preloaden
--> Branding-CSS vor Paint vorbereiten
--> panelReady = true
--> Erst jetzt Mitarbeiter-Panel rendern
-```
+## Was wurde gemacht
 
-## Zusatz: aktueller Build-Blocker
-Beim Umsetzen sollte auch der bestehende Build-Fehler mit TipTap bereinigt werden:
-- `package.json` enthält die TipTap-Dependencies bereits
-- `package-lock.json` scheint aber noch nicht synchron zu sein
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
 
-Deshalb im gleichen Schritt:
-- Lockfile sauber synchronisieren, damit die TS2307-Fehler für
-  - `@tiptap/react`
-  - `@tiptap/starter-kit`
-  - `@tiptap/extension-underline`
-  verschwinden
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
 
-## Ergebnis
-Nach der Umsetzung:
-- kein blaues Default-Branding mehr beim Login
-- kein kurzes Aufblitzen vom Arbeitsvertrag-Menüpunkt
-- kein verspätet ladendes Branding-Logo
-- stattdessen erst neutraler Spinner, dann sofort das vollständig gebrandete Mitarbeiter-Panel
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
