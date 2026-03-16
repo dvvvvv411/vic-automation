@@ -381,7 +381,17 @@ const MeineDaten = () => {
               onClick={async () => {
                 const el = document.getElementById("contract-pdf-content");
                 if (!el) return;
+                const dialogEl = el.closest('[class*="max-h-"]') as HTMLElement | null;
+                const originalStyles = dialogEl ? { maxHeight: dialogEl.style.maxHeight, overflow: dialogEl.style.overflow } : null;
+                if (dialogEl) {
+                  dialogEl.style.maxHeight = "none";
+                  dialogEl.style.overflow = "visible";
+                }
                 const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+                if (dialogEl && originalStyles) {
+                  dialogEl.style.maxHeight = originalStyles.maxHeight;
+                  dialogEl.style.overflow = originalStyles.overflow;
+                }
                 const pdf = new jsPDF("p", "mm", "a4");
                 const pdfWidth = pdf.internal.pageSize.getWidth();
                 const A4_HEIGHT_PX = (canvas.width * 297) / 210;
