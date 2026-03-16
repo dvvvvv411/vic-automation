@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useOutletContext } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,12 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { CalendarIcon, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsUpDown, Upload, X } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { CalendarIcon, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsUpDown, Upload, X, FileText, PenTool } from "lucide-react";
 import { format, isBefore, startOfDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -61,27 +66,27 @@ const NATIONALITIES = [
   "Zentralafrikanisch", "Zyprisch",
 ];
 
-const STEPS = [
-  "Persönliche Informationen",
-  "Steuerliche Angaben",
-  "Bankverbindung",
-  "Ausweisdokumente",
-  "Zusammenfassung",
-];
-
 interface ContextType {
-  contract: { id: string; first_name: string | null; application_id: string | null } | null;
-  branding: { brand_color: string | null } | null;
+  contract: { id: string; first_name: string | null; application_id: string | null; branding_id?: string | null } | null;
+  branding: { brand_color: string | null; signature_image_url?: string | null; signer_name?: string | null; signer_title?: string | null; company_name?: string } | null;
   loading: boolean;
 }
 
 export default function MitarbeiterArbeitsvertrag() {
   const { contract } = useOutletContext<ContextType>();
-  const [step, setStep] = useState(0);
+  // step: -1 = template selection, 0-3 = data entry, 4 = summary, 5 = contract preview
+  const [step, setStep] = useState(-1);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [sigDialogOpen, setSigDialogOpen] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [brandingData, setBrandingData] = useState<any>(null);
 
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: "", phone: "",
@@ -100,35 +105,66 @@ export default function MitarbeiterArbeitsvertrag() {
   const [idBackPreview, setIdBackPreview] = useState<string | null>(null);
   const [nationalityOpen, setNationalityOpen] = useState(false);
 
-  // Pre-fill from contract data
-  useEffect(() => {
-    if (!contract) {
-      setLoadingData(false);
-      return;
-    }
+  const STEPS = [
+    "Vorlage wählen",
+    "Persönliche Informationen",
+    "Steuerliche Angaben",
+    "Bankverbindung",
+    "Ausweisdokumente",
+    "Zusammenfassung",
+    "Vertragsvorschau",
+  ];
 
-    const fetchContract = async () => {
-      const { data } = await supabase
+  useEffect(() => {
+    if (!contract) { setLoadingData(false); return; }
+
+    const fetchData = async () => {
+      const { data: contractData } = await supabase
         .from("employment_contracts")
-        .select("first_name, last_name, email, phone, submitted_at")
+        .select("first_name, last_name, email, phone, submitted_at, branding_id")
         .eq("id", contract.id)
         .maybeSingle();
 
-      if (data?.submitted_at) {
+      if (contractData?.submitted_at) {
         setAlreadySubmitted(true);
-      } else if (data) {
+        setLoadingData(false);
+        return;
+      }
+
+      if (contractData) {
         setForm(prev => ({
           ...prev,
-          first_name: data.first_name || "",
-          last_name: data.last_name || "",
-          email: data.email || "",
-          phone: data.phone || "",
+          first_name: contractData.first_name || "",
+          last_name: contractData.last_name || "",
+          email: contractData.email || "",
+          phone: contractData.phone || "",
         }));
       }
+
+      // Fetch templates for this branding
+      const brandingId = contractData?.branding_id || (contract as any).branding_id;
+      if (brandingId) {
+        const { data: tpls } = await supabase
+          .from("contract_templates" as any)
+          .select("*")
+          .eq("branding_id", brandingId)
+          .eq("is_active", true)
+          .order("employment_type");
+        setTemplates(tpls || []);
+
+        // Get branding signature info
+        const { data: bd } = await supabase
+          .from("brandings")
+          .select("signature_image_url, signer_name, signer_title, company_name")
+          .eq("id", brandingId)
+          .maybeSingle();
+        setBrandingData(bd);
+      }
+
       setLoadingData(false);
     };
 
-    fetchContract();
+    fetchData();
   }, [contract]);
 
   if (loadingData) {
@@ -165,11 +201,14 @@ export default function MitarbeiterArbeitsvertrag() {
 
   const updateForm = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
 
+  const dataStep = step - 1; // Offset because step 0 is template selection
+
   const isStepValid = () => {
+    if (step === -1) return !!selectedTemplate;
     if (step === 0) {
       const bdMatch = form.birth_date.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
       const bdValid = bdMatch ? !isNaN(new Date(`${bdMatch[3]}-${bdMatch[2]}-${bdMatch[1]}`).getTime()) : false;
-      return form.first_name && form.last_name && form.email && form.phone && bdValid && form.birth_place && form.nationality && form.street && form.zip_code && form.city && form.marital_status && form.employment_type && form.desired_start_date;
+      return form.first_name && form.last_name && form.email && form.phone && bdValid && form.birth_place && form.nationality && form.street && form.zip_code && form.city && form.marital_status && form.desired_start_date;
     }
     if (step === 1) return form.social_security_number && form.tax_id && form.health_insurance;
     if (step === 2) return form.iban && form.bic && form.bank_name;
@@ -179,16 +218,93 @@ export default function MitarbeiterArbeitsvertrag() {
 
   const handleFileChange = (side: "front" | "back", file: File | null) => {
     if (!file) return;
-    if (side === "front") {
-      setIdFrontFile(file);
-      setIdFrontPreview(URL.createObjectURL(file));
-    } else {
-      setIdBackFile(file);
-      setIdBackPreview(URL.createObjectURL(file));
-    }
+    if (side === "front") { setIdFrontFile(file); setIdFrontPreview(URL.createObjectURL(file)); }
+    else { setIdBackFile(file); setIdBackPreview(URL.createObjectURL(file)); }
   };
 
-  const handleSubmit = async () => {
+  const replaceTemplatePlaceholders = (content: string) => {
+    const replacements: Record<string, string> = {
+      vorname: form.first_name,
+      nachname: form.last_name,
+      name: `${form.first_name} ${form.last_name}`,
+      email: form.email,
+      telefon: form.phone,
+      geburtsdatum: form.birth_date,
+      geburtsort: form.birth_place,
+      nationalitaet: form.nationality,
+      strasse: form.street,
+      plz: form.zip_code,
+      stadt: form.city,
+      familienstand: form.marital_status,
+      startdatum: form.desired_start_date ? format(form.desired_start_date, "dd.MM.yyyy") : "",
+      gehalt: selectedTemplate?.salary ? `${selectedTemplate.salary} €` : "",
+      anstellungsart: selectedTemplate?.employment_type || "",
+      firma: brandingData?.company_name || "",
+    };
+
+    let result = content;
+    for (const [key, value] of Object.entries(replacements)) {
+      result = result.replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "gi"), value);
+    }
+    return result;
+  };
+
+  // Canvas signing
+  const initCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "#1a1a2e";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+  };
+
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDrawing(true);
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    const rect = canvas.getBoundingClientRect();
+    const x = ("touches" in e) ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = ("touches" in e) ? e.touches[0].clientY - rect.left : e.clientY - rect.top;
+    ctx.beginPath();
+    ctx.moveTo(x * (canvas.width / rect.width), y * (canvas.height / rect.height));
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d")!;
+    const rect = canvas.getBoundingClientRect();
+    const x = ("touches" in e) ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = ("touches" in e) ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    ctx.lineTo(x * (canvas.width / rect.width), y * (canvas.height / rect.height));
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const handleSign = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const data = canvas.toDataURL("image/png");
+    setSignatureData(data);
+    setSigDialogOpen(false);
+    // Now submit
+    await handleSubmit(data);
+  };
+
+  const handleSubmit = async (sigData: string) => {
     setSubmitting(true);
     try {
       const uploadFile = async (file: File, prefix: string) => {
@@ -216,7 +332,7 @@ export default function MitarbeiterArbeitsvertrag() {
         _zip_code: form.zip_code,
         _city: form.city,
         _marital_status: form.marital_status,
-        _employment_type: form.employment_type,
+        _employment_type: selectedTemplate?.employment_type || form.employment_type,
         _desired_start_date: format(form.desired_start_date!, "yyyy-MM-dd"),
         _social_security_number: form.social_security_number,
         _tax_id: form.tax_id,
@@ -230,10 +346,19 @@ export default function MitarbeiterArbeitsvertrag() {
 
       if (rpcError) throw rpcError;
 
+      // Save signature_data and template_id
+      await supabase
+        .from("employment_contracts")
+        .update({
+          signature_data: sigData,
+          template_id: selectedTemplate?.id || null,
+        } as any)
+        .eq("id", contract.id);
+
       await sendTelegram("vertrag_eingereicht", `📋 Arbeitsvertrag eingereicht\n\nName: ${form.first_name} ${form.last_name}`);
 
       setSubmitted(true);
-      toast.success("Daten erfolgreich eingereicht!");
+      toast.success("Vertrag erfolgreich eingereicht!");
     } catch (err: any) {
       toast.error("Fehler beim Einreichen: " + (err.message || "Unbekannter Fehler"));
     } finally {
@@ -246,8 +371,7 @@ export default function MitarbeiterArbeitsvertrag() {
   };
 
   const DatePickerField = ({ label, value, onChange, disablePast = false }: {
-    label: string; value: Date | null; onChange: (d: Date | undefined) => void;
-    disablePast?: boolean;
+    label: string; value: Date | null; onChange: (d: Date | undefined) => void; disablePast?: boolean;
   }) => (
     <div className="space-y-2">
       <Label>{label} <span className="text-destructive">*</span></Label>
@@ -273,38 +397,82 @@ export default function MitarbeiterArbeitsvertrag() {
     </div>
   );
 
+  const currentStepIndex = step + 1; // For stepper display (0 = template, 1-4 = data, 5 = summary, 6 = preview)
+  const totalSteps = templates.length > 0 ? 7 : 6;
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="bg-background rounded-xl border border-border shadow-sm overflow-hidden">
         {/* Stepper */}
         <div className="p-6 pb-4">
           <div className="flex items-center mb-6">
-            {STEPS.map((s, i) => (
+            {(templates.length > 0 ? STEPS : STEPS.slice(1)).map((s, i) => (
               <React.Fragment key={i}>
                 <div
                   className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors shrink-0",
-                    i <= step ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/30 text-muted-foreground bg-background"
+                    i <= currentStepIndex ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/30 text-muted-foreground bg-background"
                   )}
                 >
-                  {i < step ? "✓" : i + 1}
+                  {i < currentStepIndex ? "✓" : i + 1}
                 </div>
-                {i < STEPS.length - 1 && (
-                  <div className={cn("h-0.5 flex-1 mx-1", i < step ? "bg-primary" : "bg-border")} />
+                {i < (templates.length > 0 ? STEPS.length : STEPS.length - 1) - 1 && (
+                  <div className={cn("h-0.5 flex-1 mx-1", i < currentStepIndex ? "bg-primary" : "bg-border")} />
                 )}
               </React.Fragment>
             ))}
           </div>
-          <h2 className="text-xl font-semibold text-foreground">{STEPS[step]}</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {step === 2 ? "Bitte gib deine Bankverbindung für die Gehaltsauszahlung an." : step < 4 ? "Bitte fülle alle Pflichtfelder aus." : "Bitte überprüfe deine Angaben."}
-          </p>
+          <h2 className="text-xl font-semibold text-foreground">
+            {templates.length > 0 ? STEPS[currentStepIndex] : STEPS[currentStepIndex + 1]}
+          </h2>
         </div>
 
         <div className="border-t border-border mx-6" />
 
         <div className="p-6 space-y-4">
-          {/* Step 1: Personal */}
+          {/* Step -1: Template Selection */}
+          {step === -1 && templates.length > 0 && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">Wähle die Vertragsvorlage, die für dich zutrifft.</p>
+              <div className="grid gap-3">
+                {templates.map((t: any) => (
+                  <Card
+                    key={t.id}
+                    className={cn(
+                      "cursor-pointer transition-all hover:shadow-md",
+                      selectedTemplate?.id === t.id ? "ring-2 ring-primary border-primary" : ""
+                    )}
+                    onClick={() => {
+                      setSelectedTemplate(t);
+                      updateForm("employment_type", t.employment_type);
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-semibold text-foreground">{t.title}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline">{employmentLabels[t.employment_type] || t.employment_type}</Badge>
+                            {t.salary && <span className="text-sm text-muted-foreground">{t.salary} € / Monat</span>}
+                          </div>
+                        </div>
+                        {selectedTemplate?.id === t.id && (
+                          <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                            <Check className="h-4 w-4 text-primary-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      {t.content && (
+                        <div className="mt-3 text-xs text-muted-foreground line-clamp-3 prose prose-sm" dangerouslySetInnerHTML={{ __html: t.content }} />
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 0: Personal */}
           {step === 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -347,12 +515,7 @@ export default function MitarbeiterArbeitsvertrag() {
                 <Label>Nationalität <span className="text-destructive">*</span></Label>
                 <Popover open={nationalityOpen} onOpenChange={setNationalityOpen}>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={nationalityOpen}
-                      className={cn("w-full justify-between font-normal", form.nationality ? "border-green-500" : "text-muted-foreground")}
-                    >
+                    <Button variant="outline" role="combobox" className={cn("w-full justify-between font-normal", form.nationality ? "border-green-500" : "text-muted-foreground")}>
                       {form.nationality || "Nationalität wählen"}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -364,14 +527,7 @@ export default function MitarbeiterArbeitsvertrag() {
                         <CommandEmpty>Keine Nationalität gefunden.</CommandEmpty>
                         <CommandGroup>
                           {NATIONALITIES.map((nat) => (
-                            <CommandItem
-                              key={nat}
-                              value={nat}
-                              onSelect={() => {
-                                updateForm("nationality", nat);
-                                setNationalityOpen(false);
-                              }}
-                            >
+                            <CommandItem key={nat} value={nat} onSelect={() => { updateForm("nationality", nat); setNationalityOpen(false); }}>
                               <Check className={cn("mr-2 h-4 w-4", form.nationality === nat ? "opacity-100" : "opacity-0")} />
                               {nat}
                             </CommandItem>
@@ -406,22 +562,24 @@ export default function MitarbeiterArbeitsvertrag() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Art der Beschäftigung <span className="text-destructive">*</span></Label>
-                <Select value={form.employment_type} onValueChange={v => updateForm("employment_type", v)}>
-                  <SelectTrigger className={cn(form.employment_type && "border-green-500")}><SelectValue placeholder="Bitte wählen" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="minijob">Minijob</SelectItem>
-                    <SelectItem value="teilzeit">Teilzeit</SelectItem>
-                    <SelectItem value="vollzeit">Vollzeit</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {!selectedTemplate && (
+                <div className="space-y-2">
+                  <Label>Art der Beschäftigung <span className="text-destructive">*</span></Label>
+                  <Select value={form.employment_type} onValueChange={v => updateForm("employment_type", v)}>
+                    <SelectTrigger className={cn(form.employment_type && "border-green-500")}><SelectValue placeholder="Bitte wählen" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="minijob">Minijob</SelectItem>
+                      <SelectItem value="teilzeit">Teilzeit</SelectItem>
+                      <SelectItem value="vollzeit">Vollzeit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <DatePickerField label="Gewünschtes Startdatum" value={form.desired_start_date} onChange={d => updateForm("desired_start_date", d || null)} disablePast />
             </div>
           )}
 
-          {/* Step 2: Tax */}
+          {/* Step 1: Tax */}
           {step === 1 && (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -439,7 +597,7 @@ export default function MitarbeiterArbeitsvertrag() {
             </div>
           )}
 
-          {/* Step 3: Bank */}
+          {/* Step 2: Bank */}
           {step === 2 && (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -457,7 +615,7 @@ export default function MitarbeiterArbeitsvertrag() {
             </div>
           )}
 
-          {/* Step 4: Documents */}
+          {/* Step 3: Documents */}
           {step === 3 && (
             <div className="grid grid-cols-2 gap-4">
               {(["front", "back"] as const).map((side) => {
@@ -488,7 +646,7 @@ export default function MitarbeiterArbeitsvertrag() {
             </div>
           )}
 
-          {/* Step 5: Summary */}
+          {/* Step 4: Summary */}
           {step === 4 && (
             <div className="space-y-4">
               <div className="bg-muted/30 rounded-lg p-4 space-y-1">
@@ -501,7 +659,7 @@ export default function MitarbeiterArbeitsvertrag() {
                 <SummaryRow label="Nationalität" value={form.nationality} />
                 <SummaryRow label="Adresse" value={`${form.street}, ${form.zip_code} ${form.city}`} />
                 <SummaryRow label="Familienstand" value={form.marital_status} />
-                <SummaryRow label="Beschäftigung" value={employmentLabels[form.employment_type] || form.employment_type} />
+                <SummaryRow label="Beschäftigung" value={employmentLabels[selectedTemplate?.employment_type || form.employment_type] || form.employment_type} />
                 <SummaryRow label="Startdatum" value={form.desired_start_date ? format(form.desired_start_date, "dd.MM.yyyy") : ""} />
               </div>
               <div className="bg-muted/30 rounded-lg p-4 space-y-1">
@@ -525,24 +683,97 @@ export default function MitarbeiterArbeitsvertrag() {
               </div>
             </div>
           )}
+
+          {/* Step 5: Contract Preview + Sign */}
+          {step === 5 && selectedTemplate && (
+            <div className="space-y-6">
+              <div className="border border-border rounded-lg p-6 bg-white prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: replaceTemplatePlaceholders(selectedTemplate.content) }} />
+              
+              {/* Company Signature */}
+              {brandingData?.signature_image_url && (
+                <div className="border-t border-border pt-4">
+                  <p className="text-xs text-muted-foreground mb-2">Firmenunterschrift</p>
+                  <img src={brandingData.signature_image_url} alt="Firmenunterschrift" className="h-16 object-contain" />
+                  <p className="text-sm font-medium mt-1">{brandingData.signer_name}</p>
+                  {brandingData.signer_title && <p className="text-xs text-muted-foreground">{brandingData.signer_title}</p>}
+                </div>
+              )}
+
+              <div className="flex justify-center">
+                <Button
+                  size="lg"
+                  onClick={() => {
+                    setSigDialogOpen(true);
+                    setTimeout(initCanvas, 100);
+                  }}
+                  disabled={submitting}
+                >
+                  <PenTool className="h-4 w-4 mr-2" /> Unterschreiben
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 5 without template: just submit */}
+          {step === 5 && !selectedTemplate && null}
         </div>
 
         {/* Navigation */}
         <div className="border-t border-border p-6 flex justify-between">
-          <Button variant="outline" onClick={() => setStep(s => s - 1)} disabled={step === 0}>
+          <Button variant="outline" onClick={() => setStep(s => s - 1)} disabled={step === (templates.length > 0 ? -1 : 0)}>
             <ChevronLeft className="h-4 w-4 mr-1" /> Zurück
           </Button>
-          {step < 4 ? (
-            <Button onClick={() => setStep(s => s + 1)} disabled={!isStepValid()}>
+          {step < (selectedTemplate ? 5 : 4) ? (
+            <Button onClick={() => {
+              if (step === -1 && !selectedTemplate && templates.length > 0) return;
+              if (step === -1 && templates.length === 0) { setStep(0); return; }
+              setStep(s => s + 1);
+            }} disabled={!isStepValid()}>
               Weiter <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
-          ) : (
-            <Button onClick={handleSubmit} disabled={submitting}>
+          ) : step === 4 && !selectedTemplate ? (
+            <Button onClick={() => handleSubmit("")} disabled={submitting}>
               {submitting ? "Wird eingereicht..." : "Daten einreichen"}
             </Button>
-          )}
+          ) : step === 4 && selectedTemplate ? (
+            <Button onClick={() => setStep(5)} disabled={!isStepValid()}>
+              Vertrag ansehen <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          ) : null}
         </div>
       </div>
+
+      {/* Signature Dialog */}
+      <Dialog open={sigDialogOpen} onOpenChange={setSigDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Unterschrift</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Bitte unterschreiben Sie im Feld unten mit der Maus oder dem Finger.</p>
+          <div className="border-2 border-border rounded-lg overflow-hidden bg-white">
+            <canvas
+              ref={canvasRef}
+              width={460}
+              height={200}
+              className="w-full cursor-crosshair touch-none"
+              onMouseDown={startDrawing}
+              onMouseMove={draw}
+              onMouseUp={stopDrawing}
+              onMouseLeave={stopDrawing}
+              onTouchStart={startDrawing}
+              onTouchMove={draw}
+              onTouchEnd={stopDrawing}
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={clearCanvas}>Löschen</Button>
+            <Button variant="outline" onClick={() => setSigDialogOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleSign} disabled={submitting}>
+              {submitting ? "Wird eingereicht..." : "Unterschreiben & Einreichen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
