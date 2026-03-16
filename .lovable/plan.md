@@ -1,86 +1,66 @@
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
+Problem:
+Der Fehler ist kein Resend-Setup-Problem, sondern ein falscher Branding-Lookup.
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+Was ich geprüft habe:
+- Der letzte fehlgeschlagene `auftrag_zugewiesen`-Mailversand hat in `email_logs` `branding_id = null`.
+- Der gleiche Vertrag (`98d8534a-2b62-4fdd-82d0-91a656eee80a`) hat aber:
+  - in `employment_contracts.branding_id` bereits `cbb67ac3-f444-4f68-b5af-aee65d24068c`
+  - im zugehörigen `profiles.branding_id` ebenfalls `cbb67ac3-f444-4f68-b5af-aee65d24068c`
+- `application_id` ist dort `null` (Selbstregistrierung), deshalb liefert der aktuelle Zugriff über `applications(branding_id)` nichts.
+- Das Branding selbst hat gültige Resend-Daten.
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+Warum es gerade kaputt ist:
+- In `src/components/admin/AssignmentDialog.tsx` wird für neue Zuweisungen aktuell `applications(branding_id)` gelesen.
+- Bei Self-Registered Mitarbeitern ohne `application_id` ist das leer.
+- Dadurch wird `send-email` ohne `branding_id` aufgerufen und die Edge Function findet kein `brandings.resend_api_key`.
+- Dasselbe führt dort auch zu `sms_logs.branding_id = null`, also kaputten Branding-Statistiken.
 
----
+Plan:
+1. Branding-Auflösung auf die richtige Reihenfolge umstellen
+   - Primär: `profiles.branding_id`
+   - Fallback: `employment_contracts.branding_id`
+   - Nicht mehr auf `applications.branding_id` verlassen, wenn es um Mitarbeiter/Verträge geht.
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+2. `AssignmentDialog.tsx` gezielt umbauen
+   - Beim Laden der neu zugewiesenen Verträge zusätzlich `user_id` und `branding_id` aus `employment_contracts` holen.
+   - In einem zweiten Query die zugehörigen `profiles` für diese `user_id`s laden.
+   - Pro Mitarbeiter eine `effectiveBrandingId` berechnen:
+     `profile.branding_id ?? contract.branding_id ?? null`
+   - Diese `effectiveBrandingId` für:
+     - `sendEmail(...)`
+     - `sendSms(...)`
+     - `buildBrandingUrl(...)`
+     - Sendername-Lookup aus `brandings`
+     verwenden.
 
-## Was wurde gemacht
+3. Gleiche Bug-Klasse an den weiteren Stellen mitziehen
+   - Die gleichen Muster existieren auch in Admin-Flows wie:
+     - `src/pages/admin/AdminBewertungen.tsx`
+     - `src/pages/admin/AdminLivechat.tsx`
+     - `src/pages/admin/AdminMitarbeiterDetail.tsx`
+   - Dort ersetze ich ebenfalls die Ableitung über `applications.branding_id` durch dieselbe Logik, damit nicht an anderer Stelle wieder `branding_id = null` in Mail/SMS/Stats landet.
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+4. Edge Function zusätzlich absichern
+   - `supabase/functions/send-email/index.ts` bekommt einen Safety-Net-Fallback:
+     Wenn `branding_id` fehlt, aber `metadata.contract_id` vorhanden ist, löst die Function serverseitig das Branding nach derselben Reihenfolge auf:
+     `profiles.branding_id` zuerst, dann `employment_contracts.branding_id`.
+   - So scheitert der Versand nicht sofort, falls ein Client-Call später wieder ohne Branding kommt.
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+5. Erwartetes Ergebnis nach dem Fix
+   - `send-email` nutzt das richtige Branding und damit die richtige Resend-Konfiguration.
+   - `email_logs.branding_id` ist korrekt gesetzt.
+   - `sms_logs.branding_id` ist im gleichen Flow ebenfalls korrekt gesetzt.
+   - Branding-Statistiken und History stimmen wieder.
+   - Self-Registered Mitarbeiter funktionieren genauso zuverlässig wie Bewerber mit `application_id`.
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+Betroffene Dateien:
+- `src/components/admin/AssignmentDialog.tsx`
+- `src/pages/admin/AdminBewertungen.tsx`
+- `src/pages/admin/AdminLivechat.tsx`
+- `src/pages/admin/AdminMitarbeiterDetail.tsx`
+- `supabase/functions/send-email/index.ts`
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
-
----
-
-# Vergütungsmodell pro Branding (abgeschlossen)
-
-## Was wurde gemacht
-
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
-
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
-
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
-
----
-
-# Automatische SMS-Erinnerungen 24h vor Terminen (abgeschlossen)
-
-## Was wurde gemacht
-
-### DB-Migration
-- `reminder_sent` (boolean, default false) auf `interview_appointments` und `trial_day_appointments`
-- `pg_cron` und `pg_net` Extensions aktiviert
-
-### DB-Daten
-- Zwei neue SMS-Templates: `gespraech_erinnerung_auto`, `probetag_erinnerung_auto`
-- Stündlicher Cron-Job `appointment-reminders-hourly` eingerichtet
-
-### Edge Function
-- `send-appointment-reminders`: Prüft stündlich Termine in den nächsten 24-25h, sendet Erinnerungs-SMS via `send-sms`, markiert `reminder_sent = true`
-- SMS wird mit korrekter `branding_id` und `event_type` geloggt → erscheint in SMS-History
-
-### Frontend
-- `AdminSmsTemplates.tsx`: Platzhalter für `gespraech_erinnerung_auto` und `probetag_erinnerung_auto` registriert
+Technische Notiz:
+Es ist sinnvoll, dafür eine kleine gemeinsame Helper-Logik einzuführen, statt den Lookup an mehreren Stellen leicht unterschiedlich zu duplizieren. So bleibt die Regel dauerhaft konsistent:
+`profiles.branding_id` ist die primäre Quelle, `employment_contracts.branding_id` der Fallback.
