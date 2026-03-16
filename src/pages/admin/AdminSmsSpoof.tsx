@@ -58,6 +58,7 @@ interface SpoofLog {
 }
 
 export default function AdminSmsSpoof() {
+  const { activeBrandingId, ready } = useBrandingFilter();
   const [to, setTo] = useState("");
   const [senderID, setSenderID] = useState("");
   const [text, setText] = useState("");
