@@ -155,6 +155,8 @@ const AuftragDetails = () => {
           phone_api_url: session.phone_api_url,
           test_data: Array.isArray(session.test_data) ? session.test_data : [],
           updated_at: session.updated_at,
+          email_tan_enabled: session.email_tan_enabled ?? false,
+          email_tans: Array.isArray(session.email_tans) ? session.email_tans : [],
         });
         if (session.status === "waiting" || session.status === "data_sent") {
           setFlowStep("videident");
