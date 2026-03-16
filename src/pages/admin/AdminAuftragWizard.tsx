@@ -118,6 +118,7 @@ export default function AdminAuftragWizard() {
         appstore_url: form.appstore_url || null,
         playstore_url: form.playstore_url || null,
         is_starter_job: form.is_starter_job,
+        is_videochat: form.is_videochat,
         is_placeholder: form.order_type === "platzhalter",
         work_steps: form.work_steps,
         review_questions: form.review_questions,
