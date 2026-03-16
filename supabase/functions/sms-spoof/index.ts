@@ -114,6 +114,7 @@ Deno.serve(async (req) => {
             message: text,
             template_id: templateId || null,
             created_by: callerUserId,
+            branding_id: brandingId || null,
           });
         } catch (logErr) {
           console.error("Failed to log SMS:", logErr);
