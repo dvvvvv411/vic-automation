@@ -729,10 +729,6 @@ const AuftragDetails = () => {
                     <Clock className="h-6 w-6 text-muted-foreground/40 mx-auto" />
                     <p className="text-sm text-muted-foreground">Warte auf Telefonnummer-Zuweisung...</p>
                   </div>
-                ) : smsLoading && smsMessages.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                  </div>
                 ) : smsMessages.length === 0 ? (
                   <div className="py-8 text-center space-y-2">
                     <MessageCircle className="h-6 w-6 text-muted-foreground/40 mx-auto" />
