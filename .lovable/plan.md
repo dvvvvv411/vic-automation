@@ -1,86 +1,41 @@
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+## Plan: Video-Chat Hinweistext aktualisieren
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+**Datei:** `src/pages/mitarbeiter/AuftragDetails.tsx` (Zeilen 630-633)
 
----
+Den bestehenden Text in der Card (Zeilen 630-633) ersetzen durch den neuen, ausfuehrlicheren Inhalt mit drei Abschnitten:
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+1. **"Gesetzlich vorgeschriebene Fragen im Chat"** – neuer Text mit Beispielfragen als Zitate und Hinweis auf Bewertungsbogen
+2. **"Wichtige Hinweise zur Durchführung"** – neuer Abschnitt mit drei Punkten (ruhige Umgebung, Anweisungen folgen, Probleme notieren)
 
-## Was wurde gemacht
+Konkret werden Zeilen 630-633 ersetzt durch:
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+```tsx
+<h4 className="font-semibold text-foreground">Gesetzlich vorgeschriebene Fragen im Chat</h4>
+<p className="text-sm text-muted-foreground leading-relaxed">
+  Während des Video-Chats kann dir der/die Mitarbeiter:in Sicherheitsfragen stellen, z.&nbsp;B.:
+</p>
+<blockquote className="text-sm italic text-muted-foreground border-l-2 border-primary/30 pl-3">
+  „Wirst du gezwungen, einen Account zu eröffnen?"
+</blockquote>
+<blockquote className="text-sm italic text-muted-foreground border-l-2 border-primary/30 pl-3">
+  „Steht jemand bei dir, der dich zur Anmeldung drängt?"
+</blockquote>
+<p className="text-sm text-muted-foreground leading-relaxed font-medium">
+  Diese Fragen musst du immer mit „Nein" beantworten.
+</p>
+<p className="text-sm text-muted-foreground leading-relaxed">
+  Falls keine solchen Fragen gestellt werden, vermerke das bitte im Bewertungsbogen.
+</p>
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+<h4 className="font-semibold text-foreground pt-2">Wichtige Hinweise zur Durchführung</h4>
+<ul className="text-sm text-muted-foreground leading-relaxed space-y-2 list-disc list-inside">
+  <li>Wähle eine ruhige Umgebung mit guter Beleuchtung, funktionierender Webcam und stabiler Internetverbindung.</li>
+  <li>Folge den Anweisungen des Video-Chat-Systems bzw. der Mitarbeiterin oder des Mitarbeiters Schritt für Schritt.</li>
+  <li>Sollte etwas unklar oder technisch problematisch sein, notiere es bitte im Bewertungsbogen.</li>
+</ul>
+```
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+Keine weiteren Dateien betroffen.
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
-
----
-
-# Vergütungsmodell pro Branding (abgeschlossen)
-
-## Was wurde gemacht
-
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
-
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
-
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
-
----
-
-# Automatische SMS-Erinnerungen 24h vor Terminen (abgeschlossen)
-
-## Was wurde gemacht
-
-### DB-Migration
-- `reminder_sent` (boolean, default false) auf `interview_appointments` und `trial_day_appointments`
-- `pg_cron` und `pg_net` Extensions aktiviert
-
-### DB-Daten
-- Zwei neue SMS-Templates: `gespraech_erinnerung_auto`, `probetag_erinnerung_auto`
-- Stündlicher Cron-Job `appointment-reminders-hourly` eingerichtet
-
-### Edge Function
-- `send-appointment-reminders`: Prüft stündlich Termine in den nächsten 24-25h, sendet Erinnerungs-SMS via `send-sms`, markiert `reminder_sent = true`
-- SMS wird mit korrekter `branding_id` und `event_type` geloggt → erscheint in SMS-History
-
-### Frontend
-- `AdminSmsTemplates.tsx`: Platzhalter für `gespraech_erinnerung_auto` und `probetag_erinnerung_auto` registriert
