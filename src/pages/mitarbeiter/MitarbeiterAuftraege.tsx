@@ -92,8 +92,11 @@ const StatusButton = ({ status, orderId, navigate, hasIdentSession }: {
           size="sm"
           onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
         >
-          Auftrag starten
-          <ExternalLink className="h-3.5 w-3.5 ml-1.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
+          {hasIdentSession ? "Auftrag fortführen" : "Auftrag starten"}
+          {hasIdentSession 
+            ? <Play className="h-3.5 w-3.5 ml-1.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
+            : <ExternalLink className="h-3.5 w-3.5 ml-1.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
+          }
         </Button>
       );
   }
