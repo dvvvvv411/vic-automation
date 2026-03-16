@@ -478,19 +478,21 @@ export default function AdminAuftragWizard() {
           <ArrowLeft className="h-4 w-4 mr-1.5" /> Zurück
         </Button>
 
-        {step < STEPS.length - 1 ? (
-          <Button onClick={() => setStep(step + 1)}>
-            Weiter →
-          </Button>
-        ) : (
+        <div className="flex items-center gap-2">
           <Button
+            variant={step < STEPS.length - 1 ? "secondary" : "default"}
             disabled={!canSave || saveMutation.isPending}
             onClick={() => saveMutation.mutate()}
           >
             <CheckCircle className="h-4 w-4 mr-1.5" />
             {saveMutation.isPending ? "Speichern..." : isEditing ? "Auftrag aktualisieren" : "Auftrag speichern"}
           </Button>
-        )}
+          {step < STEPS.length - 1 && (
+            <Button onClick={() => setStep(step + 1)}>
+              Weiter →
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
