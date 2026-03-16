@@ -119,10 +119,12 @@ export default function AdminSmsSpoof() {
   };
 
   const fetchTemplates = async () => {
-    const { data } = await supabase
+    let q = supabase
       .from("sms_spoof_templates" as any)
       .select("*")
       .order("created_at", { ascending: false });
+    if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
+    const { data } = await q;
     if (data) setTemplates(data as any);
   };
 
