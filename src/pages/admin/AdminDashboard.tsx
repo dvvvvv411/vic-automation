@@ -20,7 +20,6 @@ const STAT_BORDERS = [
   "border-t-[hsl(var(--stat-orange))]",
   "border-t-[hsl(var(--stat-violet))]",
   "border-t-[hsl(var(--stat-rose))]",
-  "border-t-[hsl(var(--stat-teal,180_60%_45%))]",
 ];
 
 export default function AdminDashboard() {
