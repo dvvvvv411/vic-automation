@@ -463,7 +463,18 @@ export default function MitarbeiterArbeitsvertrag() {
                         )}
                       </div>
                       {t.content && (
-                        <div className="mt-3 text-xs text-muted-foreground line-clamp-3 prose prose-sm" dangerouslySetInnerHTML={{ __html: t.content }} />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-3 gap-1.5 text-muted-foreground hover:text-foreground px-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewTemplate(t);
+                          }}
+                        >
+                          <FileText className="h-4 w-4" />
+                          Vorschau
+                        </Button>
                       )}
                     </CardContent>
                   </Card>
