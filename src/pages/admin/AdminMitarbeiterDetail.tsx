@@ -27,7 +27,7 @@ import {
   ArrowLeft, MessageCircle, ClipboardList, CheckCircle, XCircle, Lock, Unlock,
   Star, ChevronDown, Copy, Eye, EyeOff, Pencil, Save, X, User, CreditCard,
   KeyRound, StickyNote, IdCard, ShoppingBag, ImageIcon, Plus, Package,
-  Clock, CheckCheck,
+  Clock, CheckCheck, FileText,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
