@@ -37,9 +37,14 @@ export function MitarbeiterSidebar({ branding, brandingLoading, contractStatus }
   const { user, signOut } = useAuth();
   const { isMobile, setOpenMobile } = useSidebar();
 
-  const filteredNavItems = navItems.filter(
-    (item) => !(item.url === "/mitarbeiter/arbeitsvertrag" && contractStatus === "genehmigt")
-  );
+  // Only show Arbeitsvertrag link when contractStatus is explicitly known and not "genehmigt"
+  const filteredNavItems = navItems.filter((item) => {
+    if (item.url === "/mitarbeiter/arbeitsvertrag") {
+      // Hide if status unknown (undefined) OR already approved
+      return contractStatus !== undefined && contractStatus !== "genehmigt";
+    }
+    return true;
+  });
 
   const userInitial = user?.email?.charAt(0).toUpperCase() || "?";
 
