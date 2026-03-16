@@ -520,6 +520,69 @@ function IdentDetailContent({
           </CardContent>
         </Card>
       </div>
+
+        {/* Mitarbeiterdaten Card */}
+        {contractDetails && (
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <User className="h-4 w-4" /> Mitarbeiterdaten
+              </h4>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                {[
+                  ["Vorname", contractDetails.first_name],
+                  ["Nachname", contractDetails.last_name],
+                  ["E-Mail", contractDetails.email],
+                  ["Telefon", contractDetails.phone],
+                  ["Geburtsdatum", contractDetails.birth_date ? format(new Date(contractDetails.birth_date), "dd.MM.yyyy") : null],
+                  ["Geburtsort", contractDetails.birth_place],
+                  ["Nationalität", contractDetails.nationality],
+                  ["Straße", contractDetails.street],
+                  ["PLZ & Stadt", [contractDetails.zip_code, contractDetails.city].filter(Boolean).join(" ") || null],
+                  ["Familienstand", contractDetails.marital_status],
+                ].map(([label, value]) => (
+                  <div key={label as string}>
+                    <span className="text-muted-foreground">{label}</span>
+                    <p className="font-medium text-foreground">{(value as string) || "–"}</p>
+                  </div>
+                ))}
+              </div>
+
+              {(contractDetails.id_front_url || contractDetails.id_back_url) && (
+                <>
+                  <Separator />
+                  <Dialog open={idDialogOpen} onOpenChange={setIdDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full gap-2">
+                        <CreditCard className="h-4 w-4" /> Personalausweis anzeigen
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Personalausweis</DialogTitle>
+                      </DialogHeader>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {contractDetails.id_front_url && (
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-2">Vorderseite</p>
+                            <img src={contractDetails.id_front_url} alt="Ausweis Vorderseite" className="rounded-lg border w-full object-contain" />
+                          </div>
+                        )}
+                        {contractDetails.id_back_url && (
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-2">Rückseite</p>
+                            <img src={contractDetails.id_back_url} alt="Ausweis Rückseite" className="rounded-lg border w-full object-contain" />
+                          </div>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
