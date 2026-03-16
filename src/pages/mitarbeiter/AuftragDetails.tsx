@@ -60,6 +60,8 @@ interface IdentSession {
   phone_api_url: string | null;
   test_data: Array<{ label: string; value: string }>;
   updated_at: string;
+  email_tan_enabled: boolean;
+  email_tans: Array<{ code: string; created_at: string }>;
 }
 
 interface AnosimSms {
