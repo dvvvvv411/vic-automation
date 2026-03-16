@@ -73,6 +73,7 @@ const navGroups = [
       { title: "SMS", url: "/admin/sms", icon: Smartphone },
       { title: "SMS History", url: "/admin/sms-history", icon: History },
       { title: "Telegram", url: "/admin/telegram", icon: Send },
+      { title: "Vertragsvorlagen", url: "/admin/vertragsvorlagen", icon: ScrollText },
       { title: "Zeitplan", url: "/admin/zeitplan", icon: Clock },
       { title: "Kunden", url: "/admin/kunden", icon: UserPlus },
     ],

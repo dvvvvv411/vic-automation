@@ -98,6 +98,9 @@ const App = () => (
               <Route path="telefonnummern" element={<AdminTelefonnummern />} />
               <Route path="sms-spoof" element={<AdminSmsSpoof />} />
               <Route path="sms-history" element={<AdminSmsHistory />} />
+              <Route path="vertragsvorlagen" element={<AdminVertragsvorlagen />} />
+              <Route path="vertragsvorlagen/neu" element={<AdminVertragsvorlageForm />} />
+              <Route path="vertragsvorlagen/:id" element={<AdminVertragsvorlageForm />} />
               <Route path="kunden" element={<AdminKunden />} />
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
