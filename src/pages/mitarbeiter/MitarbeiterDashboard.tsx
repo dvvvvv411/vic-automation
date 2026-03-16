@@ -30,6 +30,7 @@ interface Order {
 
 interface OrderWithStatus extends Order {
   assignment_status: string;
+  hasIdentSession: boolean;
 }
 
 function getGreeting(): string {
