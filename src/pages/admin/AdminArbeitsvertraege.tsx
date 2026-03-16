@@ -19,7 +19,7 @@ import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const PAGE_SIZE = 20;
 
-type TabValue = "all" | "offen" | "eingereicht" | "genehmigt" | "unterzeichnet";
+type TabValue = "all" | "offen" | "eingereicht" | "genehmigt";
 
 export default function AdminArbeitsvertraege() {
   const [page, setPage] = useState(0);
@@ -36,41 +36,26 @@ export default function AdminArbeitsvertraege() {
     queryKey: ["arbeitsvertraege", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      const { data: appointments, error } = await supabase
-        .from("interview_appointments")
-        .select("*, applications!inner(id, first_name, last_name, email, phone, branding_id, brandings(id, company_name))")
-        .eq("status", "erfolgreich")
-        .eq("applications.branding_id", activeBrandingId!)
+      const { data: contracts, error } = await supabase
+        .from("employment_contracts")
+        .select("*, applications(id, first_name, last_name, email, phone, branding_id, brandings(id, company_name))")
+        .eq("branding_id", activeBrandingId!)
+        .neq("status", "offen")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-
-      const appIds = (appointments || []).map((a: any) => a.applications?.id).filter(Boolean);
-      let contracts: any[] = [];
-      if (appIds.length > 0) {
-        const { data: c } = await supabase
-          .from("employment_contracts")
-          .select("*")
-          .in("application_id", appIds);
-        contracts = c || [];
-      }
-
-      return (appointments || []).map((apt: any) => {
-        const contract = contracts.find((c: any) => c.application_id === apt.applications?.id);
-        return { ...apt, contract };
-      });
+      return contracts || [];
     },
   });
 
   // Counts per status
   const counts = useMemo(() => {
-    if (!data) return { all: 0, offen: 0, eingereicht: 0, genehmigt: 0, unterzeichnet: 0 };
-    const c = { all: data.length, offen: 0, eingereicht: 0, genehmigt: 0, unterzeichnet: 0 };
+    if (!data) return { all: 0, offen: 0, eingereicht: 0, genehmigt: 0 };
+    const c = { all: data.length, offen: 0, eingereicht: 0, genehmigt: 0 };
     data.forEach((item: any) => {
-      const s = item.contract?.status;
-      if (s === "eingereicht") c.eingereicht++;
+      const s = item.status;
+      if (s === "eingereicht" || s === "unterzeichnet") c.eingereicht++;
       else if (s === "genehmigt") c.genehmigt++;
-      else if (s === "unterzeichnet") c.unterzeichnet++;
       else c.offen++;
     });
     return c;
@@ -85,18 +70,19 @@ export default function AdminArbeitsvertraege() {
     const filtered = activeTab === "all"
       ? data
       : data.filter((item: any) => {
-          const s = item.contract?.status;
+          const s = item.status;
           if (activeTab === "offen") return !s || s === "offen";
+          if (activeTab === "eingereicht") return s === "eingereicht" || s === "unterzeichnet";
           return s === activeTab;
         });
 
     return [...filtered].sort((a, b) => {
-      const rankA = statusOrder[a.contract?.status] ?? 3;
-      const rankB = statusOrder[b.contract?.status] ?? 3;
+      const rankA = statusOrder[a.status] ?? 3;
+      const rankB = statusOrder[b.status] ?? 3;
       if (rankA !== rankB) return rankA - rankB;
 
-      const dateA = a.contract?.desired_start_date ? new Date(a.contract.desired_start_date + "T00:00:00") : null;
-      const dateB = b.contract?.desired_start_date ? new Date(b.contract.desired_start_date + "T00:00:00") : null;
+      const dateA = a.desired_start_date ? new Date(a.desired_start_date + "T00:00:00") : null;
+      const dateB = b.desired_start_date ? new Date(b.desired_start_date + "T00:00:00") : null;
 
       if (!dateA && !dateB) return 0;
       if (!dateA) return 1;
@@ -155,15 +141,14 @@ export default function AdminArbeitsvertraege() {
     }
   };
 
-  const statusBadge = (contract: any) => {
-    if (!contract) return <Badge variant="outline">Offen</Badge>;
-    switch (contract.status) {
+  const statusBadge = (status: string) => {
+    switch (status) {
       case "eingereicht":
         return <Badge className="bg-yellow-500 text-white border-yellow-500">Eingereicht</Badge>;
-      case "genehmigt":
-        return <Badge className="bg-green-600 text-white border-green-600">Genehmigt</Badge>;
       case "unterzeichnet":
         return <Badge className="bg-blue-600 text-white border-blue-600">Unterzeichnet</Badge>;
+      case "genehmigt":
+        return <Badge className="bg-green-600 text-white border-green-600">Genehmigt</Badge>;
       default:
         return <Badge variant="outline">Offen</Badge>;
     }
@@ -213,7 +198,7 @@ export default function AdminArbeitsvertraege() {
               <TabsTrigger value="offen">Offen<TabBadge count={counts.offen} /></TabsTrigger>
               <TabsTrigger value="eingereicht">Eingereicht<TabBadge count={counts.eingereicht} /></TabsTrigger>
               <TabsTrigger value="genehmigt">Genehmigt<TabBadge count={counts.genehmigt} /></TabsTrigger>
-              <TabsTrigger value="unterzeichnet">Unterzeichnet<TabBadge count={counts.unterzeichnet} /></TabsTrigger>
+              
             </TabsList>
 
             {/* Single content area for all tabs since filtering is done via sortedItems */}
@@ -224,15 +209,15 @@ export default function AdminArbeitsvertraege() {
                 </div>
               ) : (
                 paginatedItems.map((item: any, i: number) => {
-                  const firstName = item.applications?.first_name || "";
-                  const lastName = item.applications?.last_name || "";
-                  const email = item.applications?.email || "";
-                  const phone = item.applications?.phone || "";
+                  const firstName = item.applications?.first_name || item.first_name || "";
+                  const lastName = item.applications?.last_name || item.last_name || "";
+                  const email = item.applications?.email || item.email || "";
+                  const phone = item.applications?.phone || item.phone || "";
                   const branding = item.applications?.brandings?.company_name || "";
-                  const startDate = item.contract?.desired_start_date
-                    ? format(new Date(item.contract.desired_start_date + "T00:00:00"), "dd. MMM yyyy", { locale: de })
+                  const startDate = item.desired_start_date
+                    ? format(new Date(item.desired_start_date + "T00:00:00"), "dd. MMM yyyy", { locale: de })
                     : null;
-                  const hasData = item.contract?.status === "eingereicht" || item.contract?.status === "genehmigt" || item.contract?.status === "unterzeichnet";
+                  const hasData = item.status === "eingereicht" || item.status === "genehmigt" || item.status === "unterzeichnet";
 
                   return (
                     <motion.div
@@ -251,7 +236,7 @@ export default function AdminArbeitsvertraege() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-foreground truncate">{firstName} {lastName}</span>
-                          {statusBadge(item.contract)}
+                          {statusBadge(item.status)}
                         </div>
                         <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
                           {email && (
@@ -289,8 +274,9 @@ export default function AdminArbeitsvertraege() {
                               size="icon"
                               className="h-8 w-8"
                               onClick={async () => {
-                                const brandingId = item.applications?.brandings?.id;
-                                const url = await buildBrandingUrl(brandingId, `/arbeitsvertrag/${item.applications?.id}`);
+                              const brandingId = item.applications?.brandings?.id || item.branding_id;
+                                const appId = item.applications?.id || item.application_id;
+                                const url = await buildBrandingUrl(brandingId, `/arbeitsvertrag/${appId}`);
                                 navigator.clipboard.writeText(url);
                                 toast.success("Link kopiert!");
                               }}
@@ -304,7 +290,7 @@ export default function AdminArbeitsvertraege() {
                         {hasData ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetails(item.contract)}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetails(item)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>

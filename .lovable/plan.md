@@ -1,50 +1,66 @@
 
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-# Fix: Self-registered contracts not visible in Admin Arbeitsverträge
+## Was wurde gemacht
 
-## Problem
-The query in `AdminArbeitsvertraege.tsx` only fetches contracts linked to `interview_appointments` via `applications`. Self-registered users (like `testeraccount@yopmail.com`) have `application_id = NULL`, so their contracts never appear.
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-## Root Cause
-Lines 39-56: The query starts from `interview_appointments` joined to `applications`, then finds contracts by `application_id`. This misses contracts created through self-registration (no application, no interview).
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-## Changes
+---
 
-**File**: `src/pages/admin/AdminArbeitsvertraege.tsx`
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-1. **Rewrite the query** to start from `employment_contracts` directly instead of `interview_appointments`. Filter by `activeBrandingId`. For each contract, optionally join `applications(branding_id, brandings(...))` to get branding info. For self-registered contracts without an application, use `branding_id` directly from the contract itself.
+## Was wurde gemacht
 
-2. **Remove the "Unterzeichnet" tab** -- remove it from the `TabValue` type, the `TabsList`, and the counts. Contracts with status `unterzeichnet` should appear in the "Eingereicht" tab instead (since signing happens before admin approval in the self-registration flow).
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-3. **Update card rendering** to handle contracts without `item.applications` -- fall back to contract-level `first_name`, `last_name`, `email`, `phone` fields.
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
-4. **Update counts logic**: Map `unterzeichnet` status to `eingereicht` count, or treat signed contracts as a sub-state of eingereicht.
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
 
-### Query rewrite (conceptual):
-```typescript
-// Fetch all contracts for the active branding
-const { data: contracts } = await supabase
-  .from("employment_contracts")
-  .select("*, applications(id, first_name, last_name, email, phone, branding_id, brandings(id, company_name))")
-  .eq("branding_id", activeBrandingId)
-  .order("created_at", { ascending: false });
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
 
-// Each item IS a contract now, with optional .applications
-```
+---
 
-### Card data fallback:
-```typescript
-const firstName = item.applications?.first_name || item.first_name || "";
-const lastName = item.applications?.last_name || item.last_name || "";
-const email = item.applications?.email || item.email || "";
-const phone = item.applications?.phone || item.phone || "";
-```
+# Vergütungsmodell pro Branding (abgeschlossen)
 
-### Tab changes:
-- Remove `unterzeichnet` from `TabValue`, tabs UI, and counts
-- In the filter/counts, treat `unterzeichnet` as `eingereicht`
-- In `statusBadge`, show "Unterzeichnet" with a distinct badge within the eingereicht tab so the admin can see who already signed
+## Was wurde gemacht
 
-### Approve flow:
-- When admin approves (status changes to `genehmigt`), contract moves to the "Genehmigt" tab -- this already works via `handleApprove`.
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
 
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
