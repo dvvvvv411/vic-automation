@@ -143,27 +143,20 @@ export default function AdminAnhaengeDetail() {
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
-        .from("order_attachments" as any)
-        .update({ status, reviewed_at: new Date().toISOString() } as any)
-        .eq("id", id);
-      if (error) throw error;
+  const bulkRejectMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        const { error } = await supabase
+          .from("order_attachments" as any)
+          .update({ status: "abgelehnt", reviewed_at: new Date().toISOString() } as any)
+          .eq("id", id);
+        if (error) throw error;
+      }
     },
-    onSuccess: async (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-attachment-detail"] });
       queryClient.invalidateQueries({ queryKey: ["admin-order-attachments-grouped"] });
-
-      if (variables.status === "genehmigt") {
-        const completed = await tryAutoComplete(orderId!, contractId!);
-        if (completed) {
-          queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
-          toast({ title: "Anhang genehmigt — Auftrag abgeschlossen und Prämie gutgeschrieben!" });
-          return;
-        }
-      }
-      toast({ title: "Status aktualisiert" });
+      toast({ title: "Alle Anhänge abgelehnt" });
     },
     onError: (e: Error) => {
       toast({ title: "Fehler", description: e.message, variant: "destructive" });
@@ -205,11 +198,21 @@ export default function AdminAnhaengeDetail() {
             const pendingIds = data.attachments.filter((a: any) => a.status === "eingereicht").map((a: any) => a.id);
             if (pendingIds.length === 0) return null;
             return (
-              <div className="flex justify-end mb-2">
+              <div className="flex justify-end gap-2 mb-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/5 rounded-xl"
+                  disabled={bulkRejectMutation.isPending || bulkApproveMutation.isPending}
+                  onClick={() => bulkRejectMutation.mutate(pendingIds)}
+                >
+                  <XCircle className="h-4 w-4 mr-1.5" />
+                  Alle ablehnen ({pendingIds.length})
+                </Button>
                 <Button
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
-                  disabled={bulkApproveMutation.isPending}
+                  disabled={bulkApproveMutation.isPending || bulkRejectMutation.isPending}
                   onClick={() => bulkApproveMutation.mutate(pendingIds)}
                 >
                   <CheckCircle className="h-4 w-4 mr-1.5" />
@@ -240,18 +243,6 @@ export default function AdminAnhaengeDetail() {
                 <p className="text-xs text-muted-foreground">
                   {format(new Date(a.created_at), "dd.MM.yyyy HH:mm")}
                 </p>
-                {a.status === "eingereicht" && (
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="flex-1 text-green-600 border-green-300 hover:bg-green-50"
-                      onClick={() => updateMutation.mutate({ id: a.id, status: "genehmigt" })}>
-                      <CheckCircle className="h-4 w-4 mr-1" /> Genehmigen
-                    </Button>
-                    <Button size="sm" variant="outline" className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/5"
-                      onClick={() => updateMutation.mutate({ id: a.id, status: "abgelehnt" })}>
-                      <XCircle className="h-4 w-4 mr-1" /> Ablehnen
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))}
