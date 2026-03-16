@@ -449,13 +449,13 @@ const AuftragDetails = () => {
           </motion.div>
         )}
 
-        {/* Check if attachments are still pending */}
-        {assignmentStatus === "in_pruefung" && requiredAttachments.length > 0 && (() => {
+        {/* Check if attachments are still pending or show submitted attachments */}
+        {requiredAttachments.length > 0 && (() => {
           const allSubmitted = requiredAttachments.every((_, i) => {
             const att = attachments.find(a => a.attachment_index === i);
             return att && (att.status === "eingereicht" || att.status === "genehmigt");
           });
-          if (!allSubmitted) {
+          if (!allSubmitted && assignmentStatus !== "erfolgreich") {
             return (
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
                 <Card className="border border-amber-300 bg-amber-50/30 shadow-sm">
@@ -466,6 +466,45 @@ const AuftragDetails = () => {
                       <p className="text-xs text-muted-foreground">Es fehlen noch erforderliche Anhänge für diesen Auftrag.</p>
                     </div>
                     <Button size="sm" variant="outline" onClick={() => setFlowStep("attachments")}>Anhänge hochladen</Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          }
+          if (allSubmitted && attachments.length > 0) {
+            const isImage = (url: string) => /\.(png|jpe?g|gif|webp)$/i.test(url);
+            return (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                <Card className="border border-border/60 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
+                      <FileText className="h-4 w-4 text-primary" /> Eingereichte Anhänge
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {requiredAttachments.map((reqAtt, i) => {
+                        const att = attachments.find(a => a.attachment_index === i);
+                        if (!att) return null;
+                        return (
+                          <div key={att.id} className="rounded-lg border border-border/40 overflow-hidden">
+                            <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                              {isImage(att.file_url) ? (
+                                <img src={att.file_url} alt={reqAtt.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <FileText className="h-8 w-8 text-muted-foreground/50" />
+                              )}
+                            </div>
+                            <div className="p-2">
+                              <p className="text-xs font-medium text-foreground truncate">{reqAtt.title}</p>
+                              <Badge variant="outline" className={cn("text-[10px] mt-1", att.status === "genehmigt" ? "text-green-600 border-green-300" : att.status === "abgelehnt" ? "text-destructive border-destructive/30" : "text-blue-600 border-blue-300")}>
+                                {att.status === "genehmigt" ? "Genehmigt" : att.status === "abgelehnt" ? "Abgelehnt" : "Eingereicht"}
+                              </Badge>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>

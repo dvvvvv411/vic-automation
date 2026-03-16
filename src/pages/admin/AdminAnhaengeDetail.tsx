@@ -80,7 +80,7 @@ export default function AdminAnhaengeDetail() {
     const reqAtt = data?.requiredAttachments;
     if (Array.isArray(reqAtt) && reqAtt[index]) {
       const item = reqAtt[index];
-      return typeof item === "string" ? item : (item as any)?.label ?? `Anhang ${index + 1}`;
+      return typeof item === "string" ? item : (item as any)?.title ?? (item as any)?.label ?? `Anhang ${index + 1}`;
     }
     return `Anhang ${index + 1}`;
   };

@@ -335,6 +335,7 @@ const MitarbeiterAuftraege = () => {
                     hasIdentSession={a.hasIdentSession}
                     hasReviewSubmitted={a.hasReviewSubmitted}
                     attachmentsPending={a.attachmentsPending}
+                    attachmentsSubmitted={a.attachmentsSubmitted}
                   />
                 </CardContent>
               </Card>
