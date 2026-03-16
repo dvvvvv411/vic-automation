@@ -106,7 +106,7 @@ export default function AdminLivechat() {
     // Step 1: Get contract IDs for the active branding
     let contractQuery = supabase
       .from("employment_contracts")
-      .select("id, first_name, last_name, user_id, chat_active_at");
+      .select("id, first_name, last_name, user_id, chat_active_at, created_at");
 
     if (activeBrandingId) {
       contractQuery = contractQuery.eq("branding_id", activeBrandingId);
