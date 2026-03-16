@@ -214,8 +214,8 @@ export default function Probetag() {
           .select("message")
           .eq("event_type", "probetag_bestaetigung")
           .single();
-        const smsText = tpl?.message
-          ? (tpl.message as string).replace("{name}", application.first_name).replace("{datum}", formattedDate).replace("{uhrzeit}", selectedTime!)
+        const smsText = (tpl as any)?.message
+          ? ((tpl as any).message as string).replace("{name}", application.first_name).replace("{datum}", formattedDate).replace("{uhrzeit}", selectedTime!)
           : `Hallo ${application.first_name}, Ihr Probetag ist bestätigt: ${formattedDate} um ${selectedTime} Uhr. Wir freuen uns auf Sie!`;
         await sendSms({
           to: application.phone,
