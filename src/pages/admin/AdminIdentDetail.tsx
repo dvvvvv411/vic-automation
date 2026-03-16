@@ -241,12 +241,10 @@ function IdentDetailContent({
   const handleSave = async () => {
     setSaving(true);
     const filteredData = testData.filter(d => d.value.trim() !== "");
-    const normalizedUrl = phoneUrl.trim().replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
 
     const { error } = await supabase
       .from("ident_sessions" as any)
       .update({
-        phone_api_url: normalizedUrl || null,
         test_data: filteredData,
         status: filteredData.length > 0 ? "data_sent" : session.status,
         updated_at: new Date().toISOString(),
@@ -260,6 +258,57 @@ function IdentDetailContent({
       onUpdate();
     }
     setSaving(false);
+  };
+
+  const [assigningPhone, setAssigningPhone] = useState(false);
+  const [newPhoneLink, setNewPhoneLink] = useState("");
+  const [addingPhone, setAddingPhone] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleAssignPhone = async (url: string) => {
+    if (!url.trim()) return;
+    setAssigningPhone(true);
+    const normalizedUrl = url.trim().replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
+    const { error } = await supabase
+      .from("ident_sessions" as any)
+      .update({ phone_api_url: normalizedUrl, updated_at: new Date().toISOString() } as any)
+      .eq("id", session.id);
+    if (error) {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    } else {
+      setPhoneUrl(normalizedUrl);
+      toast({ title: "Telefonnummer zugewiesen" });
+      // Resolve the number if not yet in map
+      if (!phoneDisplayMap[normalizedUrl]) {
+        try {
+          const { data } = await supabase.functions.invoke("anosim-proxy", { body: { url: normalizedUrl } });
+          if (data?.number) {
+            setPhoneDisplayMap(prev => ({ ...prev, [normalizedUrl]: data.number }));
+          }
+        } catch {}
+      }
+      onUpdate();
+    }
+    setAssigningPhone(false);
+  };
+
+  const handleAddNewPhone = async () => {
+    const link = newPhoneLink.trim();
+    if (!link) return;
+    setAddingPhone(true);
+    const normalizedUrl = link.replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
+    const { error } = await supabase.from("phone_numbers").insert({
+      api_url: normalizedUrl,
+      branding_id: session.branding_id,
+    });
+    if (error) {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Nummer hinzugefügt" });
+      setNewPhoneLink("");
+      queryClient.invalidateQueries({ queryKey: ["phone_numbers", session.branding_id] });
+    }
+    setAddingPhone(false);
   };
 
   const handleEndSession = async () => {
