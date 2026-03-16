@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Calendar, FileCheck, CalendarClock, MessageCircle } from "lucide-react";
+import { FileText, Calendar, FileCheck, CalendarClock, MessageCircle, Video } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
