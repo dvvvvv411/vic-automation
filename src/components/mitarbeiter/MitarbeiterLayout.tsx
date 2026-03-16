@@ -28,6 +28,7 @@ interface ContractData {
   contract_pdf_url: string | null;
   signed_contract_pdf_url: string | null;
   is_suspended: boolean;
+  submitted_at: string | null;
 }
 
 export default function MitarbeiterLayout() {
