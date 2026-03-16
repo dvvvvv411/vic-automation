@@ -604,8 +604,15 @@ const AuftragDetails = () => {
             {/* SMS Card */}
             <Card className="border border-border/60 shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
-                  <MessageSquare className="h-4 w-4 text-primary" /> SMS Nachrichten
+                <CardTitle className="text-base font-semibold flex items-center justify-between text-foreground">
+                  <span className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-primary" /> SMS Nachrichten
+                  </span>
+                  {hasPhone && (
+                    <span className="text-[10px] text-muted-foreground font-normal tabular-nums">
+                      Aktualisierung in {smsCountdown}s
+                    </span>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
