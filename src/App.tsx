@@ -34,6 +34,8 @@ import AdminSmsSpoof from "./pages/admin/AdminSmsSpoof";
 import AdminKunden from "./pages/admin/AdminKunden";
 import AdminSmsHistory from "./pages/admin/AdminSmsHistory";
 import AdminProbetag from "./pages/admin/AdminProbetag";
+import AdminVertragsvorlagen from "./pages/admin/AdminVertragsvorlagen";
+import AdminVertragsvorlageForm from "./pages/admin/AdminVertragsvorlageForm";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
 import Probetag from "./pages/Probetag";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
