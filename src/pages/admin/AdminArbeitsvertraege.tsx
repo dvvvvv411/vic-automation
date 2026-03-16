@@ -209,15 +209,15 @@ export default function AdminArbeitsvertraege() {
                 </div>
               ) : (
                 paginatedItems.map((item: any, i: number) => {
-                  const firstName = item.applications?.first_name || "";
-                  const lastName = item.applications?.last_name || "";
-                  const email = item.applications?.email || "";
-                  const phone = item.applications?.phone || "";
+                  const firstName = item.applications?.first_name || item.first_name || "";
+                  const lastName = item.applications?.last_name || item.last_name || "";
+                  const email = item.applications?.email || item.email || "";
+                  const phone = item.applications?.phone || item.phone || "";
                   const branding = item.applications?.brandings?.company_name || "";
-                  const startDate = item.contract?.desired_start_date
-                    ? format(new Date(item.contract.desired_start_date + "T00:00:00"), "dd. MMM yyyy", { locale: de })
+                  const startDate = item.desired_start_date
+                    ? format(new Date(item.desired_start_date + "T00:00:00"), "dd. MMM yyyy", { locale: de })
                     : null;
-                  const hasData = item.contract?.status === "eingereicht" || item.contract?.status === "genehmigt" || item.contract?.status === "unterzeichnet";
+                  const hasData = item.status === "eingereicht" || item.status === "genehmigt" || item.status === "unterzeichnet";
 
                   return (
                     <motion.div
