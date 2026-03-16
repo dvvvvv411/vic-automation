@@ -274,8 +274,9 @@ export default function AdminArbeitsvertraege() {
                               size="icon"
                               className="h-8 w-8"
                               onClick={async () => {
-                                const brandingId = item.applications?.brandings?.id;
-                                const url = await buildBrandingUrl(brandingId, `/arbeitsvertrag/${item.applications?.id}`);
+                              const brandingId = item.applications?.brandings?.id || item.branding_id;
+                                const appId = item.applications?.id || item.application_id;
+                                const url = await buildBrandingUrl(brandingId, `/arbeitsvertrag/${appId}`);
                                 navigator.clipboard.writeText(url);
                                 toast.success("Link kopiert!");
                               }}
