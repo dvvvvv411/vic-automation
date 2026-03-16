@@ -32,6 +32,8 @@ const PLACEHOLDER_INFO: Record<string, string[]> = {
   gespraech_erinnerung: ["{name}", "{telefon}"],
   gespraech_bestaetigung: ["{name}", "{datum}", "{uhrzeit}"],
   probetag_bestaetigung: ["{name}", "{datum}", "{uhrzeit}"],
+  gespraech_erinnerung_auto: ["{name}", "{datum}", "{uhrzeit}"],
+  probetag_erinnerung_auto: ["{name}", "{datum}", "{uhrzeit}"],
   konto_erstellt: ["{name}"],
   vertrag_eingereicht: ["{name}"],
 };
