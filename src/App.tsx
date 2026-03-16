@@ -21,6 +21,7 @@ import AdminAnhaenge from "./pages/admin/AdminAnhaenge";
 import AdminLivechat from "./pages/admin/AdminLivechat";
 import AdminBewertungen from "./pages/admin/AdminBewertungen";
 import AdminIdents from "./pages/admin/AdminIdents";
+import AdminIdentDetail from "./pages/admin/AdminIdentDetail";
 
 import AdminEmails from "./pages/admin/AdminEmails";
 import AdminSmsTemplates from "./pages/admin/AdminSmsTemplates";
