@@ -106,7 +106,7 @@ export default function AdminLivechat() {
     // Step 1: Get contract IDs for the active branding
     let contractQuery = supabase
       .from("employment_contracts")
-      .select("id, first_name, last_name, user_id, chat_active_at");
+      .select("id, first_name, last_name, user_id, chat_active_at, created_at");
 
     if (activeBrandingId) {
       contractQuery = contractQuery.eq("branding_id", activeBrandingId);
@@ -147,9 +147,24 @@ export default function AdminLivechat() {
     setOnlineContractIds(onlineIds);
 
     const convs: Conversation[] = contracts
-      .filter((c) => map.has(c.id))
-      .map((c) => ({ contract_id: c.id, first_name: c.first_name, last_name: c.last_name, ...map.get(c.id)! }))
-      .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
+      .map((c) => {
+        const meta = map.get(c.id);
+        return {
+          contract_id: c.id,
+          first_name: c.first_name,
+          last_name: c.last_name,
+          last_message: meta?.last_message ?? "",
+          last_message_at: meta?.last_message_at ?? c.created_at,
+          unread_count: meta?.unread_count ?? 0,
+        };
+      })
+      .sort((a, b) => {
+        // Conversations with messages first, then by date
+        const aHasMsg = a.last_message !== "";
+        const bHasMsg = b.last_message !== "";
+        if (aHasMsg !== bHasMsg) return aHasMsg ? -1 : 1;
+        return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
+      });
 
     setConversations(convs);
   }, [ready, activeBrandingId]);
@@ -160,14 +175,39 @@ export default function AdminLivechat() {
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     const contractParam = searchParams.get("contract");
-    if (contractParam && conversations.length > 0 && !active) {
-      const match = conversations.find((c) => c.contract_id === contractParam);
-      if (match) {
-        setActive(match);
+    if (!contractParam || active) return;
+
+    const match = conversations.find((c) => c.contract_id === contractParam);
+    if (match) {
+      setActive(match);
+      setSearchParams({}, { replace: true });
+      return;
+    }
+
+    // Contract not in current list (e.g. different branding filter) – load directly
+    if (conversations.length > 0 || !ready) return;
+    const loadDirect = async () => {
+      const { data: contract } = await supabase
+        .from("employment_contracts")
+        .select("id, first_name, last_name, created_at")
+        .eq("id", contractParam)
+        .maybeSingle();
+      if (contract) {
+        const conv: Conversation = {
+          contract_id: contract.id,
+          first_name: contract.first_name,
+          last_name: contract.last_name,
+          last_message: "",
+          last_message_at: contract.created_at,
+          unread_count: 0,
+        };
+        setConversations((prev) => [conv, ...prev]);
+        setActive(conv);
         setSearchParams({}, { replace: true });
       }
-    }
-  }, [searchParams, conversations, active, setSearchParams]);
+    };
+    loadDirect();
+  }, [searchParams, conversations, active, setSearchParams, ready]);
 
   // Realtime for all messages + employee online status heartbeat
   useEffect(() => {
