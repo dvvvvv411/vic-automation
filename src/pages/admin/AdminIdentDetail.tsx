@@ -421,29 +421,15 @@ function IdentDetailContent({
               </Button>
             </div>
 
-            <Separator />
-
-            {/* Add new number to phone_numbers table */}
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Neue Nummer zum Branding hinzufügen</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  placeholder="Anosim Share-Link..."
-                  value={newPhoneLink}
-                  onChange={(e) => setNewPhoneLink(e.target.value)}
-                  className="text-xs flex-1"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleAddNewPhone}
-                  disabled={addingPhone || !newPhoneLink.trim()}
-                  className="shrink-0 gap-1.5"
-                >
-                  {addingPhone ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                  Hinzufügen
-                </Button>
-              </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="addToBranding"
+                checked={addToBranding}
+                onCheckedChange={(checked) => setAddToBranding(!!checked)}
+              />
+              <Label htmlFor="addToBranding" className="text-xs text-muted-foreground cursor-pointer">
+                Nummer auch zum Branding hinzufügen
+              </Label>
             </div>
           </CardContent>
         </Card>
