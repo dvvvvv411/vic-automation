@@ -229,26 +229,28 @@ export default function AdminSmsHistory() {
         )}
 
         {/* Per-User for Spoof */}
-        {perSpoofUser.length > 0 && (
+        {perSpoofBranding.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <MessageSquareText className="h-4 w-4" /> Spoof pro Nutzerkonto
+                <Building2 className="h-4 w-4" /> Spoof pro Branding
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Konto</TableHead>
+                    <TableHead>Branding</TableHead>
                     <TableHead className="text-right">Anzahl</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {perSpoofUser.map((u) => (
-                    <TableRow key={u.uid}>
-                      <TableCell className="font-medium">{getUserLabel(u.uid === "system" ? null : u.uid)}</TableCell>
-                      <TableCell className="text-right font-semibold">{u.count}</TableCell>
+                  {perSpoofBranding.map((b) => (
+                    <TableRow key={b.bid}>
+                      <TableCell className="font-medium">
+                        {b.bid === "unknown" ? <span className="text-muted-foreground">Ohne Zuordnung</span> : getBrandingLabel(b.bid)}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{b.count}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
