@@ -31,6 +31,7 @@ interface ContractDetails {
   iban: string | null;
   bic: string | null;
   bank_name: string | null;
+  employment_type: string | null;
 }
 
 const MeineDaten = () => {
