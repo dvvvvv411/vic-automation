@@ -10,6 +10,7 @@ import { useChatRealtime, type ChatMessage } from "@/components/chat/useChatReal
 import { useChatTyping } from "@/components/chat/useChatTyping";
 
 import { sendSms } from "@/lib/sendSms";
+import { resolveContractBranding } from "@/lib/resolveContractBranding";
 import { uploadChatAttachment } from "@/components/chat/uploadChatAttachment";
 import { SmsWatch } from "@/components/chat/SmsWatch";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
