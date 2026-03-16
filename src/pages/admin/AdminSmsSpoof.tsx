@@ -107,11 +107,13 @@ export default function AdminSmsSpoof() {
 
   const fetchLogs = async () => {
     setLogsLoading(true);
-    const { data } = await supabase
+    let q = supabase
       .from("sms_spoof_logs" as any)
       .select("*")
       .order("created_at", { ascending: false })
       .limit(100);
+    if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
+    const { data } = await q;
     if (data) setLogs(data as any);
     setLogsLoading(false);
   };
