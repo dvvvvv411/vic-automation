@@ -67,11 +67,11 @@ export default function Bewerbungsgespraech() {
     queryKey: ["branding-schedule-settings-public", brandingId, "interview"],
     enabled: !!brandingId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("branding_schedule_settings")
         .select("*")
-        .eq("branding_id", brandingId!)
-        .eq("schedule_type" as any, "interview")
+        .eq("branding_id", brandingId!) as any)
+        .eq("schedule_type", "interview")
         .maybeSingle();
       if (error) throw error;
       return data;

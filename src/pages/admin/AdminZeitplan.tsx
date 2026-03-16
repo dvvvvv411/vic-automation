@@ -61,11 +61,11 @@ export default function AdminZeitplan() {
     queryKey: ["branding-schedule-settings", activeBrandingId, "interview"],
     enabled: ready && !!activeBrandingId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("branding_schedule_settings")
         .select("*")
-        .eq("branding_id", activeBrandingId!)
-        .eq("schedule_type" as any, "interview")
+        .eq("branding_id", activeBrandingId!) as any)
+        .eq("schedule_type", "interview")
         .maybeSingle();
       if (error) throw error;
       return data;

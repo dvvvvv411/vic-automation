@@ -61,11 +61,11 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
   const { data: trialSetting } = useQuery({
     queryKey: ["branding-schedule-settings", brandingId, "trial"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("branding_schedule_settings")
         .select("*")
-        .eq("branding_id", brandingId)
-        .eq("schedule_type" as any, "trial")
+        .eq("branding_id", brandingId) as any)
+        .eq("schedule_type", "trial")
         .maybeSingle();
       if (error) throw error;
       return data;
