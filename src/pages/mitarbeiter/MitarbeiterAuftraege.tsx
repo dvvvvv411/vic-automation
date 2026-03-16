@@ -27,6 +27,7 @@ interface Assignment {
   hasRequiredAttachments: boolean;
   attachmentsPending: boolean;
   hasIdentSession: boolean;
+  hasReviewSubmitted: boolean;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
@@ -55,9 +56,23 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-const StatusButton = ({ status, orderId, navigate, hasIdentSession }: { 
-  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean
+const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSubmitted, attachmentsPending }: { 
+  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean; hasReviewSubmitted?: boolean; attachmentsPending?: boolean
 }) => {
+  // Special case: review done but attachments still pending
+  if (status === "offen" && hasReviewSubmitted && attachmentsPending) {
+    return (
+      <Button
+        className="w-full mt-2 rounded-xl group/btn bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-600 hover:to-amber-500 text-white"
+        size="sm"
+        onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
+      >
+        <Paperclip className="h-3.5 w-3.5 mr-1.5" />
+        Anhänge hinzufügen
+      </Button>
+    );
+  }
+
   switch (status) {
     case "in_pruefung":
       return (
@@ -141,7 +156,15 @@ const MitarbeiterAuftraege = () => {
         .eq("contract_id", contract.id)
         .in("order_id", orderIds);
 
+      // Load reviews to detect "bewertung abgeschickt" state
+      const { data: reviews } = await supabase
+        .from("order_reviews")
+        .select("order_id")
+        .eq("contract_id", contract.id)
+        .in("order_id", orderIds);
+
       const orderIdsWithSession = new Set((identSessions ?? []).map(s => s.order_id));
+      const orderIdsWithReview = new Set((reviews ?? []).map(r => r.order_id));
 
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
 
@@ -174,6 +197,7 @@ const MitarbeiterAuftraege = () => {
               hasRequiredAttachments: hasReq,
               attachmentsPending: hasReq && !allApproved,
               hasIdentSession: orderIdsWithSession.has(a.order_id),
+              hasReviewSubmitted: orderIdsWithReview.has(a.order_id),
             };
           })
       );
@@ -261,6 +285,12 @@ const MitarbeiterAuftraege = () => {
                         #{a.order_number}
                       </Badge>
                       <div className="flex items-center gap-1.5">
+                        {a.status === "offen" && a.hasReviewSubmitted && a.attachmentsPending && (
+                          <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
+                            <Paperclip className="h-3 w-3 mr-1" />
+                            Anhänge erforderlich
+                          </Badge>
+                        )}
                         {(a.status === "in_pruefung" || a.status === "erfolgreich") && a.attachmentsPending && (
                           <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
                             <Paperclip className="h-3 w-3 mr-1" />
@@ -293,6 +323,8 @@ const MitarbeiterAuftraege = () => {
                     orderId={a.order_id} 
                     navigate={navigate}
                     hasIdentSession={a.hasIdentSession}
+                    hasReviewSubmitted={a.hasReviewSubmitted}
+                    attachmentsPending={a.attachmentsPending}
                   />
                 </CardContent>
               </Card>

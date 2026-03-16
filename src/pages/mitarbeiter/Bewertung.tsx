@@ -63,7 +63,7 @@ const Bewertung = () => {
   const navigate = useNavigate();
   const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
 
-  const [order, setOrder] = useState<{ id: string; title: string; review_questions: unknown } | null>(null);
+  const [order, setOrder] = useState<{ id: string; title: string; review_questions: unknown; required_attachments: unknown } | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<ReviewAnswer[]>([]);
@@ -74,7 +74,7 @@ const Bewertung = () => {
     const fetch = async () => {
       const { data } = await supabase
         .from("orders")
-        .select("id, title, review_questions")
+        .select("id, title, review_questions, required_attachments")
         .eq("id", id)
         .maybeSingle();
 
@@ -131,19 +131,31 @@ const Bewertung = () => {
       return;
     }
 
-    // Set assignment status to in_pruefung
-    await supabase
-      .from("order_assignments")
-      .update({ status: "in_pruefung" })
-      .eq("order_id", order.id)
-      .eq("contract_id", contract.id);
+    // Check if required attachments exist
+    const reqAtts = Array.isArray(order.required_attachments) ? order.required_attachments : [];
+    const hasPendingAttachments = reqAtts.length > 0;
+
+    if (!hasPendingAttachments) {
+      // No attachments needed → set to in_pruefung as before
+      await supabase
+        .from("order_assignments")
+        .update({ status: "in_pruefung" })
+        .eq("order_id", order.id)
+        .eq("contract_id", contract.id);
+    }
 
     // Telegram notification
     const empName = contract.first_name || "Mitarbeiter";
     await sendTelegram("bewertung_eingereicht", `⭐ Bewertung eingereicht\n\nMitarbeiter: ${empName}\nAuftrag: ${order.title}`);
 
     toast.success("Bewertung erfolgreich abgeschickt!");
-    navigate("/mitarbeiter");
+
+    if (hasPendingAttachments) {
+      toast.info("Bitte lade jetzt die erforderlichen Anhänge hoch.");
+      navigate(`/mitarbeiter/auftragdetails/${order.id}`);
+    } else {
+      navigate("/mitarbeiter");
+    }
   };
 
   if (layoutLoading || loading) {

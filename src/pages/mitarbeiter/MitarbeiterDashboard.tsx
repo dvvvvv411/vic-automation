@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Apple, Play, Package, Clock, CheckCircle, XCircle, RefreshCw, FileText } from "lucide-react";
+import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Apple, Play, Package, Clock, CheckCircle, XCircle, RefreshCw, FileText, Paperclip } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,8 @@ interface Order {
 interface OrderWithStatus extends Order {
   assignment_status: string;
   hasIdentSession: boolean;
+  hasReviewSubmitted: boolean;
+  attachmentsPending: boolean;
 }
 
 function getGreeting(): string {
@@ -40,9 +42,23 @@ function getGreeting(): string {
   return "Guten Abend";
 }
 
-const StatusButton = ({ status, orderId, navigate, hasIdentSession }: { 
-  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean
+const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSubmitted, attachmentsPending }: { 
+  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean; hasReviewSubmitted?: boolean; attachmentsPending?: boolean
 }) => {
+  // Special case: review done but attachments still pending
+  if (status === "offen" && hasReviewSubmitted && attachmentsPending) {
+    return (
+      <Button
+        className="w-full mt-2 rounded-xl group/btn bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-600 hover:to-amber-500 text-white"
+        size="sm"
+        onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
+      >
+        <Paperclip className="h-3.5 w-3.5 mr-1.5" />
+        Anhänge hinzufügen
+      </Button>
+    );
+  }
+
   switch (status) {
     case "in_pruefung":
       return (
@@ -174,11 +190,42 @@ const MitarbeiterDashboard = () => {
       const orderIdsWithSession = new Set((identSessions ?? []).map(s => s.order_id));
 
       if (ordersData) {
-        setOrders(ordersData.map((o) => ({ 
-          ...o, 
-          assignment_status: statusMap[o.id] ?? "offen",
-          hasIdentSession: orderIdsWithSession.has(o.id),
-        })));
+        // Load attachments and reviews for attachment-pending detection
+        const { data: attachments } = await supabase
+          .from("order_attachments")
+          .select("order_id, attachment_index, status")
+          .eq("contract_id", contract.id);
+
+        const { data: reviewsForOrders } = await supabase
+          .from("order_reviews")
+          .select("order_id")
+          .eq("contract_id", contract.id)
+          .in("order_id", orderIds);
+
+        const orderIdsWithReview = new Set((reviewsForOrders ?? []).map(r => r.order_id));
+
+        // Group attachments by order_id
+        const attachmentsByOrder: Record<string, Array<{ attachment_index: number; status: string }>> = {};
+        for (const att of attachments ?? []) {
+          if (!attachmentsByOrder[att.order_id]) attachmentsByOrder[att.order_id] = [];
+          attachmentsByOrder[att.order_id].push(att);
+        }
+
+        setOrders(ordersData.map((o) => {
+          const reqAtts = (o.required_attachments as any[] | null) ?? [];
+          const hasReq = reqAtts.length > 0;
+          const orderAtts = attachmentsByOrder[o.id] ?? [];
+          const allApproved = hasReq && reqAtts.every((_: any, i: number) =>
+            orderAtts.some((att) => att.attachment_index === i && att.status === "genehmigt")
+          );
+          return {
+            ...o, 
+            assignment_status: statusMap[o.id] ?? "offen",
+            hasIdentSession: orderIdsWithSession.has(o.id),
+            hasReviewSubmitted: orderIdsWithReview.has(o.id),
+            attachmentsPending: hasReq && !allApproved,
+          };
+        }));
       }
 
       // Fetch reviews with order titles
@@ -392,6 +439,12 @@ const MitarbeiterDashboard = () => {
                               #{order.order_number}
                             </Badge>
                             <div className="flex items-center gap-1.5">
+                              {order.assignment_status === "offen" && order.hasReviewSubmitted && order.attachmentsPending && (
+                                <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
+                                  <Paperclip className="h-3 w-3 mr-1" />
+                                  Anhänge erforderlich
+                                </Badge>
+                              )}
                               {order.is_placeholder && (
                                 <Badge variant="outline" className="text-[11px] text-muted-foreground rounded-full">
                                   Platzhalter
@@ -452,6 +505,8 @@ const MitarbeiterDashboard = () => {
                             orderId={order.id} 
                             navigate={navigate}
                             hasIdentSession={order.hasIdentSession}
+                            hasReviewSubmitted={order.hasReviewSubmitted}
+                            attachmentsPending={order.attachmentsPending}
                           />
                         </CardContent>
                       </Card>
