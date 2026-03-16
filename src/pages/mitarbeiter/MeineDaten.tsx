@@ -146,7 +146,7 @@ const MeineDaten = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <h2 className="text-2xl font-bold tracking-tight text-foreground">Meine Daten</h2>
         <p className="text-muted-foreground text-sm mt-1">Deine persönlichen Informationen im Überblick</p>
