@@ -226,7 +226,7 @@ export default function AdminSmsSpoof() {
     setTplSaving(true);
     const { error } = await supabase
       .from("sms_spoof_templates" as any)
-      .insert({ label: tplLabel.trim(), sender_name: tplSender.trim(), message: tplMessage.trim() } as any);
+      .insert({ label: tplLabel.trim(), sender_name: tplSender.trim(), message: tplMessage.trim(), branding_id: activeBrandingId } as any);
     if (error) {
       toast({ title: "Fehler", description: error.message, variant: "destructive" });
     } else {
