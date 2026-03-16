@@ -1,49 +1,86 @@
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
+## Was wurde gemacht
 
-# Plan: Telefonnummer-Management bei Idents verbessern & SMS-Anzeige fixen
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-## Zusammenfassung
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-4 Probleme werden behoben:
-1. **Admin**: Telefonnummer wird erst bei "Speichern & Senden" gespeichert → Mitarbeiter sieht keine SMS
-2. **Admin**: Keine aufgeloeste Telefonnummer sichtbar
-3. **Mitarbeiter**: SMS werden nicht angezeigt (weil `phone_api_url` in DB null bleibt)  
-4. **Mitarbeiter**: Countdown fehlt / aufgeloeste Telefonnummer nicht sichtbar
+---
 
-## Aenderungen
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-### 1. `AdminIdentDetail.tsx` – Telefonnummer-Card umbauen
+## Was wurde gemacht
 
-**Telefonnummer separat speichern** (nicht mehr ueber "Speichern & Senden"):
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-- Neuen "Zuweisen"-Button in der Telefonnummer-Card hinzufuegen
-- Beim Klick: `phone_api_url` sofort in DB schreiben (mit URL-Normalisierung)
-- Dropdown-Auswahl (`onValueChange`) soll ebenfalls sofort speichern
-- Aufgeloeste Telefonnummer als Badge/Info anzeigen (aus `phoneDisplayMap`)
-- "Neue Nummer hinzufuegen"-Bereich: Input + Button der in `phone_numbers`-Tabelle mit `branding_id` einfuegt
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
-**handleSave aendern**: `phone_api_url` aus dem Update entfernen – nur noch `test_data` und `status` speichern.
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
 
-### 2. `AdminIdentDetail.tsx` – Aufgeloeste Nummer anzeigen
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
 
-- Wenn `phoneUrl` gesetzt ist und in `phoneDisplayMap` aufgeloest wurde: Badge mit Telefonnummer anzeigen (z.B. "📞 +49 123 456789")
-- Falls URL manuell eingegeben und noch nicht aufgeloest: nach Zuweisen einmalig anosim-proxy aufrufen und Nummer anzeigen
+---
 
-### 3. `AuftragDetails.tsx` (Mitarbeiter) – SMS-Anzeige & Countdown fixen
+# Vergütungsmodell pro Branding (abgeschlossen)
 
-Durch das sofortige Speichern der `phone_api_url` (Punkt 1) bekommt der Mitarbeiter die URL via Realtime/Refetch → `hasPhone` wird `true` → SMS werden geladen.
+## Was wurde gemacht
 
-Zusaetzlich:
-- Aufgeloeste Telefonnummer anzeigen: `useEffect` der bei `identSession?.phone_api_url` anosim-proxy aufruft und Nummer in State speichert. Anzeige als Info-Box oberhalb der SMS-Liste.
-- Countdown-Text: Bereits korrekt implementiert, funktioniert sobald `hasPhone` true ist.
-- "Keine SMS-Nachrichten vorhanden" Text aendern zu "Warte auf Telefonnummer-Zuweisung..." wenn `!hasPhone`.
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
 
-### Betroffene Dateien
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
 
-| Datei | Aenderungen |
-|---|---|
-| `src/pages/admin/AdminIdentDetail.tsx` | Telefon-Card mit Zuweisen-Button, Auto-Save bei Dropdown, handleSave ohne phone_api_url, aufgeloeste Nummer anzeigen, neue Nummer hinzufuegen |
-| `src/pages/mitarbeiter/AuftragDetails.tsx` | Aufgeloeste Telefonnummer anzeigen, "Warte auf Zuweisung"-Text |
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
 
-Keine DB-Aenderungen noetig – alle benoetigten Tabellen und Spalten existieren bereits.
+---
 
+# Automatische SMS-Erinnerungen 24h vor Terminen (abgeschlossen)
+
+## Was wurde gemacht
+
+### DB-Migration
+- `reminder_sent` (boolean, default false) auf `interview_appointments` und `trial_day_appointments`
+- `pg_cron` und `pg_net` Extensions aktiviert
+
+### DB-Daten
+- Zwei neue SMS-Templates: `gespraech_erinnerung_auto`, `probetag_erinnerung_auto`
+- Stündlicher Cron-Job `appointment-reminders-hourly` eingerichtet
+
+### Edge Function
+- `send-appointment-reminders`: Prüft stündlich Termine in den nächsten 24-25h, sendet Erinnerungs-SMS via `send-sms`, markiert `reminder_sent = true`
+- SMS wird mit korrekter `branding_id` und `event_type` geloggt → erscheint in SMS-History
+
+### Frontend
+- `AdminSmsTemplates.tsx`: Platzhalter für `gespraech_erinnerung_auto` und `probetag_erinnerung_auto` registriert

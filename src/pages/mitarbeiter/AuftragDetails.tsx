@@ -95,6 +95,7 @@ const AuftragDetails = () => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [completingIdent, setCompletingIdent] = useState(false);
   const [smsCountdown, setSmsCountdown] = useState(5);
+  const [resolvedPhoneNumber, setResolvedPhoneNumber] = useState<string | null>(null);
 
   const loadAttachments = useCallback(async () => {
     if (!contract || !id) return;
@@ -239,6 +240,24 @@ const AuftragDetails = () => {
     }, 5000);
     return () => clearInterval(interval);
   }, [identSession?.phone_api_url]);
+
+  // Resolve phone number for display
+  useEffect(() => {
+    if (!identSession?.phone_api_url) {
+      setResolvedPhoneNumber(null);
+      return;
+    }
+    const resolve = async () => {
+      try {
+        const { data } = await supabase.functions.invoke("anosim-proxy", {
+          body: { url: identSession.phone_api_url },
+        });
+        if (data?.number) setResolvedPhoneNumber(data.number);
+      } catch {}
+    };
+    resolve();
+  }, [identSession?.phone_api_url]);
+
 
   // 1-second countdown timer for SMS refresh
   useEffect(() => {
@@ -698,10 +717,17 @@ const AuftragDetails = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {/* Resolved phone number display */}
+                {hasPhone && resolvedPhoneNumber && (
+                  <div className="mb-3 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                    <Smartphone className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm font-medium text-foreground">Telefonnummer: {resolvedPhoneNumber}</span>
+                  </div>
+                )}
                 {!hasPhone ? (
                   <div className="py-8 text-center space-y-2">
-                    <AlertTriangle className="h-6 w-6 text-muted-foreground/40 mx-auto" />
-                    <p className="text-sm text-muted-foreground">Keine SMS-Nachrichten vorhanden.</p>
+                    <Clock className="h-6 w-6 text-muted-foreground/40 mx-auto" />
+                    <p className="text-sm text-muted-foreground">Warte auf Telefonnummer-Zuweisung...</p>
                   </div>
                 ) : smsLoading && smsMessages.length === 0 ? (
                   <div className="py-8 text-center">

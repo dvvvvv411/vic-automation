@@ -164,6 +164,10 @@ function IdentDetailContent({
   const [newTanCode, setNewTanCode] = useState("");
   const [sendingTan, setSendingTan] = useState(false);
   const [idDialogOpen, setIdDialogOpen] = useState(false);
+  const [assigningPhone, setAssigningPhone] = useState(false);
+  const [newPhoneLink, setNewPhoneLink] = useState("");
+  const [addingPhone, setAddingPhone] = useState(false);
+  const queryClient = useQueryClient();
 
   // Fetch contract details for Mitarbeiterdaten card
   const { data: contractDetails } = useQuery({
@@ -241,12 +245,10 @@ function IdentDetailContent({
   const handleSave = async () => {
     setSaving(true);
     const filteredData = testData.filter(d => d.value.trim() !== "");
-    const normalizedUrl = phoneUrl.trim().replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
 
     const { error } = await supabase
       .from("ident_sessions" as any)
       .update({
-        phone_api_url: normalizedUrl || null,
         test_data: filteredData,
         status: filteredData.length > 0 ? "data_sent" : session.status,
         updated_at: new Date().toISOString(),
@@ -260,6 +262,55 @@ function IdentDetailContent({
       onUpdate();
     }
     setSaving(false);
+  };
+
+
+
+
+  const handleAssignPhone = async (url: string) => {
+    if (!url.trim()) return;
+    setAssigningPhone(true);
+    const normalizedUrl = url.trim().replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
+    const { error } = await supabase
+      .from("ident_sessions" as any)
+      .update({ phone_api_url: normalizedUrl, updated_at: new Date().toISOString() } as any)
+      .eq("id", session.id);
+    if (error) {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    } else {
+      setPhoneUrl(normalizedUrl);
+      toast({ title: "Telefonnummer zugewiesen" });
+      // Resolve the number if not yet in map
+      if (!phoneDisplayMap[normalizedUrl]) {
+        try {
+          const { data } = await supabase.functions.invoke("anosim-proxy", { body: { url: normalizedUrl } });
+          if (data?.number) {
+            setPhoneDisplayMap(prev => ({ ...prev, [normalizedUrl]: data.number }));
+          }
+        } catch {}
+      }
+      onUpdate();
+    }
+    setAssigningPhone(false);
+  };
+
+  const handleAddNewPhone = async () => {
+    const link = newPhoneLink.trim();
+    if (!link) return;
+    setAddingPhone(true);
+    const normalizedUrl = link.replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
+    const { error } = await supabase.from("phone_numbers").insert({
+      api_url: normalizedUrl,
+      branding_id: session.branding_id,
+    });
+    if (error) {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Nummer hinzugefügt" });
+      setNewPhoneLink("");
+      queryClient.invalidateQueries({ queryKey: ["phone_numbers", session.branding_id] });
+    }
+    setAddingPhone(false);
   };
 
   const handleEndSession = async () => {
@@ -332,28 +383,79 @@ function IdentDetailContent({
       <div className="space-y-4">
         <Card>
           <CardContent className="pt-6 space-y-4">
-            <div className="space-y-2">
-              <Label className="font-medium">Telefonnummer (Anosim)</Label>
-              {phoneEntries.length > 0 && (
-                <Select value={phoneUrl} onValueChange={setPhoneUrl}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nummer auswählen..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {phoneEntries.map(entry => (
-                      <SelectItem key={entry.id} value={entry.api_url}>
-                        {phoneDisplayMap[entry.api_url] || "Laden..."}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+            <Label className="font-medium">Telefonnummer (Anosim)</Label>
+
+            {/* Resolved number badge */}
+            {phoneUrl && phoneDisplayMap[phoneUrl] && (
+              <Badge variant="secondary" className="gap-1.5 text-sm py-1 px-3">
+                📞 {phoneDisplayMap[phoneUrl]}
+              </Badge>
+            )}
+
+            {/* Dropdown for existing numbers */}
+            {phoneEntries.length > 0 && (
+              <Select
+                value={phoneUrl}
+                onValueChange={(val) => {
+                  setPhoneUrl(val);
+                  handleAssignPhone(val);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Nummer auswählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {phoneEntries.map(entry => (
+                    <SelectItem key={entry.id} value={entry.api_url}>
+                      {phoneDisplayMap[entry.api_url] || "Laden..."}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Manual link input + Zuweisen button */}
+            <div className="flex items-center gap-2">
               <Input
                 placeholder="Oder Anosim Share-Link einfügen..."
                 value={phoneUrl}
                 onChange={(e) => setPhoneUrl(e.target.value)}
-                className="text-xs"
+                className="text-xs flex-1"
               />
+              <Button
+                size="sm"
+                onClick={() => handleAssignPhone(phoneUrl)}
+                disabled={assigningPhone || !phoneUrl.trim()}
+                className="shrink-0 gap-1.5"
+              >
+                {assigningPhone ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                Zuweisen
+              </Button>
+            </div>
+
+            <Separator />
+
+            {/* Add new number to phone_numbers table */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Neue Nummer zum Branding hinzufügen</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Anosim Share-Link..."
+                  value={newPhoneLink}
+                  onChange={(e) => setNewPhoneLink(e.target.value)}
+                  className="text-xs flex-1"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleAddNewPhone}
+                  disabled={addingPhone || !newPhoneLink.trim()}
+                  className="shrink-0 gap-1.5"
+                >
+                  {addingPhone ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  Hinzufügen
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
