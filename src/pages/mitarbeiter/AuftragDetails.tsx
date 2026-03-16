@@ -358,6 +358,9 @@ const AuftragDetails = () => {
 
     toast.success("Anhänge erfolgreich eingereicht!");
     setSubmittingAttachments(false);
+
+    // Telegram notification
+    await sendTelegram("anhaenge_eingereicht", `📎 Anhänge eingereicht\n\nMitarbeiter: ${contract?.first_name || ""}\nAuftrag: ${order.title}`);
   };
 
   if (layoutLoading || loading) {
