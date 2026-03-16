@@ -213,7 +213,7 @@ export default function AdminMitarbeiter() {
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {(item as any).applications?.brandings?.company_name || "–"}
+                          {activeBrandingName}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">
