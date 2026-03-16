@@ -140,25 +140,13 @@ export default function AdminArbeitsvertraege() {
         }
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        "https://luorlnagxpsibarcygjm.supabase.co/functions/v1/create-employee-account",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token}`,
-            apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1b3JsbmFneHBzaWJhcmN5Z2ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDI3MTAsImV4cCI6MjA4NjM3ODcxMH0.B0MYZqUChRbyW3ekOR8YI4j7q153ME77qI_LjUUJTqs",
-          },
-          body: JSON.stringify({ contract_id: contractId }),
-        }
-      );
-      const result = await res.json();
-      if (!res.ok) {
-        toast.error(result.error || "Fehler beim Genehmigen.");
+      const { error } = await supabase.rpc("approve_employment_contract", { _contract_id: contractId });
+      if (error) {
+        toast.error("Fehler beim Genehmigen.");
         return;
       }
-      toast.success(`Genehmigt! Temporäres Passwort: ${result.temp_password}`, { duration: 15000 });
+
+      toast.success("Vertrag genehmigt!");
       setStartDateDialogOpen(false);
       setDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["arbeitsvertraege"] });
