@@ -381,28 +381,79 @@ function IdentDetailContent({
       <div className="space-y-4">
         <Card>
           <CardContent className="pt-6 space-y-4">
-            <div className="space-y-2">
-              <Label className="font-medium">Telefonnummer (Anosim)</Label>
-              {phoneEntries.length > 0 && (
-                <Select value={phoneUrl} onValueChange={setPhoneUrl}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nummer auswählen..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {phoneEntries.map(entry => (
-                      <SelectItem key={entry.id} value={entry.api_url}>
-                        {phoneDisplayMap[entry.api_url] || "Laden..."}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+            <Label className="font-medium">Telefonnummer (Anosim)</Label>
+
+            {/* Resolved number badge */}
+            {phoneUrl && phoneDisplayMap[phoneUrl] && (
+              <Badge variant="secondary" className="gap-1.5 text-sm py-1 px-3">
+                📞 {phoneDisplayMap[phoneUrl]}
+              </Badge>
+            )}
+
+            {/* Dropdown for existing numbers */}
+            {phoneEntries.length > 0 && (
+              <Select
+                value={phoneUrl}
+                onValueChange={(val) => {
+                  setPhoneUrl(val);
+                  handleAssignPhone(val);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Nummer auswählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {phoneEntries.map(entry => (
+                    <SelectItem key={entry.id} value={entry.api_url}>
+                      {phoneDisplayMap[entry.api_url] || "Laden..."}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Manual link input + Zuweisen button */}
+            <div className="flex items-center gap-2">
               <Input
                 placeholder="Oder Anosim Share-Link einfügen..."
                 value={phoneUrl}
                 onChange={(e) => setPhoneUrl(e.target.value)}
-                className="text-xs"
+                className="text-xs flex-1"
               />
+              <Button
+                size="sm"
+                onClick={() => handleAssignPhone(phoneUrl)}
+                disabled={assigningPhone || !phoneUrl.trim()}
+                className="shrink-0 gap-1.5"
+              >
+                {assigningPhone ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                Zuweisen
+              </Button>
+            </div>
+
+            <Separator />
+
+            {/* Add new number to phone_numbers table */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Neue Nummer zum Branding hinzufügen</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Anosim Share-Link..."
+                  value={newPhoneLink}
+                  onChange={(e) => setNewPhoneLink(e.target.value)}
+                  className="text-xs flex-1"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleAddNewPhone}
+                  disabled={addingPhone || !newPhoneLink.trim()}
+                  className="shrink-0 gap-1.5"
+                >
+                  {addingPhone ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  Hinzufügen
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

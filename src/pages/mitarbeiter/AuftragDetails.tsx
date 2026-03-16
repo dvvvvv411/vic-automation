@@ -95,6 +95,7 @@ const AuftragDetails = () => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [completingIdent, setCompletingIdent] = useState(false);
   const [smsCountdown, setSmsCountdown] = useState(5);
+  const [resolvedPhoneNumber, setResolvedPhoneNumber] = useState<string | null>(null);
 
   const loadAttachments = useCallback(async () => {
     if (!contract || !id) return;
