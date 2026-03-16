@@ -18,6 +18,7 @@ import AdminMitarbeiterDetail from "./pages/admin/AdminMitarbeiterDetail";
 import AdminAuftraege from "./pages/admin/AdminAuftraege";
 import AdminAuftragWizard from "./pages/admin/AdminAuftragWizard";
 import AdminAnhaenge from "./pages/admin/AdminAnhaenge";
+import AdminAnhaengeDetail from "./pages/admin/AdminAnhaengeDetail";
 import AdminLivechat from "./pages/admin/AdminLivechat";
 import AdminBewertungen from "./pages/admin/AdminBewertungen";
 import AdminIdents from "./pages/admin/AdminIdents";
@@ -79,6 +80,7 @@ const App = () => (
               <Route path="auftraege/neu" element={<AdminAuftragWizard />} />
               <Route path="auftraege/:id/bearbeiten" element={<AdminAuftragWizard />} />
               <Route path="anhaenge" element={<AdminAnhaenge />} />
+              <Route path="anhaenge/:contractId/:orderId" element={<AdminAnhaengeDetail />} />
               
               <Route path="idents" element={<AdminIdents />} />
               <Route path="idents/:id" element={<AdminIdentDetail />} />
