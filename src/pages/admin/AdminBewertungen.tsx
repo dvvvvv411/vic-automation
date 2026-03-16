@@ -180,11 +180,11 @@ const AdminBewertungen = () => {
     if (finalStatus === "erfolgreich") {
       const { data: contract } = await supabase
         .from("employment_contracts")
-        .select("balance, email, first_name, last_name, phone, branding_id, applications(branding_id)")
+        .select("balance, email, first_name, last_name, phone")
         .eq("id", g.contract_id)
         .single();
 
-      const brandingId = contract?.branding_id || (contract as any)?.applications?.branding_id;
+      const brandingId = await resolveContractBranding(g.contract_id);
 
       // Credit reward if per_order model
       let isPerOrder = true;
