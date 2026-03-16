@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Apple, Play, Package, Clock, CheckCircle, XCircle, RefreshCw, FileText, Paperclip } from "lucide-react";
+import { Smartphone, Euro, ClipboardList, Star, ExternalLink, Play, Package, Clock, CheckCircle, XCircle, RefreshCw, FileText, Paperclip } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -487,32 +487,6 @@ const MitarbeiterDashboard = () => {
                               </div>
                             )}
 
-                            {(order.appstore_url || order.playstore_url) && (
-                              <div className="flex items-center gap-2 pt-1">
-                                {order.appstore_url && (
-                                  <a
-                                    href={order.appstore_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors bg-muted/60 rounded-full px-3 py-1.5"
-                                  >
-                                    <Apple className="h-3.5 w-3.5" />
-                                    App Store
-                                  </a>
-                                )}
-                                {order.playstore_url && (
-                                  <a
-                                    href={order.playstore_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors bg-muted/60 rounded-full px-3 py-1.5"
-                                  >
-                                    <Play className="h-3.5 w-3.5" />
-                                    Play Store
-                                  </a>
-                                )}
-                              </div>
-                            )}
 
                           </div>
 
