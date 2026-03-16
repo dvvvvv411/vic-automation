@@ -50,13 +50,12 @@ export default function AdminArbeitsvertraege() {
 
   // Counts per status
   const counts = useMemo(() => {
-    if (!data) return { all: 0, offen: 0, eingereicht: 0, genehmigt: 0, unterzeichnet: 0 };
-    const c = { all: data.length, offen: 0, eingereicht: 0, genehmigt: 0, unterzeichnet: 0 };
+    if (!data) return { all: 0, offen: 0, eingereicht: 0, genehmigt: 0 };
+    const c = { all: data.length, offen: 0, eingereicht: 0, genehmigt: 0 };
     data.forEach((item: any) => {
-      const s = item.contract?.status;
-      if (s === "eingereicht") c.eingereicht++;
+      const s = item.status;
+      if (s === "eingereicht" || s === "unterzeichnet") c.eingereicht++;
       else if (s === "genehmigt") c.genehmigt++;
-      else if (s === "unterzeichnet") c.unterzeichnet++;
       else c.offen++;
     });
     return c;
