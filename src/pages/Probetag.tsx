@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTelegram } from "@/lib/sendTelegram";
+import { sendEmail } from "@/lib/sendEmail";
+import { sendSms } from "@/lib/sendSms";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import {
@@ -183,7 +185,38 @@ export default function Probetag() {
       if (insertError) throw insertError;
 
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
+      const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
       await sendTelegram("probetag_gebucht", `🏢 Probetag gebucht\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`);
+
+      // Email confirmation
+      if (application?.email) {
+        await sendEmail({
+          to: application.email,
+          recipient_name: applicantName,
+          subject: `Ihr Probetag am ${formattedDateLong}`,
+          body_title: "Terminbestätigung – Probetag",
+          body_lines: [
+            `Hallo ${application.first_name},`,
+            `Ihr Probetag wurde erfolgreich gebucht.`,
+            `Datum: ${formattedDateLong}`,
+            `Uhrzeit: ${selectedTime} Uhr`,
+            `Wir freuen uns auf Sie!`,
+          ],
+          event_type: "probetag_bestaetigung",
+          branding_id: application.branding_id,
+        });
+      }
+
+      // SMS confirmation
+      if (application?.phone) {
+        await sendSms({
+          to: application.phone,
+          text: `Hallo ${application.first_name}, Ihr Probetag ist bestätigt: ${formattedDate} um ${selectedTime} Uhr. Wir freuen uns auf Sie!`,
+          event_type: "probetag_bestaetigung",
+          recipient_name: applicantName,
+          branding_id: application.branding_id,
+        });
+      }
     },
     onSuccess: () => {
       setBookedDate(format(selectedDate!, "dd. MMMM yyyy", { locale: de }));

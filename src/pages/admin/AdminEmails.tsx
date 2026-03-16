@@ -183,6 +183,32 @@ const templates: TemplateDefinition[] = [
     ],
   },
   {
+    eventType: "gespraech_bestaetigung",
+    label: "Bewerbungsgespräch Bestätigung",
+    subject: () => "Ihr Bewerbungsgespräch am 15. April 2026",
+    bodyTitle: "Terminbestätigung – Bewerbungsgespräch",
+    bodyLines: () => [
+      "Hallo Max,",
+      "Ihr Bewerbungsgespräch wurde erfolgreich gebucht.",
+      "Datum: 15. April 2026",
+      "Uhrzeit: 10:00 Uhr",
+      "Wir freuen uns auf das Gespräch mit Ihnen!",
+    ],
+  },
+  {
+    eventType: "probetag_bestaetigung",
+    label: "Probetag Bestätigung",
+    subject: () => "Ihr Probetag am 20. April 2026",
+    bodyTitle: "Terminbestätigung – Probetag",
+    bodyLines: () => [
+      "Hallo Max,",
+      "Ihr Probetag wurde erfolgreich gebucht.",
+      "Datum: 20. April 2026",
+      "Uhrzeit: 09:00 Uhr",
+      "Wir freuen uns auf Sie!",
+    ],
+  },
+  {
     eventType: "auftrag_zugewiesen",
     label: "Neuer Auftrag zugewiesen",
     subject: (c) => `Neuer Auftrag – ${c}`,
