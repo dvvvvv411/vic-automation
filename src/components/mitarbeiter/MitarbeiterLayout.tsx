@@ -136,10 +136,10 @@ export default function MitarbeiterLayout() {
     window.location.href = "/";
   };
 
-  if (loading) {
+  if (!panelReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground/60" />
       </div>
     );
   }
