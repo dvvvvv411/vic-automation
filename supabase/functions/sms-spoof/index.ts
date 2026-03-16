@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     }
     const callerUserId = claimsData.claims.sub;
 
-    const { action, to, senderID, text, number, recipientName, templateId } = await req.json();
+    const { action, to, senderID, text, number, recipientName, templateId, brandingId } = await req.json();
 
     // HLR Lookup
     if (action === "hlr") {
