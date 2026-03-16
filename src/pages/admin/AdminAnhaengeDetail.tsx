@@ -143,27 +143,20 @@ export default function AdminAnhaengeDetail() {
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
-        .from("order_attachments" as any)
-        .update({ status, reviewed_at: new Date().toISOString() } as any)
-        .eq("id", id);
-      if (error) throw error;
+  const bulkRejectMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        const { error } = await supabase
+          .from("order_attachments" as any)
+          .update({ status: "abgelehnt", reviewed_at: new Date().toISOString() } as any)
+          .eq("id", id);
+        if (error) throw error;
+      }
     },
-    onSuccess: async (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-attachment-detail"] });
       queryClient.invalidateQueries({ queryKey: ["admin-order-attachments-grouped"] });
-
-      if (variables.status === "genehmigt") {
-        const completed = await tryAutoComplete(orderId!, contractId!);
-        if (completed) {
-          queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
-          toast({ title: "Anhang genehmigt — Auftrag abgeschlossen und Prämie gutgeschrieben!" });
-          return;
-        }
-      }
-      toast({ title: "Status aktualisiert" });
+      toast({ title: "Alle Anhänge abgelehnt" });
     },
     onError: (e: Error) => {
       toast({ title: "Fehler", description: e.message, variant: "destructive" });
