@@ -33,6 +33,7 @@ interface OrderWithStatus extends Order {
   hasIdentSession: boolean;
   hasReviewSubmitted: boolean;
   attachmentsPending: boolean;
+  attachmentsSubmitted: boolean;
 }
 
 function getGreeting(): string {
@@ -42,9 +43,19 @@ function getGreeting(): string {
   return "Guten Abend";
 }
 
-const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSubmitted, attachmentsPending }: { 
-  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean; hasReviewSubmitted?: boolean; attachmentsPending?: boolean
+const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSubmitted, attachmentsPending, attachmentsSubmitted }: { 
+  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean; hasReviewSubmitted?: boolean; attachmentsPending?: boolean; attachmentsSubmitted?: boolean
 }) => {
+  // Attachments submitted but not yet approved → show "In Überprüfung"
+  if (attachmentsSubmitted && status !== "erfolgreich") {
+    return (
+      <Button className="w-full mt-2 rounded-xl" size="sm" disabled variant="outline">
+        <Clock className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
+        In Überprüfung
+      </Button>
+    );
+  }
+
   // Attachments pending takes priority over regular status (except erfolgreich)
   if (attachmentsPending && status !== "erfolgreich") {
     return (
@@ -216,6 +227,9 @@ const MitarbeiterDashboard = () => {
           const reqAtts = (o.required_attachments as any[] | null) ?? [];
           const hasReq = reqAtts.length > 0;
           const orderAtts = attachmentsByOrder[o.id] ?? [];
+          const allSubmitted = hasReq && reqAtts.every((_: any, i: number) =>
+            orderAtts.some((att) => att.attachment_index === i && (att.status === "eingereicht" || att.status === "genehmigt"))
+          );
           const allApproved = hasReq && reqAtts.every((_: any, i: number) =>
             orderAtts.some((att) => att.attachment_index === i && att.status === "genehmigt")
           );
@@ -224,7 +238,8 @@ const MitarbeiterDashboard = () => {
             assignment_status: statusMap[o.id] ?? "offen",
             hasIdentSession: orderIdsWithSession.has(o.id),
             hasReviewSubmitted: orderIdsWithReview.has(o.id),
-            attachmentsPending: hasReq && !allApproved,
+            attachmentsPending: hasReq && !allSubmitted,
+            attachmentsSubmitted: allSubmitted && !allApproved,
           };
         }));
       }
@@ -501,13 +516,14 @@ const MitarbeiterDashboard = () => {
 
                           </div>
 
-                          <StatusButton 
+                        <StatusButton 
                             status={order.assignment_status} 
                             orderId={order.id} 
                             navigate={navigate}
                             hasIdentSession={order.hasIdentSession}
                             hasReviewSubmitted={order.hasReviewSubmitted}
                             attachmentsPending={order.attachmentsPending}
+                            attachmentsSubmitted={order.attachmentsSubmitted}
                           />
                         </CardContent>
                       </Card>

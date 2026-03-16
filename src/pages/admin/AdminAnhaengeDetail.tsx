@@ -58,6 +58,26 @@ export default function AdminAnhaengeDetail() {
     },
   });
 
+  const bulkApproveMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        const { error } = await supabase
+          .from("order_attachments" as any)
+          .update({ status: "genehmigt", reviewed_at: new Date().toISOString() } as any)
+          .eq("id", id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-attachment-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-order-attachments-grouped"] });
+      toast({ title: "Alle Anhänge genehmigt" });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    },
+  });
+
   const updateMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase
@@ -106,6 +126,24 @@ export default function AdminAnhaengeDetail() {
       ) : !data?.attachments.length ? (
         <p className="text-muted-foreground">Keine Anhänge vorhanden.</p>
       ) : (
+        <>
+          {(() => {
+            const pendingIds = data.attachments.filter((a: any) => a.status === "eingereicht").map((a: any) => a.id);
+            if (pendingIds.length === 0) return null;
+            return (
+              <div className="flex justify-end mb-2">
+                <Button
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
+                  disabled={bulkApproveMutation.isPending}
+                  onClick={() => bulkApproveMutation.mutate(pendingIds)}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1.5" />
+                  Alle genehmigen ({pendingIds.length})
+                </Button>
+              </div>
+            );
+          })()}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.attachments.map((a: any) => (
             <Card key={a.id} className="overflow-hidden">
@@ -144,6 +182,7 @@ export default function AdminAnhaengeDetail() {
             </Card>
           ))}
         </div>
+        </>
       )}
     </div>
   );

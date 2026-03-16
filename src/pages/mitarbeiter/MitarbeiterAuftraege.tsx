@@ -65,7 +65,7 @@ const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSub
     return (
       <Button className="w-full mt-2 rounded-xl" size="sm" disabled variant="outline">
         <Clock className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
-        Anhänge in Überprüfung
+        In Überprüfung
       </Button>
     );
   }
