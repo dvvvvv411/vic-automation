@@ -347,7 +347,7 @@ export default function AdminSmsHistory() {
                         </TableCell>
                         <TableCell className="text-sm">{log.sender_name}</TableCell>
                         <TableCell className="max-w-[200px] truncate text-xs">{log.message}</TableCell>
-                        <TableCell className="text-xs">{getUserLabel(log.created_by)}</TableCell>
+                        <TableCell className="text-xs">{getBrandingLabel(log.branding_id)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
