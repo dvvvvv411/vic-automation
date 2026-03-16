@@ -20,6 +20,7 @@ import AdminAuftragWizard from "./pages/admin/AdminAuftragWizard";
 import AdminAnhaenge from "./pages/admin/AdminAnhaenge";
 import AdminLivechat from "./pages/admin/AdminLivechat";
 import AdminBewertungen from "./pages/admin/AdminBewertungen";
+import AdminIdents from "./pages/admin/AdminIdents";
 
 import AdminEmails from "./pages/admin/AdminEmails";
 import AdminSmsTemplates from "./pages/admin/AdminSmsTemplates";
