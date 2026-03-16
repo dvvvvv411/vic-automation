@@ -505,6 +505,8 @@ const MitarbeiterDashboard = () => {
                             orderId={order.id} 
                             navigate={navigate}
                             hasIdentSession={order.hasIdentSession}
+                            hasReviewSubmitted={order.hasReviewSubmitted}
+                            attachmentsPending={order.attachmentsPending}
                           />
                         </CardContent>
                       </Card>
