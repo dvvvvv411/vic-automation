@@ -31,6 +31,8 @@ interface Order {
 interface OrderWithStatus extends Order {
   assignment_status: string;
   hasIdentSession: boolean;
+  hasReviewSubmitted: boolean;
+  attachmentsPending: boolean;
 }
 
 function getGreeting(): string {
