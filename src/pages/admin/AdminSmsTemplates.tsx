@@ -30,6 +30,8 @@ const PLACEHOLDER_INFO: Record<string, string[]> = {
   bewertung_genehmigt: ["{name}", "{auftrag}", "{praemie}"],
   bewertung_abgelehnt: ["{name}", "{auftrag}"],
   gespraech_erinnerung: ["{name}", "{telefon}"],
+  gespraech_bestaetigung: ["{name}", "{datum}", "{uhrzeit}"],
+  probetag_bestaetigung: ["{name}", "{datum}", "{uhrzeit}"],
 };
 
 export default function AdminSmsTemplates() {
