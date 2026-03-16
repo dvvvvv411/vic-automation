@@ -643,32 +643,92 @@ export default function MitarbeiterArbeitsvertrag() {
 
           {/* Step 3: Documents */}
           {step === 3 && (
-            <div className="grid grid-cols-2 gap-4">
-              {(["front", "back"] as const).map((side) => {
-                const preview = side === "front" ? idFrontPreview : idBackPreview;
-                const label = side === "front" ? "Ausweis Vorderseite" : "Ausweis Rückseite";
-                return preview ? (
-                  <div key={side} className="relative rounded-lg border border-green-500 overflow-hidden aspect-[3/2]">
-                    <img src={preview} alt={label} className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => {
-                        if (side === "front") { setIdFrontFile(null); setIdFrontPreview(null); }
-                        else { setIdBackFile(null); setIdBackPreview(null); }
-                      }}
-                      className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+            <div className="space-y-6">
+              {/* ID Type Selection */}
+              <div className="space-y-3">
+                <Label>Dokumenttyp <span className="text-destructive">*</span></Label>
+                <RadioGroup value={idType} onValueChange={(v) => {
+                  setIdType(v as "personalausweis" | "reisepass");
+                  // Reset files when switching type
+                  setIdBackFile(null); setIdBackPreview(null);
+                }} className="flex gap-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="personalausweis" id="personalausweis" />
+                    <Label htmlFor="personalausweis" className="cursor-pointer">Personalausweis</Label>
                   </div>
-                ) : (
-                  <label key={side} className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg aspect-[3/2] cursor-pointer hover:border-muted-foreground/50 transition-colors">
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <span className="text-sm font-medium text-muted-foreground">{label}</span>
-                    <span className="text-xs text-muted-foreground mt-1">Klicken zum Hochladen</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={e => handleFileChange(side, e.target.files?.[0] || null)} />
-                  </label>
-                );
-              })}
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="reisepass" id="reisepass" />
+                    <Label htmlFor="reisepass" className="cursor-pointer">Reisepass</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* ID Upload */}
+              <div className={cn("grid gap-4", idType === "personalausweis" ? "grid-cols-2" : "grid-cols-1 max-w-xs")}>
+                {(idType === "personalausweis" ? ["front", "back"] as const : ["front"] as const).map((side) => {
+                  const preview = side === "front" ? idFrontPreview : idBackPreview;
+                  const label = idType === "reisepass" ? "Reisepass" : (side === "front" ? "Vorderseite" : "Rückseite");
+                  return preview ? (
+                    <div key={side} className="relative rounded-lg border border-green-500 overflow-hidden aspect-[3/2]">
+                      <img src={preview} alt={label} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => {
+                          if (side === "front") { setIdFrontFile(null); setIdFrontPreview(null); }
+                          else { setIdBackFile(null); setIdBackPreview(null); }
+                        }}
+                        className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label key={side} className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg aspect-[3/2] cursor-pointer hover:border-muted-foreground/50 transition-colors">
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+                      <span className="text-xs text-muted-foreground mt-1">Klicken zum Hochladen</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={e => handleFileChange(side, e.target.files?.[0] || null)} />
+                    </label>
+                  );
+                })}
+              </div>
+
+              {/* Meldenachweis */}
+              {requiresProofOfAddress && (
+                <div className="space-y-3 border-t border-border pt-4">
+                  <Label>Meldenachweis <span className="text-destructive">*</span></Label>
+                  <p className="text-xs text-muted-foreground">z.B. Stromrechnung, Meldebestätigung (Bild oder PDF)</p>
+                  {proofOfAddressPreview ? (
+                    <div className="relative rounded-lg border border-green-500 overflow-hidden max-w-xs">
+                      {proofOfAddressFile?.type?.includes("pdf") ? (
+                        <div className="flex items-center gap-2 p-4 bg-muted/30">
+                          <FileUp className="h-8 w-8 text-muted-foreground" />
+                          <span className="text-sm font-medium truncate">{proofOfAddressFile.name}</span>
+                        </div>
+                      ) : (
+                        <img src={proofOfAddressPreview} alt="Meldenachweis" className="w-full object-cover" />
+                      )}
+                      <button
+                        onClick={() => { setProofOfAddressFile(null); setProofOfAddressPreview(null); }}
+                        className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg py-8 cursor-pointer hover:border-muted-foreground/50 transition-colors max-w-xs">
+                      <FileUp className="h-8 w-8 text-muted-foreground mb-2" />
+                      <span className="text-sm font-medium text-muted-foreground">Meldenachweis hochladen</span>
+                      <span className="text-xs text-muted-foreground mt-1">Bild oder PDF</span>
+                      <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setProofOfAddressFile(file);
+                        setProofOfAddressPreview(file.type.includes("pdf") ? "pdf" : URL.createObjectURL(file));
+                      }} />
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
