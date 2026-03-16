@@ -22,6 +22,7 @@ interface MitarbeiterSidebarProps {
     brand_color: string | null;
   } | null;
   brandingLoading: boolean;
+  contractStatus?: string;
 }
 
 const navItems = [
