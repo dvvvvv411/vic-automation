@@ -10,6 +10,14 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardReviewsSummary from "@/components/mitarbeiter/DashboardReviewsSummary";
 import DashboardPayoutSummary from "@/components/mitarbeiter/DashboardPayoutSummary";
 
+const truncateText = (text: string, maxLen: number): string => {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLen) return normalized;
+  const cut = normalized.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > maxLen * 0.6 ? cut.slice(0, lastSpace) : cut) + "...";
+};
+
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string | null; employment_type?: string | null } | null;
   branding: { logo_url: string | null; company_name: string; brand_color: string | null; payment_model?: string | null; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null } | null;
