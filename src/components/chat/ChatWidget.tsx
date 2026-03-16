@@ -98,55 +98,42 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
       try { setAdminProfile(JSON.parse(cached)); } catch {}
     }
 
-    const loadAdmin = async () => {
-      let ownerId: string | null = null;
-
-      // Try to find the owner of this contract (kunde or admin who created it)
+    const loadBrandingChat = async () => {
+      // Get branding_id from contract
       const { data: contract } = await supabase
         .from("employment_contracts")
-        .select("created_by")
+        .select("branding_id")
         .eq("id", contractId)
         .maybeSingle();
-      ownerId = contract?.created_by ?? null;
+      const brandingId = contract?.branding_id;
+      if (!brandingId) return;
 
-      // Fallback: find first admin
-      if (!ownerId) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("user_id")
-          .eq("role", "admin")
-          .limit(1);
-        ownerId = roles?.[0]?.user_id ?? null;
-      }
-
-      if (!ownerId) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("avatar_url, display_name, is_chat_online")
-        .eq("id", ownerId)
+      const { data: branding } = await supabase
+        .from("brandings")
+        .select("chat_display_name, chat_avatar_url, chat_online")
+        .eq("id", brandingId)
         .maybeSingle();
-      if (profile) {
-        const p = { avatar_url: (profile as any).avatar_url, display_name: (profile as any).display_name };
+      if (branding) {
+        const p = { avatar_url: (branding as any).chat_avatar_url, display_name: (branding as any).chat_display_name };
         setAdminProfile(p);
-        setAdminOnline((profile as any).is_chat_online ?? false);
+        setAdminOnline((branding as any).chat_online ?? false);
         sessionStorage.setItem(cacheKey, JSON.stringify(p));
       }
 
-      // Subscribe to realtime changes for admin online status
+      // Subscribe to branding changes for online status
       const statusChannel = supabase
-        .channel(`admin-online-${ownerId}`)
+        .channel(`branding-chat-${brandingId}`)
         .on("postgres_changes", {
           event: "UPDATE",
           schema: "public",
-          table: "profiles",
-          filter: `id=eq.${ownerId}`,
+          table: "brandings",
+          filter: `id=eq.${brandingId}`,
         }, (payload: any) => {
-          setAdminOnline(payload.new.is_chat_online ?? false);
-          if (payload.new.display_name !== undefined || payload.new.avatar_url !== undefined) {
+          setAdminOnline(payload.new.chat_online ?? false);
+          if (payload.new.chat_display_name !== undefined || payload.new.chat_avatar_url !== undefined) {
             setAdminProfile(prev => ({
-              avatar_url: payload.new.avatar_url ?? prev.avatar_url,
-              display_name: payload.new.display_name ?? prev.display_name,
+              avatar_url: payload.new.chat_avatar_url ?? prev.avatar_url,
+              display_name: payload.new.chat_display_name ?? prev.display_name,
             }));
           }
         })
@@ -156,7 +143,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
         supabase.removeChannel(statusChannel);
       };
     };
-    const cleanup = loadAdmin();
+    const cleanup = loadBrandingChat();
     return () => { cleanup.then(fn => fn?.()); };
   }, [contractId]);
 
