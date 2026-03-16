@@ -166,8 +166,8 @@ export default function AdminArbeitsvertraege() {
           .select("message")
           .eq("event_type", "vertrag_genehmigt")
           .single();
-        const smsText = tpl?.message
-          ? (tpl.message as string).replace("{name}", contractName)
+        const smsText = (tpl as any)?.message
+          ? ((tpl as any).message as string).replace("{name}", contractName)
           : `Hallo ${contractName}, herzlichen Glückwunsch! Ihr Arbeitsvertrag wurde genehmigt. Wir freuen uns auf die Zusammenarbeit!`;
 
         // Get branding SMS sender name
