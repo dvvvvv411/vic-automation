@@ -1052,11 +1052,12 @@ export default function MitarbeiterArbeitsvertrag() {
               onTouchEnd={stopDrawing}
             />
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={clearCanvas}>Löschen</Button>
-            <Button variant="outline" onClick={() => setSigDialogOpen(false)}>Abbrechen</Button>
+          <DialogFooter className="flex flex-row justify-between items-center sm:justify-between">
+            <Button variant="ghost" size="icon" onClick={clearCanvas} className="text-muted-foreground">
+              <Trash2 className="h-4 w-4" />
+            </Button>
             <Button onClick={handleSign} disabled={submitting}>
-              {submitting ? "Wird eingereicht..." : "Unterschreiben & Einreichen"}
+              {submitting ? "Wird eingereicht..." : "Bestätigen"}
             </Button>
           </DialogFooter>
         </DialogContent>
