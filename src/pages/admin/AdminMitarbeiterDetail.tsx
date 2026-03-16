@@ -823,33 +823,84 @@ export default function AdminMitarbeiterDetail() {
             </div>
           </TabsContent>
 
-          {/* ─── PERSONALAUSWEIS ───────────────────────────────────────── */}
+          {/* ─── KYC ──────────────────────────────────────────────── */}
           <TabsContent value="id">
             <Card className="rounded-2xl shadow-md border-border/60 overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-amber-500/5 to-transparent">
+              <CardHeader className="bg-gradient-to-r from-amber-500/5 to-transparent flex flex-row items-center justify-between">
                 <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
-                  <IdCard className="h-4 w-4 text-amber-600" /> Personalausweis
+                  <IdCard className="h-4 w-4 text-amber-600" /> KYC
                 </CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Meldenachweis erforderlich</span>
+                  <Switch
+                    checked={!!(contract as any).requires_proof_of_address}
+                    onCheckedChange={async (checked) => {
+                      const { error } = await supabase
+                        .from("employment_contracts")
+                        .update({ requires_proof_of_address: checked } as any)
+                        .eq("id", contract.id);
+                      if (error) { toast.error("Fehler beim Speichern."); return; }
+                      toast.success(checked ? "Meldenachweis aktiviert" : "Meldenachweis deaktiviert");
+                      invalidateAll();
+                    }}
+                  />
+                </div>
               </CardHeader>
-              <CardContent className="pt-4">
-                {!contract.id_front_url && !contract.id_back_url ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                    <ImageIcon className="h-12 w-12 mb-3 opacity-40" />
-                    <p className="text-sm">Kein Personalausweis hochgeladen.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {contract.id_front_url && (
-                      <div className="cursor-pointer group" onClick={() => setImagePreview(contract.id_front_url)}>
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Vorderseite</p>
-                        <img src={contract.id_front_url} alt="Ausweis Vorderseite" className="w-full rounded-xl border border-border object-cover group-hover:opacity-80 transition-opacity" />
-                      </div>
-                    )}
-                    {contract.id_back_url && (
-                      <div className="cursor-pointer group" onClick={() => setImagePreview(contract.id_back_url)}>
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Rückseite</p>
-                        <img src={contract.id_back_url} alt="Ausweis Rückseite" className="w-full rounded-xl border border-border object-cover group-hover:opacity-80 transition-opacity" />
-                      </div>
+              <CardContent className="pt-4 space-y-6">
+                {/* ID Document */}
+                <div>
+                  <h4 className="text-sm font-semibold mb-3">
+                    {(contract as any).id_type === "reisepass" ? "Reisepass" : "Personalausweis"}
+                  </h4>
+                  {!contract.id_front_url && !contract.id_back_url ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                      <ImageIcon className="h-12 w-12 mb-3 opacity-40" />
+                      <p className="text-sm">Kein Ausweisdokument hochgeladen.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {contract.id_front_url && (
+                        <div className="cursor-pointer group" onClick={() => setImagePreview(contract.id_front_url)}>
+                          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                            {(contract as any).id_type === "reisepass" ? "Reisepass" : "Vorderseite"}
+                          </p>
+                          <img src={contract.id_front_url} alt="Ausweis" className="w-full rounded-xl border border-border object-cover group-hover:opacity-80 transition-opacity" />
+                        </div>
+                      )}
+                      {contract.id_back_url && (contract as any).id_type !== "reisepass" && (
+                        <div className="cursor-pointer group" onClick={() => setImagePreview(contract.id_back_url)}>
+                          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Rückseite</p>
+                          <img src={contract.id_back_url} alt="Ausweis Rückseite" className="w-full rounded-xl border border-border object-cover group-hover:opacity-80 transition-opacity" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Meldenachweis */}
+                {(contract as any).requires_proof_of_address && (
+                  <div className="border-t border-border pt-4">
+                    <h4 className="text-sm font-semibold mb-3">Meldenachweis</h4>
+                    {!(contract as any).proof_of_address_url ? (
+                      <p className="text-sm text-muted-foreground">Noch nicht hochgeladen.</p>
+                    ) : (
+                      (() => {
+                        const url = (contract as any).proof_of_address_url as string;
+                        const isPdf = url.toLowerCase().endsWith(".pdf");
+                        return isPdf ? (
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 border border-border rounded-xl p-4 hover:bg-muted/50 transition-colors">
+                            <FileText className="h-10 w-10 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">PDF Dokument</p>
+                              <p className="text-xs text-muted-foreground">Klicken zum Öffnen</p>
+                            </div>
+                          </a>
+                        ) : (
+                          <div className="cursor-pointer group max-w-sm" onClick={() => setImagePreview(url)}>
+                            <img src={url} alt="Meldenachweis" className="w-full rounded-xl border border-border object-cover group-hover:opacity-80 transition-opacity" />
+                          </div>
+                        );
+                      })()
                     )}
                   </div>
                 )}
