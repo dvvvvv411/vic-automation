@@ -1,45 +1,66 @@
 
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-# Fix: Auftrag nur "erfolgreich" wenn Bewertung UND Anhänge genehmigt
+## Was wurde gemacht
 
-## Problem
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-`AdminBewertungen.tsx` setzt bei Review-Genehmigung sofort `status = "erfolgreich"` — ohne zu prüfen ob Pflichtanhänge existieren und ob diese genehmigt sind. Ebenso fehlt in `AdminAnhaengeDetail.tsx` die Gegenprüfung nach Anhänge-Genehmigung.
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-## Änderungen
+---
 
-### 1. `AdminBewertungen.tsx` — `handleApprove` (Zeile 135-200)
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-Vor dem Status-Update:
-- Order laden mit `required_attachments`
-- Falls `required_attachments` nicht leer: `order_attachments` laden und prüfen ob alle den Status `"genehmigt"` haben
-- Alle Anhänge genehmigt → `"erfolgreich"` + Prämie + Benachrichtigungen (wie bisher)
-- Anhänge fehlen oder nicht alle genehmigt → `"in_pruefung"` setzen, keine Prämie, Toast: "Bewertung genehmigt. Anhänge stehen noch aus."
-- Keine `required_attachments` → wie bisher `"erfolgreich"`
+## Was wurde gemacht
 
-### 2. `AdminAnhaengeDetail.tsx` — Auto-Abschluss nach Anhänge-Genehmigung
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-Nach `bulkApproveMutation` und `updateMutation` (`onSuccess`):
-- Prüfen ob nach dem Update alle Anhänge des Auftrags `"genehmigt"` sind
-- Falls ja: `order_assignments` laden für diesen Order+Contract
-- Falls `status === "in_pruefung"` (= Review wurde bereits genehmigt): 
-  - Status auf `"erfolgreich"` setzen
-  - Prämie gutschreiben (Order `reward` laden, Balance erhöhen)
-  - Toast: "Auftrag abgeschlossen und Prämie gutgeschrieben"
-- Falls Status noch `"offen"` → nichts tun (Bewertung fehlt noch)
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
-### 3. Mitarbeiter-Button-Logik — bereits korrekt
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
 
-Die StatusButton-Logik zeigt schon jetzt korrekt:
-- `attachmentsPending=true` + `status="in_pruefung"` → "Anhänge einreichen" (attachmentsPending hat Vorrang)
-- `attachmentsSubmitted=true` → "In Überprüfung"
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
 
-Das funktioniert automatisch sobald `handleApprove` den Status auf `"in_pruefung"` statt `"erfolgreich"` setzt.
+---
 
-## Betroffene Dateien
+# Vergütungsmodell pro Branding (abgeschlossen)
 
-| Datei | Änderung |
-|-------|----------|
-| `AdminBewertungen.tsx` | `handleApprove`: Anhänge-Check vor finaler Status-Entscheidung |
-| `AdminAnhaengeDetail.tsx` | Auto-Abschluss-Logik nach Anhänge-Genehmigung |
+## Was wurde gemacht
 
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
