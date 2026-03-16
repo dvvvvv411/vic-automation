@@ -131,19 +131,31 @@ const Bewertung = () => {
       return;
     }
 
-    // Set assignment status to in_pruefung
-    await supabase
-      .from("order_assignments")
-      .update({ status: "in_pruefung" })
-      .eq("order_id", order.id)
-      .eq("contract_id", contract.id);
+    // Check if required attachments exist
+    const reqAtts = Array.isArray(order.required_attachments) ? order.required_attachments : [];
+    const hasPendingAttachments = reqAtts.length > 0;
+
+    if (!hasPendingAttachments) {
+      // No attachments needed → set to in_pruefung as before
+      await supabase
+        .from("order_assignments")
+        .update({ status: "in_pruefung" })
+        .eq("order_id", order.id)
+        .eq("contract_id", contract.id);
+    }
 
     // Telegram notification
     const empName = contract.first_name || "Mitarbeiter";
     await sendTelegram("bewertung_eingereicht", `⭐ Bewertung eingereicht\n\nMitarbeiter: ${empName}\nAuftrag: ${order.title}`);
 
     toast.success("Bewertung erfolgreich abgeschickt!");
-    navigate("/mitarbeiter");
+
+    if (hasPendingAttachments) {
+      toast.info("Bitte lade jetzt die erforderlichen Anhänge hoch.");
+      navigate(`/mitarbeiter/auftragdetails/${order.id}`);
+    } else {
+      navigate("/mitarbeiter");
+    }
   };
 
   if (layoutLoading || loading) {
