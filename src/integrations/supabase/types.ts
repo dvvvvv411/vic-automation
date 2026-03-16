@@ -144,6 +144,9 @@ export type Database = {
       brandings: {
         Row: {
           brand_color: string | null
+          chat_avatar_url: string | null
+          chat_display_name: string | null
+          chat_online: boolean
           city: string | null
           company_name: string
           created_at: string
@@ -174,6 +177,9 @@ export type Database = {
         }
         Insert: {
           brand_color?: string | null
+          chat_avatar_url?: string | null
+          chat_display_name?: string | null
+          chat_online?: boolean
           city?: string | null
           company_name: string
           created_at?: string
@@ -204,6 +210,9 @@ export type Database = {
         }
         Update: {
           brand_color?: string | null
+          chat_avatar_url?: string | null
+          chat_display_name?: string | null
+          chat_online?: boolean
           city?: string | null
           company_name?: string
           created_at?: string

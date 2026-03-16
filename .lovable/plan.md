@@ -1,60 +1,66 @@
 
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Plan: Livechat-Einstellungen als Branding-basierte Settings-Seite
-
-### Problem
-Aktuell werden Livechat-Einstellungen (Name, Avatar, Online-Status) pro Admin-User in der `profiles`-Tabelle gespeichert und im Livechat-Header per Popover bearbeitet. Das fuehrt dazu, dass verschiedene Kunden/Admins unterschiedliche Daten sehen. Stattdessen sollen diese Einstellungen pro Branding gelten.
+## Was wurde gemacht
 
 ### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-Neue Spalten auf `brandings`-Tabelle:
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-```sql
-ALTER TABLE public.brandings
-  ADD COLUMN chat_display_name text,
-  ADD COLUMN chat_avatar_url text,
-  ADD COLUMN chat_online boolean NOT NULL DEFAULT false;
-```
+---
 
-### Neue Seite: `/admin/livechat-einstellungen`
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-Einfaches Formular mit:
-- **Avatar-Upload** (via `AvatarUpload`-Komponente)
-- **Anzeigename** (Input)
-- **Online/Offline** (Switch)
-- Speichert per `supabase.from("brandings").update(...)` auf `activeBrandingId`
-- Laedt Daten per Query auf `brandings` gefiltert nach `activeBrandingId`
+## Was wurde gemacht
 
-### Sidebar
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-Neuer Eintrag in "Einstellungen"-Gruppe: `{ title: "Livechat", url: "/admin/livechat-einstellungen", icon: MessageCircle }`
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
-### Routing
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
 
-Neue Route `livechat-einstellungen` in `App.tsx` unter `/admin`.
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
 
-### AdminLivechat.tsx
+---
 
-- Admin-Profil-Popover (Zeilen 507-550) komplett entfernen
-- `adminAvatar`, `adminDisplayName`, `editingName`, `adminOnlineStatus`, `handleOnlineToggle`, `saveDisplayName` State/Logik entfernen
-- Profil-Load-Effect (Zeilen 79-93) entfernen
+# Vergütungsmodell pro Branding (abgeschlossen)
 
-### ChatWidget.tsx (Mitarbeiter-Seite)
+## Was wurde gemacht
 
-- Statt Admin-Profil aus `profiles` zu laden, Branding-Daten laden:
-  1. `employment_contracts.branding_id` holen
-  2. `brandings.chat_display_name, chat_avatar_url, chat_online` lesen
-- Online-Status-Subscription auf `brandings`-Tabelle statt `profiles`
-- Fallback: Wenn keine Branding-Chat-Daten vorhanden, bestehende `profiles`-Logik beibehalten
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
 
-### Dateien
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
 
-| Datei | Aenderung |
-|-------|-----------|
-| DB-Migration | 3 neue Spalten auf `brandings` |
-| `AdminLivechatEinstellungen.tsx` | Neue Seite (erstellen) |
-| `App.tsx` | Route hinzufuegen |
-| `AdminSidebar.tsx` | Nav-Eintrag hinzufuegen |
-| `AdminLivechat.tsx` | Profil-Popover + zugehoerige Logik entfernen |
-| `ChatWidget.tsx` | Branding-basierte Chat-Daten statt Profil-basierte |
-
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary

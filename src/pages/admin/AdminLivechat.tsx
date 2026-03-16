@@ -46,7 +46,6 @@ export default function AdminLivechat() {
   const [editingMessageText, setEditingMessageText] = useState("");
   const [adminAvatar, setAdminAvatar] = useState<string | null>(null);
   const [adminDisplayName, setAdminDisplayName] = useState("");
-  const [editingName, setEditingName] = useState(false);
   const [employeeProfile, setEmployeeProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
   const [quickSmsCode, setQuickSmsCode] = useState("");
   const [externalChatValue, setExternalChatValue] = useState<string | null>(null);
@@ -65,39 +64,23 @@ export default function AdminLivechat() {
     role: "admin",
   });
 
-  const [adminOnlineStatus, setAdminOnlineStatus] = useState(false);
   const [onlineContractIds, setOnlineContractIds] = useState<Set<string>>(new Set());
 
-  const handleOnlineToggle = async (checked: boolean) => {
-    setAdminOnlineStatus(checked);
-    if (user) {
-      await supabase.from("profiles").update({ is_chat_online: checked } as any).eq("id", user.id);
-    }
-  };
-
-  // Load admin profile
+  // Load branding chat profile
   useEffect(() => {
-    if (!user) return;
+    if (!activeBrandingId || !ready) return;
     supabase
-      .from("profiles")
-      .select("avatar_url, display_name, full_name, is_chat_online")
-      .eq("id", user.id)
+      .from("brandings")
+      .select("chat_display_name, chat_avatar_url, chat_online")
+      .eq("id", activeBrandingId)
       .maybeSingle()
       .then(({ data }: any) => {
         if (data) {
-          setAdminAvatar(data.avatar_url);
-          setAdminDisplayName(data.display_name || data.full_name || "");
-          setAdminOnlineStatus(data.is_chat_online ?? false);
+          setAdminAvatar(data.chat_avatar_url);
+          setAdminDisplayName(data.chat_display_name || "");
         }
       });
-  }, [user]);
-
-  const saveDisplayName = async () => {
-    if (!user) return;
-    await supabase.from("profiles").update({ display_name: adminDisplayName } as any).eq("id", user.id);
-    toast.success("Anzeigename gespeichert");
-    setEditingName(false);
-  };
+  }, [activeBrandingId, ready]);
 
   // Load conversations + online status (filtered by branding)
   const loadConversations = useCallback(async () => {
@@ -503,51 +486,8 @@ export default function AdminLivechat() {
                 <Bell className="h-4 w-4" />
               </Button>
             )}
-            {/* Admin profile popover – always visible */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="cursor-pointer">
-                  <AvatarUpload avatarUrl={adminAvatar} name={adminDisplayName || "Admin"} size={36} />
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-4" align="end">
-                <p className="text-xs text-muted-foreground mb-3">Admin-Profil</p>
-                <div className="flex justify-center mb-3">
-                  <AvatarUpload
-                    avatarUrl={adminAvatar}
-                    name={adminDisplayName || "Admin"}
-                    size={56}
-                    editable
-                    onUploaded={(url) => setAdminAvatar(url)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-foreground">Anzeigename</label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={adminDisplayName}
-                      onChange={(e) => setAdminDisplayName(e.target.value)}
-                      placeholder="Dein Name..."
-                      className="h-8 text-sm"
-                    />
-                    <button
-                      onClick={saveDisplayName}
-                      className="shrink-0 h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
-                    >
-                      OK
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-2">
-                  <label className="text-xs font-medium text-foreground">Online-Status</label>
-                  <div className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rounded-full ${adminOnlineStatus ? "bg-green-500" : "bg-muted-foreground/30"}`} />
-                    <span className="text-xs text-muted-foreground">{adminOnlineStatus ? "Online" : "Offline"}</span>
-                    <Switch checked={adminOnlineStatus} onCheckedChange={handleOnlineToggle} />
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+            {/* Admin avatar display */}
+            <AvatarUpload avatarUrl={adminAvatar} name={adminDisplayName || "Admin"} size={36} />
           </div>
         </div>
 
