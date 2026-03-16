@@ -1,66 +1,34 @@
 
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
+# Plan: Brandings auf eigene Seite statt Popup
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+## Ziel
+Branding-Erstellung und -Bearbeitung von einem Dialog in eine eigene Unterseite (`/admin/brandings/neu` und `/admin/brandings/:id`) verlagern. Die Listenansicht (`/admin/brandings`) bleibt bestehen, verliert aber den Dialog.
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+## Änderungen
 
----
+### 1. Neue Datei: `src/pages/admin/AdminBrandingForm.tsx`
+- Eigenständige Seite mit dem kompletten Formular (aus dem bisherigen Dialog extrahiert)
+- Liest bei `:id`-Parameter das bestehende Branding und befüllt das Formular (Edit-Modus)
+- Ohne `:id` = Neu-Erstellung
+- Nach Speichern/Erstellen: `navigate("/admin/brandings")` mit Toast
+- Zurück-Button oben links
+- Card-basiertes Layout mit Sektionen (Stammdaten, Adresse, Resend, SMS, Vergütung, Farbe) statt eines langen Formulars
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+### 2. `src/pages/admin/AdminBrandings.tsx` vereinfachen
+- Dialog und gesamte Formular-Logik entfernen (Form-State, Mutations, Schema etc.)
+- "Branding hinzufügen"-Button navigiert zu `/admin/brandings/neu`
+- Pencil-Button navigiert zu `/admin/brandings/:id`
+- Nur noch Tabelle + Delete-Mutation bleibt
 
-## Was wurde gemacht
+### 3. `src/App.tsx` — Neue Routen
+- `<Route path="brandings/neu" element={<AdminBrandingForm />} />`
+- `<Route path="brandings/:id" element={<AdminBrandingForm />} />`
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+### Betroffene Dateien
+| Datei | Änderung |
+|-------|----------|
+| `src/pages/admin/AdminBrandingForm.tsx` | **Neu** — Formularseite für Erstellen/Bearbeiten |
+| `src/pages/admin/AdminBrandings.tsx` | Dialog + Formular-Logik entfernen, Navigation statt Dialog |
+| `src/App.tsx` | Zwei neue Routen unter `/admin` |
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
-
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
-
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
-
----
-
-# Vergütungsmodell pro Branding (abgeschlossen)
-
-## Was wurde gemacht
-
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
-
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
-
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
