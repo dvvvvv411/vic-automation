@@ -91,6 +91,7 @@ const AuftragDetails = () => {
   const [smsLoading, setSmsLoading] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [completingIdent, setCompletingIdent] = useState(false);
+  const [smsCountdown, setSmsCountdown] = useState(5);
 
   const loadAttachments = useCallback(async () => {
     if (!contract || !id) return;
