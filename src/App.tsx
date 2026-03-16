@@ -10,6 +10,7 @@ import QueryCacheClearer from "./components/admin/QueryCacheClearer";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBrandings from "./pages/admin/AdminBrandings";
+import AdminBrandingForm from "./pages/admin/AdminBrandingForm";
 import AdminBewerbungen from "./pages/admin/AdminBewerbungen";
 import AdminBewerbungsgespraeche from "./pages/admin/AdminBewerbungsgespraeche";
 import AdminArbeitsvertraege from "./pages/admin/AdminArbeitsvertraege";
