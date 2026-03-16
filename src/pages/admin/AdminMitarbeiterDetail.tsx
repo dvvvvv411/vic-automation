@@ -728,7 +728,7 @@ export default function AdminMitarbeiterDetail() {
               value="id"
               className="gap-1.5 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md"
             >
-              <IdCard className="h-3.5 w-3.5" /> Personalausweis
+              <IdCard className="h-3.5 w-3.5" /> KYC
             </TabsTrigger>
             <TabsTrigger
               value="orders"
