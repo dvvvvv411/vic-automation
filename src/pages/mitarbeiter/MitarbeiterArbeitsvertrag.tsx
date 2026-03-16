@@ -104,6 +104,7 @@ export default function MitarbeiterArbeitsvertrag() {
   const [idFrontPreview, setIdFrontPreview] = useState<string | null>(null);
   const [idBackPreview, setIdBackPreview] = useState<string | null>(null);
   const [nationalityOpen, setNationalityOpen] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<{ title: string; content: string } | null>(null);
 
   const STEPS = [
     "Vorlage wählen",
@@ -463,7 +464,18 @@ export default function MitarbeiterArbeitsvertrag() {
                         )}
                       </div>
                       {t.content && (
-                        <div className="mt-3 text-xs text-muted-foreground line-clamp-3 prose prose-sm" dangerouslySetInnerHTML={{ __html: t.content }} />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-3 gap-1.5 text-muted-foreground hover:text-foreground px-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewTemplate(t);
+                          }}
+                        >
+                          <FileText className="h-4 w-4" />
+                          Vorschau
+                        </Button>
                       )}
                     </CardContent>
                   </Card>
@@ -772,6 +784,17 @@ export default function MitarbeiterArbeitsvertrag() {
               {submitting ? "Wird eingereicht..." : "Unterschreiben & Einreichen"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{previewTemplate?.title}</DialogTitle>
+          </DialogHeader>
+          {previewTemplate?.content && (
+            <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: previewTemplate.content }} />
+          )}
         </DialogContent>
       </Dialog>
     </div>
