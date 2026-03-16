@@ -882,7 +882,7 @@ export default function AdminMitarbeiterDetail() {
 
               {/* Right 1/3 */}
               <div className="space-y-6">
-                <CredentialsCard email={contract.email} tempPassword={contract.temp_password} />
+                <CredentialsCard email={contract.email} tempPassword={contract.temp_password} contractId={contract.id} onPasswordReset={invalidateAll} />
                 <AdminNotesCard
                   notes={adminNotes}
                   onAdd={async (text) => {
