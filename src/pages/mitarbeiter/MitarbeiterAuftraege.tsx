@@ -322,7 +322,9 @@ const MitarbeiterAuftraege = () => {
                 <CardContent className="flex-1 flex flex-col justify-between gap-4 pt-0">
                   <div className="space-y-3">
                     {a.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-1 pb-3 border-b border-border/30">{a.description}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed pb-3 border-b border-border/30 break-words">
+                        {truncateText(a.description, 120)}
+                      </p>
                     )}
                     {a.reward && !["0", "0€", "0 €"].includes(a.reward.trim()) && (
                       <div className="flex items-center justify-between text-sm">
