@@ -198,6 +198,9 @@ const MitarbeiterAuftraege = () => {
             const allApproved = hasReq && reqAtts.every((_: any, i: number) =>
               orderAtts.some((att) => att.attachment_index === i && att.status === "genehmigt")
             );
+            const allSubmitted = hasReq && reqAtts.every((_: any, i: number) =>
+              orderAtts.some((att) => att.attachment_index === i && (att.status === "eingereicht" || att.status === "genehmigt"))
+            );
             return {
               order_id: a.order_id,
               status: a.status ?? "offen",
@@ -207,7 +210,8 @@ const MitarbeiterAuftraege = () => {
               provider: order.provider,
               reward: order.reward,
               hasRequiredAttachments: hasReq,
-              attachmentsPending: hasReq && !allApproved,
+              attachmentsPending: hasReq && !allSubmitted,
+              attachmentsSubmitted: allSubmitted && !allApproved,
               hasIdentSession: orderIdsWithSession.has(a.order_id),
               hasReviewSubmitted: orderIdsWithReview.has(a.order_id),
             };
