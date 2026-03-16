@@ -118,6 +118,14 @@ export default function MitarbeiterLayout() {
     window.location.href = "/";
   };
 
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
   if (contract?.is_suspended) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 text-center">
