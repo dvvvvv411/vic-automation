@@ -412,12 +412,16 @@ const AdminBewertungen = () => {
         <TabsList>
           <TabsTrigger value="in-review">In Überprüfung ({pendingReviews.length})</TabsTrigger>
           <TabsTrigger value="approved">Genehmigt ({approvedReviews.length})</TabsTrigger>
+          <TabsTrigger value="rejected">Abgelehnt ({rejectedReviews.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="in-review">
           {renderTable(pendingReviews, true)}
         </TabsContent>
         <TabsContent value="approved">
           {renderTable(approvedReviews, false)}
+        </TabsContent>
+        <TabsContent value="rejected">
+          {renderTable(rejectedReviews, false)}
         </TabsContent>
       </Tabs>
 
