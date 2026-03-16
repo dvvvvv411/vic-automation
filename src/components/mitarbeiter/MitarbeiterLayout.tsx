@@ -133,7 +133,17 @@ export default function MitarbeiterLayout() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-muted/30">
+      <div className="min-h-screen flex w-full bg-muted/30" style={{
+          '--sidebar-background': '0 0% 100%',
+          '--sidebar-foreground': '220 20% 14%',
+          '--sidebar-primary': '217 91% 60%',
+          '--sidebar-primary-foreground': '0 0% 100%',
+          '--sidebar-accent': '220 14% 96%',
+          '--sidebar-accent-foreground': '220 20% 14%',
+          '--sidebar-border': '220 13% 91%',
+          '--sidebar-ring': '217 91% 60%',
+          '--sidebar-muted': '220 14% 96%',
+        } as React.CSSProperties}>
         <MitarbeiterSidebar branding={branding} brandingLoading={loading} contractStatus={contract?.status} />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="border-b border-border/20 bg-background sticky top-0 z-50 h-16 flex items-center justify-between px-5 shadow-sm relative">
