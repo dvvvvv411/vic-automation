@@ -175,14 +175,39 @@ export default function AdminLivechat() {
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     const contractParam = searchParams.get("contract");
-    if (contractParam && conversations.length > 0 && !active) {
-      const match = conversations.find((c) => c.contract_id === contractParam);
-      if (match) {
-        setActive(match);
+    if (!contractParam || active) return;
+
+    const match = conversations.find((c) => c.contract_id === contractParam);
+    if (match) {
+      setActive(match);
+      setSearchParams({}, { replace: true });
+      return;
+    }
+
+    // Contract not in current list (e.g. different branding filter) – load directly
+    if (conversations.length > 0 || !ready) return;
+    const loadDirect = async () => {
+      const { data: contract } = await supabase
+        .from("employment_contracts")
+        .select("id, first_name, last_name, created_at")
+        .eq("id", contractParam)
+        .maybeSingle();
+      if (contract) {
+        const conv: Conversation = {
+          contract_id: contract.id,
+          first_name: contract.first_name,
+          last_name: contract.last_name,
+          last_message: "",
+          last_message_at: contract.created_at,
+          unread_count: 0,
+        };
+        setConversations((prev) => [conv, ...prev]);
+        setActive(conv);
         setSearchParams({}, { replace: true });
       }
-    }
-  }, [searchParams, conversations, active, setSearchParams]);
+    };
+    loadDirect();
+  }, [searchParams, conversations, active, setSearchParams, ready]);
 
   // Realtime for all messages + employee online status heartbeat
   useEffect(() => {
