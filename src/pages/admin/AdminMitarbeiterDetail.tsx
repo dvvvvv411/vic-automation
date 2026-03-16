@@ -1147,6 +1147,7 @@ export default function AdminMitarbeiterDetail() {
           mode="contract"
           sourceId={contract.id}
           sourceLabel={fullName}
+          brandingId={activeBrandingId ?? undefined}
         />
       )}
 
