@@ -14,7 +14,7 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
 interface ContextType {
-  contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null; signature_data?: string | null; template_id?: string | null } | null;
+  contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null; signature_data?: string | null; template_id?: string | null; submitted_at?: string | null } | null;
   branding: { logo_url: string | null; company_name: string; brand_color: string | null; signature_image_url?: string | null; signer_name?: string | null; signer_title?: string | null } | null;
   loading: boolean;
 }
