@@ -61,14 +61,16 @@ export default function AdminSmsHistory() {
   // Fetch sms_logs (seven.io)
   const { data: smsLogs, isLoading: smsLoading } = useQuery({
     queryKey: ["sms-history-logs", selectedMonth, activeBrandingId],
-    enabled: ready,
+    enabled: ready && !!activeBrandingId,
     queryFn: async () => {
-      const { data } = await supabase
+      let q = supabase
         .from("sms_logs")
         .select("*")
         .gte("created_at", fromISO)
         .lte("created_at", toISO)
         .order("created_at", { ascending: false });
+      if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
+      const { data } = await q;
       return data ?? [];
     },
   });
