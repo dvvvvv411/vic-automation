@@ -58,6 +58,26 @@ export default function AdminAnhaengeDetail() {
     },
   });
 
+  const bulkApproveMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        const { error } = await supabase
+          .from("order_attachments" as any)
+          .update({ status: "genehmigt", reviewed_at: new Date().toISOString() } as any)
+          .eq("id", id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-attachment-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-order-attachments-grouped"] });
+      toast({ title: "Alle Anhänge genehmigt" });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    },
+  });
+
   const updateMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase
