@@ -1,66 +1,54 @@
 
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
+## Plan: Email & Telegram Notifications Ueberarbeitung
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+### Zusammenfassung der Aenderungen
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+**Entfernen:**
+1. `bewerbung_abgelehnt` Email — keine Ablehnungsmail mehr senden
+2. `probetag_erfolgreich` Email — nicht noetig da User schon Konto hat
+3. `termin_gebucht` Email (Auftragstermin) — entfernen
 
----
+**Umfunktionieren:**
+4. `vertrag_genehmigt` Email — kein Passwort/Zugangsdaten mehr, sondern reine Benachrichtigung "Ihr Vertrag wurde genehmigt". Wird in `AdminArbeitsvertraege.tsx` nach `approve_employment_contract` RPC gesendet (nicht mehr in der `create-employee-account` Edge Function)
+5. `gespraech_erfolgreich` Email-Vorschau in `AdminEmails.tsx` — Text und Button anpassen auf "Probetag buchen" (der eigentliche Versand-Code ist bereits korrekt)
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+**Neu hinzufuegen:**
+6. `konto_erstellt` Email — nach Selbstregistrierung in `Auth.tsx`, informiert ueber Starterjobs und Vertragseinreichung
+7. `vertrag_eingereicht` Email — Bestaetigung an User nach Einreichung (in `MitarbeiterArbeitsvertrag.tsx` und `Arbeitsvertrag.tsx`)
+8. `auftrag_erfolgreich` Email — wenn Auftrag komplett abgeschlossen. Bei `per_order` Verguetungsmodell mit Praemie, bei `festgehalt` allgemeine Erfolgsmeldung
 
-## Was wurde gemacht
+**Neue Telegram Notifications:**
+9. `anhaenge_eingereicht` — in `AuftragDetails.tsx` nach `handleSubmitAttachments`
+10. `konto_erstellt` — in `Auth.tsx` nach erfolgreicher Registrierung
+11. `ident_gestartet` — in `AuftragDetails.tsx` nach `handleStartVideoIdent`
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+### Dateien und Aenderungen
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+| Datei | Aenderung |
+|-------|-----------|
+| `src/pages/admin/AdminBewerbungen.tsx` | `rejectMutation`: `sendEmail`-Aufruf fuer `bewerbung_abgelehnt` entfernen |
+| `src/pages/admin/AdminProbetag.tsx` | `probetag_erfolgreich` Email-Block komplett entfernen |
+| `src/pages/admin/AdminArbeitsvertraege.tsx` | Nach `approve_employment_contract` RPC: neue schlichte `vertrag_genehmigt` Email senden (ohne Passwort, nur "Vertrag genehmigt" Benachrichtigung) |
+| `supabase/functions/create-employee-account/index.ts` | Den gesamten Email-Versand-Block entfernen (Zeilen 155-182), da Vertragsgenehmigung jetzt ueber `AdminArbeitsvertraege.tsx` laeuft |
+| `src/pages/Auth.tsx` | Nach Registrierung: `sendEmail` mit `konto_erstellt` und `sendTelegram` mit `konto_erstellt` aufrufen |
+| `src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx` | Nach Einreichung: `sendEmail` mit `vertrag_eingereicht` aufrufen |
+| `src/pages/Arbeitsvertrag.tsx` | Nach Einreichung: `sendEmail` mit `vertrag_eingereicht` aufrufen |
+| `src/pages/mitarbeiter/AuftragDetails.tsx` | `handleSubmitAttachments`: `sendTelegram("anhaenge_eingereicht", ...)` hinzufuegen; `handleStartVideoIdent`: `sendTelegram("ident_gestartet", ...)` hinzufuegen |
+| `src/pages/admin/AdminBewertungen.tsx` | Wenn `finalStatus === "erfolgreich"`: statt nur `bewertung_genehmigt` eine `auftrag_erfolgreich` Email senden, Praemie-Text abhaengig vom payment_model des Brandings |
+| `src/pages/admin/AdminMitarbeiterDetail.tsx` | Analog: `handleReviewApprove` bei `erfolgreich` → `auftrag_erfolgreich` Email mit Praemie/Festgehalt-Unterscheidung |
+| `src/pages/admin/AdminEmails.tsx` | Preview-Templates aktualisieren: `bewerbung_abgelehnt` und `probetag_erfolgreich` und `termin_gebucht` entfernen; `gespraech_erfolgreich` Text/Button auf "Probetag buchen" aendern; `vertrag_genehmigt` vereinfachen (kein Passwort); neue Previews fuer `konto_erstellt`, `vertrag_eingereicht`, `auftrag_erfolgreich` hinzufuegen |
+| `src/pages/admin/AdminSmsTemplates.tsx` | `vertrag_genehmigt` Platzhalter anpassen (kein `{link}` mehr noetig); `termin_gebucht` entfernen |
+| `src/pages/admin/AdminTelegram.tsx` | Neue Events `konto_erstellt`, `anhaenge_eingereicht`, `ident_gestartet` zur Event-Liste hinzufuegen |
+| `src/components/admin/AssignmentDialog.tsx` | `termin_gebucht` Email entfernen (falls vorhanden) |
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+### Auftrag erfolgreich — Payment Model Logik
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+Beim Senden der `auftrag_erfolgreich` Email wird das Branding geladen und `payment_model` geprueft:
+- `per_order`: "Die Praemie von X€ wurde Ihrem Konto gutgeschrieben."
+- `festgehalt`: "Ihr Auftrag wurde erfolgreich abgeschlossen. Vielen Dank fuer Ihre Mitarbeit."
 
----
+### Keine DB-Migration noetig
 
-# Vergütungsmodell pro Branding (abgeschlossen)
+Alle Telegram-Events werden dynamisch als Strings behandelt und muessen nur in der UI-Event-Liste registriert werden.
 
-## Was wurde gemacht
-
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
-
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
-
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
