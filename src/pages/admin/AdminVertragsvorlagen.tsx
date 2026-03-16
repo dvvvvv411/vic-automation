@@ -322,7 +322,7 @@ export default function AdminVertragsvorlagen() {
           </div>
         </div>
 
-        <Card>
+        <Card key={activeBrandingId}>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               {/* Signature Preview */}
