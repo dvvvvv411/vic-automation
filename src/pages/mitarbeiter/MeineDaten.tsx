@@ -309,8 +309,8 @@ const MeineDaten = () => {
                     {(() => { const t = new Date(); const d = t.getDate() < 15 ? new Date(t.getFullYear(), t.getMonth(), 15) : new Date(t.getFullYear(), t.getMonth() + 1, 15); return format(d, "dd.MM.yyyy", { locale: de }); })()}
                   </p>
                   <div className="border-t border-border pt-3">
-                    <p className="text-xs text-muted-foreground">Voraussichtlicher Betrag</p>
-                    <p className="text-2xl font-bold text-primary">€{pendingPayout.toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">{isFixedSalary ? "Betrag" : "Voraussichtlicher Betrag"}</p>
+                    <p className="text-2xl font-bold text-primary">€{isFixedSalary ? fixedSalary.toFixed(2) : pendingPayout.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
