@@ -82,28 +82,7 @@ export default function AdminProbetag() {
     toast.success(`Status auf "${newStatus}" gesetzt.`);
     queryClient.invalidateQueries({ queryKey: ["trial-day-appointments-admin"] });
 
-    // On success → send contract email
-    if (newStatus === "erfolgreich" && item.applications?.email) {
-      const app = item.applications;
-      const contractLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
-
-      await sendEmail({
-        to: app.email,
-        recipient_name: `${app.first_name} ${app.last_name}`,
-        subject: "Ihr Probetag war erfolgreich",
-        body_title: "Probetag erfolgreich",
-        body_lines: [
-          `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
-          "Ihr Probetag war erfolgreich. Wir freuen uns, Sie im nächsten Schritt willkommen zu heißen.",
-          "Bitte füllen Sie nun Ihren Arbeitsvertrag über den folgenden Link aus.",
-        ],
-        button_text: contractLink ? "Arbeitsvertrag ausfüllen" : undefined,
-        button_url: contractLink || undefined,
-        branding_id: app.brandings?.id || null,
-        event_type: "probetag_erfolgreich",
-        metadata: { appointment_id: item.id, application_id: item.application_id },
-      });
-    }
+    // probetag_erfolgreich email removed — user already has account at this point
   };
 
   const toggleView = (mode: ViewMode) => {
