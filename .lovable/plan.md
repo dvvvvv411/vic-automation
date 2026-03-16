@@ -1,66 +1,65 @@
 
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
+## Plan: SMS-Templates und -Versand an neuen Workflow anpassen
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+### Probleme identifiziert
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+1. **DB-Template `vertrag_genehmigt`** spricht noch von Zugangsdaten — muss auf Gratulations-Text geaendert werden
+2. **DB-Template `termin_gebucht`** existiert noch — wird nicht mehr genutzt, entfernen
+3. **Fehlende DB-Templates**: `gespraech_bestaetigung`, `probetag_bestaetigung`, `konto_erstellt`, `vertrag_eingereicht`, `auftrag_erfolgreich`
+4. **`create-employee-account/index.ts`** sendet noch `vertrag_genehmigt` SMS mit undefinierter `loginUrl` Variable — gesamten SMS-Block entfernen (SMS wird jetzt von `AdminArbeitsvertraege.tsx` gesendet)
+5. **`AdminArbeitsvertraege.tsx`** sendet Email bei Genehmigung aber keine SMS — SMS hinzufuegen
+6. **`Bewerbungsgespraech.tsx` und `Probetag.tsx`** senden hardcoded SMS-Text statt DB-Templates zu nutzen — Template-Lookup einbauen
+7. Fehlende SMS bei `konto_erstellt` (Auth.tsx), `vertrag_eingereicht` (Arbeitsvertrag.tsx, MitarbeiterArbeitsvertrag.tsx), `auftrag_erfolgreich` (AdminBewertungen.tsx, AdminMitarbeiterDetail.tsx)
 
----
+### Aenderungen
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+| Datei | Aenderung |
+|-------|-----------|
+| **DB Migration** | `vertrag_genehmigt` Template-Text updaten; `termin_gebucht` loeschen; neue Templates einfuegen fuer `gespraech_bestaetigung`, `probetag_bestaetigung`, `konto_erstellt`, `vertrag_eingereicht`, `auftrag_erfolgreich` |
+| **`supabase/functions/create-employee-account/index.ts`** | SMS-Block (Zeilen 175-219) komplett entfernen |
+| **`src/pages/admin/AdminArbeitsvertraege.tsx`** | `sendSms` importieren; nach Email-Versand: SMS mit Template-Lookup senden (`vertrag_genehmigt`) |
+| **`src/pages/Bewerbungsgespraech.tsx`** | Hardcoded SMS-Text ersetzen durch Template-Lookup aus `sms_templates` Tabelle |
+| **`src/pages/Probetag.tsx`** | Analog: Template-Lookup statt hardcoded Text |
+| **`src/pages/Auth.tsx`** | SMS `konto_erstellt` nach Registrierung senden |
+| **`src/pages/Arbeitsvertrag.tsx`** | SMS `vertrag_eingereicht` nach Einreichung senden |
+| **`src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx`** | SMS `vertrag_eingereicht` nach Einreichung senden |
+| **`src/pages/admin/AdminBewertungen.tsx`** | Zusaetzlich `auftrag_erfolgreich` SMS senden (bereits `bewertung_genehmigt` SMS vorhanden — Event-Type anpassen) |
+| **`src/pages/admin/AdminMitarbeiterDetail.tsx`** | Analog: `auftrag_erfolgreich` SMS Event-Type |
+| **`src/pages/admin/AdminSmsTemplates.tsx`** | `PLACEHOLDER_INFO` um neue Events erweitern: `konto_erstellt`, `vertrag_eingereicht`, `auftrag_erfolgreich` |
 
-## Was wurde gemacht
+### DB Migration (SQL)
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+```sql
+-- Update vertrag_genehmigt text
+UPDATE sms_templates 
+SET message = 'Hallo {name}, herzlichen Glückwunsch! Ihr Arbeitsvertrag wurde genehmigt – Sie sind nun vollwertiger Mitarbeiter. Wir freuen uns auf die Zusammenarbeit!',
+    updated_at = now()
+WHERE event_type = 'vertrag_genehmigt';
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+-- Delete obsolete termin_gebucht
+DELETE FROM sms_templates WHERE event_type = 'termin_gebucht';
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+-- Insert new templates
+INSERT INTO sms_templates (event_type, label, message) VALUES
+  ('gespraech_bestaetigung', 'Bewerbungsgespräch Bestätigung', 'Hallo {name}, Ihr Bewerbungsgespräch ist bestätigt: {datum} um {uhrzeit} Uhr. Wir freuen uns auf Sie!'),
+  ('probetag_bestaetigung', 'Probetag Bestätigung', 'Hallo {name}, Ihr Probetag ist bestätigt: {datum} um {uhrzeit} Uhr. Wir freuen uns auf Sie!'),
+  ('konto_erstellt', 'Konto erstellt', 'Hallo {name}, Ihr Konto wurde erfolgreich erstellt. Loggen Sie sich ein und reichen Sie Ihren Arbeitsvertrag ein.'),
+  ('vertrag_eingereicht', 'Vertrag eingereicht', 'Hallo {name}, Ihre Vertragsdaten wurden erfolgreich eingereicht. Wir prüfen diese zeitnah.'),
+  ('auftrag_erfolgreich', 'Auftrag erfolgreich', 'Hallo {name}, Ihr Auftrag "{auftrag}" wurde erfolgreich abgeschlossen. Vielen Dank!')
+ON CONFLICT DO NOTHING;
+```
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+### SMS-Template-Lookup Pattern
 
----
+Alle SMS-Versand-Stellen laden das Template aus der DB und ersetzen Platzhalter, mit Hardcoded-Fallback:
 
-# Vergütungsmodell pro Branding (abgeschlossen)
+```typescript
+const { data: tpl } = await supabase
+  .from("sms_templates").select("message")
+  .eq("event_type", "gespraech_bestaetigung").single();
+const smsText = tpl?.message
+  ? tpl.message.replace("{name}", name).replace("{datum}", date).replace("{uhrzeit}", time)
+  : `Hallo ${name}, Ihr Termin: ${date} um ${time} Uhr.`;
+```
 
-## Was wurde gemacht
-
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
-
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
-
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
