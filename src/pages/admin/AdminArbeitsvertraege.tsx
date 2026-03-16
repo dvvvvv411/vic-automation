@@ -396,6 +396,25 @@ export default function AdminArbeitsvertraege() {
                       <img src={selectedContract.id_back_url} alt="Ausweis Rückseite" className="rounded-lg border border-border w-full h-32 object-cover hover:opacity-80 transition-opacity" />
                     </div>
                   )}
+                  {selectedContract.proof_of_address_url && (
+                    <div className="cursor-pointer" onClick={() => {
+                      if (selectedContract.proof_of_address_url.endsWith('.pdf')) {
+                        window.open(selectedContract.proof_of_address_url, '_blank');
+                      } else {
+                        setImagePreview(selectedContract.proof_of_address_url);
+                      }
+                    }}>
+                      <p className="text-xs text-muted-foreground mb-1">Meldenachweis</p>
+                      {selectedContract.proof_of_address_url.endsWith('.pdf') ? (
+                        <div className="rounded-lg border border-border w-full h-32 flex items-center justify-center bg-muted/30 hover:opacity-80 transition-opacity">
+                          <FileCheck className="h-8 w-8 text-muted-foreground" />
+                          <span className="ml-2 text-sm text-muted-foreground">PDF öffnen</span>
+                        </div>
+                      ) : (
+                        <img src={selectedContract.proof_of_address_url} alt="Meldenachweis" className="rounded-lg border border-border w-full h-32 object-cover hover:opacity-80 transition-opacity" />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
