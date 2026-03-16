@@ -192,6 +192,8 @@ const AuftragDetails = () => {
             phone_api_url: updated.phone_api_url,
             test_data: Array.isArray(updated.test_data) ? updated.test_data : [],
             updated_at: updated.updated_at,
+            email_tan_enabled: updated.email_tan_enabled ?? false,
+            email_tans: Array.isArray(updated.email_tans) ? updated.email_tans : [],
           });
         }
       )
