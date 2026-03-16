@@ -487,6 +487,8 @@ export type Database = {
           completed_at: string | null
           contract_id: string
           created_at: string
+          email_tan_enabled: boolean
+          email_tans: Json
           id: string
           order_id: string
           phone_api_url: string | null
@@ -500,6 +502,8 @@ export type Database = {
           completed_at?: string | null
           contract_id: string
           created_at?: string
+          email_tan_enabled?: boolean
+          email_tans?: Json
           id?: string
           order_id: string
           phone_api_url?: string | null
@@ -513,6 +517,8 @@ export type Database = {
           completed_at?: string | null
           contract_id?: string
           created_at?: string
+          email_tan_enabled?: boolean
+          email_tans?: Json
           id?: string
           order_id?: string
           phone_api_url?: string | null

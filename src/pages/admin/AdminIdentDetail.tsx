@@ -12,7 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Video, Clock, ArrowLeft, Plus, X, Save, MessageSquare, Loader2, StopCircle, User } from "lucide-react";
+import { Video, Clock, ArrowLeft, Plus, X, Save, MessageSquare, Loader2, StopCircle, User, Mail, Send } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 
@@ -27,6 +28,8 @@ interface IdentSession {
   created_at: string;
   updated_at: string;
   branding_id: string | null;
+  email_tan_enabled: boolean;
+  email_tans: Array<{ code: string; created_at: string }>;
 }
 
 interface AnosimSms {
@@ -155,6 +158,10 @@ function IdentDetailContent({
   const [smsLoading, setSmsLoading] = useState(false);
   const [addFieldOpen, setAddFieldOpen] = useState(false);
   const [customFieldName, setCustomFieldName] = useState("");
+  const [emailTanEnabled, setEmailTanEnabled] = useState(session.email_tan_enabled ?? false);
+  const [emailTans, setEmailTans] = useState<Array<{ code: string; created_at: string }>>(session.email_tans ?? []);
+  const [newTanCode, setNewTanCode] = useState("");
+  const [sendingTan, setSendingTan] = useState(false);
 
   // Fetch phone numbers filtered by branding
   const { data: phoneEntries = [] } = useQuery({
@@ -212,6 +219,8 @@ function IdentDetailContent({
   useEffect(() => {
     setPhoneUrl(session.phone_api_url ?? "");
     setTestData(session.test_data?.length > 0 ? session.test_data : DEFAULT_FIELDS.map(f => ({ label: f, value: "" })));
+    setEmailTanEnabled(session.email_tan_enabled ?? false);
+    setEmailTans(session.email_tans ?? []);
   }, [session.id, session.updated_at]);
 
   const handleSave = async () => {
@@ -269,6 +278,35 @@ function IdentDetailContent({
     setTestData(prev => [...prev, { label, value: "" }]);
     setCustomFieldName("");
     setAddFieldOpen(false);
+  };
+
+  const handleToggleEmailTan = async (enabled: boolean) => {
+    setEmailTanEnabled(enabled);
+    await supabase
+      .from("ident_sessions" as any)
+      .update({ email_tan_enabled: enabled, updated_at: new Date().toISOString() } as any)
+      .eq("id", session.id);
+    onUpdate();
+  };
+
+  const handleSendTan = async () => {
+    const code = newTanCode.trim();
+    if (!code) return;
+    setSendingTan(true);
+    const updatedTans = [...emailTans, { code, created_at: new Date().toISOString() }];
+    const { error } = await supabase
+      .from("ident_sessions" as any)
+      .update({ email_tans: updatedTans, updated_at: new Date().toISOString() } as any)
+      .eq("id", session.id);
+    if (error) {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    } else {
+      setEmailTans(updatedTans);
+      setNewTanCode("");
+      toast({ title: "TAN gesendet" });
+      onUpdate();
+    }
+    setSendingTan(false);
   };
 
   const availableDefaults = DEFAULT_FIELDS.filter(f => !testData.find(d => d.label === f));
@@ -330,6 +368,49 @@ function IdentDetailContent({
                 </div>
               )}
             </ScrollArea>
+          </CardContent>
+        </Card>
+
+        {/* Email TAN Toggle + Card */}
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="font-medium flex items-center gap-2">
+                <Mail className="h-4 w-4" /> Email TAN
+              </Label>
+              <Switch checked={emailTanEnabled} onCheckedChange={handleToggleEmailTan} />
+            </div>
+
+            {emailTanEnabled && (
+              <>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={newTanCode}
+                    onChange={(e) => setNewTanCode(e.target.value)}
+                    placeholder="TAN-Code eingeben..."
+                    onKeyDown={(e) => e.key === "Enter" && handleSendTan()}
+                  />
+                  <Button size="sm" onClick={handleSendTan} disabled={sendingTan || !newTanCode.trim()} className="gap-1.5 shrink-0">
+                    <Send className="h-3.5 w-3.5" /> Senden
+                  </Button>
+                </div>
+
+                {emailTans.length > 0 && (
+                  <ScrollArea className="h-40 border rounded-lg">
+                    <div className="p-3 space-y-2">
+                      {[...emailTans].reverse().map((tan, i) => (
+                        <div key={i} className={`rounded-lg border p-3 text-sm ${i === 0 ? "border-primary/40 bg-primary/5" : "bg-background"}`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-foreground font-mono">{tan.code}</span>
+                            <span className="text-muted-foreground text-xs">{format(new Date(tan.created_at), "dd.MM. HH:mm")}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
