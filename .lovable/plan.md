@@ -1,35 +1,66 @@
 
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-# Fixes für Festgehalt-Anzeige
+## Was wurde gemacht
 
-## Probleme
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-1. **Dashboard Stats**: `employmentType` wird kleingeschrieben angezeigt (z.B. "minijob" statt "Minijob")
-2. **MeineDaten - Gehaltsauszahlungen**: Zeigt "Voraussichtlicher Betrag" + Prämien-Summe statt Festgehalt
-3. **MeineDaten - Statistiken**: Zeigt "Kontostand" statt Festgehalt
-4. **MeineDaten - Verdienst-Historie**: Soll bei Festgehalt ausgeblendet werden
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-## Änderungen
+---
 
-### 1. `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` (Zeile 315)
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-`employmentType` capitalisieren:
+## Was wurde gemacht
 
-```typescript
-detail: employmentType 
-  ? employmentType.charAt(0).toUpperCase() + employmentType.slice(1) 
-  : "Festgehalt"
-```
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-### 2. `src/pages/mitarbeiter/MeineDaten.tsx`
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
-**ContextType erweitern** (Zeile 18): `branding` muss `payment_model`, `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` enthalten.
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
 
-**Statistiken-Sektion** (Zeile 250): Bei Festgehalt statt "Kontostand" → "Festgehalt" mit dem entsprechenden Betrag anzeigen.
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
 
-**Gehaltsauszahlungen** (Zeile 296): Bei Festgehalt "Betrag" statt "Voraussichtlicher Betrag" anzeigen, und den Festgehalt-Wert statt `pendingPayout`.
+---
 
-**Verdienst-Historie** (Zeile 307-340): Den gesamten Block bei Festgehalt ausblenden.
+# Vergütungsmodell pro Branding (abgeschlossen)
 
-Dafür muss `employment_type` aus den Contract-Details geladen werden (wird bereits im Dashboard geladen, fehlt aber in MeineDaten). Festgehalt-Betrag wird anhand von `employment_type` + Branding-Salary-Feldern berechnet.
+## Was wurde gemacht
 
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary

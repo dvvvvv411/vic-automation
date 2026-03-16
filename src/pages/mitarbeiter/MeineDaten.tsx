@@ -15,7 +15,7 @@ import jsPDF from "jspdf";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null; signature_data?: string | null; template_id?: string | null; submitted_at?: string | null } | null;
-  branding: { logo_url: string | null; company_name: string; brand_color: string | null; signature_image_url?: string | null; signer_name?: string | null; signer_title?: string | null } | null;
+  branding: { logo_url: string | null; company_name: string; brand_color: string | null; signature_image_url?: string | null; signer_name?: string | null; signer_title?: string | null; payment_model?: string; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null } | null;
   loading: boolean;
 }
 
@@ -31,10 +31,11 @@ interface ContractDetails {
   iban: string | null;
   bic: string | null;
   bank_name: string | null;
+  employment_type: string | null;
 }
 
 const MeineDaten = () => {
-  const { contract, loading: contextLoading } = useOutletContext<ContextType>();
+  const { contract, branding, loading: contextLoading } = useOutletContext<ContextType>();
   const [contractDetails, setContractDetails] = useState<ContractDetails | null>(null);
   const [stats, setStats] = useState({ ratedOrders: 0, avgRating: 0 });
   const [pendingPayout, setPendingPayout] = useState(0);
@@ -55,7 +56,7 @@ const MeineDaten = () => {
       const [contractRes, reviewsRes, assignmentsRes] = await Promise.all([
         supabase
           .from("employment_contracts")
-          .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name")
+          .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name, employment_type")
           .eq("id", contract.id)
           .maybeSingle(),
         supabase
@@ -140,6 +141,18 @@ const MeineDaten = () => {
   }
 
   const fullName = [contractDetails.first_name, contractDetails.last_name].filter(Boolean).join(" ") || "—";
+
+  const isFixedSalary = branding?.payment_model === "festgehalt";
+  const getFixedSalary = () => {
+    if (!branding) return 0;
+    switch (contractDetails.employment_type?.toLowerCase()) {
+      case "minijob": return Number(branding.salary_minijob) || 0;
+      case "teilzeit": return Number(branding.salary_teilzeit) || 0;
+      case "vollzeit": return Number(branding.salary_vollzeit) || 0;
+      default: return 0;
+    }
+  };
+  const fixedSalary = getFixedSalary();
 
   const formatIban = (iban: string | null) => {
     if (!iban) return "—";
@@ -247,7 +260,10 @@ const MeineDaten = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               <StatCard icon={ClipboardCheck} label="Bewertete Aufträge" value={String(stats.ratedOrders)} />
               <StatCard icon={Star} label="Ø Bewertung" value={stats.avgRating > 0 ? String(stats.avgRating) : "—"} showStars rating={stats.avgRating} />
-              <StatCard icon={Euro} label="Kontostand" value={`€${Number(contractDetails.balance).toFixed(2)}`} />
+              {isFixedSalary
+                ? <StatCard icon={Euro} label="Festgehalt" value={`€${fixedSalary.toFixed(2)}`} />
+                : <StatCard icon={Euro} label="Kontostand" value={`€${Number(contractDetails.balance).toFixed(2)}`} />
+              }
             </div>
           </CardContent>
         </Card>
@@ -293,8 +309,8 @@ const MeineDaten = () => {
                     {(() => { const t = new Date(); const d = t.getDate() < 15 ? new Date(t.getFullYear(), t.getMonth(), 15) : new Date(t.getFullYear(), t.getMonth() + 1, 15); return format(d, "dd.MM.yyyy", { locale: de }); })()}
                   </p>
                   <div className="border-t border-border pt-3">
-                    <p className="text-xs text-muted-foreground">Voraussichtlicher Betrag</p>
-                    <p className="text-2xl font-bold text-primary">€{pendingPayout.toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">{isFixedSalary ? "Betrag" : "Voraussichtlicher Betrag"}</p>
+                    <p className="text-2xl font-bold text-primary">€{isFixedSalary ? fixedSalary.toFixed(2) : pendingPayout.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -303,41 +319,43 @@ const MeineDaten = () => {
         </Card>
       </motion.div>
 
-      {/* Reward History */}
-      <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.4 }}>
-        <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <History className="h-4 w-4 text-primary" />
-              Verdienst-Historie
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {rewardHistory.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Noch keine abgeschlossenen Aufträge.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Auftrag</TableHead>
-                    <TableHead>Prämie</TableHead>
-                    <TableHead>Datum</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rewardHistory.map((item, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="font-medium">{item.title}</TableCell>
-                      <TableCell>{item.reward.replace(/[^0-9.,]/g, "").replace(",", ".")} €</TableCell>
-                      <TableCell>{format(new Date(item.date), "dd.MM.yyyy", { locale: de })}</TableCell>
+      {/* Reward History - only for per_order model */}
+      {!isFixedSalary && (
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.4 }}>
+          <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <History className="h-4 w-4 text-primary" />
+                Verdienst-Historie
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {rewardHistory.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Noch keine abgeschlossenen Aufträge.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Auftrag</TableHead>
+                      <TableHead>Prämie</TableHead>
+                      <TableHead>Datum</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
+                  </TableHeader>
+                  <TableBody>
+                    {rewardHistory.map((item, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-medium">{item.title}</TableCell>
+                        <TableCell>{item.reward.replace(/[^0-9.,]/g, "").replace(",", ".")} €</TableCell>
+                        <TableCell>{format(new Date(item.date), "dd.MM.yyyy", { locale: de })}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
 
       <Dialog open={contractViewOpen} onOpenChange={setContractViewOpen}>
