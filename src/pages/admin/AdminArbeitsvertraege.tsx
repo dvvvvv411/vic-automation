@@ -70,18 +70,19 @@ export default function AdminArbeitsvertraege() {
     const filtered = activeTab === "all"
       ? data
       : data.filter((item: any) => {
-          const s = item.contract?.status;
+          const s = item.status;
           if (activeTab === "offen") return !s || s === "offen";
+          if (activeTab === "eingereicht") return s === "eingereicht" || s === "unterzeichnet";
           return s === activeTab;
         });
 
     return [...filtered].sort((a, b) => {
-      const rankA = statusOrder[a.contract?.status] ?? 3;
-      const rankB = statusOrder[b.contract?.status] ?? 3;
+      const rankA = statusOrder[a.status] ?? 3;
+      const rankB = statusOrder[b.status] ?? 3;
       if (rankA !== rankB) return rankA - rankB;
 
-      const dateA = a.contract?.desired_start_date ? new Date(a.contract.desired_start_date + "T00:00:00") : null;
-      const dateB = b.contract?.desired_start_date ? new Date(b.contract.desired_start_date + "T00:00:00") : null;
+      const dateA = a.desired_start_date ? new Date(a.desired_start_date + "T00:00:00") : null;
+      const dateB = b.desired_start_date ? new Date(b.desired_start_date + "T00:00:00") : null;
 
       if (!dateA && !dateB) return 0;
       if (!dateA) return 1;
