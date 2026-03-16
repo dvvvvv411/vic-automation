@@ -197,6 +197,7 @@ export default function AdminAuftraege() {
           mode="order"
           sourceId={assignOrder.id}
           sourceLabel={assignOrder.title}
+          brandingId={activeBrandingId ?? undefined}
         />
       )}
     </div>

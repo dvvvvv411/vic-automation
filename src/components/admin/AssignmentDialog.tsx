@@ -21,9 +21,10 @@ interface AssignmentDialogProps {
   mode: "order" | "contract";
   sourceId: string;
   sourceLabel: string;
+  brandingId?: string;
 }
 
-export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, sourceLabel }: AssignmentDialogProps) {
+export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, sourceLabel, brandingId }: AssignmentDialogProps) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
@@ -65,14 +66,16 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
 
   // Load items to pick from
   const { data: items, isLoading: loadingItems } = useQuery({
-    queryKey: [mode === "order" ? "assignable_contracts" : "assignable_orders"],
+    queryKey: [mode === "order" ? "assignable_contracts" : "assignable_orders", brandingId],
     enabled: open,
     queryFn: async () => {
       if (mode === "order") {
-        const { data, error } = await supabase
+        let query = supabase
           .from("employment_contracts")
           .select("id, first_name, last_name, email, employment_type")
           .eq("status", "unterzeichnet");
+        if (brandingId) query = query.eq("branding_id", brandingId);
+        const { data, error } = await query;
         if (error) throw error;
         return (data ?? []).map((c) => ({
           id: c.id,
@@ -81,9 +84,11 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           employmentType: c.employment_type ?? null,
         }));
       } else {
-        const { data, error } = await supabase
+        let query = supabase
           .from("orders")
           .select("id, order_number, title, provider");
+        if (brandingId) query = query.eq("branding_id", brandingId);
+        const { data, error } = await query;
         if (error) throw error;
         return (data ?? []).map((o) => ({
           id: o.id,

@@ -309,6 +309,7 @@ export default function AdminMitarbeiter() {
           mode="contract"
           sourceId={assignContract.id}
           sourceLabel={assignContract.label}
+          brandingId={activeBrandingId ?? undefined}
         />
       )}
 
