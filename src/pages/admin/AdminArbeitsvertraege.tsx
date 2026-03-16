@@ -290,7 +290,7 @@ export default function AdminArbeitsvertraege() {
                         {hasData ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetails(item.contract)}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDetails(item)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
