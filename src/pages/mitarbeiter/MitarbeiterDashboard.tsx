@@ -33,6 +33,7 @@ interface OrderWithStatus extends Order {
   hasIdentSession: boolean;
   hasReviewSubmitted: boolean;
   attachmentsPending: boolean;
+  attachmentsSubmitted: boolean;
 }
 
 function getGreeting(): string {
