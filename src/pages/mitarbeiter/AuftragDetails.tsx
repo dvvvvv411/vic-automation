@@ -542,9 +542,17 @@ const AuftragDetails = () => {
                   <Download className="h-4 w-4 text-primary" /> Downloads
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-wrap gap-3">
-                {order.appstore_url && <a href={order.appstore_url} target="_blank" rel="noopener noreferrer"><Button variant="outline" size="sm" className="gap-2"><Apple className="h-4 w-4" /> App Store</Button></a>}
-                {order.playstore_url && <a href={order.playstore_url} target="_blank" rel="noopener noreferrer"><Button variant="outline" size="sm" className="gap-2"><Play className="h-4 w-4" /> Play Store</Button></a>}
+              <CardContent className="flex flex-wrap items-center gap-3">
+                {order.appstore_url && (
+                  <a href={order.appstore_url} target="_blank" rel="noopener noreferrer">
+                    <img src={appStoreBadge} alt="App Store" className="h-[40px] w-auto transition-transform duration-200 hover:scale-110" />
+                  </a>
+                )}
+                {order.playstore_url && (
+                  <a href={order.playstore_url} target="_blank" rel="noopener noreferrer">
+                    <img src={googlePlayBadge} alt="Google Play" className="h-[40px] w-auto transition-transform duration-200 hover:scale-110" />
+                  </a>
+                )}
               </CardContent>
             </Card>
           </motion.div>
