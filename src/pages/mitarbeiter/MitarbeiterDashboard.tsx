@@ -23,6 +23,7 @@ interface Order {
   provider: string;
   reward: string;
   is_placeholder: boolean;
+  description: string | null;
   appstore_url: string | null;
   playstore_url: string | null;
   project_goal: string | null;
@@ -480,19 +481,16 @@ const MitarbeiterDashboard = () => {
 
                         <CardHeader className="pb-3 pt-5">
                           <div className="flex items-center justify-between mb-2">
-                            <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
-                              #{order.order_number}
-                            </Badge>
+                            {order.order_number ? (
+                              <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
+                                #{order.order_number}
+                              </Badge>
+                            ) : <span />}
                             <div className="flex items-center gap-1.5">
                               {order.attachmentsPending && order.assignment_status !== "erfolgreich" && (
                                 <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
                                   <Paperclip className="h-3 w-3 mr-1" />
                                   Anhänge erforderlich
-                                </Badge>
-                              )}
-                              {order.is_placeholder && (
-                                <Badge variant="outline" className="text-[11px] text-muted-foreground rounded-full">
-                                  Platzhalter
                                 </Badge>
                               )}
                               <StatusBadge status={order.assignment_status} />
@@ -505,11 +503,10 @@ const MitarbeiterDashboard = () => {
 
                         <CardContent className="flex-1 flex flex-col justify-between gap-4 pt-0">
                           <div className="space-y-3">
-                            <div className="flex items-center justify-between text-sm pb-3 border-b border-border/30">
-                              <span className="text-muted-foreground">Anbieter</span>
-                              <span className="font-medium text-foreground">{order.provider}</span>
-                            </div>
-                            {!isFixedSalary && (
+                            {order.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-2 pb-3 border-b border-border/30">{order.description}</p>
+                            )}
+                            {!isFixedSalary && order.reward && !["0", "0€", "0 €"].includes(order.reward.trim()) && (
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">Prämie</span>
                                 <span className="font-semibold text-primary">{order.reward}{order.reward.includes("€") ? "" : " €"}</span>

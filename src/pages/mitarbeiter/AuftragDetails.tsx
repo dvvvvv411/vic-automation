@@ -398,16 +398,7 @@ const AuftragDetails = () => {
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4 mr-1.5" /> Zurück
           </Button>
-          <div className="flex gap-2">
-            {order.order_type && (
-              <Badge variant="secondary" className="text-xs font-medium px-3 py-1">{order.order_type}</Badge>
-            )}
-            {order.is_videochat && (
-              <Badge variant="outline" className="text-xs font-medium px-3 py-1 gap-1 border-primary/30 text-primary">
-                <Video className="h-3 w-3" /> Video-Chat
-              </Badge>
-            )}
-          </div>
+          <span />
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
@@ -426,7 +417,7 @@ const AuftragDetails = () => {
                   <p className="font-medium text-foreground">{order.provider}</p>
                 </div>
               )}
-              {!isFixedSalary && (
+              {!isFixedSalary && order.reward && !["0", "0€", "0 €"].includes(order.reward.trim()) && (
                 <div>
                   <span className="text-muted-foreground">Prämie</span>
                   <p className="font-semibold text-primary">{order.reward}{order.reward.includes("€") ? "" : " €"}</p>

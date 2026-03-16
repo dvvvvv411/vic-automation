@@ -24,6 +24,7 @@ interface Assignment {
   title: string;
   provider: string;
   reward: string;
+  description: string | null;
   hasRequiredAttachments: boolean;
   attachmentsPending: boolean;
   attachmentsSubmitted: boolean;
@@ -151,7 +152,7 @@ const MitarbeiterAuftraege = () => {
       const orderIds = rawAssignments.map((a) => a.order_id);
       const { data: orders } = await supabase
         .from("orders")
-        .select("id, order_number, title, provider, reward, is_placeholder, required_attachments")
+        .select("id, order_number, title, provider, reward, is_placeholder, required_attachments, description")
         .in("id", orderIds);
 
 
@@ -209,6 +210,7 @@ const MitarbeiterAuftraege = () => {
               title: order.title,
               provider: order.provider,
               reward: order.reward,
+              description: order.description ?? null,
               hasRequiredAttachments: hasReq,
               attachmentsPending: hasReq && !allSubmitted,
               attachmentsSubmitted: allSubmitted && !allApproved,
@@ -297,9 +299,11 @@ const MitarbeiterAuftraege = () => {
 
                 <CardHeader className="pb-3 pt-5">
                     <div className="flex items-center justify-between mb-2">
-                      <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
-                        #{a.order_number}
-                      </Badge>
+                      {a.order_number ? (
+                        <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
+                          #{a.order_number}
+                        </Badge>
+                      ) : <span />}
                       <div className="flex items-center gap-1.5">
                         {a.attachmentsPending && a.status !== "erfolgreich" && (
                           <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
@@ -317,14 +321,15 @@ const MitarbeiterAuftraege = () => {
 
                 <CardContent className="flex-1 flex flex-col justify-between gap-4 pt-0">
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm pb-3 border-b border-border/30">
-                      <span className="text-muted-foreground">Anbieter</span>
-                      <span className="font-medium text-foreground">{a.provider}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Prämie</span>
-                      <span className="font-semibold text-primary">{a.reward}{a.reward.includes("€") ? "" : " €"}</span>
-                    </div>
+                    {a.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 pb-3 border-b border-border/30">{a.description}</p>
+                    )}
+                    {a.reward && !["0", "0€", "0 €"].includes(a.reward.trim()) && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Prämie</span>
+                        <span className="font-semibold text-primary">{a.reward}{a.reward.includes("€") ? "" : " €"}</span>
+                      </div>
+                    )}
 
                   </div>
 
