@@ -227,6 +227,9 @@ const MitarbeiterDashboard = () => {
           const reqAtts = (o.required_attachments as any[] | null) ?? [];
           const hasReq = reqAtts.length > 0;
           const orderAtts = attachmentsByOrder[o.id] ?? [];
+          const allSubmitted = hasReq && reqAtts.every((_: any, i: number) =>
+            orderAtts.some((att) => att.attachment_index === i && (att.status === "eingereicht" || att.status === "genehmigt"))
+          );
           const allApproved = hasReq && reqAtts.every((_: any, i: number) =>
             orderAtts.some((att) => att.attachment_index === i && att.status === "genehmigt")
           );
@@ -235,7 +238,8 @@ const MitarbeiterDashboard = () => {
             assignment_status: statusMap[o.id] ?? "offen",
             hasIdentSession: orderIdsWithSession.has(o.id),
             hasReviewSubmitted: orderIdsWithReview.has(o.id),
-            attachmentsPending: hasReq && !allApproved,
+            attachmentsPending: hasReq && !allSubmitted,
+            attachmentsSubmitted: allSubmitted && !allApproved,
           };
         }));
       }
