@@ -117,13 +117,36 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Load branding
+    // Load branding – resolve from branding_id or fallback via contract_id in metadata
+    let effectiveBrandingId = branding_id || null;
+
+    if (!effectiveBrandingId && metadata?.contract_id) {
+      // Resolve branding from profiles first, then employment_contracts
+      const contractId = metadata.contract_id as string;
+      const { data: contractRow } = await adminClient
+        .from("employment_contracts")
+        .select("branding_id, user_id")
+        .eq("id", contractId)
+        .single();
+
+      if (contractRow?.user_id) {
+        const { data: profile } = await adminClient
+          .from("profiles")
+          .select("branding_id")
+          .eq("id", contractRow.user_id)
+          .single();
+        effectiveBrandingId = profile?.branding_id ?? contractRow.branding_id ?? null;
+      } else {
+        effectiveBrandingId = contractRow?.branding_id ?? null;
+      }
+    }
+
     let branding: any = null;
-    if (branding_id) {
+    if (effectiveBrandingId) {
       const { data } = await adminClient
         .from("brandings")
         .select("company_name, logo_url, brand_color, street, zip_code, city, resend_api_key, resend_from_email, resend_from_name")
-        .eq("id", branding_id)
+        .eq("id", effectiveBrandingId)
         .single();
       branding = data;
     }
