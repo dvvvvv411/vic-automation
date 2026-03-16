@@ -717,10 +717,17 @@ const AuftragDetails = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {/* Resolved phone number display */}
+                {hasPhone && resolvedPhoneNumber && (
+                  <div className="mb-3 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                    <Smartphone className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm font-medium text-foreground">Telefonnummer: {resolvedPhoneNumber}</span>
+                  </div>
+                )}
                 {!hasPhone ? (
                   <div className="py-8 text-center space-y-2">
-                    <AlertTriangle className="h-6 w-6 text-muted-foreground/40 mx-auto" />
-                    <p className="text-sm text-muted-foreground">Keine SMS-Nachrichten vorhanden.</p>
+                    <Clock className="h-6 w-6 text-muted-foreground/40 mx-auto" />
+                    <p className="text-sm text-muted-foreground">Warte auf Telefonnummer-Zuweisung...</p>
                   </div>
                 ) : smsLoading && smsMessages.length === 0 ? (
                   <div className="py-8 text-center">
