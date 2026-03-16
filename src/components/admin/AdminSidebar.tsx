@@ -208,6 +208,7 @@ export function AdminSidebar() {
     "/admin/probetag": probetagTodayCount ?? 0,
     "/admin/arbeitsvertraege": eingereichtCount ?? 0,
     "/admin/idents": identWaitingCount ?? 0,
+    "/admin/anhaenge": anhaengeEingereichtCount ?? 0,
     "/admin/livechat": chatUnreadCount ?? 0,
     "/admin/bewertungen": inPruefungCount ?? 0,
   };

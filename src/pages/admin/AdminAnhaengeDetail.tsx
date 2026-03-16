@@ -250,18 +250,6 @@ export default function AdminAnhaengeDetail() {
                 <p className="text-xs text-muted-foreground">
                   {format(new Date(a.created_at), "dd.MM.yyyy HH:mm")}
                 </p>
-                {a.status === "eingereicht" && (
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="flex-1 text-green-600 border-green-300 hover:bg-green-50"
-                      onClick={() => updateMutation.mutate({ id: a.id, status: "genehmigt" })}>
-                      <CheckCircle className="h-4 w-4 mr-1" /> Genehmigen
-                    </Button>
-                    <Button size="sm" variant="outline" className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/5"
-                      onClick={() => updateMutation.mutate({ id: a.id, status: "abgelehnt" })}>
-                      <XCircle className="h-4 w-4 mr-1" /> Ablehnen
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))}
