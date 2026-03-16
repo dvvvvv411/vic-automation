@@ -358,13 +358,19 @@ const MeineDaten = () => {
                   <img src={brandingSig.signature_image_url} alt="Firmenunterschrift" className="h-16 object-contain" />
                   <p className="text-sm font-medium mt-1">{brandingSig.signer_name}</p>
                   {brandingSig.signer_title && <p className="text-xs text-muted-foreground">{brandingSig.signer_title}</p>}
+                  {contractExtra?.submitted_at && (
+                    <p className="text-xs text-muted-foreground mt-1">Datum: {format(new Date(contractExtra.submitted_at), "dd.MM.yyyy", { locale: de })}</p>
+                  )}
                 </div>
               )}
-              {(contract as any)?.signature_data && (
+              {contractExtra?.signature_data && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">Ihre Unterschrift</p>
-                  <img src={(contract as any).signature_data} alt="Unterschrift" className="h-16 object-contain" />
-                  <p className="text-sm font-medium mt-1">{contractDetails?.first_name} {contractDetails?.last_name}</p>
+                  <p className="text-xs text-muted-foreground mb-2">Unterschrift Mitarbeiter</p>
+                  <img src={contractExtra.signature_data} alt="Unterschrift" className="h-16 object-contain" />
+                  <p className="text-sm font-medium mt-1">{[contractExtra.first_name, contractExtra.last_name].filter(Boolean).join(" ")}</p>
+                  {contractExtra?.submitted_at && (
+                    <p className="text-xs text-muted-foreground mt-1">Datum: {format(new Date(contractExtra.submitted_at), "dd.MM.yyyy", { locale: de })}</p>
+                  )}
                 </div>
               )}
             </div>
