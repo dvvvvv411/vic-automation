@@ -122,6 +122,12 @@ export default function AdminAuftraege() {
                           Video-Chat
                         </Badge>
                       )}
+                      {Array.isArray(o.required_attachments) && (o.required_attachments as any[]).length > 0 && (
+                        <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-300 text-xs">
+                          <Paperclip className="h-3 w-3 mr-1" />
+                          Anhänge erforderlich
+                        </Badge>
+                      )}
                       {count > 0 && (
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Users className="h-3 w-3" /> {count}
