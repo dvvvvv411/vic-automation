@@ -164,6 +164,7 @@ const MitarbeiterAuftraege = () => {
         .in("order_id", orderIds);
 
       const orderIdsWithSession = new Set((identSessions ?? []).map(s => s.order_id));
+      const orderIdsWithReview = new Set((reviews ?? []).map(r => r.order_id));
 
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
 
