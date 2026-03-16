@@ -23,6 +23,7 @@ interface Order {
   provider: string;
   reward: string;
   is_placeholder: boolean;
+  description: string | null;
   appstore_url: string | null;
   playstore_url: string | null;
   project_goal: string | null;
