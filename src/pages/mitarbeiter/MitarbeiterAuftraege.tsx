@@ -156,6 +156,13 @@ const MitarbeiterAuftraege = () => {
         .eq("contract_id", contract.id)
         .in("order_id", orderIds);
 
+      // Load reviews to detect "bewertung abgeschickt" state
+      const { data: reviews } = await supabase
+        .from("order_reviews")
+        .select("order_id")
+        .eq("contract_id", contract.id)
+        .in("order_id", orderIds);
+
       const orderIdsWithSession = new Set((identSessions ?? []).map(s => s.order_id));
 
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
