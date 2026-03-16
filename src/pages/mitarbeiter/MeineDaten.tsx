@@ -203,12 +203,17 @@ const MeineDaten = () => {
                   variant="outline"
                   size="sm"
                   onClick={async () => {
-                    // Load template content + branding signature
                     const { data: ec } = await supabase
                       .from("employment_contracts")
-                      .select("template_id, signature_data, first_name, last_name, birth_date, street, zip_code, city, employment_type, branding_id")
+                      .select("template_id, signature_data, first_name, last_name, birth_date, street, zip_code, city, employment_type, branding_id, submitted_at")
                       .eq("id", contract.id)
                       .maybeSingle();
+                    setContractExtra({
+                      signature_data: ec?.signature_data ?? undefined,
+                      first_name: ec?.first_name ?? undefined,
+                      last_name: ec?.last_name ?? undefined,
+                      submitted_at: ec?.submitted_at ?? undefined,
+                    });
                     if (ec?.template_id) {
                       const { data: tpl } = await supabase.from("contract_templates" as any).select("content, salary").eq("id", ec.template_id).maybeSingle();
                       setTemplateContent((tpl as any)?.content || null);
