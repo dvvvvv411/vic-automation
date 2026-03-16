@@ -450,7 +450,8 @@ const MitarbeiterDashboard = () => {
                           <StatusButton 
                             status={order.assignment_status} 
                             orderId={order.id} 
-                            navigate={navigate} 
+                            navigate={navigate}
+                            hasIdentSession={order.hasIdentSession}
                           />
                         </CardContent>
                       </Card>
