@@ -43,6 +43,7 @@ const MeineDaten = () => {
   const [contractViewOpen, setContractViewOpen] = useState(false);
   const [templateContent, setTemplateContent] = useState<string | null>(null);
   const [brandingSig, setBrandingSig] = useState<any>(null);
+  const [contractExtra, setContractExtra] = useState<{ signature_data?: string; first_name?: string; last_name?: string; submitted_at?: string } | null>(null);
 
   useEffect(() => {
     if (!contract?.id) return;
