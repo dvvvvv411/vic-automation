@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -19,27 +18,22 @@ const TIME_SLOTS = Array.from({ length: 21 }, (_, i) => {
   return `${String(hour).padStart(2, "0")}:${min}`;
 });
 
-export default function TrialDayBlocker() {
+interface TrialDayBlockerProps {
+  brandingId: string;
+}
+
+export default function TrialDayBlocker({ brandingId }: TrialDayBlockerProps) {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockReason, setBlockReason] = useState("");
-  const [blockBrandingId, setBlockBrandingId] = useState<string>("all");
-
-  const { data: brandings = [] } = useQuery({
-    queryKey: ["brandings"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("brandings").select("id, company_name").order("company_name");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
 
   const { data: blockedSlots } = useQuery({
-    queryKey: ["trial-day-blocked-slots"],
+    queryKey: ["trial-day-blocked-slots", brandingId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trial_day_blocked_slots" as any)
         .select("*")
+        .eq("branding_id", brandingId)
         .order("blocked_date", { ascending: true });
       if (error) throw error;
       const allSlots = (data || []) as unknown as Array<{
@@ -64,7 +58,7 @@ export default function TrialDayBlocker() {
           blocked_date: format(selectedDate, "yyyy-MM-dd"),
           blocked_time: time + ":00",
           reason: blockReason || null,
-          branding_id: blockBrandingId === "all" ? null : blockBrandingId,
+          branding_id: brandingId,
         });
       if (error) throw error;
     },
@@ -111,18 +105,6 @@ export default function TrialDayBlocker() {
                 <Label>Grund (optional)</Label>
                 <Input placeholder="z.B. Feiertag" value={blockReason} onChange={(e) => setBlockReason(e.target.value)} />
               </div>
-              {brandings.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  <Label>Branding</Label>
-                  <Select value={blockBrandingId} onValueChange={setBlockBrandingId}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Alle Brandings</SelectItem>
-                      {brandings.map((b) => <SelectItem key={b.id} value={b.id}>{b.company_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
             <div>
               {!selectedDate ? (
