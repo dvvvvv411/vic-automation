@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Package, ExternalLink, Clock, CheckCircle, XCircle, RefreshCw, Paperclip } from "lucide-react";
+import { Package, ExternalLink, Clock, CheckCircle, XCircle, RefreshCw, Paperclip, Play } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ interface Assignment {
   reward: string;
   hasRequiredAttachments: boolean;
   attachmentsPending: boolean;
+  hasIdentSession: boolean;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
@@ -54,8 +55,8 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-const StatusButton = ({ status, orderId, navigate }: { 
-  status: string; orderId: string; navigate: (path: string) => void 
+const StatusButton = ({ status, orderId, navigate, hasIdentSession }: { 
+  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean
 }) => {
   switch (status) {
     case "in_pruefung":
@@ -91,8 +92,11 @@ const StatusButton = ({ status, orderId, navigate }: {
           size="sm"
           onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
         >
-          Auftrag starten
-          <ExternalLink className="h-3.5 w-3.5 ml-1.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
+          {hasIdentSession ? "Auftrag fortführen" : "Auftrag starten"}
+          {hasIdentSession 
+            ? <Play className="h-3.5 w-3.5 ml-1.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
+            : <ExternalLink className="h-3.5 w-3.5 ml-1.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
+          }
         </Button>
       );
   }
@@ -130,6 +134,15 @@ const MitarbeiterAuftraege = () => {
         .select("order_id, attachment_index, status")
         .eq("contract_id", contract.id);
 
+      // Load ident sessions to detect "fortführen" state
+      const { data: identSessions } = await supabase
+        .from("ident_sessions")
+        .select("order_id")
+        .eq("contract_id", contract.id)
+        .in("order_id", orderIds);
+
+      const orderIdsWithSession = new Set((identSessions ?? []).map(s => s.order_id));
+
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
 
       // Group attachments by order_id
@@ -160,6 +173,7 @@ const MitarbeiterAuftraege = () => {
               reward: order.reward,
               hasRequiredAttachments: hasReq,
               attachmentsPending: hasReq && !allApproved,
+              hasIdentSession: orderIdsWithSession.has(a.order_id),
             };
           })
       );
@@ -277,7 +291,8 @@ const MitarbeiterAuftraege = () => {
                   <StatusButton 
                     status={a.status} 
                     orderId={a.order_id} 
-                    navigate={navigate} 
+                    navigate={navigate}
+                    hasIdentSession={a.hasIdentSession}
                   />
                 </CardContent>
               </Card>

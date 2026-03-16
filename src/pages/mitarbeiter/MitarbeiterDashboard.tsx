@@ -30,6 +30,7 @@ interface Order {
 
 interface OrderWithStatus extends Order {
   assignment_status: string;
+  hasIdentSession: boolean;
 }
 
 function getGreeting(): string {
@@ -39,8 +40,8 @@ function getGreeting(): string {
   return "Guten Abend";
 }
 
-const StatusButton = ({ status, orderId, navigate }: { 
-  status: string; orderId: string; navigate: (path: string) => void 
+const StatusButton = ({ status, orderId, navigate, hasIdentSession }: { 
+  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean
 }) => {
   switch (status) {
     case "in_pruefung":
@@ -76,8 +77,11 @@ const StatusButton = ({ status, orderId, navigate }: {
           size="sm"
           onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
         >
-          Auftrag starten
-          <ExternalLink className="h-3.5 w-3.5 ml-1.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
+          {hasIdentSession ? "Auftrag fortführen" : "Auftrag starten"}
+          {hasIdentSession 
+            ? <Play className="h-3.5 w-3.5 ml-1.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
+            : <ExternalLink className="h-3.5 w-3.5 ml-1.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
+          }
         </Button>
       );
   }
@@ -160,10 +164,20 @@ const MitarbeiterDashboard = () => {
         .select("*")
         .in("id", orderIds);
 
+      // Load ident sessions to detect "fortführen" state
+      const { data: identSessions } = await supabase
+        .from("ident_sessions")
+        .select("order_id")
+        .eq("contract_id", contract.id)
+        .in("order_id", orderIds);
+
+      const orderIdsWithSession = new Set((identSessions ?? []).map(s => s.order_id));
+
       if (ordersData) {
         setOrders(ordersData.map((o) => ({ 
           ...o, 
           assignment_status: statusMap[o.id] ?? "offen",
+          hasIdentSession: orderIdsWithSession.has(o.id),
         })));
       }
 
@@ -436,7 +450,8 @@ const MitarbeiterDashboard = () => {
                           <StatusButton 
                             status={order.assignment_status} 
                             orderId={order.id} 
-                            navigate={navigate} 
+                            navigate={navigate}
+                            hasIdentSession={order.hasIdentSession}
                           />
                         </CardContent>
                       </Card>
