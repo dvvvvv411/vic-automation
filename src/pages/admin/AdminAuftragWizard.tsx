@@ -40,6 +40,7 @@ const emptyForm = {
   appstore_url: "",
   playstore_url: "",
   is_starter_job: false,
+  is_videochat: false,
   work_steps: [] as WorkStep[],
   review_questions: [] as string[],
   required_attachments: [] as RequiredAttachment[],
