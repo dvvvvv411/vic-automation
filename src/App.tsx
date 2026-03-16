@@ -80,6 +80,7 @@ const App = () => (
               <Route path="auftraege/neu" element={<AdminAuftragWizard />} />
               <Route path="auftraege/:id/bearbeiten" element={<AdminAuftragWizard />} />
               <Route path="anhaenge" element={<AdminAnhaenge />} />
+              <Route path="anhaenge/:contractId/:orderId" element={<AdminAnhaengeDetail />} />
               
               <Route path="idents" element={<AdminIdents />} />
               <Route path="idents/:id" element={<AdminIdentDetail />} />

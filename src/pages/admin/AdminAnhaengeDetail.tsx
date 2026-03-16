@@ -48,12 +48,14 @@ export default function AdminAnhaengeDetail() {
           .single(),
       ]);
       if (error) throw error;
-      const employeeName = `${contract?.data?.first_name ?? ""} ${contract?.data?.last_name ?? ""}`.trim() || "Unbekannt";
+      const c = contract?.data;
+      const o = order?.data;
+      const employeeName = `${c?.first_name ?? ""} ${c?.last_name ?? ""}`.trim() || "Unbekannt";
       return {
         attachments: (attachments ?? []) as any[],
         employeeName,
-        orderTitle: (order as any)?.data?.title ?? "–",
-        requiredAttachments: (order as any)?.data?.required_attachments ?? [],
+        orderTitle: (o as any)?.title ?? "–",
+        requiredAttachments: (o as any)?.required_attachments ?? [],
       };
     },
   });
