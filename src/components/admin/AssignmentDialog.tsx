@@ -21,9 +21,10 @@ interface AssignmentDialogProps {
   mode: "order" | "contract";
   sourceId: string;
   sourceLabel: string;
+  brandingId?: string;
 }
 
-export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, sourceLabel }: AssignmentDialogProps) {
+export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, sourceLabel, brandingId }: AssignmentDialogProps) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
