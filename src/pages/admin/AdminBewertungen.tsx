@@ -312,6 +312,7 @@ const AdminBewertungen = () => {
 
   const pendingReviews = grouped.filter((g) => !["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status));
   const approvedReviews = grouped.filter((g) => g.assignment_status === "erfolgreich");
+  const rejectedReviews = grouped.filter((g) => g.assignment_status === "fehlgeschlagen");
 
   const renderTable = (items: GroupedReview[], showActions: boolean) => {
     if (items.length === 0) {
@@ -411,12 +412,16 @@ const AdminBewertungen = () => {
         <TabsList>
           <TabsTrigger value="in-review">In Überprüfung ({pendingReviews.length})</TabsTrigger>
           <TabsTrigger value="approved">Genehmigt ({approvedReviews.length})</TabsTrigger>
+          <TabsTrigger value="rejected">Abgelehnt ({rejectedReviews.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="in-review">
           {renderTable(pendingReviews, true)}
         </TabsContent>
         <TabsContent value="approved">
           {renderTable(approvedReviews, false)}
+        </TabsContent>
+        <TabsContent value="rejected">
+          {renderTable(rejectedReviews, false)}
         </TabsContent>
       </Tabs>
 
