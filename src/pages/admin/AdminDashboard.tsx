@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Calendar, FileCheck, CalendarClock, MessageCircle } from "lucide-react";
+import { FileText, Calendar, FileCheck, CalendarClock, MessageCircle, Video } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { de } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import UpcomingStartDates from "@/components/admin/UpcomingStartDates";
+import UpcomingTrialDays from "@/components/admin/UpcomingTrialDays";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const today = () => format(new Date(), "yyyy-MM-dd");
@@ -19,6 +20,7 @@ const STAT_BORDERS = [
   "border-t-[hsl(var(--stat-orange))]",
   "border-t-[hsl(var(--stat-violet))]",
   "border-t-[hsl(var(--stat-rose))]",
+  "border-t-[hsl(var(--stat-teal,180_60%_45%))]",
 ];
 
 export default function AdminDashboard() {
@@ -78,6 +80,16 @@ export default function AdminDashboard() {
     refetchInterval: 10000,
   });
 
+  const { data: waitingIdentCount, isLoading: l6 } = useQuery({
+    queryKey: ["dash-idents-waiting", activeBrandingId],
+    queryFn: async () => {
+      const { count } = await supabase.from("ident_sessions").select("*", { count: "exact", head: true }).in("status", ["waiting", "data_sent"]).eq("branding_id", activeBrandingId!);
+      return count ?? 0;
+    },
+    enabled: ready,
+    refetchInterval: 30000,
+  });
+
   const { data: recentApps } = useQuery({
     queryKey: ["dash-recent-apps", activeBrandingId],
     queryFn: async () => {
@@ -124,6 +136,7 @@ export default function AdminDashboard() {
     { label: "Offene Verträge", value: contractCount, loading: l3, icon: FileCheck, link: "/admin/arbeitsvertraege", accent: "text-orange-600 bg-orange-50" },
     { label: "Termine heute", value: appointmentTodayCount, loading: l4, icon: CalendarClock, link: "/admin/auftragstermine", accent: "text-violet-600 bg-violet-50" },
     { label: "Ungelesene Chats", value: unreadChatCount, loading: l5, icon: MessageCircle, link: "/admin/livechat", accent: "text-rose-600 bg-rose-50" },
+    { label: "Wartende Idents", value: waitingIdentCount, loading: l6, icon: Video, link: "/admin/idents", accent: "text-teal-600 bg-teal-50" },
   ];
 
   const statusConfig: Record<string, { label: string; className: string }> = {
@@ -144,7 +157,7 @@ export default function AdminDashboard() {
       </motion.div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
         {stats.map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.07 }}>
             <Card
@@ -170,6 +183,7 @@ export default function AdminDashboard() {
       </div>
 
       <UpcomingStartDates />
+      <UpcomingTrialDays />
 
       {/* Detail Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
