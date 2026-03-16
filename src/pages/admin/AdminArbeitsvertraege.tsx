@@ -236,7 +236,7 @@ export default function AdminArbeitsvertraege() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-foreground truncate">{firstName} {lastName}</span>
-                          {statusBadge(item.contract)}
+                          {statusBadge(item.status)}
                         </div>
                         <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
                           {email && (
