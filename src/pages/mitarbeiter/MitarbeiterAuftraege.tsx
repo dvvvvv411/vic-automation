@@ -26,6 +26,7 @@ interface Assignment {
   reward: string;
   hasRequiredAttachments: boolean;
   attachmentsPending: boolean;
+  attachmentsSubmitted: boolean;
   hasIdentSession: boolean;
   hasReviewSubmitted: boolean;
 }
@@ -56,9 +57,19 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSubmitted, attachmentsPending }: { 
-  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean; hasReviewSubmitted?: boolean; attachmentsPending?: boolean
+const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSubmitted, attachmentsPending, attachmentsSubmitted }: { 
+  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean; hasReviewSubmitted?: boolean; attachmentsPending?: boolean; attachmentsSubmitted?: boolean
 }) => {
+  // Attachments submitted but not yet approved → show "In Überprüfung"
+  if (attachmentsSubmitted && status !== "erfolgreich") {
+    return (
+      <Button className="w-full mt-2 rounded-xl" size="sm" disabled variant="outline">
+        <Clock className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
+        Anhänge in Überprüfung
+      </Button>
+    );
+  }
+
   // Attachments pending takes priority over regular status (except erfolgreich)
   if (attachmentsPending && status !== "erfolgreich") {
     return (
@@ -187,6 +198,9 @@ const MitarbeiterAuftraege = () => {
             const allApproved = hasReq && reqAtts.every((_: any, i: number) =>
               orderAtts.some((att) => att.attachment_index === i && att.status === "genehmigt")
             );
+            const allSubmitted = hasReq && reqAtts.every((_: any, i: number) =>
+              orderAtts.some((att) => att.attachment_index === i && (att.status === "eingereicht" || att.status === "genehmigt"))
+            );
             return {
               order_id: a.order_id,
               status: a.status ?? "offen",
@@ -196,7 +210,8 @@ const MitarbeiterAuftraege = () => {
               provider: order.provider,
               reward: order.reward,
               hasRequiredAttachments: hasReq,
-              attachmentsPending: hasReq && !allApproved,
+              attachmentsPending: hasReq && !allSubmitted,
+              attachmentsSubmitted: allSubmitted && !allApproved,
               hasIdentSession: orderIdsWithSession.has(a.order_id),
               hasReviewSubmitted: orderIdsWithReview.has(a.order_id),
             };
@@ -320,6 +335,7 @@ const MitarbeiterAuftraege = () => {
                     hasIdentSession={a.hasIdentSession}
                     hasReviewSubmitted={a.hasReviewSubmitted}
                     attachmentsPending={a.attachmentsPending}
+                    attachmentsSubmitted={a.attachmentsSubmitted}
                   />
                 </CardContent>
               </Card>
