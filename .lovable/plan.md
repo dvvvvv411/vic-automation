@@ -1,57 +1,66 @@
 
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-# Fix Contract View Dialog in MeineDaten
+## Was wurde gemacht
 
-## Issues
-1. User signature + name not always showing (signature_data not in layout contract fetch)
-2. PDF export puts everything on one page — overflows if content is long
-3. No timestamp showing when signatures were made
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-## Changes
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-### File: `src/pages/mitarbeiter/MeineDaten.tsx`
+---
 
-**1. Fetch `submitted_at` when opening dialog (line 207-208)**
-Add `submitted_at` to the select query so we have the signing timestamp. Store it in state alongside templateContent.
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-**2. Ensure signature_data is available**
-The `contract` from context doesn't include `signature_data`. The dialog's onClick already fetches `signature_data` from the contract (line 208), but it's stored in `ec` which is scoped to that callback. Store `ec.signature_data` and `ec.first_name`/`ec.last_name` in component state so the dialog can use them.
+## Was wurde gemacht
 
-Add state: `const [contractExtra, setContractExtra] = useState<{signature_data?: string; first_name?: string; last_name?: string; submitted_at?: string} | null>(null);`
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-In the onClick handler, after fetching `ec`, call `setContractExtra({ signature_data: ec?.signature_data, first_name: ec?.first_name, last_name: ec?.last_name, submitted_at: ec?.submitted_at })`.
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
-**3. Fix signature display in dialog (lines 348-364)**
-- Always show the grid with both columns
-- Left: Firmenunterschrift (existing)
-- Right: User signature from `contractExtra.signature_data` with name from `contractExtra.first_name`/`last_name`
-- Add timestamp below each signature: format `submitted_at` as "dd.MM.yyyy" using date-fns
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
 
-**4. Fix PDF export for multi-page content (lines 369-378)**
-Replace the single-page approach with a loop that slices the canvas into A4-sized chunks:
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
 
-```typescript
-const A4_HEIGHT_PX = (canvas.width * 297) / 210; // A4 aspect ratio
-let yOffset = 0;
-let page = 0;
-while (yOffset < canvas.height) {
-  if (page > 0) pdf.addPage();
-  // Create a temporary canvas for this page slice
-  const pageCanvas = document.createElement("canvas");
-  pageCanvas.width = canvas.width;
-  pageCanvas.height = Math.min(A4_HEIGHT_PX, canvas.height - yOffset);
-  const ctx = pageCanvas.getContext("2d")!;
-  ctx.drawImage(canvas, 0, yOffset, pageCanvas.width, pageCanvas.height, 0, 0, pageCanvas.width, pageCanvas.height);
-  const pageImg = pageCanvas.toDataURL("image/png");
-  const pageH = (pageCanvas.height * pdfWidth) / pageCanvas.width;
-  pdf.addImage(pageImg, "PNG", 0, 0, pdfWidth, pageH);
-  yOffset += A4_HEIGHT_PX;
-  page++;
-}
-```
+---
 
-### File: `src/components/mitarbeiter/MitarbeiterLayout.tsx`
+# Vergütungsmodell pro Branding (abgeschlossen)
 
-**5. Add `submitted_at` to contract fetch (line 46)**
-Add `submitted_at` to the select so it's available in context. Update `ContractData` interface to include `submitted_at?: string`.
+## Was wurde gemacht
 
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary

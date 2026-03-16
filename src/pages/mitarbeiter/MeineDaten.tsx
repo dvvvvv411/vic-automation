@@ -14,7 +14,7 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
 interface ContextType {
-  contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null; signature_data?: string | null; template_id?: string | null } | null;
+  contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null; signature_data?: string | null; template_id?: string | null; submitted_at?: string | null } | null;
   branding: { logo_url: string | null; company_name: string; brand_color: string | null; signature_image_url?: string | null; signer_name?: string | null; signer_title?: string | null } | null;
   loading: boolean;
 }
@@ -43,6 +43,7 @@ const MeineDaten = () => {
   const [contractViewOpen, setContractViewOpen] = useState(false);
   const [templateContent, setTemplateContent] = useState<string | null>(null);
   const [brandingSig, setBrandingSig] = useState<any>(null);
+  const [contractExtra, setContractExtra] = useState<{ signature_data?: string; first_name?: string; last_name?: string; submitted_at?: string } | null>(null);
 
   useEffect(() => {
     if (!contract?.id) return;
@@ -202,12 +203,17 @@ const MeineDaten = () => {
                   variant="outline"
                   size="sm"
                   onClick={async () => {
-                    // Load template content + branding signature
                     const { data: ec } = await supabase
                       .from("employment_contracts")
-                      .select("template_id, signature_data, first_name, last_name, birth_date, street, zip_code, city, employment_type, branding_id")
+                      .select("template_id, signature_data, first_name, last_name, birth_date, street, zip_code, city, employment_type, branding_id, submitted_at")
                       .eq("id", contract.id)
                       .maybeSingle();
+                    setContractExtra({
+                      signature_data: ec?.signature_data ?? undefined,
+                      first_name: ec?.first_name ?? undefined,
+                      last_name: ec?.last_name ?? undefined,
+                      submitted_at: ec?.submitted_at ?? undefined,
+                    });
                     if (ec?.template_id) {
                       const { data: tpl } = await supabase.from("contract_templates" as any).select("content, salary").eq("id", ec.template_id).maybeSingle();
                       setTemplateContent((tpl as any)?.content || null);
@@ -352,13 +358,19 @@ const MeineDaten = () => {
                   <img src={brandingSig.signature_image_url} alt="Firmenunterschrift" className="h-16 object-contain" />
                   <p className="text-sm font-medium mt-1">{brandingSig.signer_name}</p>
                   {brandingSig.signer_title && <p className="text-xs text-muted-foreground">{brandingSig.signer_title}</p>}
+                  {contractExtra?.submitted_at && (
+                    <p className="text-xs text-muted-foreground mt-1">Datum: {format(new Date(contractExtra.submitted_at), "dd.MM.yyyy", { locale: de })}</p>
+                  )}
                 </div>
               )}
-              {(contract as any)?.signature_data && (
+              {contractExtra?.signature_data && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">Ihre Unterschrift</p>
-                  <img src={(contract as any).signature_data} alt="Unterschrift" className="h-16 object-contain" />
-                  <p className="text-sm font-medium mt-1">{contractDetails?.first_name} {contractDetails?.last_name}</p>
+                  <p className="text-xs text-muted-foreground mb-2">Unterschrift Mitarbeiter</p>
+                  <img src={contractExtra.signature_data} alt="Unterschrift" className="h-16 object-contain" />
+                  <p className="text-sm font-medium mt-1">{[contractExtra.first_name, contractExtra.last_name].filter(Boolean).join(" ")}</p>
+                  {contractExtra?.submitted_at && (
+                    <p className="text-xs text-muted-foreground mt-1">Datum: {format(new Date(contractExtra.submitted_at), "dd.MM.yyyy", { locale: de })}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -370,11 +382,25 @@ const MeineDaten = () => {
                 const el = document.getElementById("contract-pdf-content");
                 if (!el) return;
                 const canvas = await html2canvas(el, { scale: 2, useCORS: true });
-                const imgData = canvas.toDataURL("image/png");
                 const pdf = new jsPDF("p", "mm", "a4");
                 const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+                const A4_HEIGHT_PX = (canvas.width * 297) / 210;
+                let yOffset = 0;
+                let page = 0;
+                while (yOffset < canvas.height) {
+                  if (page > 0) pdf.addPage();
+                  const pageCanvas = document.createElement("canvas");
+                  pageCanvas.width = canvas.width;
+                  const sliceHeight = Math.min(A4_HEIGHT_PX, canvas.height - yOffset);
+                  pageCanvas.height = sliceHeight;
+                  const ctx = pageCanvas.getContext("2d")!;
+                  ctx.drawImage(canvas, 0, yOffset, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+                  const pageImg = pageCanvas.toDataURL("image/png");
+                  const pageH = (sliceHeight * pdfWidth) / canvas.width;
+                  pdf.addImage(pageImg, "PNG", 0, 0, pdfWidth, pageH);
+                  yOffset += A4_HEIGHT_PX;
+                  page++;
+                }
                 pdf.save("arbeitsvertrag.pdf");
               }}
             >
