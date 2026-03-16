@@ -147,24 +147,19 @@ export default function AdminLivechat() {
     setOnlineContractIds(onlineIds);
 
     const convs: Conversation[] = contracts
+      .filter((c) => map.has(c.id))
       .map((c) => {
-        const meta = map.get(c.id);
+        const meta = map.get(c.id)!;
         return {
           contract_id: c.id,
           first_name: c.first_name,
           last_name: c.last_name,
-          last_message: meta?.last_message ?? "",
-          last_message_at: meta?.last_message_at ?? c.created_at,
-          unread_count: meta?.unread_count ?? 0,
+          last_message: meta.last_message,
+          last_message_at: meta.last_message_at,
+          unread_count: meta.unread_count,
         };
       })
-      .sort((a, b) => {
-        // Conversations with messages first, then by date
-        const aHasMsg = a.last_message !== "";
-        const bHasMsg = b.last_message !== "";
-        if (aHasMsg !== bHasMsg) return aHasMsg ? -1 : 1;
-        return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
-      });
+      .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
 
     setConversations(convs);
   }, [ready, activeBrandingId]);
