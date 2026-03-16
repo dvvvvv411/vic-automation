@@ -299,9 +299,11 @@ const MitarbeiterAuftraege = () => {
 
                 <CardHeader className="pb-3 pt-5">
                     <div className="flex items-center justify-between mb-2">
-                      <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
-                        #{a.order_number}
-                      </Badge>
+                      {a.order_number ? (
+                        <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
+                          #{a.order_number}
+                        </Badge>
+                      ) : <span />}
                       <div className="flex items-center gap-1.5">
                         {a.attachmentsPending && a.status !== "erfolgreich" && (
                           <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
