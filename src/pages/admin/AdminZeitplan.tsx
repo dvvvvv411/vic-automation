@@ -14,7 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Trash2, Ban, Check } from "lucide-react";
+import { Trash2, Ban, Check, Settings, CalendarOff, ClipboardList } from "lucide-react";
 
 import TrialDayBlocker from "@/components/admin/TrialDayBlocker";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
@@ -55,48 +55,38 @@ export default function AdminZeitplan() {
   const { activeBrandingId, ready } = useBrandingFilter();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockReason, setBlockReason] = useState("");
-  const [blockBrandingId, setBlockBrandingId] = useState<string>("all");
 
-  // Load brandings
-  const { data: brandings = [] } = useQuery({
-    queryKey: ["brandings", activeBrandingId],
-    enabled: ready,
-    queryFn: async () => {
-      const { data, error } = await supabase.from("brandings").select("id, company_name").order("company_name");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  // Load branding-specific settings
-  const { data: brandingSettings = [] } = useQuery({
+  // Load branding-specific settings for active branding
+  const { data: brandingSetting } = useQuery({
     queryKey: ["branding-schedule-settings", activeBrandingId],
-    enabled: ready,
+    enabled: ready && !!activeBrandingId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("branding_schedule_settings")
-        .select("*");
+        .select("*")
+        .eq("branding_id", activeBrandingId!)
+        .maybeSingle();
       if (error) throw error;
-      return data || [];
+      return data;
     },
   });
 
-  // Load blocked slots + auto-delete past ones
+  // Load blocked slots for active branding + auto-delete past ones
   const { data: blockedSlots } = useQuery({
     queryKey: ["schedule-blocked-slots", activeBrandingId],
-    enabled: ready,
+    enabled: ready && !!activeBrandingId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("schedule_blocked_slots")
         .select("*")
+        .eq("branding_id", activeBrandingId!)
         .order("blocked_date", { ascending: true });
       if (error) throw error;
       const today = format(new Date(), "yyyy-MM-dd");
       const past = (data || []).filter((s) => s.blocked_date < today);
       const current = (data || []).filter((s) => s.blocked_date >= today);
       if (past.length > 0) {
-        const pastIds = past.map((s) => s.id);
-        supabase.from("schedule_blocked_slots").delete().in("id", pastIds).then(() => {});
+        supabase.from("schedule_blocked_slots").delete().in("id", past.map((s) => s.id)).then(() => {});
       }
       return current;
     },
@@ -104,11 +94,11 @@ export default function AdminZeitplan() {
 
   // Save branding-specific settings
   const saveBrandingSettingsMutation = useMutation({
-    mutationFn: async (params: { branding_id: string; start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] }) => {
+    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] }) => {
       const { error } = await supabase
         .from("branding_schedule_settings")
         .upsert({
-          branding_id: params.branding_id,
+          branding_id: activeBrandingId!,
           start_time: params.start_time + ":00",
           end_time: params.end_time + ":00",
           slot_interval_minutes: params.slot_interval_minutes,
@@ -127,14 +117,13 @@ export default function AdminZeitplan() {
   const blockMutation = useMutation({
     mutationFn: async (time: string) => {
       if (!selectedDate) return;
-      const dateStr = format(selectedDate, "yyyy-MM-dd");
       const { error } = await supabase
         .from("schedule_blocked_slots")
         .insert({
-          blocked_date: dateStr,
+          blocked_date: format(selectedDate, "yyyy-MM-dd"),
           blocked_time: time + ":00",
           reason: blockReason || null,
-          branding_id: blockBrandingId === "all" ? null : blockBrandingId,
+          branding_id: activeBrandingId,
         });
       if (error) throw error;
     },
@@ -148,40 +137,30 @@ export default function AdminZeitplan() {
   // Unblock slot mutation
   const unblockMutation = useMutation({
     mutationFn: async (slotId: string) => {
-      const { error } = await supabase
-        .from("schedule_blocked_slots")
-        .delete()
-        .eq("id", slotId);
+      const { error } = await supabase.from("schedule_blocked_slots").delete().eq("id", slotId);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["schedule-blocked-slots"] }),
     onError: () => toast({ title: "Fehler beim Freigeben", variant: "destructive" }),
   });
 
-  // Use first branding's settings for time slot generation in blocker view
-  const firstBrandingSetting = brandingSettings[0];
-  const blockViewStart = firstBrandingSetting?.start_time?.slice(0, 5) ?? DEFAULT_START;
-  const blockViewEnd = firstBrandingSetting?.end_time?.slice(0, 5) ?? DEFAULT_END;
-  const blockViewInterval = firstBrandingSetting?.slot_interval_minutes ?? DEFAULT_INTERVAL;
+  const blockViewStart = brandingSetting?.start_time?.slice(0, 5) ?? DEFAULT_START;
+  const blockViewEnd = brandingSetting?.end_time?.slice(0, 5) ?? DEFAULT_END;
+  const blockViewInterval = brandingSetting?.slot_interval_minutes ?? DEFAULT_INTERVAL;
 
-  // Time slots for selected date
   const timeSlots = useMemo(
     () => generateTimeSlots(blockViewStart, blockViewEnd, blockViewInterval),
     [blockViewStart, blockViewEnd, blockViewInterval]
   );
 
-  // Blocked times for selected date
   const blockedForDate = useMemo(() => {
     if (!selectedDate || !blockedSlots) return new Map<string, string>();
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     const map = new Map<string, string>();
-    blockedSlots
-      .filter((s) => s.blocked_date === dateStr)
-      .forEach((s) => map.set(s.blocked_time?.slice(0, 5), s.id));
+    blockedSlots.filter((s) => s.blocked_date === dateStr).forEach((s) => map.set(s.blocked_time?.slice(0, 5), s.id));
     return map;
   }, [selectedDate, blockedSlots]);
 
-  // All blocked slots grouped by date for the list
   const blockedByDate = useMemo(() => {
     if (!blockedSlots) return [];
     const groups = new Map<string, typeof blockedSlots>();
@@ -200,187 +179,134 @@ export default function AdminZeitplan() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-foreground">Zeitplan</h2>
         <p className="text-muted-foreground text-sm">
-          Verfügbare Zeiten für Bewerbungsgespräche konfigurieren
+          Verfügbare Zeiten und Blockierungen konfigurieren
         </p>
       </div>
 
-      {/* Per-Branding Settings */}
-      {brandings.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Zeiteinstellungen</CardTitle>
-            <CardDescription>Zeitspanne, Intervall und verfügbare Wochentage pro Branding konfigurieren.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue={brandings[0]?.id}>
-              <TabsList className="flex flex-wrap h-auto gap-1">
-                {brandings.map((b) => (
-                  <TabsTrigger key={b.id} value={b.id} className="text-xs">
-                    {b.company_name}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {brandings.map((b) => {
-                const bs = brandingSettings.find((s) => s.branding_id === b.id);
-                return (
-                  <TabsContent key={b.id} value={b.id}>
-                    <BrandingScheduleForm
-                      brandingId={b.id}
-                      brandingName={b.company_name}
-                      existing={bs}
-                      onSave={(params) => saveBrandingSettingsMutation.mutate(params)}
-                      isSaving={saveBrandingSettingsMutation.isPending}
-                    />
-                  </TabsContent>
-                );
-              })}
-            </Tabs>
-          </CardContent>
-        </Card>
-      )}
+      <Tabs defaultValue="settings">
+        <TabsList>
+          <TabsTrigger value="settings" className="gap-1.5">
+            <Settings className="h-4 w-4" />
+            Zeiteinstellungen
+          </TabsTrigger>
+          <TabsTrigger value="interview-block" className="gap-1.5">
+            <CalendarOff className="h-4 w-4" />
+            Gespräch blockieren
+          </TabsTrigger>
+          <TabsTrigger value="trial-block" className="gap-1.5">
+            <ClipboardList className="h-4 w-4" />
+            Probetag blockieren
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Block Slots */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Bewerbungsgespräch Zeiten blockieren</CardTitle>
-          <CardDescription>
-            Wählen Sie ein Datum und blockieren Sie einzelne Zeitfenster für Bewerbungsgespräche.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                locale={de}
-                className="pointer-events-auto"
+        {/* Tab 1: Zeiteinstellungen */}
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Zeiteinstellungen</CardTitle>
+              <CardDescription>Zeitspanne, Intervall und verfügbare Wochentage konfigurieren.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BrandingScheduleForm
+                existing={brandingSetting ?? undefined}
+                onSave={(params) => saveBrandingSettingsMutation.mutate(params)}
+                isSaving={saveBrandingSettingsMutation.isPending}
               />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-              <div className="mt-4 space-y-2">
-                <Label>Grund (optional)</Label>
-                <Input
-                  placeholder="z.B. Arzttermin"
-                  value={blockReason}
-                  onChange={(e) => setBlockReason(e.target.value)}
-                />
-              </div>
-              {brandings.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  <Label>Branding</Label>
-                  <Select value={blockBrandingId} onValueChange={setBlockBrandingId}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Alle Brandings</SelectItem>
-                      {brandings.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>{b.company_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
-            <div>
-              {!selectedDate ? (
-                <p className="text-sm text-muted-foreground py-8 text-center">
-                  Wählen Sie ein Datum aus dem Kalender.
-                </p>
-              ) : (
-                <>
-                  <p className="text-sm font-medium mb-3">
-                    {format(selectedDate, "EEEE, dd. MMMM yyyy", { locale: de })}
-                  </p>
-                  <div className="grid grid-cols-3 gap-1.5 max-h-[340px] overflow-y-auto">
-                    {timeSlots.map((time) => {
-                      const isBlocked = blockedForDate.has(time);
-                      return (
-                        <button
-                          key={time}
-                          onClick={() => {
-                            if (isBlocked) {
-                              const slotId = blockedForDate.get(time)!;
-                              unblockMutation.mutate(slotId);
-                            } else {
-                              blockMutation.mutate(time);
-                            }
-                          }}
-                          className={cn(
-                            "py-2 px-2 rounded-lg text-sm font-medium transition-all border flex items-center justify-center gap-1",
-                            isBlocked
-                              ? "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20"
-                              : "bg-card border-border hover:bg-muted text-foreground"
-                          )}
-                        >
-                          {isBlocked ? <Ban className="h-3 w-3" /> : <Check className="h-3 w-3 text-muted-foreground" />}
-                          {time}
-                        </button>
-                      );
-                    })}
+        {/* Tab 2: Bewerbungsgespräch blockieren */}
+        <TabsContent value="interview-block" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Bewerbungsgespräch Zeiten blockieren</CardTitle>
+              <CardDescription>Wählen Sie ein Datum und blockieren Sie einzelne Zeitfenster.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} locale={de} className="pointer-events-auto" />
+                  <div className="mt-4 space-y-2">
+                    <Label>Grund (optional)</Label>
+                    <Input placeholder="z.B. Arzttermin" value={blockReason} onChange={(e) => setBlockReason(e.target.value)} />
                   </div>
-                </>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* List of all blocked slots */}
-      {blockedByDate.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Blockierte Bewerbungsgespräch-Zeitfenster</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {blockedByDate.map(({ date, slots }) => (
-              <div key={date}>
-                <p className="text-sm font-medium mb-2">
-                  {format(new Date(date), "EEEE, dd. MMMM yyyy", { locale: de })}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {slots.map((s) => (
-                    <Badge
-                      key={s.id}
-                      variant="secondary"
-                      className="gap-1.5 pr-1"
-                    >
-                      {s.blocked_time?.slice(0, 5)} Uhr
-                      {s.reason && <span className="text-muted-foreground">({s.reason})</span>}
-                      <button
-                        onClick={() => unblockMutation.mutate(s.id)}
-                        className="ml-1 hover:text-destructive transition-colors"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
+                </div>
+                <div>
+                  {!selectedDate ? (
+                    <p className="text-sm text-muted-foreground py-8 text-center">Wählen Sie ein Datum aus dem Kalender.</p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium mb-3">{format(selectedDate, "EEEE, dd. MMMM yyyy", { locale: de })}</p>
+                      <div className="grid grid-cols-3 gap-1.5 max-h-[340px] overflow-y-auto">
+                        {timeSlots.map((time) => {
+                          const isBlocked = blockedForDate.has(time);
+                          return (
+                            <button
+                              key={time}
+                              onClick={() => isBlocked ? unblockMutation.mutate(blockedForDate.get(time)!) : blockMutation.mutate(time)}
+                              className={cn(
+                                "py-2 px-2 rounded-lg text-sm font-medium transition-all border flex items-center justify-center gap-1",
+                                isBlocked
+                                  ? "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20"
+                                  : "bg-card border-border hover:bg-muted text-foreground"
+                              )}
+                            >
+                              {isBlocked ? <Ban className="h-3 w-3" /> : <Check className="h-3 w-3 text-muted-foreground" />}
+                              {time}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
 
+          {blockedByDate.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-lg">Blockierte Bewerbungsgespräch-Zeitfenster</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                {blockedByDate.map(({ date, slots }) => (
+                  <div key={date}>
+                    <p className="text-sm font-medium mb-2">{format(new Date(date), "EEEE, dd. MMMM yyyy", { locale: de })}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {slots.map((s) => (
+                        <Badge key={s.id} variant="secondary" className="gap-1.5 pr-1">
+                          {s.blocked_time?.slice(0, 5)} Uhr
+                          {s.reason && <span className="text-muted-foreground">({s.reason})</span>}
+                          <button onClick={() => unblockMutation.mutate(s.id)} className="ml-1 hover:text-destructive transition-colors">
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
-      {/* Trial Day Blocking */}
-      <TrialDayBlocker />
+        {/* Tab 3: Probetag blockieren */}
+        <TabsContent value="trial-block">
+          {activeBrandingId && <TrialDayBlocker brandingId={activeBrandingId} />}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
 
-// Sub-component for per-branding schedule settings
+// Sub-component for schedule settings
 function BrandingScheduleForm({
-  brandingId,
-  brandingName,
   existing,
   onSave,
   isSaving,
 }: {
-  brandingId: string;
-  brandingName: string;
   existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] };
-  onSave: (params: { branding_id: string; start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] }) => void;
+  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] }) => void;
   isSaving: boolean;
 }) {
   const [st, setSt] = useState(existing?.start_time?.slice(0, 5) || DEFAULT_START);
@@ -393,19 +319,14 @@ function BrandingScheduleForm({
   };
 
   return (
-    <div className="space-y-4 pt-4">
-      <p className="text-sm text-muted-foreground">
-        {existing ? `Individuelle Einstellung für ${brandingName}` : `Noch keine individuelle Einstellung für ${brandingName} – Standardwerte werden verwendet`}
-      </p>
+    <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Startzeit</Label>
           <Select value={st} onValueChange={setSt}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {TIME_OPTIONS.map((t) => (
-                <SelectItem key={t} value={t}>{t} Uhr</SelectItem>
-              ))}
+              {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -414,9 +335,7 @@ function BrandingScheduleForm({
           <Select value={et} onValueChange={setEt}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {TIME_OPTIONS.map((t) => (
-                <SelectItem key={t} value={t}>{t} Uhr</SelectItem>
-              ))}
+              {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -444,10 +363,7 @@ function BrandingScheduleForm({
           ))}
         </div>
       </div>
-      <Button
-        onClick={() => onSave({ branding_id: brandingId, start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds })}
-        disabled={isSaving}
-      >
+      <Button onClick={() => onSave({ start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds })} disabled={isSaving}>
         {isSaving ? "Speichern..." : "Einstellungen speichern"}
       </Button>
     </div>
