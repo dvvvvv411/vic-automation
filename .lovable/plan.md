@@ -1,66 +1,135 @@
 
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
+# Video-Chat Verifizierung & Ident-System
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
-
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+## Übersicht
+Komplettes Video-Ident-Feature: Neue Auftragsoption "Videochat Verifizierung", mehrstufiger Auftragsablauf für Mitarbeiter, neues Admin-Modul "Idents" mit Echtzeit-Datenaustausch.
 
 ---
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+## 1. Datenbank-Änderungen
 
-## Was wurde gemacht
+### `orders` Tabelle erweitern
+```sql
+ALTER TABLE orders ADD COLUMN is_videochat boolean NOT NULL DEFAULT false;
+```
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+### Neue Tabelle `ident_sessions`
+```sql
+CREATE TABLE ident_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id uuid NOT NULL REFERENCES orders(id),
+  contract_id uuid NOT NULL REFERENCES employment_contracts(id),
+  assignment_id uuid NOT NULL REFERENCES order_assignments(id),
+  status text NOT NULL DEFAULT 'waiting', -- waiting, data_sent, completed, cancelled
+  phone_api_url text,
+  test_data jsonb DEFAULT '[]'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  completed_at timestamptz,
+  branding_id uuid
+);
+ALTER TABLE ident_sessions ENABLE ROW LEVEL SECURITY;
+-- RLS: Admins/Kunden full access, Users can read own (by contract_id)
+```
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
-
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
-
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+`test_data` Format: `[{ "label": "Identcode", "value": "123456" }, { "label": "Passwort", "value": "abc" }]`
 
 ---
 
-# Vergütungsmodell pro Branding (abgeschlossen)
+## 2. Admin Auftrag-Wizard (`AdminAuftragWizard.tsx`)
 
-## Was wurde gemacht
+- Add `is_videochat` to form state (default `false`)
+- Add Switch toggle on Step 1 (Grundinformationen), similar to `is_starter_job`:
+  - Label: "Video-Chat Verifizierung aktivieren"
+  - Description: "Mitarbeiter müssen vor der Bewertung eine Video-Chat Verifizierung durchführen."
+- Include `is_videochat` in save payload
 
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+---
 
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+## 3. Auftragsdetails-Seite komplett umbauen (`AuftragDetails.tsx`)
 
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
+### Mehrstufiger Flow mit internem Step-State:
+
+**Step 1 - Übersicht**: Titel, Beschreibung, Typ-Badge, Prämie. Button "Auftrag starten"
+
+**Step 2 - Vorbereitung**: Downloads Card + Arbeitsschritte Card. Button "Auftrag starten" (startet den eigentlichen Prozess)
+
+**Step 3a - Video-Chat Disclaimer** (nur wenn `is_videochat`):
+- Video-Icon, Titel "Möchtest du den Video-Chat durchführen?"
+- Infotext + Hinweise (wie im Screenshot)
+- Button "Einverstanden, ich möchte am Video-Chat teilnehmen"
+- Erstellt `ident_session` mit Status `waiting`
+
+**Step 3b - Video-Ident Warteseite** (nur wenn `is_videochat`):
+- Split-Layout: Links "SMS Nachrichten" (leer bis Telefonnummer zugewiesen), Rechts "Test-Daten" mit Loading-Spinner
+- Texte wie im Screenshot: "Deine Test-Daten werden vorbereitet", "Das kann bis zu 3 Stunden dauern..."
+- Info-Boxen: "Was passiert als nächstes?" und "Keine Daten nach einigen Stunden?"
+- **Realtime-Subscription** auf `ident_sessions` für Updates
+- Sobald `test_data` und `phone_api_url` gesetzt → Daten anzeigen + SMS via Anosim-Proxy laden
+- Button "Videochat erfolgreich beendet" → Bestätigungs-Dialog → weiter zu Bewertung
+
+**Step 4 - Bewertungsfragen**: Bestehende Bewertungslogik (inline oder Navigation zu `/mitarbeiter/bewertung/:id`). Nach Absenden → Status `in_pruefung`
+
+**Step 5 - Erforderliche Anhänge** (wenn vorhanden):
+- Bestehende Anhänge-UI
+- Neuer Button "Später hinzufügen" → markiert Auftrag als "Anhänge ausstehend"
+- User kann jederzeit zurückkehren und Anhänge hochladen
+
+---
+
+## 4. Neues Admin-Modul "Idents" (`AdminIdents.tsx`)
+
+### Sidebar
+- Neuer Eintrag in "Betrieb": `{ title: "Idents", url: "/admin/idents", icon: Video }`
+- Badge-Count: Anzahl `ident_sessions` mit Status `waiting`
+
+### Idents-Übersicht
+- Card/Tabellen-Ansicht aller aktiven Ident-Sessions
+- Anzeige: Mitarbeitername, Auftragsname, Status, Zeitstempel
+- Echtzeit-Updates via Supabase Realtime
+
+### Ident-Detail-Ansicht (Dialog oder Inline)
+- **Telefonnummer**: Anosim-URL eingeben/auswählen (wie bei Telefonnummern-Modul)
+- **SMS-Anzeige**: Sobald Telefonnummer zugewiesen, SMS live anzeigen (Anosim-Proxy)
+- **Test-Daten Editor**: 
+  - Standard-Felder als Dropdown: Identcode, Identlink, Anmeldename, Email, Passwort
+  - "+" Button für weitere benutzerdefinierte Felder (Label + Value)
+  - Nicht ausgefüllte Felder werden nicht an den User gesendet
+- **Speichern** → Update `ident_sessions` → User sieht Daten sofort (Realtime)
+- **Button "SMS Watch beenden"** → setzt Status auf `completed` oder entfernt Telefonnummer
+
+---
+
+## 5. Routing (`App.tsx`)
+- Import + Route: `<Route path="idents" element={<AdminIdents />} />`
+
+---
+
+## 6. Realtime-Synchronisation
+- User-Seite: `supabase.channel('ident-session-{id}').on('postgres_changes', ...)` auf `ident_sessions`
+- Admin-Seite: Realtime-Subscription auf `ident_sessions` für neue Sessions
+
+---
+
+## Betroffene Dateien
+
+| Datei | Änderung |
+|-------|----------|
+| Migration | `orders.is_videochat` + `ident_sessions` Tabelle + RLS |
+| `AdminAuftragWizard.tsx` | Video-Chat Toggle |
+| `AuftragDetails.tsx` | Komplett umbauen: Multi-Step Flow |
+| `AdminIdents.tsx` | **NEU** - Admin Ident-Verwaltung |
+| `AdminSidebar.tsx` | Idents Nav-Eintrag + Badge |
+| `App.tsx` | Route für Idents |
+
+---
+
+## Implementierungsreihenfolge
+1. DB-Migration (orders + ident_sessions)
+2. Admin Wizard: is_videochat Toggle
+3. AuftragDetails: Multi-Step Flow
+4. AdminIdents: Neue Seite
+5. Sidebar + Routing
+6. Realtime-Integration
+
