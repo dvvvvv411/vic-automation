@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { MitarbeiterSidebar } from "./MitarbeiterSidebar";
@@ -36,6 +36,7 @@ export default function MitarbeiterLayout() {
   const [contract, setContract] = useState<ContractData | null>(null);
   const [panelReady, setPanelReady] = useState(false);
   const [brandingHSL, setBrandingHSL] = useState<string | null>(null);
+  const [showContractLink, setShowContractLink] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -49,71 +50,57 @@ export default function MitarbeiterLayout() {
       });
 
     const fetchData = async () => {
-      let resolvedBranding: BrandingData | null = null;
-      let resolvedContract: ContractData | null = null;
-
-      // 1. Get employment contract
-      const { data: contractData } = await supabase
-        .from("employment_contracts")
-        .select("id, first_name, application_id, status, contract_pdf_url, signed_contract_pdf_url, is_suspended, submitted_at")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (contractData) {
-        resolvedContract = contractData;
-
-        // 2. Get application -> branding_id
-        const { data: appData } = await supabase
-          .from("applications")
-          .select("branding_id")
-          .eq("id", contractData.application_id)
-          .maybeSingle();
-
-        if (appData?.branding_id) {
-          const { data: brandingData } = await supabase
-            .from("brandings")
-            .select("logo_url, company_name, brand_color, payment_model, salary_minijob, salary_teilzeit, salary_vollzeit")
-            .eq("id", appData.branding_id)
-            .maybeSingle();
-
-          if (brandingData) resolvedBranding = brandingData;
-        }
-      }
-
-      // Fallback: load branding from profile.branding_id
-      if (!resolvedBranding) {
-        const { data: profileData } = await supabase
+      // Parallel: branding from profile + contract
+      const [profileResult, contractResult] = await Promise.all([
+        supabase
           .from("profiles")
           .select("branding_id")
           .eq("id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("employment_contracts")
+          .select("id, first_name, application_id, status, contract_pdf_url, signed_contract_pdf_url, is_suspended, submitted_at")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
+
+      const resolvedContract: ContractData | null = contractResult.data ?? null;
+
+      // Load branding from profile.branding_id
+      let resolvedBranding: BrandingData | null = null;
+      const brandingId = profileResult.data?.branding_id;
+
+      if (brandingId) {
+        const { data: brandingData } = await supabase
+          .from("brandings")
+          .select("logo_url, company_name, brand_color, payment_model, salary_minijob, salary_teilzeit, salary_vollzeit")
+          .eq("id", brandingId)
           .maybeSingle();
 
-        if (profileData?.branding_id) {
-          const { data: brandingData } = await supabase
-            .from("brandings")
-            .select("logo_url, company_name, brand_color, payment_model, salary_minijob, salary_teilzeit, salary_vollzeit")
-            .eq("id", profileData.branding_id)
-            .maybeSingle();
-
-          if (brandingData) resolvedBranding = brandingData;
-        }
+        if (brandingData) resolvedBranding = brandingData;
       }
 
-      // Compute HSL before rendering
+      // Compute HSL
       let hsl: string | null = null;
       if (resolvedBranding?.brand_color) {
         hsl = hexToHSL(resolvedBranding.brand_color);
       }
 
-      // Preload logo before rendering
+      // Preload logo
       if (resolvedBranding?.logo_url) {
         await preloadImage(resolvedBranding.logo_url);
       }
 
-      // Set all state at once — panel will render with correct branding on first paint
+      // Determine contract link visibility
+      const contractLinkVisible =
+        resolvedContract !== null &&
+        resolvedContract.status !== "genehmigt";
+
+      // Set all state at once
       setContract(resolvedContract);
       setBranding(resolvedBranding);
       setBrandingHSL(hsl);
+      setShowContractLink(contractLinkVisible);
       setPanelReady(true);
     };
 
@@ -125,11 +112,11 @@ export default function MitarbeiterLayout() {
     window.location.href = "/";
   };
 
-  // Neutral fullscreen loader — no primary color used
+  // Neutral gray fullscreen loader — no branding color used
   if (!panelReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground/60" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-muted-foreground/60" />
       </div>
     );
   }
@@ -147,9 +134,8 @@ export default function MitarbeiterLayout() {
     );
   }
 
-  // Build inline CSS variables — branding color applied directly on the wrapper
-  // so the very first paint already has the correct color. No useEffect race.
-  const primaryHSL = brandingHSL || "217 91% 60%";
+  // Neutral gray fallback instead of blue
+  const primaryHSL = brandingHSL || "0 0% 45%";
   const cssVars: Record<string, string> = {
     '--primary': primaryHSL,
     '--ring': primaryHSL,
@@ -170,7 +156,7 @@ export default function MitarbeiterLayout() {
         className="min-h-screen flex w-full bg-muted/30"
         style={cssVars as React.CSSProperties}
       >
-        <MitarbeiterSidebar branding={branding} brandingLoading={false} contractStatus={contract?.status} />
+        <MitarbeiterSidebar branding={branding} brandingLoading={false} showContractLink={showContractLink} />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="border-b border-border/20 bg-background sticky top-0 z-50 h-16 flex items-center justify-between px-5 shadow-sm relative">
             <SidebarTrigger />

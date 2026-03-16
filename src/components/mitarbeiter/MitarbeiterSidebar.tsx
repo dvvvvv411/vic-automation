@@ -13,7 +13,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface MitarbeiterSidebarProps {
   branding: {
@@ -22,7 +21,7 @@ interface MitarbeiterSidebarProps {
     brand_color: string | null;
   } | null;
   brandingLoading: boolean;
-  contractStatus?: string;
+  showContractLink: boolean;
 }
 
 const navItems = [
@@ -33,15 +32,13 @@ const navItems = [
   { title: "Meine Daten", url: "/mitarbeiter/meine-daten", icon: User },
 ];
 
-export function MitarbeiterSidebar({ branding, brandingLoading, contractStatus }: MitarbeiterSidebarProps) {
+export function MitarbeiterSidebar({ branding, brandingLoading, showContractLink }: MitarbeiterSidebarProps) {
   const { user, signOut } = useAuth();
   const { isMobile, setOpenMobile } = useSidebar();
 
-  // Only show Arbeitsvertrag link when contractStatus is explicitly known and not "genehmigt"
   const filteredNavItems = navItems.filter((item) => {
     if (item.url === "/mitarbeiter/arbeitsvertrag") {
-      // Hide if status unknown (undefined) OR already approved
-      return contractStatus !== undefined && contractStatus !== "genehmigt";
+      return showContractLink;
     }
     return true;
   });
@@ -56,9 +53,7 @@ export function MitarbeiterSidebar({ branding, brandingLoading, contractStatus }
     <Sidebar className="border-r border-border/30 bg-white">
       {/* Logo */}
       <div className="py-7 px-5 border-b border-border/30 flex justify-center items-center">
-        {brandingLoading ? (
-          <Skeleton className="h-10 w-32" />
-        ) : branding?.logo_url ? (
+        {branding?.logo_url ? (
           <img
             src={branding.logo_url}
             alt={branding.company_name}
