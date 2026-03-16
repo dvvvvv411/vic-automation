@@ -99,6 +99,7 @@ export default function AdminAuftragWizard() {
         appstore_url: existingOrder.appstore_url ?? "",
         playstore_url: existingOrder.playstore_url ?? "",
         is_starter_job: (existingOrder as any).is_starter_job ?? false,
+        is_videochat: (existingOrder as any).is_videochat ?? false,
         work_steps: parseJson((existingOrder as any).work_steps),
         review_questions: parseJson(existingOrder.review_questions),
         required_attachments: parseJson((existingOrder as any).required_attachments),
