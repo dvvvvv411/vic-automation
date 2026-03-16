@@ -220,7 +220,11 @@ export default function MitarbeiterArbeitsvertrag() {
     }
     if (step === 1) return form.social_security_number && form.tax_id && form.health_insurance;
     if (step === 2) return form.iban && form.bic && form.bank_name;
-    if (step === 3) return idFrontFile && idBackFile;
+    if (step === 3) {
+      const idValid = idType === "reisepass" ? !!idFrontFile : !!(idFrontFile && idBackFile);
+      const proofValid = requiresProofOfAddress ? !!proofOfAddressFile : true;
+      return idValid && proofValid;
+    }
     return true;
   };
 
