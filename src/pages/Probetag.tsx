@@ -207,11 +207,19 @@ export default function Probetag() {
         });
       }
 
-      // SMS confirmation
+      // SMS confirmation via template lookup
       if (application?.phone) {
+        const { data: tpl } = await supabase
+          .from("sms_templates" as any)
+          .select("message")
+          .eq("event_type", "probetag_bestaetigung")
+          .single();
+        const smsText = (tpl as any)?.message
+          ? ((tpl as any).message as string).replace("{name}", application.first_name).replace("{datum}", formattedDate).replace("{uhrzeit}", selectedTime!)
+          : `Hallo ${application.first_name}, Ihr Probetag ist bestätigt: ${formattedDate} um ${selectedTime} Uhr. Wir freuen uns auf Sie!`;
         await sendSms({
           to: application.phone,
-          text: `Hallo ${application.first_name}, Ihr Probetag ist bestätigt: ${formattedDate} um ${selectedTime} Uhr. Wir freuen uns auf Sie!`,
+          text: smsText,
           event_type: "probetag_bestaetigung",
           recipient_name: applicantName,
           branding_id: application.branding_id,
