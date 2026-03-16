@@ -116,6 +116,7 @@ export default function MitarbeiterArbeitsvertrag() {
   const [savedIdFrontUrl, setSavedIdFrontUrl] = useState<string | null>(null);
   const [savedIdBackUrl, setSavedIdBackUrl] = useState<string | null>(null);
   const [savedProofOfAddressUrl, setSavedProofOfAddressUrl] = useState<string | null>(null);
+  const [signatureLoaded, setSignatureLoaded] = useState(false);
 
   const STEPS = [
     "Vorlage wählen",
@@ -265,6 +266,16 @@ export default function MitarbeiterArbeitsvertrag() {
             .eq("id", brandingId)
             .maybeSingle();
           setBrandingData(bd);
+
+          // Preload signature image so it's cached before step 5
+          if (bd?.signature_image_url) {
+            const img = new window.Image();
+            img.onload = () => setSignatureLoaded(true);
+            img.onerror = () => setSignatureLoaded(true);
+            img.src = bd.signature_image_url;
+          } else {
+            setSignatureLoaded(true);
+          }
         }
 
         // Determine resume step
@@ -957,7 +968,13 @@ export default function MitarbeiterArbeitsvertrag() {
           )}
 
           {/* Step 5: Contract Preview + Sign */}
-          {step === 5 && selectedTemplate && (
+          {step === 5 && selectedTemplate && !signatureLoaded && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-muted-foreground">Vertrag wird geladen…</p>
+            </div>
+          )}
+          {step === 5 && selectedTemplate && signatureLoaded && (
             <div className="space-y-6">
               <div className="border border-border rounded-lg p-6 bg-white prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: replaceTemplatePlaceholders(selectedTemplate.content) }} />
               
