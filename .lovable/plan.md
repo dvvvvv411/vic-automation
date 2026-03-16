@@ -1,66 +1,86 @@
 
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
+## Plan: Automatische SMS-Erinnerungen 24h vor Terminen
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+### Uebersicht
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+Eine neue Edge Function `send-appointment-reminders` wird stuendlich per `pg_cron` aufgerufen. Sie prueft ob Termine in den naechsten 24-25h anstehen, laedt das SMS-Template aus der DB, sendet die SMS via bestehende `send-sms` Edge Function (die automatisch in `sms_logs` mit `branding_id` loggt), und markiert den Termin als erinnert.
 
----
+### Aenderungen
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+| # | Ort | Was |
+|---|-----|-----|
+| 1 | **DB Migration** | `reminder_sent` Boolean-Spalte auf `interview_appointments` und `trial_day_appointments` |
+| 2 | **DB Insert** | Zwei neue SMS-Templates: `gespraech_erinnerung_auto`, `probetag_erinnerung_auto` |
+| 3 | **Edge Function** | Neue `send-appointment-reminders/index.ts` |
+| 4 | **`supabase/config.toml`** | `verify_jwt = false` fuer neue Function |
+| 5 | **`AdminSmsTemplates.tsx`** | Platzhalter fuer neue Templates registrieren |
+| 6 | **pg_cron SQL** | Stuendlicher Cron-Job via Supabase Insert-Tool (nicht Migration, da projektspezifische Daten) |
 
-## Was wurde gemacht
+### DB Migration
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+```sql
+ALTER TABLE interview_appointments 
+  ADD COLUMN IF NOT EXISTS reminder_sent boolean NOT NULL DEFAULT false;
+ALTER TABLE trial_day_appointments 
+  ADD COLUMN IF NOT EXISTS reminder_sent boolean NOT NULL DEFAULT false;
+```
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+### DB Insert (neue Templates)
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+```sql
+INSERT INTO sms_templates (event_type, label, message) VALUES
+  ('gespraech_erinnerung_auto', 'Bewerbungsgespräch Erinnerung (24h)', 
+   'Hallo {name}, zur Erinnerung: Morgen um {uhrzeit} Uhr findet Ihr Bewerbungsgespräch statt. Wir freuen uns auf Sie!'),
+  ('probetag_erinnerung_auto', 'Probetag Erinnerung (24h)', 
+   'Hallo {name}, zur Erinnerung: Morgen um {uhrzeit} Uhr ist Ihr Probetag. Wir freuen uns auf Sie!')
+ON CONFLICT DO NOTHING;
+```
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+### Edge Function Logik (`send-appointment-reminders`)
 
----
+1. Query `interview_appointments` WHERE `appointment_date + appointment_time` zwischen jetzt und jetzt+25h, `reminder_sent = false`, `status = 'neu'` — JOIN `applications` fuer Name, Phone, `branding_id`
+2. Dasselbe fuer `trial_day_appointments`
+3. Fuer jeden Termin:
+   - SMS-Template aus `sms_templates` laden (`gespraech_erinnerung_auto` / `probetag_erinnerung_auto`)
+   - Platzhalter ersetzen (`{name}`, `{uhrzeit}`, `{datum}`)
+   - SMS senden via internen Aufruf der `send-sms` Edge Function (die loggt automatisch in `sms_logs` mit `branding_id` und `event_type`)
+   - `reminder_sent = true` setzen
+4. Response: Anzahl gesendeter Erinnerungen
 
-# Vergütungsmodell pro Branding (abgeschlossen)
+### Branding & SMS-History
 
-## Was wurde gemacht
+Die SMS wird ueber die bestehende `send-sms` Function gesendet, die automatisch:
+- In `sms_logs` loggt (erscheint in SMS-History)
+- `branding_id` mitspeichert (Branding-Filterung funktioniert)
+- `event_type` setzt (`gespraech_erinnerung_auto` / `probetag_erinnerung_auto`)
+- Absendername aus dem Branding nutzt (`sms_sender_name`)
 
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+### pg_cron Job (via Insert-Tool, nicht Migration)
 
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+```sql
+SELECT cron.schedule(
+  'appointment-reminders-hourly',
+  '0 * * * *',
+  $$
+  SELECT net.http_post(
+    url:='https://luorlnagxpsibarcygjm.supabase.co/functions/v1/send-appointment-reminders',
+    headers:='{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1b3JsbmFneHBzaWJhcmN5Z2ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDI3MTAsImV4cCI6MjA4NjM3ODcxMH0.B0MYZqUChRbyW3ekOR8YI4j7q153ME77qI_LjUUJTqs"}'::jsonb,
+    body:='{}'::jsonb
+  ) AS request_id;
+  $$
+);
+```
 
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
+### Warum 25h-Fenster?
+
+Bei stuendlicher Ausfuehrung deckt ein 25h-Fenster sicher ab, dass kein Termin uebersprungen wird. `reminder_sent` verhindert Doppel-Versand.
+
+### AdminSmsTemplates.tsx
+
+Neue Eintraege in `PLACEHOLDER_INFO`:
+```
+gespraech_erinnerung_auto: ["{name}", "{datum}", "{uhrzeit}"]
+probetag_erinnerung_auto: ["{name}", "{datum}", "{uhrzeit}"]
+```
+
