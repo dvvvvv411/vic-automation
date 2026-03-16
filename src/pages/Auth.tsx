@@ -150,8 +150,13 @@ const Auth = () => {
     return <div className="min-h-screen bg-background" />;
   }
 
+  // Scope branding color to this page only via inline CSS variable
+  const authStyle: React.CSSProperties = brandingColor
+    ? { '--primary': hexToHSL(brandingColor) || undefined } as React.CSSProperties
+    : {};
+
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen" style={authStyle}>
       {/* Left branding panel */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground flex-col justify-center items-center px-16 overflow-hidden text-center">
         <div className="absolute -top-10 -right-10 w-80 h-80 rounded-full bg-white/10 blur-3xl" />
