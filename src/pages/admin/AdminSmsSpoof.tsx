@@ -201,7 +201,7 @@ export default function AdminSmsSpoof() {
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("sms-spoof", {
-        body: { action: "send", to: to.trim(), senderID: senderID.trim(), text: text.trim() },
+        body: { action: "send", to: to.trim(), senderID: senderID.trim(), text: text.trim(), brandingId: activeBrandingId },
       });
       if (error) throw error;
       if (data?.error) {
