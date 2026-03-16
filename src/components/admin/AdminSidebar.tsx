@@ -182,6 +182,26 @@ export function AdminSidebar() {
     refetchInterval: 10000,
   });
 
+  const { data: anhaengeEingereichtCount } = useQuery({
+    queryKey: ["badge-anhaenge-eingereicht", activeBrandingId],
+    enabled: !!activeBrandingId,
+    queryFn: async () => {
+      const { data: contracts } = await supabase
+        .from("employment_contracts")
+        .select("id")
+        .eq("branding_id", activeBrandingId!);
+      const contractIds = (contracts ?? []).map((c) => c.id);
+      if (!contractIds.length) return 0;
+      const { count } = await supabase
+        .from("order_attachments")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "eingereicht")
+        .in("contract_id", contractIds);
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
   const badgeCounts: Record<string, number> = {
     "/admin/bewerbungen": neuCount ?? 0,
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
