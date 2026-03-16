@@ -1,66 +1,65 @@
 
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
+## Plan: Zeitplan-Tabs umstrukturieren, Probetag-Doppelbuchungen verhindern, Branding-bezogene Zeiteinstellungen
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
-
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
-
----
-
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
-
-## Was wurde gemacht
+### Problem
+1. `/probetag` erlaubt Doppelbuchungen (gleiche Uhrzeit wird mehrfach vergeben)
+2. Beide öffentlichen Seiten (`/probetag`, `/bewerbungsgespraech`) lesen von der globalen `schedule_settings`-Tabelle statt von `branding_schedule_settings`
+3. Blocked/Booked Slots werden nicht nach Branding gefiltert
+4. Admin-Tabs: "Zeiteinstellungen" ist ein separater Tab, soll aber in "Bewerbungsgespräche" integriert werden
+5. Probetage brauchen eigene Zeiteinstellungen (Start, Ende, Intervall, Wochentage)
 
 ### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+**`branding_schedule_settings`**: Neue Spalte `schedule_type text NOT NULL DEFAULT 'interview'` hinzufuegen. Unique-Constraint von `(branding_id)` auf `(branding_id, schedule_type)` aendern. Damit kann jedes Branding separate Einstellungen fuer `'interview'` und `'trial'` haben.
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+```sql
+ALTER TABLE branding_schedule_settings 
+  ADD COLUMN schedule_type text NOT NULL DEFAULT 'interview';
+ALTER TABLE branding_schedule_settings 
+  DROP CONSTRAINT branding_schedule_settings_branding_id_key;
+ALTER TABLE branding_schedule_settings 
+  ADD CONSTRAINT branding_schedule_settings_branding_type_key 
+  UNIQUE (branding_id, schedule_type);
+```
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+### Admin-Seite `/admin/zeitplan` (AdminZeitplan.tsx)
 
----
+- **Tab "Zeiteinstellungen" entfernen**
+- **Tab "Bewerbungsgespräche"** (vorher "Gespräch blockieren"):
+  - Oben: `BrandingScheduleForm` fuer `schedule_type='interview'` einbetten
+  - Darunter: Kalender + Slot-Blocker (wie bisher)
+- **Tab "Probetage"** (vorher "Probetag blockieren"):
+  - Oben: `BrandingScheduleForm` fuer `schedule_type='trial'` einbetten
+  - Darunter: `TrialDayBlocker` (wie bisher)
+- Queries/Mutations: `schedule_type` Parameter bei upsert/select mitsenden
 
-# Vergütungsmodell pro Branding (abgeschlossen)
+### TrialDayBlocker.tsx
 
-## Was wurde gemacht
+- Zeitslots dynamisch aus `branding_schedule_settings` (type=`trial`) laden statt hartcodierte 30-Min-Slots
+- Hardcoded `TIME_SLOTS` entfernen, stattdessen `generateTimeSlots()` mit den Branding-Settings verwenden
 
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+### Probetag.tsx (oeffentliche Buchungsseite)
 
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+- **Settings**: Von `branding_schedule_settings` lesen, gefiltert auf `branding_id = application.branding_id` und `schedule_type = 'trial'` (statt globale `schedule_settings`)
+- **Blocked Slots**: `trial_day_blocked_slots` nach `branding_id` filtern
+- **Booked Slots**: `trial_day_appointments` nach Branding filtern (ueber application.branding_id JOIN oder direkt), damit bereits gebuchte Zeiten ausgegraut werden und keine Doppelbuchungen moeglich sind
+- Interval-Change-Logik entfernen (nicht relevant fuer branding_schedule_settings)
 
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
+### Bewerbungsgespraech.tsx (oeffentliche Buchungsseite)
+
+- **Settings**: Von `branding_schedule_settings` lesen, gefiltert auf `branding_id = application.branding_id` und `schedule_type = 'interview'` (statt globale `schedule_settings`)
+- **Blocked Slots**: `schedule_blocked_slots` nach `branding_id` filtern
+- **Booked Slots**: `interview_appointments` nach Branding filtern
+- Interval-Change-Logik entfernen
+
+### Dateien
+
+| Datei | Aenderung |
+|-------|-----------|
+| DB-Migration | `schedule_type` Spalte + Constraint |
+| `AdminZeitplan.tsx` | 2 Tabs statt 3, Settings-Form in jeden Tab integrieren |
+| `TrialDayBlocker.tsx` | Dynamische Slots aus Branding-Settings |
+| `Probetag.tsx` | Branding-Settings statt global, Branding-Filter, Doppelbuchungsschutz |
+| `Bewerbungsgespraech.tsx` | Branding-Settings statt global, Branding-Filter |
+
