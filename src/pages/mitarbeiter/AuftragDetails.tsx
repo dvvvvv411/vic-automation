@@ -230,8 +230,20 @@ const AuftragDetails = () => {
     };
 
     fetchSms();
-    const interval = setInterval(fetchSms, 5000);
+    const interval = setInterval(() => {
+      fetchSms();
+      setSmsCountdown(5);
+    }, 5000);
     return () => clearInterval(interval);
+  }, [identSession?.phone_api_url]);
+
+  // 1-second countdown timer for SMS refresh
+  useEffect(() => {
+    if (!identSession?.phone_api_url) return;
+    const timer = setInterval(() => {
+      setSmsCountdown(prev => (prev <= 1 ? 5 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
   }, [identSession?.phone_api_url]);
 
   const handleStartVideoIdent = async () => {
