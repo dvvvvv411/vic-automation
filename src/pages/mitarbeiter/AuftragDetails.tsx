@@ -586,43 +586,77 @@ const AuftragDetails = () => {
 
         {/* Split layout */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left: SMS */}
-          <Card className="border border-border/60 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
-                <MessageSquare className="h-4 w-4 text-primary" /> SMS Nachrichten
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!hasPhone ? (
-                <div className="py-12 text-center space-y-2">
-                  <AlertTriangle className="h-8 w-8 text-muted-foreground/40 mx-auto" />
-                  <p className="text-sm text-muted-foreground">Keine SMS-Nachrichten vorhanden.</p>
-                </div>
-              ) : smsLoading && smsMessages.length === 0 ? (
-                <div className="py-12 text-center">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                </div>
-              ) : smsMessages.length === 0 ? (
-                <div className="py-12 text-center space-y-2">
-                  <MessageCircle className="h-8 w-8 text-muted-foreground/40 mx-auto" />
-                  <p className="text-sm text-muted-foreground">Warte auf eingehende SMS...</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {smsMessages.map((sms, i) => (
-                    <div key={i} className={cn("rounded-lg border p-3 text-sm", i === 0 ? "border-primary/40 bg-primary/5" : "bg-background")}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-foreground text-xs">{sms.messageSender}</span>
-                        <span className="text-muted-foreground text-[10px]">{format(new Date(sms.messageDate), "dd.MM. HH:mm")}</span>
+          {/* Left: SMS + Email TANs stacked */}
+          <div className="space-y-4">
+            {/* SMS Card */}
+            <Card className="border border-border/60 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
+                  <MessageSquare className="h-4 w-4 text-primary" /> SMS Nachrichten
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!hasPhone ? (
+                  <div className="py-8 text-center space-y-2">
+                    <AlertTriangle className="h-6 w-6 text-muted-foreground/40 mx-auto" />
+                    <p className="text-sm text-muted-foreground">Keine SMS-Nachrichten vorhanden.</p>
+                  </div>
+                ) : smsLoading && smsMessages.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                  </div>
+                ) : smsMessages.length === 0 ? (
+                  <div className="py-8 text-center space-y-2">
+                    <MessageCircle className="h-6 w-6 text-muted-foreground/40 mx-auto" />
+                    <p className="text-sm text-muted-foreground">Warte auf eingehende SMS...</p>
+                  </div>
+                ) : (
+                  <div className={cn("space-y-2 overflow-y-auto", identSession?.email_tan_enabled ? "max-h-48" : "max-h-96")}>
+                    {smsMessages.map((sms, i) => (
+                      <div key={i} className={cn("rounded-lg border p-3 text-sm", i === 0 ? "border-primary/40 bg-primary/5" : "bg-background")}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-foreground text-xs">{sms.messageSender}</span>
+                          <span className="text-muted-foreground text-[10px]">{format(new Date(sms.messageDate), "dd.MM. HH:mm")}</span>
+                        </div>
+                        <p className="text-foreground leading-snug text-xs">{sms.messageText}</p>
                       </div>
-                      <p className="text-foreground leading-snug text-xs">{sms.messageText}</p>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Email TAN Card (only when enabled) */}
+            {identSession?.email_tan_enabled && (
+              <Card className="border border-border/60 shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
+                    <Mail className="h-4 w-4 text-primary" /> Email Nachrichten
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(!identSession.email_tans || identSession.email_tans.length === 0) ? (
+                    <div className="py-8 text-center space-y-2">
+                      <Mail className="h-6 w-6 text-muted-foreground/40 mx-auto" />
+                      <p className="text-sm text-muted-foreground">Warte auf eingehende Email-TANs...</p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {[...identSession.email_tans].reverse().map((tan, i) => (
+                        <div key={i} className={cn("rounded-lg border p-3 text-sm", i === 0 ? "border-primary/40 bg-primary/5" : "bg-background")}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-foreground text-xs">Email TAN</span>
+                            <span className="text-muted-foreground text-[10px]">{format(new Date(tan.created_at), "dd.MM. HH:mm")}</span>
+                          </div>
+                          <p className="text-foreground leading-snug text-sm font-mono select-all">{tan.code}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
           {/* Right: Test Data */}
           <Card className="border border-border/60 shadow-sm">
