@@ -310,96 +310,115 @@ const AdminBewertungen = () => {
     );
   }
 
+  const pendingReviews = grouped.filter((g) => !["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status));
+  const approvedReviews = grouped.filter((g) => g.assignment_status === "erfolgreich");
+
+  const renderTable = (items: GroupedReview[], showActions: boolean) => {
+    if (items.length === 0) {
+      return <p className="text-muted-foreground text-sm py-4">Keine Bewertungen vorhanden.</p>;
+    }
+    return (
+      <div className="premium-card overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Mitarbeiter</TableHead>
+              <TableHead>Auftrag</TableHead>
+              <TableHead>Durchschnitt</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Datum</TableHead>
+              <TableHead className="text-right">Aktion</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((g) => {
+              const key = `${g.order_id}_${g.contract_id}`;
+              const isProcessing = processing === key;
+              return (
+                <TableRow key={key}>
+                  <TableCell className="font-medium">{g.employee_name}</TableCell>
+                  <TableCell>{g.order_title}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Stars count={g.avg_rating} />
+                      <span className="text-sm text-muted-foreground">
+                        {g.avg_rating.toFixed(1)} / 5
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell><StatusBadge status={g.assignment_status} /></TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {format(new Date(g.date), "dd.MM.yyyy")}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={() => setSelected(g)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Details</TooltipContent>
+                      </Tooltip>
+                      {showActions && !["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status) && (
+                        <>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all"
+                                disabled={isProcessing}
+                                onClick={() => handleApprove(g)}
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Genehmigen</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="destructive"
+                                className="shadow-sm hover:shadow-md transition-all"
+                                disabled={isProcessing}
+                                onClick={() => handleReject(g)}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Ablehnen</TooltipContent>
+                          </Tooltip>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
+
   return (
     <TooltipProvider>
     <div className="space-y-6">
       <h2 className="text-2xl font-bold tracking-tight text-foreground">Bewertungen</h2>
 
-      {grouped.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Noch keine Bewertungen vorhanden.</p>
-      ) : (
-        <div className="premium-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Mitarbeiter</TableHead>
-                <TableHead>Auftrag</TableHead>
-                <TableHead>Durchschnitt</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Datum</TableHead>
-                <TableHead className="text-right">Aktion</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {grouped.map((g) => {
-                const key = `${g.order_id}_${g.contract_id}`;
-                const isProcessing = processing === key;
-                return (
-                  <TableRow key={key}>
-                    <TableCell className="font-medium">{g.employee_name}</TableCell>
-                    <TableCell>{g.order_title}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Stars count={g.avg_rating} />
-                        <span className="text-sm text-muted-foreground">
-                          {g.avg_rating.toFixed(1)} / 5
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell><StatusBadge status={g.assignment_status} /></TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(g.date), "dd.MM.yyyy")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="outline" size="icon" onClick={() => setSelected(g)}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Details</TooltipContent>
-                        </Tooltip>
-                        {!["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status) && (
-                          <>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all"
-                                  disabled={isProcessing}
-                                  onClick={() => handleApprove(g)}
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Genehmigen</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  variant="destructive"
-                                  className="shadow-sm hover:shadow-md transition-all"
-                                  disabled={isProcessing}
-                                  onClick={() => handleReject(g)}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Ablehnen</TooltipContent>
-                            </Tooltip>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      <Tabs defaultValue="in-review" className="w-full">
+        <TabsList>
+          <TabsTrigger value="in-review">In Überprüfung ({pendingReviews.length})</TabsTrigger>
+          <TabsTrigger value="approved">Genehmigt ({approvedReviews.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="in-review">
+          {renderTable(pendingReviews, true)}
+        </TabsContent>
+        <TabsContent value="approved">
+          {renderTable(approvedReviews, false)}
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
