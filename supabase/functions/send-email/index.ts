@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
         recipient_email: to,
         recipient_name: recipient_name || null,
         subject,
-        branding_id: branding_id || null,
+        branding_id: effectiveBrandingId || null,
         status: "failed",
         error_message: resendResult?.message || JSON.stringify(resendResult),
         metadata: metadata || {},
