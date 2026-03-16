@@ -168,12 +168,26 @@ export function AdminSidebar() {
     refetchInterval: 30000,
   });
 
+  const { data: identWaitingCount } = useQuery({
+    queryKey: ["badge-idents-waiting", activeBrandingId],
+    enabled: !!activeBrandingId,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("ident_sessions" as any)
+        .select("*", { count: "exact", head: true })
+        .eq("status", "waiting")
+        .eq("branding_id", activeBrandingId!);
+      return count ?? 0;
+    },
+    refetchInterval: 10000,
+  });
+
   const badgeCounts: Record<string, number> = {
     "/admin/bewerbungen": neuCount ?? 0,
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
     "/admin/probetag": probetagTodayCount ?? 0,
     "/admin/arbeitsvertraege": eingereichtCount ?? 0,
-    
+    "/admin/idents": identWaitingCount ?? 0,
     "/admin/livechat": chatUnreadCount ?? 0,
     "/admin/bewertungen": inPruefungCount ?? 0,
   };

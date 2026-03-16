@@ -79,6 +79,7 @@ const App = () => (
               <Route path="auftraege/:id/bearbeiten" element={<AdminAuftragWizard />} />
               <Route path="anhaenge" element={<AdminAnhaenge />} />
               
+              <Route path="idents" element={<AdminIdents />} />
               <Route path="livechat" element={<AdminLivechat />} />
               <Route path="bewertungen" element={<AdminBewertungen />} />
               <Route path="emails" element={<AdminEmails />} />
