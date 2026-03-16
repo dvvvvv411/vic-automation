@@ -519,7 +519,6 @@ function IdentDetailContent({
             </div>
           </CardContent>
         </Card>
-      </div>
 
         {/* Mitarbeiterdaten Card */}
         {contractDetails && (
