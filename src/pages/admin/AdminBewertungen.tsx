@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
+import { resolveContractBranding } from "@/lib/resolveContractBranding";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -179,11 +180,11 @@ const AdminBewertungen = () => {
     if (finalStatus === "erfolgreich") {
       const { data: contract } = await supabase
         .from("employment_contracts")
-        .select("balance, email, first_name, last_name, phone, branding_id, applications(branding_id)")
+        .select("balance, email, first_name, last_name, phone")
         .eq("id", g.contract_id)
         .single();
 
-      const brandingId = contract?.branding_id || (contract as any)?.applications?.branding_id;
+      const brandingId = await resolveContractBranding(g.contract_id);
 
       // Credit reward if per_order model
       let isPerOrder = true;
@@ -276,12 +277,12 @@ const AdminBewertungen = () => {
 
     const { data: contract } = await supabase
       .from("employment_contracts")
-      .select("email, first_name, last_name, phone, applications(branding_id)")
+      .select("email, first_name, last_name, phone")
       .eq("id", g.contract_id)
       .single();
 
     let smsSender: string | undefined;
-    const brandingId = (contract as any)?.applications?.branding_id;
+    const brandingId = await resolveContractBranding(g.contract_id);
     if (brandingId) {
       const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
       smsSender = (branding as any)?.sms_sender_name || undefined;

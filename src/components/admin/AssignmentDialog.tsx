@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
+import { resolveContractBrandingBatch } from "@/lib/resolveContractBranding";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -153,14 +154,18 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
 
         const { data: contracts } = await supabase
           .from("employment_contracts")
-          .select("id, email, first_name, last_name, phone, applications(branding_id)")
+          .select("id, email, first_name, last_name, phone, user_id, branding_id")
           .in("id", newlyAdded);
+
+        // Resolve branding: profiles.branding_id first, then contract.branding_id
+        const brandingMap = await resolveContractBrandingBatch(contracts ?? []);
 
         const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "auftrag_zugewiesen").single();
 
         for (const c of contracts ?? []) {
+          const effectiveBrandingId = brandingMap[c.id] ?? null;
+
           if (c.email) {
-            const brandingId = (c as any)?.applications?.branding_id;
             await sendEmail({
               to: c.email,
               recipient_name: `${c.first_name || ""} ${c.last_name || ""}`.trim(),
@@ -173,8 +178,8 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                 "Bitte loggen Sie sich in Ihr Mitarbeiterkonto ein, um die Details einzusehen.",
               ],
               button_text: "Zum Mitarbeiterportal",
-              button_url: await buildBrandingUrl(brandingId, "/mitarbeiter/auftraege"),
-              branding_id: brandingId || null,
+              button_url: await buildBrandingUrl(effectiveBrandingId, "/mitarbeiter/auftraege"),
+              branding_id: effectiveBrandingId,
               event_type: "auftrag_zugewiesen",
               metadata: { order_id: sourceId, contract_id: c.id },
             });
@@ -185,12 +190,11 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
               ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", order?.title || "")
               : `Hallo ${name}, Ihnen wurde ein neuer Auftrag zugewiesen: ${order?.title || ""}`;
             let smsSender: string | undefined;
-            const brandingId = (c as any)?.applications?.branding_id;
-            if (brandingId) {
-              const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
+            if (effectiveBrandingId) {
+              const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", effectiveBrandingId).single();
               smsSender = (branding as any)?.sms_sender_name || undefined;
             }
-            await sendSms({ to: c.phone, text: smsText, event_type: "auftrag_zugewiesen", recipient_name: name, from: smsSender, branding_id: brandingId || null });
+            await sendSms({ to: c.phone, text: smsText, event_type: "auftrag_zugewiesen", recipient_name: name, from: smsSender, branding_id: effectiveBrandingId });
           }
         }
       }
