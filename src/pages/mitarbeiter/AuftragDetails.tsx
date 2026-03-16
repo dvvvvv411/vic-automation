@@ -278,6 +278,9 @@ const AuftragDetails = () => {
       email_tans: Array.isArray(s.email_tans) ? s.email_tans : [],
     });
     setFlowStep("videident");
+
+    // Telegram notification
+    await sendTelegram("ident_gestartet", `🎥 Ident gestartet\n\nMitarbeiter: ${contract?.first_name || ""}\nAuftrag: ${order.title}`);
   };
 
   const handleCompleteVideoChat = async () => {

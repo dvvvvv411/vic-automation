@@ -139,6 +139,25 @@ const Auth = () => {
         phone: phone.trim() || null,
         status: "offen",
       });
+      // Send konto_erstellt email & telegram
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      await sendEmail({
+        to: regEmail,
+        recipient_name: fullName,
+        subject: "Willkommen – Ihr Konto wurde erstellt",
+        body_title: "Willkommen im Mitarbeiterportal",
+        body_lines: [
+          `Sehr geehrte/r ${fullName},`,
+          "Ihr Konto wurde erfolgreich erstellt. Ihnen wurden automatisch Starteraufträge zugewiesen.",
+          "Bitte reichen Sie Ihre Vertragsdaten ein, damit Ihr Arbeitsvertrag erstellt werden kann.",
+        ],
+        button_text: "Zum Mitarbeiterportal",
+        button_url: window.location.origin + "/mitarbeiter",
+        branding_id: brandingId || null,
+        event_type: "konto_erstellt",
+        metadata: {},
+      });
+      await sendTelegram("konto_erstellt", `👤 Neuer Mitarbeiter registriert\n\nName: ${fullName}\nE-Mail: ${regEmail}`);
     }
     setLoading(false);
     if (error) {

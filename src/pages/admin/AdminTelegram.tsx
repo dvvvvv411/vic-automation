@@ -15,8 +15,11 @@ import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const EVENT_TYPES = [
   { key: "gespraech_gebucht", label: "Bewerbungsgespräch gebucht", desc: "Bewerber bucht ein Bewerbungsgespräch" },
-  { key: "vertrag_eingereicht", label: "Arbeitsvertrag eingereicht", desc: "Bewerber füllt Arbeitsvertrag aus" },
-  { key: "vertrag_unterzeichnet", label: "Vertrag unterzeichnet", desc: "Bewerber/Mitarbeiter unterzeichnet Vertrag" },
+  { key: "konto_erstellt", label: "Konto erstellt", desc: "Neuer Mitarbeiter registriert sich" },
+  { key: "vertrag_eingereicht", label: "Arbeitsvertrag eingereicht", desc: "Mitarbeiter reicht Vertragsdaten ein" },
+  { key: "vertrag_unterzeichnet", label: "Vertrag unterzeichnet", desc: "Mitarbeiter unterzeichnet Vertrag" },
+  { key: "anhaenge_eingereicht", label: "Anhänge eingereicht", desc: "Mitarbeiter reicht Auftrags-Anhänge ein" },
+  { key: "ident_gestartet", label: "Ident gestartet", desc: "Mitarbeiter startet Video-Identifizierung" },
   { key: "auftragstermin_gebucht", label: "Auftragstermin gebucht", desc: "Mitarbeiter bucht einen Auftragstermin" },
   { key: "chat_nachricht", label: "Chat-Nachricht", desc: "Mitarbeiter schreibt im Livechat" },
   { key: "bewertung_eingereicht", label: "Bewertung eingereicht", desc: "Mitarbeiter schickt Bewertung ab" },

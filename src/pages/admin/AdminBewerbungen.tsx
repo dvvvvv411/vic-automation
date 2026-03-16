@@ -324,23 +324,6 @@ export default function AdminBewerbungen() {
         .update({ status: "abgelehnt" })
         .eq("id", app.id);
       if (error) throw error;
-      if (!app.is_indeed && app.email) {
-        await sendEmail({
-          to: app.email,
-          recipient_name: `${app.first_name} ${app.last_name}`,
-          subject: "Ihre Bewerbung",
-           body_title: "Rückmeldung zu Ihrer Bewerbung",
-           body_lines: [
-             `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
-             "vielen Dank für Ihr Interesse und Ihre Bewerbung.",
-             "Leider müssen wir Ihnen mitteilen, dass wir uns für andere Kandidaten entschieden haben.",
-             "Wir wünschen Ihnen für Ihren weiteren Weg alles Gute.",
-          ],
-          branding_id: app.branding_id || null,
-          event_type: "bewerbung_abgelehnt",
-          metadata: { application_id: app.id },
-        });
-      }
     },
     onSuccess: (_data, app) => {
       queryClient.setQueryData(["applications", activeBrandingId], (old: any[] | undefined) => {

@@ -133,6 +133,25 @@ export default function AdminArbeitsvertraege() {
         return;
       }
 
+      // Send vertrag_genehmigt email
+      if (selectedContract?.email) {
+        const brandingId = selectedContract?.branding_id || selectedContract?.applications?.brandings?.id;
+        await sendEmail({
+          to: selectedContract.email,
+          recipient_name: `${selectedContract.first_name || ""} ${selectedContract.last_name || ""}`.trim(),
+          subject: "Ihr Arbeitsvertrag wurde genehmigt",
+          body_title: "Arbeitsvertrag genehmigt",
+          body_lines: [
+            `Sehr geehrte/r ${selectedContract.first_name || ""} ${selectedContract.last_name || ""},`,
+            "Ihr Arbeitsvertrag wurde geprüft und genehmigt.",
+            "Bitte loggen Sie sich ein und unterzeichnen Sie Ihren Arbeitsvertrag.",
+          ],
+          branding_id: brandingId || null,
+          event_type: "vertrag_genehmigt",
+          metadata: { contract_id: contractId },
+        });
+      }
+
       toast.success("Vertrag genehmigt!");
       setStartDateDialogOpen(false);
       setDialogOpen(false);
