@@ -173,6 +173,7 @@ const MitarbeiterAuftraege = () => {
               reward: order.reward,
               hasRequiredAttachments: hasReq,
               attachmentsPending: hasReq && !allApproved,
+              hasIdentSession: orderIdsWithSession.has(a.order_id),
             };
           })
       );
