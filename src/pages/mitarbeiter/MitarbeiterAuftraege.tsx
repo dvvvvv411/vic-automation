@@ -26,6 +26,7 @@ interface Assignment {
   reward: string;
   hasRequiredAttachments: boolean;
   attachmentsPending: boolean;
+  attachmentsSubmitted: boolean;
   hasIdentSession: boolean;
   hasReviewSubmitted: boolean;
 }
