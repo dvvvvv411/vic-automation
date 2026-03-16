@@ -172,24 +172,14 @@ const templates: TemplateDefinition[] = [
   {
     eventType: "vertrag_genehmigt",
     label: "Vertrag genehmigt",
-    subject: (c) => `Ihr Arbeitsvertrag wurde genehmigt – ${c}`,
-    bodyTitle: "Arbeitsvertrag genehmigt",
+    subject: (c) => `Herzlichen Glückwunsch – Sie sind nun vollwertiger Mitarbeiter bei ${c}`,
+    bodyTitle: "Willkommen im Team!",
     bodyLines: (c) => [
       "Sehr geehrte/r Max Mustermann,",
-      `Ihr Arbeitsvertrag bei ${c} wurde geprüft und genehmigt.`,
-      "Bitte loggen Sie sich ein und unterzeichnen Sie Ihren Arbeitsvertrag.",
-    ],
-  },
-  {
-    eventType: "vertrag_unterzeichnet",
-    label: "Vertrag unterzeichnet",
-    subject: (c) => `Arbeitsvertrag unterzeichnet – ${c}`,
-    bodyTitle: "Ihr Arbeitsvertrag wurde erfolgreich unterzeichnet",
-    bodyLines: (c) => [
-      "Sehr geehrte/r Max Mustermann,",
-      `vielen Dank. Ihr Arbeitsvertrag bei ${c} wurde erfolgreich unterzeichnet.`,
-      "Sie finden den unterzeichneten Vertrag in Ihrem Mitarbeiterportal.",
-      "Mit freundlichen Grüßen",
+      `herzlichen Glückwunsch! Ihr Arbeitsvertrag bei ${c} wurde genehmigt – Sie sind nun vollwertiger Mitarbeiter.`,
+      "Ihr Startdatum: 01.04.2026",
+      "Ab diesem Datum werden Ihnen Aufträge zugewiesen.",
+      "Wir freuen uns auf die Zusammenarbeit!",
     ],
   },
   {
