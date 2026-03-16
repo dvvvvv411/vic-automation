@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
+import { sendTelegram } from "@/lib/sendTelegram";
 import { ArrowLeft, Apple, Play, Target, HelpCircle, Download, Star, Upload, FileText, CheckCircle, XCircle, ListChecks, Video, AlertTriangle, Clock, MessageSquare, Smartphone, Loader2, Info, MessageCircle, RefreshCw, Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -277,6 +278,9 @@ const AuftragDetails = () => {
       email_tans: Array.isArray(s.email_tans) ? s.email_tans : [],
     });
     setFlowStep("videident");
+
+    // Telegram notification
+    await sendTelegram("ident_gestartet", `🎥 Ident gestartet\n\nMitarbeiter: ${contract?.first_name || ""}\nAuftrag: ${order.title}`);
   };
 
   const handleCompleteVideoChat = async () => {
@@ -357,6 +361,9 @@ const AuftragDetails = () => {
 
     toast.success("Anhänge erfolgreich eingereicht!");
     setSubmittingAttachments(false);
+
+    // Telegram notification
+    await sendTelegram("anhaenge_eingereicht", `📎 Anhänge eingereicht\n\nMitarbeiter: ${contract?.first_name || ""}\nAuftrag: ${order.title}`);
   };
 
   if (layoutLoading || loading) {

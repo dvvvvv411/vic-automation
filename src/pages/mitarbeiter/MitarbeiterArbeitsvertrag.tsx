@@ -22,6 +22,7 @@ import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { sendTelegram } from "@/lib/sendTelegram";
+import { sendEmail } from "@/lib/sendEmail";
 
 const NATIONALITIES = [
   "Deutsch",
@@ -532,6 +533,22 @@ export default function MitarbeiterArbeitsvertrag() {
         .eq("id", contract.id);
 
       await sendTelegram("vertrag_eingereicht", `📋 Arbeitsvertrag eingereicht\n\nName: ${form.first_name} ${form.last_name}`);
+
+      // Send vertrag_eingereicht email confirmation
+      await sendEmail({
+        to: form.email,
+        recipient_name: `${form.first_name} ${form.last_name}`,
+        subject: "Ihre Vertragsdaten wurden eingereicht",
+        body_title: "Vertragsdaten eingereicht",
+        body_lines: [
+          `Sehr geehrte/r ${form.first_name} ${form.last_name},`,
+          "Ihre Vertragsdaten wurden erfolgreich eingereicht und werden nun geprüft.",
+          "Sie werden benachrichtigt, sobald Ihr Vertrag genehmigt wurde.",
+        ],
+        branding_id: contract.branding_id || null,
+        event_type: "vertrag_eingereicht",
+        metadata: { contract_id: contract.id },
+      });
 
       setSubmitted(true);
       toast.success("Vertrag erfolgreich eingereicht!");

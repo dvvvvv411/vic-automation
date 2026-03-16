@@ -545,14 +545,23 @@ export default function AdminMitarbeiterDetail() {
     }
 
     if (reward > 0) {
-      const currentBalance = Number(contract!.balance ?? 0);
-      await supabase
-        .from("employment_contracts")
-        .update({ balance: currentBalance + reward })
-        .eq("id", contract!.id);
+      // Check payment model
+      const brandingId = (contract as any)?.applications?.brandings?.id || contract?.branding_id;
+      let isPerOrder = true;
+      if (brandingId) {
+        const { data: branding } = await supabase.from("brandings").select("payment_model").eq("id", brandingId).single();
+        isPerOrder = branding?.payment_model !== "fixed_salary";
+      }
+
+      if (isPerOrder) {
+        const currentBalance = Number(contract!.balance ?? 0);
+        await supabase
+          .from("employment_contracts")
+          .update({ balance: currentBalance + reward })
+          .eq("id", contract!.id);
+      }
 
       let smsSender: string | undefined;
-      const brandingId = (contract as any)?.applications?.brandings?.id;
       if (brandingId) {
         const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
         smsSender = (branding as any)?.sms_sender_name || undefined;
@@ -561,18 +570,27 @@ export default function AdminMitarbeiterDetail() {
       const orderTitle = assignment.orders?.title ?? "Auftrag";
 
       if (contract!.email) {
+        const bodyLines = isPerOrder
+          ? [
+              `Sehr geehrte/r ${fullName},`,
+              `Ihr Auftrag "${orderTitle}" wurde erfolgreich abgeschlossen.`,
+              `Die Prämie von ${assignment.orders?.reward ?? "0€"} wurde Ihrem Konto gutgeschrieben.`,
+              "Vielen Dank für Ihre Mitarbeit.",
+            ]
+          : [
+              `Sehr geehrte/r ${fullName},`,
+              `Ihr Auftrag "${orderTitle}" wurde erfolgreich abgeschlossen.`,
+              "Vielen Dank für Ihre Mitarbeit.",
+            ];
+
         await sendEmail({
           to: contract!.email,
           recipient_name: fullName,
-          subject: "Ihre Bewertung wurde genehmigt",
-          body_title: "Bewertung genehmigt",
-          body_lines: [
-            `Sehr geehrte/r ${fullName},`,
-            `Ihre Bewertung für den Auftrag "${orderTitle}" wurde genehmigt.`,
-            `Die Prämie von ${assignment.orders?.reward ?? "0€"} wurde Ihrem Konto gutgeschrieben.`,
-          ],
+          subject: "Auftrag erfolgreich abgeschlossen",
+          body_title: "Auftrag erfolgreich",
+          body_lines: bodyLines,
           branding_id: brandingId || null,
-          event_type: "bewertung_genehmigt",
+          event_type: "auftrag_erfolgreich",
           metadata: { order_id: orderId, contract_id: contract!.id },
         });
       }
@@ -581,7 +599,7 @@ export default function AdminMitarbeiterDetail() {
         const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewertung_genehmigt").single();
         const smsText = (tpl as any)?.message
           ? (tpl as any).message.replace("{name}", fullName).replace("{auftrag}", orderTitle).replace("{praemie}", assignment.orders?.reward ?? "0€")
-          : `Hallo ${fullName}, Ihre Bewertung für "${orderTitle}" wurde genehmigt. Prämie: ${assignment.orders?.reward ?? "0€"}.`;
+          : `Hallo ${fullName}, Ihr Auftrag "${orderTitle}" wurde erfolgreich abgeschlossen.`;
         await sendSms({ to: contract!.phone, text: smsText, event_type: "bewertung_genehmigt", recipient_name: fullName, from: smsSender, branding_id: brandingId || null });
       }
     }
