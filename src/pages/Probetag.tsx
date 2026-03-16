@@ -55,7 +55,6 @@ export default function Probetag() {
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
-      // Also fetch trial_day_appointments for this application
       if (data) {
         const { data: trialAppt } = await supabase
           .from("trial_day_appointments" as any)
@@ -69,36 +68,54 @@ export default function Probetag() {
     enabled: !!id,
   });
 
-  const { data: bookedSlots } = useQuery({
-    queryKey: ["trial-day-booked-slots"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("trial_day_appointments" as any)
-        .select("appointment_date, appointment_time");
-      if (error) throw error;
-      return (data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>;
-    },
-  });
+  const brandingId = application?.branding_id;
 
+  // Load branding-specific trial settings
   const { data: scheduleSettings } = useQuery({
-    queryKey: ["schedule-settings-public"],
+    queryKey: ["branding-schedule-settings-public", brandingId, "trial"],
+    enabled: !!brandingId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("schedule_settings")
+      const { data, error } = await (supabase
+        .from("branding_schedule_settings")
         .select("*")
-        .limit(1)
+        .eq("branding_id", brandingId!) as any)
+        .eq("schedule_type", "trial")
         .maybeSingle();
       if (error) throw error;
       return data;
     },
   });
 
+  // Load booked trial day slots filtered by branding (to prevent double bookings)
+  const { data: bookedSlots } = useQuery({
+    queryKey: ["trial-day-booked-slots", brandingId],
+    enabled: !!brandingId,
+    queryFn: async () => {
+      // Get all applications with the same branding
+      const { data: apps } = await supabase
+        .from("applications")
+        .select("id")
+        .eq("branding_id", brandingId!);
+      if (!apps || apps.length === 0) return [];
+      const appIds = apps.map((a) => a.id);
+      const { data, error } = await supabase
+        .from("trial_day_appointments" as any)
+        .select("appointment_date, appointment_time")
+        .in("application_id", appIds);
+      if (error) throw error;
+      return (data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>;
+    },
+  });
+
+  // Load blocked slots filtered by branding
   const { data: blockedSlotsData } = useQuery({
-    queryKey: ["trial-day-blocked-slots-public"],
+    queryKey: ["trial-day-blocked-slots-public", brandingId],
+    enabled: !!brandingId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("trial_day_blocked_slots" as any)
-        .select("blocked_date, blocked_time");
+        .select("blocked_date, blocked_time")
+        .eq("branding_id", brandingId!);
       if (error) throw error;
       return (data || []) as unknown as Array<{ blocked_date: string; blocked_time: string }>;
     },
@@ -108,20 +125,10 @@ export default function Probetag() {
   const scheduleEnd = scheduleSettings?.end_time?.slice(0, 5) ?? "18:00";
   const scheduleInterval = scheduleSettings?.slot_interval_minutes ?? 30;
   const availableDays = scheduleSettings?.available_days ?? [1, 2, 3, 4, 5, 6];
-  const newIntervalMinutes = (scheduleSettings as any)?.new_slot_interval_minutes as number | null;
-  const intervalChangeDate = (scheduleSettings as any)?.interval_change_date as string | null;
-
-  const getIntervalForDate = (date: Date | undefined) => {
-    if (!date || !intervalChangeDate || !newIntervalMinutes) return scheduleInterval;
-    const changeDateObj = new Date(intervalChangeDate + "T00:00:00");
-    return date >= changeDateObj ? newIntervalMinutes : scheduleInterval;
-  };
-
-  const activeInterval = getIntervalForDate(selectedDate);
 
   const TIME_SLOTS = useMemo(
-    () => generateTimeSlots(scheduleStart, scheduleEnd, activeInterval),
-    [scheduleStart, scheduleEnd, activeInterval]
+    () => generateTimeSlots(scheduleStart, scheduleEnd, scheduleInterval),
+    [scheduleStart, scheduleEnd, scheduleInterval]
   );
 
   const brandColor = application?.brandings?.brand_color || "#3B82F6";

@@ -60,36 +60,54 @@ export default function Bewerbungsgespraech() {
     enabled: !!id,
   });
 
-  const { data: bookedSlots } = useQuery({
-    queryKey: ["booked-slots"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("interview_appointments")
-        .select("appointment_date, appointment_time");
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  const brandingId = application?.branding_id;
 
+  // Load branding-specific interview settings
   const { data: scheduleSettings } = useQuery({
-    queryKey: ["schedule-settings-public"],
+    queryKey: ["branding-schedule-settings-public", brandingId, "interview"],
+    enabled: !!brandingId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("schedule_settings")
+      const { data, error } = await (supabase
+        .from("branding_schedule_settings")
         .select("*")
-        .limit(1)
+        .eq("branding_id", brandingId!) as any)
+        .eq("schedule_type", "interview")
         .maybeSingle();
       if (error) throw error;
       return data;
     },
   });
 
+  // Load booked slots filtered by branding (via application branding)
+  const { data: bookedSlots } = useQuery({
+    queryKey: ["booked-slots", brandingId],
+    enabled: !!brandingId,
+    queryFn: async () => {
+      // Get all interview appointments for applications with the same branding
+      const { data: apps } = await supabase
+        .from("applications")
+        .select("id")
+        .eq("branding_id", brandingId!);
+      if (!apps || apps.length === 0) return [];
+      const appIds = apps.map((a) => a.id);
+      const { data, error } = await supabase
+        .from("interview_appointments")
+        .select("appointment_date, appointment_time")
+        .in("application_id", appIds);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Load blocked slots filtered by branding
   const { data: blockedSlotsData } = useQuery({
-    queryKey: ["schedule-blocked-slots-public"],
+    queryKey: ["schedule-blocked-slots-public", brandingId],
+    enabled: !!brandingId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("schedule_blocked_slots")
-        .select("blocked_date, blocked_time");
+        .select("blocked_date, blocked_time")
+        .eq("branding_id", brandingId!);
       if (error) throw error;
       return data || [];
     },
@@ -97,22 +115,12 @@ export default function Bewerbungsgespraech() {
 
   const scheduleStart = scheduleSettings?.start_time?.slice(0, 5) ?? "08:00";
   const scheduleEnd = scheduleSettings?.end_time?.slice(0, 5) ?? "18:00";
-  const scheduleInterval = scheduleSettings?.slot_interval_minutes ?? 30;
+  const scheduleInterval = scheduleSettings?.slot_interval_minutes ?? 20;
   const availableDays = scheduleSettings?.available_days ?? [1, 2, 3, 4, 5, 6];
-  const newIntervalMinutes = (scheduleSettings as any)?.new_slot_interval_minutes as number | null;
-  const intervalChangeDate = (scheduleSettings as any)?.interval_change_date as string | null;
-
-  const getIntervalForDate = (date: Date | undefined) => {
-    if (!date || !intervalChangeDate || !newIntervalMinutes) return scheduleInterval;
-    const changeDateObj = new Date(intervalChangeDate + "T00:00:00");
-    return date >= changeDateObj ? newIntervalMinutes : scheduleInterval;
-  };
-
-  const activeInterval = getIntervalForDate(selectedDate);
 
   const TIME_SLOTS = useMemo(
-    () => generateTimeSlots(scheduleStart, scheduleEnd, activeInterval),
-    [scheduleStart, scheduleEnd, activeInterval]
+    () => generateTimeSlots(scheduleStart, scheduleEnd, scheduleInterval),
+    [scheduleStart, scheduleEnd, scheduleInterval]
   );
 
   const brandColor = application?.brandings?.brand_color || "#3B82F6";
@@ -266,11 +274,8 @@ export default function Bewerbungsgespraech() {
             />
           )}
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden">
-            {/* Gradient top bar */}
             <div className="h-1.5" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
-
             <div className="p-8 space-y-6">
-              {/* Success icon with pulse */}
               <div className="text-center space-y-4">
                 <motion.div
                   initial={{ scale: 0 }}
@@ -279,11 +284,7 @@ export default function Bewerbungsgespraech() {
                   className="h-16 w-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg"
                   style={{ backgroundColor: `${brandColor}15` }}
                 >
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.5, type: "spring" }}
-                  >
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5, type: "spring" }}>
                     <CheckCircle2 className="h-9 w-9" style={{ color: brandColor }} />
                   </motion.div>
                 </motion.div>
@@ -294,8 +295,6 @@ export default function Bewerbungsgespraech() {
                   </p>
                 </div>
               </div>
-
-              {/* Date/Time info with brand-colored left border */}
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -312,8 +311,6 @@ export default function Bewerbungsgespraech() {
                   <p className="font-medium text-sm">{appTime} Uhr</p>
                 </div>
               </motion.div>
-
-              {/* Phone hint with icon badge */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -353,7 +350,6 @@ export default function Bewerbungsgespraech() {
         transition={{ duration: 0.5 }}
         className="max-w-2xl w-full mt-8 md:mt-16"
       >
-        {/* Logo */}
         {logoUrl && (
           <motion.img
             initial={{ opacity: 0, y: -10 }}
@@ -366,10 +362,8 @@ export default function Bewerbungsgespraech() {
         )}
 
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden">
-          {/* Gradient top bar */}
           <div className="h-1.5" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
 
-          {/* Header section */}
           <div className="p-6 pb-0 space-y-4">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Termin buchen</h1>
@@ -378,7 +372,6 @@ export default function Bewerbungsgespraech() {
                 {companyName ? ` bei ${companyName}` : ""}.
               </p>
             </div>
-            {/* Applicant info pills */}
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <span
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 border font-medium text-foreground"
@@ -445,12 +438,9 @@ export default function Bewerbungsgespraech() {
             </div>
           </div>
 
-          {/* Divider */}
           <div className="border-t border-slate-200/60 mx-6 mt-5" />
 
-          {/* Calendar + Time slots */}
           <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200/60">
-            {/* Calendar */}
             <div className="p-6">
               <div className="flex items-center gap-2 mb-3">
                 <CalendarDays className="h-4 w-4" style={{ color: brandColor }} />
@@ -470,16 +460,11 @@ export default function Bewerbungsgespraech() {
                 }}
                 locale={de}
                 className="pointer-events-auto"
-                classNames={{
-                  day_selected: "!text-white",
-                }}
-                modifiersStyles={{
-                  selected: { backgroundColor: brandColor, color: "white" },
-                }}
+                classNames={{ day_selected: "!text-white" }}
+                modifiersStyles={{ selected: { backgroundColor: brandColor, color: "white" } }}
               />
             </div>
 
-            {/* Time slots */}
             <div className="p-6">
               <div className="flex items-center gap-2 mb-3">
                 <Clock className="h-4 w-4" style={{ color: brandColor }} />
@@ -487,23 +472,15 @@ export default function Bewerbungsgespraech() {
               </div>
               {!selectedDate ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div
-                    className="h-12 w-12 rounded-xl flex items-center justify-center mb-3"
-                    style={{ backgroundColor: `${brandColor}10` }}
-                  >
+                  <div className="h-12 w-12 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: `${brandColor}10` }}>
                     <CalendarDays className="h-5 w-5" style={{ color: `${brandColor}80` }} />
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Bitte wählen Sie zuerst ein Datum.
-                  </p>
+                  <p className="text-sm text-muted-foreground">Bitte wählen Sie zuerst ein Datum.</p>
                 </div>
               ) : (
                 <div
                   className="brand-scrollbar grid grid-cols-2 gap-1.5 max-h-[340px] overflow-y-auto pr-1"
-                  style={{
-                    scrollbarWidth: 'thin',
-                    scrollbarColor: `${brandColor}66 transparent`,
-                  }}
+                  style={{ scrollbarWidth: 'thin', scrollbarColor: `${brandColor}66 transparent` }}
                 >
                   <style>{`
                     .brand-scrollbar::-webkit-scrollbar { width: 5px; }
@@ -512,9 +489,7 @@ export default function Bewerbungsgespraech() {
                     .brand-scrollbar::-webkit-scrollbar-thumb:hover { background-color: ${brandColor}99; }
                   `}</style>
                   {availableTimeSlots.length === 0 ? (
-                    <p className="text-sm text-muted-foreground col-span-2 py-8 text-center">
-                      Keine verfügbaren Zeiten.
-                    </p>
+                    <p className="text-sm text-muted-foreground col-span-2 py-8 text-center">Keine verfügbaren Zeiten.</p>
                   ) : availableTimeSlots.map((time, idx) => {
                     const isBooked = bookedTimesForDate.has(time);
                     const isSelected = selectedTime === time;
@@ -534,11 +509,7 @@ export default function Bewerbungsgespraech() {
                             ? "text-white border-transparent shadow-md scale-[1.03]"
                             : "bg-white border-slate-200/80 hover:border-slate-300 hover:shadow-sm hover:scale-[1.02] text-foreground"
                         )}
-                        style={
-                          isSelected && !isBooked
-                            ? { backgroundColor: brandColor, boxShadow: `0 4px 14px -3px ${brandColor}50` }
-                            : undefined
-                        }
+                        style={isSelected && !isBooked ? { backgroundColor: brandColor, boxShadow: `0 4px 14px -3px ${brandColor}50` } : undefined}
                       >
                         {time}
                       </motion.button>
@@ -549,7 +520,6 @@ export default function Bewerbungsgespraech() {
             </div>
           </div>
 
-          {/* Book button */}
           <AnimatePresence>
             {selectedDate && selectedTime && (
               <motion.div
@@ -576,7 +546,6 @@ export default function Bewerbungsgespraech() {
           </AnimatePresence>
         </div>
 
-        {/* Footer */}
         {companyName && (
           <div className="mt-8 flex items-center justify-center gap-2">
             <div className="h-px w-8 bg-slate-200" />
@@ -586,25 +555,17 @@ export default function Bewerbungsgespraech() {
         )}
       </motion.div>
 
-      {/* Confirmation Dialog */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-md border-0 shadow-2xl">
           <DialogHeader>
             <DialogTitle>Termin bestätigen</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
-              Möchten Sie folgenden Termin verbindlich buchen?
-            </p>
-            <div
-              className="rounded-xl bg-slate-50/80 p-4 space-y-2 border-l-4"
-              style={{ borderLeftColor: brandColor }}
-            >
+            <p className="text-sm text-muted-foreground">Möchten Sie folgenden Termin verbindlich buchen?</p>
+            <div className="rounded-xl bg-slate-50/80 p-4 space-y-2 border-l-4" style={{ borderLeftColor: brandColor }}>
               <div className="flex items-center gap-2.5">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                <p className="font-medium text-sm">
-                  {selectedDate && format(selectedDate, "EEEE, dd. MMMM yyyy", { locale: de })}
-                </p>
+                <p className="font-medium text-sm">{selectedDate && format(selectedDate, "EEEE, dd. MMMM yyyy", { locale: de })}</p>
               </div>
               <div className="flex items-center gap-2.5">
                 <Clock className="h-4 w-4 text-muted-foreground" />
@@ -613,16 +574,12 @@ export default function Bewerbungsgespraech() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)} className="rounded-xl">
-              Abbrechen
-            </Button>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} className="rounded-xl">Abbrechen</Button>
             <Button
               onClick={() => bookMutation.mutate()}
               disabled={bookMutation.isPending}
               className="text-white rounded-xl"
-              style={{
-                background: `linear-gradient(135deg, ${brandColor}, ${brandColor}DD)`,
-              }}
+              style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}DD)` }}
             >
               {bookMutation.isPending ? "Wird gebucht..." : "Bestätigen"}
             </Button>

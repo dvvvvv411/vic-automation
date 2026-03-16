@@ -14,7 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Trash2, Ban, Check, Settings, CalendarOff, ClipboardList } from "lucide-react";
+import { Trash2, Ban, Check, CalendarOff, ClipboardList } from "lucide-react";
 
 import TrialDayBlocker from "@/components/admin/TrialDayBlocker";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
@@ -56,15 +56,16 @@ export default function AdminZeitplan() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockReason, setBlockReason] = useState("");
 
-  // Load branding-specific settings for active branding
-  const { data: brandingSetting } = useQuery({
-    queryKey: ["branding-schedule-settings", activeBrandingId],
+  // Load branding-specific settings for interview
+  const { data: interviewSetting } = useQuery({
+    queryKey: ["branding-schedule-settings", activeBrandingId, "interview"],
     enabled: ready && !!activeBrandingId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("branding_schedule_settings")
         .select("*")
-        .eq("branding_id", activeBrandingId!)
+        .eq("branding_id", activeBrandingId!) as any)
+        .eq("schedule_type", "interview")
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -93,8 +94,8 @@ export default function AdminZeitplan() {
   });
 
   // Save branding-specific settings
-  const saveBrandingSettingsMutation = useMutation({
-    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] }) => {
+  const saveSettingsMutation = useMutation({
+    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string }) => {
       const { error } = await supabase
         .from("branding_schedule_settings")
         .upsert({
@@ -103,7 +104,8 @@ export default function AdminZeitplan() {
           end_time: params.end_time + ":00",
           slot_interval_minutes: params.slot_interval_minutes,
           available_days: params.available_days,
-        }, { onConflict: "branding_id" });
+          schedule_type: params.schedule_type,
+        } as any, { onConflict: "branding_id,schedule_type" as any });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -144,9 +146,9 @@ export default function AdminZeitplan() {
     onError: () => toast({ title: "Fehler beim Freigeben", variant: "destructive" }),
   });
 
-  const blockViewStart = brandingSetting?.start_time?.slice(0, 5) ?? DEFAULT_START;
-  const blockViewEnd = brandingSetting?.end_time?.slice(0, 5) ?? DEFAULT_END;
-  const blockViewInterval = brandingSetting?.slot_interval_minutes ?? DEFAULT_INTERVAL;
+  const blockViewStart = interviewSetting?.start_time?.slice(0, 5) ?? DEFAULT_START;
+  const blockViewEnd = interviewSetting?.end_time?.slice(0, 5) ?? DEFAULT_END;
+  const blockViewInterval = interviewSetting?.slot_interval_minutes ?? DEFAULT_INTERVAL;
 
   const timeSlots = useMemo(
     () => generateTimeSlots(blockViewStart, blockViewEnd, blockViewInterval),
@@ -183,44 +185,37 @@ export default function AdminZeitplan() {
         </p>
       </div>
 
-      <Tabs defaultValue="settings">
+      <Tabs defaultValue="interviews">
         <TabsList>
-          <TabsTrigger value="settings" className="gap-1.5">
-            <Settings className="h-4 w-4" />
-            Zeiteinstellungen
-          </TabsTrigger>
-          <TabsTrigger value="interview-block" className="gap-1.5">
+          <TabsTrigger value="interviews" className="gap-1.5">
             <CalendarOff className="h-4 w-4" />
-            Gespräch blockieren
+            Bewerbungsgespräche
           </TabsTrigger>
-          <TabsTrigger value="trial-block" className="gap-1.5">
+          <TabsTrigger value="trials" className="gap-1.5">
             <ClipboardList className="h-4 w-4" />
-            Probetag blockieren
+            Probetage
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: Zeiteinstellungen */}
-        <TabsContent value="settings">
+        {/* Tab 1: Bewerbungsgespräche */}
+        <TabsContent value="interviews" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Zeiteinstellungen</CardTitle>
-              <CardDescription>Zeitspanne, Intervall und verfügbare Wochentage konfigurieren.</CardDescription>
+              <CardDescription>Zeitspanne, Intervall und verfügbare Wochentage für Bewerbungsgespräche.</CardDescription>
             </CardHeader>
             <CardContent>
               <BrandingScheduleForm
-                existing={brandingSetting ?? undefined}
-                onSave={(params) => saveBrandingSettingsMutation.mutate(params)}
-                isSaving={saveBrandingSettingsMutation.isPending}
+                existing={interviewSetting ?? undefined}
+                onSave={(params) => saveSettingsMutation.mutate({ ...params, schedule_type: "interview" })}
+                isSaving={saveSettingsMutation.isPending}
               />
             </CardContent>
           </Card>
-        </TabsContent>
 
-        {/* Tab 2: Bewerbungsgespräch blockieren */}
-        <TabsContent value="interview-block" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Bewerbungsgespräch Zeiten blockieren</CardTitle>
+              <CardTitle className="text-lg">Zeiten blockieren</CardTitle>
               <CardDescription>Wählen Sie ein Datum und blockieren Sie einzelne Zeitfenster.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -267,7 +262,7 @@ export default function AdminZeitplan() {
 
           {blockedByDate.length > 0 && (
             <Card>
-              <CardHeader><CardTitle className="text-lg">Blockierte Bewerbungsgespräch-Zeitfenster</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg">Blockierte Zeitfenster</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {blockedByDate.map(({ date, slots }) => (
                   <div key={date}>
@@ -290,9 +285,15 @@ export default function AdminZeitplan() {
           )}
         </TabsContent>
 
-        {/* Tab 3: Probetag blockieren */}
-        <TabsContent value="trial-block">
-          {activeBrandingId && <TrialDayBlocker brandingId={activeBrandingId} />}
+        {/* Tab 2: Probetage */}
+        <TabsContent value="trials" className="space-y-6">
+          {activeBrandingId && (
+            <TrialDayBlocker
+              brandingId={activeBrandingId}
+              onSaveSettings={(params) => saveSettingsMutation.mutate({ ...params, schedule_type: "trial" })}
+              isSavingSettings={saveSettingsMutation.isPending}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>

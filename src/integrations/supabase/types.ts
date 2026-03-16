@@ -105,6 +105,7 @@ export type Database = {
           created_by: string | null
           end_time: string
           id: string
+          schedule_type: string
           slot_interval_minutes: number
           start_time: string
         }
@@ -115,6 +116,7 @@ export type Database = {
           created_by?: string | null
           end_time?: string
           id?: string
+          schedule_type?: string
           slot_interval_minutes?: number
           start_time?: string
         }
@@ -125,6 +127,7 @@ export type Database = {
           created_by?: string | null
           end_time?: string
           id?: string
+          schedule_type?: string
           slot_interval_minutes?: number
           start_time?: string
         }
@@ -132,7 +135,7 @@ export type Database = {
           {
             foreignKeyName: "branding_schedule_settings_branding_id_fkey"
             columns: ["branding_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "brandings"
             referencedColumns: ["id"]
           },
