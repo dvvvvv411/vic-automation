@@ -116,6 +116,12 @@ export default function AdminAuftraege() {
                           Starter-Job
                         </Badge>
                       )}
+                      {o.is_videochat && (
+                        <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-300 text-xs">
+                          <Video className="h-3 w-3 mr-1" />
+                          Video-Chat
+                        </Badge>
+                      )}
                       {count > 0 && (
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Users className="h-3 w-3" /> {count}
