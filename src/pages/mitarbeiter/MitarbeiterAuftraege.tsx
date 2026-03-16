@@ -134,6 +134,15 @@ const MitarbeiterAuftraege = () => {
         .select("order_id, attachment_index, status")
         .eq("contract_id", contract.id);
 
+      // Load ident sessions to detect "fortführen" state
+      const { data: identSessions } = await supabase
+        .from("ident_sessions")
+        .select("order_id")
+        .eq("contract_id", contract.id)
+        .in("order_id", orderIds);
+
+      const orderIdsWithSession = new Set((identSessions ?? []).map(s => s.order_id));
+
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
 
       // Group attachments by order_id
