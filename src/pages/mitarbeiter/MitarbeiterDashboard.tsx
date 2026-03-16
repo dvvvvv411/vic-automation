@@ -42,9 +42,23 @@ function getGreeting(): string {
   return "Guten Abend";
 }
 
-const StatusButton = ({ status, orderId, navigate, hasIdentSession }: { 
-  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean
+const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSubmitted, attachmentsPending }: { 
+  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean; hasReviewSubmitted?: boolean; attachmentsPending?: boolean
 }) => {
+  // Special case: review done but attachments still pending
+  if (status === "offen" && hasReviewSubmitted && attachmentsPending) {
+    return (
+      <Button
+        className="w-full mt-2 rounded-xl group/btn bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-600 hover:to-amber-500 text-white"
+        size="sm"
+        onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
+      >
+        <Paperclip className="h-3.5 w-3.5 mr-1.5" />
+        Anhänge hinzufügen
+      </Button>
+    );
+  }
+
   switch (status) {
     case "in_pruefung":
       return (
