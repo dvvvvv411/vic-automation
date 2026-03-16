@@ -1,4 +1,3 @@
-
 # Datenisolierung: Branding-basiert (abgeschlossen)
 
 ## Was wurde gemacht
@@ -64,3 +63,24 @@
 - `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
 - `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
 - `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
+
+---
+
+# Automatische SMS-Erinnerungen 24h vor Terminen (abgeschlossen)
+
+## Was wurde gemacht
+
+### DB-Migration
+- `reminder_sent` (boolean, default false) auf `interview_appointments` und `trial_day_appointments`
+- `pg_cron` und `pg_net` Extensions aktiviert
+
+### DB-Daten
+- Zwei neue SMS-Templates: `gespraech_erinnerung_auto`, `probetag_erinnerung_auto`
+- Stündlicher Cron-Job `appointment-reminders-hourly` eingerichtet
+
+### Edge Function
+- `send-appointment-reminders`: Prüft stündlich Termine in den nächsten 24-25h, sendet Erinnerungs-SMS via `send-sms`, markiert `reminder_sent = true`
+- SMS wird mit korrekter `branding_id` und `event_type` geloggt → erscheint in SMS-History
+
+### Frontend
+- `AdminSmsTemplates.tsx`: Platzhalter für `gespraech_erinnerung_auto` und `probetag_erinnerung_auto` registriert
