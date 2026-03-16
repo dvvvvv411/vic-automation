@@ -27,6 +27,7 @@ interface Assignment {
   hasRequiredAttachments: boolean;
   attachmentsPending: boolean;
   hasIdentSession: boolean;
+  hasReviewSubmitted: boolean;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
