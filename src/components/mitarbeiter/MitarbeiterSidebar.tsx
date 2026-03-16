@@ -22,6 +22,7 @@ interface MitarbeiterSidebarProps {
     brand_color: string | null;
   } | null;
   brandingLoading: boolean;
+  contractStatus?: string;
 }
 
 const navItems = [
@@ -32,9 +33,13 @@ const navItems = [
   { title: "Meine Daten", url: "/mitarbeiter/meine-daten", icon: User },
 ];
 
-export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSidebarProps) {
+export function MitarbeiterSidebar({ branding, brandingLoading, contractStatus }: MitarbeiterSidebarProps) {
   const { user, signOut } = useAuth();
   const { isMobile, setOpenMobile } = useSidebar();
+
+  const filteredNavItems = navItems.filter(
+    (item) => !(item.url === "/mitarbeiter/arbeitsvertrag" && contractStatus === "genehmigt")
+  );
 
   const userInitial = user?.email?.charAt(0).toUpperCase() || "?";
 
@@ -66,7 +71,7 @@ export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSid
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-0.5">
-              {navItems.map((item) => (
+              {filteredNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
