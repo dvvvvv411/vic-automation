@@ -33,9 +33,13 @@ const navItems = [
   { title: "Meine Daten", url: "/mitarbeiter/meine-daten", icon: User },
 ];
 
-export function MitarbeiterSidebar({ branding, brandingLoading }: MitarbeiterSidebarProps) {
+export function MitarbeiterSidebar({ branding, brandingLoading, contractStatus }: MitarbeiterSidebarProps) {
   const { user, signOut } = useAuth();
   const { isMobile, setOpenMobile } = useSidebar();
+
+  const filteredNavItems = navItems.filter(
+    (item) => !(item.url === "/mitarbeiter/arbeitsvertrag" && contractStatus === "genehmigt")
+  );
 
   const userInitial = user?.email?.charAt(0).toUpperCase() || "?";
 
