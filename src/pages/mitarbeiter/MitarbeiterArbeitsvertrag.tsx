@@ -104,6 +104,7 @@ export default function MitarbeiterArbeitsvertrag() {
   const [idFrontPreview, setIdFrontPreview] = useState<string | null>(null);
   const [idBackPreview, setIdBackPreview] = useState<string | null>(null);
   const [nationalityOpen, setNationalityOpen] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<{ title: string; content: string } | null>(null);
 
   const STEPS = [
     "Vorlage wählen",
