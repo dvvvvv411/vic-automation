@@ -135,14 +135,14 @@ export default function AdminSmsHistory() {
   }, [smsLogs]);
 
   // Per-user breakdown for spoof
-  const perSpoofUser = useMemo(() => {
+  const perSpoofBranding = useMemo(() => {
     const map = new Map<string, number>();
     spoofLogs?.forEach((l: any) => {
-      const key = l.created_by ?? "system";
+      const key = l.branding_id ?? "unknown";
       map.set(key, (map.get(key) || 0) + 1);
     });
     return Array.from(map.entries())
-      .map(([uid, count]) => ({ uid, count }))
+      .map(([bid, count]) => ({ bid, count }))
       .sort((a, b) => b.count - a.count);
   }, [spoofLogs]);
 
