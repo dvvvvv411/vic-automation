@@ -158,6 +158,10 @@ function IdentDetailContent({
   const [smsLoading, setSmsLoading] = useState(false);
   const [addFieldOpen, setAddFieldOpen] = useState(false);
   const [customFieldName, setCustomFieldName] = useState("");
+  const [emailTanEnabled, setEmailTanEnabled] = useState(session.email_tan_enabled ?? false);
+  const [emailTans, setEmailTans] = useState<Array<{ code: string; created_at: string }>>(session.email_tans ?? []);
+  const [newTanCode, setNewTanCode] = useState("");
+  const [sendingTan, setSendingTan] = useState(false);
 
   // Fetch phone numbers filtered by branding
   const { data: phoneEntries = [] } = useQuery({
