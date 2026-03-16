@@ -512,7 +512,7 @@ const MitarbeiterDashboard = () => {
                         <CardContent className="flex-1 flex flex-col justify-between gap-4 pt-0">
                           <div className="space-y-3">
                             {order.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2 pb-3 border-b border-border/30">{order.description}</p>
+                              <p className="text-sm text-muted-foreground leading-relaxed pb-3 border-b border-border/30 break-words">{truncateText(order.description, 120)}</p>
                             )}
                             {!isFixedSalary && order.reward && !["0", "0€", "0 €"].includes(order.reward.trim()) && (
                               <div className="flex items-center justify-between text-sm">
