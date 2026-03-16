@@ -74,7 +74,7 @@ const Bewertung = () => {
     const fetch = async () => {
       const { data } = await supabase
         .from("orders")
-        .select("id, title, review_questions")
+        .select("id, title, review_questions, required_attachments")
         .eq("id", id)
         .maybeSingle();
 
