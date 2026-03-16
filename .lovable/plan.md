@@ -1,65 +1,81 @@
 
 
-## Plan: SMS-Templates und -Versand an neuen Workflow anpassen
+## Plan: SMS-Templates aktualisieren und Template-Lookup ueberall einbauen
 
-### Probleme identifiziert
+### Aktueller Stand
 
-1. **DB-Template `vertrag_genehmigt`** spricht noch von Zugangsdaten — muss auf Gratulations-Text geaendert werden
-2. **DB-Template `termin_gebucht`** existiert noch — wird nicht mehr genutzt, entfernen
-3. **Fehlende DB-Templates**: `gespraech_bestaetigung`, `probetag_bestaetigung`, `konto_erstellt`, `vertrag_eingereicht`, `auftrag_erfolgreich`
-4. **`create-employee-account/index.ts`** sendet noch `vertrag_genehmigt` SMS mit undefinierter `loginUrl` Variable — gesamten SMS-Block entfernen (SMS wird jetzt von `AdminArbeitsvertraege.tsx` gesendet)
-5. **`AdminArbeitsvertraege.tsx`** sendet Email bei Genehmigung aber keine SMS — SMS hinzufuegen
-6. **`Bewerbungsgespraech.tsx` und `Probetag.tsx`** senden hardcoded SMS-Text statt DB-Templates zu nutzen — Template-Lookup einbauen
-7. Fehlende SMS bei `konto_erstellt` (Auth.tsx), `vertrag_eingereicht` (Arbeitsvertrag.tsx, MitarbeiterArbeitsvertrag.tsx), `auftrag_erfolgreich` (AdminBewertungen.tsx, AdminMitarbeiterDetail.tsx)
+**DB-Templates (8 Eintraege):**
+- `bewerbung_angenommen` — OK, wird per Template-Lookup genutzt
+- `indeed_bewerbung_angenommen` — OK (wird via sms-spoof gesendet, nicht ueber regulaeres SMS)
+- `vertrag_genehmigt` — **Veraltet**: spricht von "Zugangsdaten per Email" — muss aktualisiert werden
+- `termin_gebucht` — **Obsolet**: wird nirgends genutzt, loeschen
+- `auftrag_zugewiesen` — OK, wird per Template-Lookup genutzt
+- `bewertung_genehmigt` — OK
+- `bewertung_abgelehnt` — OK
+- `gespraech_erinnerung` — OK
+
+**Fehlende Templates:**
+- `gespraech_bestaetigung` — Code sendet hardcoded SMS
+- `probetag_bestaetigung` — Code sendet hardcoded SMS
+- `vertrag_eingereicht` — Kein SMS an dieser Stelle
+- `konto_erstellt` — Kein SMS an dieser Stelle
+
+**Hardcoded SMS (muss Template-Lookup werden):**
+- `Bewerbungsgespraech.tsx` Zeile 211: hardcoded Text
+- `Probetag.tsx` Zeile 214: hardcoded Text
+
+**SMS im Edge Function `create-employee-account`:**
+- Sendet `vertrag_genehmigt` SMS mit undefinierter `loginUrl` Variable — muss entfernt werden (wird kuenftig von `AdminArbeitsvertraege.tsx` gesendet)
+
+**Fehlende SMS-Trigger:**
+- `AdminArbeitsvertraege.tsx` bei Genehmigung: sendet Email aber keine SMS
+- `Arbeitsvertrag.tsx` / `MitarbeiterArbeitsvertrag.tsx` bei Einreichung: keine SMS
+- `Auth.tsx` bei Registrierung: keine SMS
 
 ### Aenderungen
 
-| Datei | Aenderung |
-|-------|-----------|
-| **DB Migration** | `vertrag_genehmigt` Template-Text updaten; `termin_gebucht` loeschen; neue Templates einfuegen fuer `gespraech_bestaetigung`, `probetag_bestaetigung`, `konto_erstellt`, `vertrag_eingereicht`, `auftrag_erfolgreich` |
-| **`supabase/functions/create-employee-account/index.ts`** | SMS-Block (Zeilen 175-219) komplett entfernen |
-| **`src/pages/admin/AdminArbeitsvertraege.tsx`** | `sendSms` importieren; nach Email-Versand: SMS mit Template-Lookup senden (`vertrag_genehmigt`) |
-| **`src/pages/Bewerbungsgespraech.tsx`** | Hardcoded SMS-Text ersetzen durch Template-Lookup aus `sms_templates` Tabelle |
-| **`src/pages/Probetag.tsx`** | Analog: Template-Lookup statt hardcoded Text |
-| **`src/pages/Auth.tsx`** | SMS `konto_erstellt` nach Registrierung senden |
-| **`src/pages/Arbeitsvertrag.tsx`** | SMS `vertrag_eingereicht` nach Einreichung senden |
-| **`src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx`** | SMS `vertrag_eingereicht` nach Einreichung senden |
-| **`src/pages/admin/AdminBewertungen.tsx`** | Zusaetzlich `auftrag_erfolgreich` SMS senden (bereits `bewertung_genehmigt` SMS vorhanden — Event-Type anpassen) |
-| **`src/pages/admin/AdminMitarbeiterDetail.tsx`** | Analog: `auftrag_erfolgreich` SMS Event-Type |
-| **`src/pages/admin/AdminSmsTemplates.tsx`** | `PLACEHOLDER_INFO` um neue Events erweitern: `konto_erstellt`, `vertrag_eingereicht`, `auftrag_erfolgreich` |
+| # | Datei/Ort | Aenderung |
+|---|-----------|-----------|
+| 1 | **DB: sms_templates** | UPDATE `vertrag_genehmigt` Text; DELETE `termin_gebucht`; INSERT `gespraech_bestaetigung`, `probetag_bestaetigung`, `vertrag_eingereicht`, `konto_erstellt` |
+| 2 | **`create-employee-account/index.ts`** | SMS-Block (Zeilen 176-220) komplett entfernen |
+| 3 | **`AdminArbeitsvertraege.tsx`** | `sendSms` importieren; nach Email-Versand SMS mit Template-Lookup fuer `vertrag_genehmigt` senden |
+| 4 | **`Bewerbungsgespraech.tsx`** | Hardcoded SMS ersetzen durch Template-Lookup aus DB (`gespraech_bestaetigung`) |
+| 5 | **`Probetag.tsx`** | Hardcoded SMS ersetzen durch Template-Lookup aus DB (`probetag_bestaetigung`) |
+| 6 | **`AdminSmsTemplates.tsx`** | `PLACEHOLDER_INFO` erweitern um `vertrag_eingereicht`, `konto_erstellt` |
 
-### DB Migration (SQL)
+### DB-Daten-Updates
 
 ```sql
--- Update vertrag_genehmigt text
+-- 1. vertrag_genehmigt Text aktualisieren
 UPDATE sms_templates 
 SET message = 'Hallo {name}, herzlichen Glückwunsch! Ihr Arbeitsvertrag wurde genehmigt – Sie sind nun vollwertiger Mitarbeiter. Wir freuen uns auf die Zusammenarbeit!',
     updated_at = now()
 WHERE event_type = 'vertrag_genehmigt';
 
--- Delete obsolete termin_gebucht
+-- 2. Obsoletes Template loeschen
 DELETE FROM sms_templates WHERE event_type = 'termin_gebucht';
 
--- Insert new templates
+-- 3. Neue Templates einfuegen
 INSERT INTO sms_templates (event_type, label, message) VALUES
   ('gespraech_bestaetigung', 'Bewerbungsgespräch Bestätigung', 'Hallo {name}, Ihr Bewerbungsgespräch ist bestätigt: {datum} um {uhrzeit} Uhr. Wir freuen uns auf Sie!'),
   ('probetag_bestaetigung', 'Probetag Bestätigung', 'Hallo {name}, Ihr Probetag ist bestätigt: {datum} um {uhrzeit} Uhr. Wir freuen uns auf Sie!'),
-  ('konto_erstellt', 'Konto erstellt', 'Hallo {name}, Ihr Konto wurde erfolgreich erstellt. Loggen Sie sich ein und reichen Sie Ihren Arbeitsvertrag ein.'),
-  ('vertrag_eingereicht', 'Vertrag eingereicht', 'Hallo {name}, Ihre Vertragsdaten wurden erfolgreich eingereicht. Wir prüfen diese zeitnah.'),
-  ('auftrag_erfolgreich', 'Auftrag erfolgreich', 'Hallo {name}, Ihr Auftrag "{auftrag}" wurde erfolgreich abgeschlossen. Vielen Dank!')
+  ('konto_erstellt', 'Konto erstellt', 'Hallo {name}, Ihr Konto wurde erfolgreich erstellt. Bitte reichen Sie nun Ihre Vertragsdaten ein.'),
+  ('vertrag_eingereicht', 'Vertrag eingereicht', 'Hallo {name}, Ihre Vertragsdaten wurden erfolgreich eingereicht. Wir prüfen diese zeitnah.')
 ON CONFLICT DO NOTHING;
 ```
 
-### SMS-Template-Lookup Pattern
-
-Alle SMS-Versand-Stellen laden das Template aus der DB und ersetzen Platzhalter, mit Hardcoded-Fallback:
+### Template-Lookup Pattern (alle Stellen)
 
 ```typescript
 const { data: tpl } = await supabase
   .from("sms_templates").select("message")
   .eq("event_type", "gespraech_bestaetigung").single();
 const smsText = tpl?.message
-  ? tpl.message.replace("{name}", name).replace("{datum}", date).replace("{uhrzeit}", time)
+  ? (tpl.message as string).replace("{name}", name).replace("{datum}", date).replace("{uhrzeit}", time)
   : `Hallo ${name}, Ihr Termin: ${date} um ${time} Uhr.`;
 ```
+
+### Hinweis
+
+Die SMS-Trigger fuer `konto_erstellt` (Auth.tsx) und `vertrag_eingereicht` (Arbeitsvertrag.tsx / MitarbeiterArbeitsvertrag.tsx) werden NICHT implementiert, da diese Seiten keinen zuverlaessigen Zugriff auf die Telefonnummer des Nutzers haben (die Telefonnummer ist erst in der Application/Contract-Tabelle gespeichert, nicht im Auth-Kontext). Diese koennen bei Bedarf spaeter ergaenzt werden — die DB-Templates werden aber bereits angelegt.
 
