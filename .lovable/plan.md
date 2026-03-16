@@ -1,66 +1,42 @@
 
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
+# Plan: Preload Firmenunterschrift + Verify Signer Title
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+## Problem
+When navigating to step 5 (Vertragsvorschau), the corporate signature image loads slowly, causing a visual delay. The signer title field is already in the code but may not be populated in the branding data.
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+## Changes
 
----
+**File**: `src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx`
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+1. **Add signature preload state**: Add a `signatureLoaded` boolean state. When `brandingData?.signature_image_url` is available, preload the image via `new Image()` and set the flag when loaded.
 
-## Was wurde gemacht
+2. **Gate step 5 rendering**: When `step === 5` and `brandingData?.signature_image_url` exists but `signatureLoaded` is false, show a loading spinner instead of the contract preview. Only render the full content once the image is cached.
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+3. **Preload on step 4 already**: Start preloading the signature image as soon as `brandingData` is available (not just when entering step 5), so it's likely already cached by the time the user clicks "Vertrag ansehen".
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+4. **Signer title**: The code already renders `brandingData.signer_title` at line 969. Verify the `brandings` table field is correctly named and being queried (line 264 confirms `signer_title` is selected). If the value simply isn't set in the DB for a branding, we just need to ensure it shows when present -- which the code already does. No code change needed here unless the field name differs.
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+## Technical Detail
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+```typescript
+// New state
+const [signatureLoaded, setSignatureLoaded] = useState(false);
 
----
+// Preload effect - runs as soon as brandingData is available
+useEffect(() => {
+  if (!brandingData?.signature_image_url) {
+    setSignatureLoaded(true); // no image to load
+    return;
+  }
+  const img = new Image();
+  img.onload = () => setSignatureLoaded(true);
+  img.onerror = () => setSignatureLoaded(true); // don't block on error
+  img.src = brandingData.signature_image_url;
+}, [brandingData?.signature_image_url]);
 
-# Vergütungsmodell pro Branding (abgeschlossen)
+// In step 5 rendering: show spinner until signatureLoaded is true
+```
 
-## Was wurde gemacht
+Single file change, small addition.
 
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
-
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
-
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
