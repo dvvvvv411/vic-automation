@@ -205,11 +205,21 @@ export default function AdminAnhaengeDetail() {
             const pendingIds = data.attachments.filter((a: any) => a.status === "eingereicht").map((a: any) => a.id);
             if (pendingIds.length === 0) return null;
             return (
-              <div className="flex justify-end mb-2">
+              <div className="flex justify-end gap-2 mb-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/5 rounded-xl"
+                  disabled={bulkRejectMutation.isPending || bulkApproveMutation.isPending}
+                  onClick={() => bulkRejectMutation.mutate(pendingIds)}
+                >
+                  <XCircle className="h-4 w-4 mr-1.5" />
+                  Alle ablehnen ({pendingIds.length})
+                </Button>
                 <Button
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
-                  disabled={bulkApproveMutation.isPending}
+                  disabled={bulkApproveMutation.isPending || bulkRejectMutation.isPending}
                   onClick={() => bulkApproveMutation.mutate(pendingIds)}
                 >
                   <CheckCircle className="h-4 w-4 mr-1.5" />
