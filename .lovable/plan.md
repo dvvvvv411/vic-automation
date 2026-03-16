@@ -1,66 +1,38 @@
 
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
+# Ident-Detail als eigene Seite + Branding-Filter für Telefonnummern + UI-Optimierung
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+## Drei Änderungen
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+### 1. Ident-Detail: Dialog → eigene Seite
 
----
+**Aktuell:** Klick auf eine Ident-Card öffnet `IdentDetailDialog` als Modal.
+**Neu:** Klick navigiert zu `/admin/idents/:id`, eine eigene Seite mit dem gesamten Detail-Inhalt.
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+**Dateien:**
+- **`src/pages/admin/AdminIdentDetail.tsx`** (neu): Neue Seite, die den Inhalt des bisherigen `IdentDetailDialog` enthält, aber als vollwertige Seite mit Zurück-Button. Die Session-ID kommt aus `useParams()`. Lädt Session, Contract-Name, Order-Title selbst.
+- **`src/pages/admin/AdminIdents.tsx`**: Dialog-Import und `IdentDetailDialog`-Komponente entfernen. Card-Klick wird zu `navigate(\`/admin/idents/${session.id}\`)`.
+- **`src/App.tsx`**: Route `<Route path="idents/:id" element={<AdminIdentDetail />} />` hinzufügen.
 
-## Was wurde gemacht
+### 2. Telefonnummern-Auswahl: nur Branding-gefiltert
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+**Aktuell:** Die Query in `IdentDetailDialog` holt alle `phone_numbers` ohne Branding-Filter.
+**Neu:** In der neuen `AdminIdentDetail`-Seite wird die Phone-Query mit `.eq("branding_id", session.branding_id)` gefiltert, sodass nur zum Branding gehörige Nummern angezeigt werden.
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+### 3. Testdaten-UI aufräumen
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+**Aktuell:** Kleine `h-7`/`text-xs`-Inputs für Feldnamen, ein separates Dropdown + eigenes Textfeld + Plus-Button nebeneinander — wirkt unübersichtlich.
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+**Neu — professionelles Layout:**
+- Testdaten als saubere Tabelle/Grid mit Label links, Value-Input rechts, Delete-Icon am Rand
+- Labels der Default-Felder sind read-only (nicht editierbar), nur der Value ist ein Input
+- "Feld hinzufügen" als ein einziger Button unten, der ein Dropdown öffnet mit den Standard-Feldern + "Eigenes Feld" Option
+- Größere, besser lesbare Inputs (normale Größe statt `h-7 text-xs`)
+- Kein separates Input-Feld für "Eigenes Feld" neben dem Dropdown
 
----
+| Datei | Änderung |
+|-------|----------|
+| `src/pages/admin/AdminIdentDetail.tsx` | Neue Seite mit refactored Detail-View |
+| `src/pages/admin/AdminIdents.tsx` | Dialog entfernen, Navigation statt Popup |
+| `src/App.tsx` | Neue Route für idents/:id |
 
-# Vergütungsmodell pro Branding (abgeschlossen)
-
-## Was wurde gemacht
-
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
-
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
-
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
