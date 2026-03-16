@@ -658,6 +658,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          reminder_sent: boolean
           status: string
         }
         Insert: {
@@ -667,6 +668,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_sent?: boolean
           status?: string
         }
         Update: {
@@ -676,6 +678,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_sent?: boolean
           status?: string
         }
         Relationships: [
@@ -1384,6 +1387,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          reminder_sent: boolean
           status: string
         }
         Insert: {
@@ -1393,6 +1397,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_sent?: boolean
           status?: string
         }
         Update: {
@@ -1402,6 +1407,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_sent?: boolean
           status?: string
         }
         Relationships: [

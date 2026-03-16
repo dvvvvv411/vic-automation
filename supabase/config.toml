@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.reset-employee-password]
 verify_jwt = false
+
+[functions.send-appointment-reminders]
+verify_jwt = false
