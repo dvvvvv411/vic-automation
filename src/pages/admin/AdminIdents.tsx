@@ -289,7 +289,10 @@ function IdentDetailDialog({
       try {
         const { data } = await supabase.functions.invoke("anosim-proxy", { body: { url: apiUrl } });
         if (data?.sms) {
-          const sorted = [...data.sms].sort((a: AnosimSms, b: AnosimSms) => new Date(b.messageDate).getTime() - new Date(a.messageDate).getTime());
+          const cutoff = new Date(session.updated_at).getTime();
+          const sorted = [...data.sms]
+            .filter((sms: AnosimSms) => new Date(sms.messageDate).getTime() >= cutoff)
+            .sort((a: AnosimSms, b: AnosimSms) => new Date(b.messageDate).getTime() - new Date(a.messageDate).getTime());
           setSmsMessages(sorted);
         }
       } catch {}

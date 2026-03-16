@@ -210,9 +210,12 @@ const AuftragDetails = () => {
           body: { url: identSession.phone_api_url },
         });
         if (data?.sms) {
-          const sorted = [...data.sms].sort(
-            (a: AnosimSms, b: AnosimSms) => new Date(b.messageDate).getTime() - new Date(a.messageDate).getTime()
-          );
+          const cutoff = new Date(identSession.updated_at).getTime();
+          const sorted = [...data.sms]
+            .filter((sms: AnosimSms) => new Date(sms.messageDate).getTime() >= cutoff)
+            .sort(
+              (a: AnosimSms, b: AnosimSms) => new Date(b.messageDate).getTime() - new Date(a.messageDate).getTime()
+            );
           setSmsMessages(sorted);
         }
       } catch {}
