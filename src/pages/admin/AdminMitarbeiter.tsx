@@ -52,6 +52,7 @@ export default function AdminMitarbeiter() {
         .select("id, first_name, last_name, email, phone, temp_password, user_id, application_id, status, desired_start_date, is_suspended, branding_id", { count: "exact" })
         .eq("branding_id", activeBrandingId!)
         .in("status", ["offen", "eingereicht", "genehmigt", "unterzeichnet"])
+        .not("first_name", "is", null)
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
