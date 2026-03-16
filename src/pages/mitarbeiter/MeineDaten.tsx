@@ -35,7 +35,7 @@ interface ContractDetails {
 }
 
 const MeineDaten = () => {
-  const { contract, loading: contextLoading } = useOutletContext<ContextType>();
+  const { contract, branding, loading: contextLoading } = useOutletContext<ContextType>();
   const [contractDetails, setContractDetails] = useState<ContractDetails | null>(null);
   const [stats, setStats] = useState({ ratedOrders: 0, avgRating: 0 });
   const [pendingPayout, setPendingPayout] = useState(0);
