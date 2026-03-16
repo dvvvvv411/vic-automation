@@ -264,10 +264,8 @@ function IdentDetailContent({
     setSaving(false);
   };
 
-  const [assigningPhone, setAssigningPhone] = useState(false);
-  const [newPhoneLink, setNewPhoneLink] = useState("");
-  const [addingPhone, setAddingPhone] = useState(false);
-  const queryClient = useQueryClient();
+
+
 
   const handleAssignPhone = async (url: string) => {
     if (!url.trim()) return;
