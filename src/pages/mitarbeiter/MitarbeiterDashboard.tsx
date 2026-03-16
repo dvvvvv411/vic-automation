@@ -439,7 +439,7 @@ const MitarbeiterDashboard = () => {
                               #{order.order_number}
                             </Badge>
                             <div className="flex items-center gap-1.5">
-                              {order.assignment_status === "offen" && order.hasReviewSubmitted && order.attachmentsPending && (
+                              {order.attachmentsPending && order.assignment_status !== "erfolgreich" && (
                                 <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
                                   <Paperclip className="h-3 w-3 mr-1" />
                                   Anhänge erforderlich
