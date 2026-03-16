@@ -19,7 +19,7 @@ import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const PAGE_SIZE = 20;
 
-type TabValue = "all" | "offen" | "eingereicht" | "genehmigt" | "unterzeichnet";
+type TabValue = "all" | "offen" | "eingereicht" | "genehmigt";
 
 export default function AdminArbeitsvertraege() {
   const [page, setPage] = useState(0);
