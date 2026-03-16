@@ -1,86 +1,40 @@
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+## Plan: Wartende Idents als eigene Sektion + Stat-Card entfernen
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+### 1. Stat-Card "Wartende Idents" entfernen
 
----
+**Datei:** `src/pages/admin/AdminDashboard.tsx`
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+- Die 6. Stat-Card ("Wartende Idents") aus dem `stats`-Array entfernen (Zeile 139)
+- Den zugehoerigen Query `waitingIdentCount` / `l6` entfernen (Zeilen 83-91)
+- `Video` aus den Imports entfernen
+- `STAT_BORDERS` wieder auf 5 Eintraege kuerzen (6. Eintrag entfernen)
+- Grid zurueck auf `xl:grid-cols-5`
 
-## Was wurde gemacht
+### 2. Neue Komponente "Wartende Idents" erstellen
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+**Neue Datei:** `src/components/admin/WaitingIdents.tsx`
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+Analog zu `UpcomingTrialDays.tsx`:
+- Query: `ident_sessions` mit `status` in `('waiting', 'data_sent')`, gefiltert nach `branding_id = activeBrandingId`
+- Join auf `employment_contracts(first_name, last_name)` ueber `contract_id`
+- Icon: `Video`, Titel: "Wartende Ident-Sessions"
+- Grid-Layout mit kleinen Cards: Name, Status-Badge (`waiting` = "Wartet", `data_sent` = "Daten gesendet"), Erstelldatum
+- **Klick auf Card:** `navigate(\`/admin/idents/${item.id}\`)` – navigiert direkt zur Ident-Detail-Seite des Users
+- Status-Styles: `waiting` (amber), `data_sent` (blue)
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+### 3. Dashboard einbinden
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+**Datei:** `src/pages/admin/AdminDashboard.tsx`
 
----
+- Import `WaitingIdents`
+- Rendern unterhalb von `<UpcomingTrialDays />`: `<WaitingIdents />`
 
-# Vergütungsmodell pro Branding (abgeschlossen)
+### Betroffene Dateien
 
-## Was wurde gemacht
+| Datei | Aenderung |
+|---|---|
+| `src/pages/admin/AdminDashboard.tsx` | 6. Stat-Card + Query entfernen, Grid auf 5 Spalten, WaitingIdents importieren/rendern |
+| `src/components/admin/WaitingIdents.tsx` | Neue Komponente mit klickbaren Cards |
 
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
-
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
-
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
-
----
-
-# Automatische SMS-Erinnerungen 24h vor Terminen (abgeschlossen)
-
-## Was wurde gemacht
-
-### DB-Migration
-- `reminder_sent` (boolean, default false) auf `interview_appointments` und `trial_day_appointments`
-- `pg_cron` und `pg_net` Extensions aktiviert
-
-### DB-Daten
-- Zwei neue SMS-Templates: `gespraech_erinnerung_auto`, `probetag_erinnerung_auto`
-- Stündlicher Cron-Job `appointment-reminders-hourly` eingerichtet
-
-### Edge Function
-- `send-appointment-reminders`: Prüft stündlich Termine in den nächsten 24-25h, sendet Erinnerungs-SMS via `send-sms`, markiert `reminder_sent = true`
-- SMS wird mit korrekter `branding_id` und `event_type` geloggt → erscheint in SMS-History
-
-### Frontend
-- `AdminSmsTemplates.tsx`: Platzhalter für `gespraech_erinnerung_auto` und `probetag_erinnerung_auto` registriert
