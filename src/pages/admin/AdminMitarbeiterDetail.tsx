@@ -178,54 +178,138 @@ function EditableDualSection({
 }
 
 // ─── Credentials Card ────────────────────────────────────────────────
-function CredentialsCard({ email, tempPassword }: { email?: string | null; tempPassword?: string | null }) {
+function generateAlphanumericPassword(length = 8): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  return Array.from({ length }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join("");
+}
+
+function CredentialsCard({
+  email,
+  tempPassword,
+  contractId,
+  onPasswordReset,
+}: {
+  email?: string | null;
+  tempPassword?: string | null;
+  contractId: string;
+  onPasswordReset: () => void;
+}) {
   const [showPw, setShowPw] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [generatedPw, setGeneratedPw] = useState("");
+  const [resetting, setResetting] = useState(false);
 
   const copy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} kopiert`);
   };
 
+  const openResetDialog = () => {
+    setGeneratedPw(generateAlphanumericPassword());
+    setResetDialogOpen(true);
+  };
+
+  const confirmReset = async () => {
+    setResetting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-employee-password`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionData.session?.access_token}`,
+          },
+          body: JSON.stringify({ contract_id: contractId, new_password: generatedPw }),
+        }
+      );
+      const result = await resp.json();
+      if (!resp.ok) throw new Error(result.error || "Fehler");
+      toast.success("Passwort wurde zurückgesetzt");
+      setResetDialogOpen(false);
+      onPasswordReset();
+    } catch (err: any) {
+      toast.error(err.message || "Fehler beim Zurücksetzen");
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
-    <Card className="rounded-2xl shadow-md border-border/60 overflow-hidden">
-      <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/5 to-transparent">
-        <div className="flex items-center gap-2">
-          <KeyRound className="h-4 w-4 text-amber-600" />
-          <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Zugangsdaten</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-4">
-        <div>
-          <span className="text-xs uppercase tracking-wider text-muted-foreground">E-Mail</span>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-sm font-medium text-foreground break-all flex-1">{email || "–"}</span>
-            {email && (
-              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => copy(email, "E-Mail")}>
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
-            )}
+    <>
+      <Card className="rounded-2xl shadow-md border-border/60 overflow-hidden">
+        <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/5 to-transparent">
+          <div className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4 text-amber-600" />
+            <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Zugangsdaten</CardTitle>
           </div>
-        </div>
-        <div>
-          <span className="text-xs uppercase tracking-wider text-muted-foreground">Temporäres Passwort</span>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-sm font-mono font-medium text-foreground flex-1">
-              {tempPassword ? (showPw ? tempPassword : "••••••••") : "–"}
-            </span>
-            {tempPassword && (
-              <>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setShowPw(!showPw)}>
-                  {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => copy(tempPassword, "Passwort")}>
+        </CardHeader>
+        <CardContent className="space-y-3 pt-4">
+          <div>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">E-Mail</span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-sm font-medium text-foreground break-all flex-1">{email || "–"}</span>
+              {email && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => copy(email, "E-Mail")}>
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
-              </>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+          <div>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">Passwort</span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-sm font-mono font-medium text-foreground flex-1">
+                {tempPassword ? (showPw ? tempPassword : "••••••••") : "–"}
+              </span>
+              {tempPassword && (
+                <>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setShowPw(!showPw)}>
+                    {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => copy(tempPassword, "Passwort")}>
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+          <Button variant="outline" size="sm" className="w-full mt-2" onClick={openResetDialog}>
+            <KeyRound className="h-3.5 w-3.5 mr-2" />
+            Passwort zurücksetzen
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Passwort zurücksetzen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">Neues Passwort</span>
+              <div className="flex items-center gap-2 mt-1 p-3 bg-muted/50 rounded-lg border border-border/50">
+                <span className="text-lg font-mono font-semibold text-foreground flex-1 tracking-wider">{generatedPw}</span>
+                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => copy(generatedPw, "Passwort")}>
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => setGeneratedPw(generateAlphanumericPassword())}>
+              Neu generieren
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setResetDialogOpen(false)}>Abbrechen</Button>
+            <Button onClick={confirmReset} disabled={resetting}>
+              {resetting ? "Wird gesetzt..." : "Bestätigen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
