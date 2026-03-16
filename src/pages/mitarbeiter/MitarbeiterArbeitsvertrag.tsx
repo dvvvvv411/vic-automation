@@ -786,6 +786,17 @@ export default function MitarbeiterArbeitsvertrag() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{previewTemplate?.title}</DialogTitle>
+          </DialogHeader>
+          {previewTemplate?.content && (
+            <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: previewTemplate.content }} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
