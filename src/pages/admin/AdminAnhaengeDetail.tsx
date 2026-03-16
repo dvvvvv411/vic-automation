@@ -19,6 +19,64 @@ const statusBadge = (status: string) => {
   }
 };
 
+/** After all attachments are approved, check if review is also done and auto-complete the order */
+async function tryAutoComplete(orderId: string, contractId: string) {
+  // Load order to check required_attachments
+  const { data: order } = await supabase
+    .from("orders")
+    .select("required_attachments, reward")
+    .eq("id", orderId)
+    .single();
+
+  const requiredAttachments = (order as any)?.required_attachments ?? [];
+  if (!Array.isArray(requiredAttachments) || requiredAttachments.length === 0) return;
+
+  // Check if all attachments are approved
+  const { data: attachments } = await supabase
+    .from("order_attachments")
+    .select("status")
+    .eq("order_id", orderId)
+    .eq("contract_id", contractId);
+
+  const approvedCount = (attachments ?? []).filter((a) => a.status === "genehmigt").length;
+  if (approvedCount < requiredAttachments.length) return;
+
+  // Check current assignment status — only auto-complete if review was already approved (in_pruefung)
+  const { data: assignment } = await supabase
+    .from("order_assignments")
+    .select("status")
+    .eq("order_id", orderId)
+    .eq("contract_id", contractId)
+    .single();
+
+  if ((assignment as any)?.status !== "in_pruefung") return;
+
+  // All conditions met — mark as erfolgreich
+  await supabase
+    .from("order_assignments")
+    .update({ status: "erfolgreich" })
+    .eq("order_id", orderId)
+    .eq("contract_id", contractId);
+
+  // Credit reward
+  const reward = parseFloat(((order as any)?.reward ?? "0").replace(/[^0-9.,]/g, "").replace(",", "."));
+  if (reward > 0) {
+    const { data: contract } = await supabase
+      .from("employment_contracts")
+      .select("balance")
+      .eq("id", contractId)
+      .single();
+
+    const currentBalance = Number(contract?.balance ?? 0);
+    await supabase
+      .from("employment_contracts")
+      .update({ balance: currentBalance + reward })
+      .eq("id", contractId);
+  }
+
+  return true; // indicates auto-completed
+}
+
 export default function AdminAnhaengeDetail() {
   const { contractId, orderId } = useParams();
   const navigate = useNavigate();
@@ -68,10 +126,17 @@ export default function AdminAnhaengeDetail() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["admin-attachment-detail"] });
       queryClient.invalidateQueries({ queryKey: ["admin-order-attachments-grouped"] });
-      toast({ title: "Alle Anhänge genehmigt" });
+
+      const completed = await tryAutoComplete(orderId!, contractId!);
+      if (completed) {
+        queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
+        toast({ title: "Alle Anhänge genehmigt — Auftrag abgeschlossen und Prämie gutgeschrieben!" });
+      } else {
+        toast({ title: "Alle Anhänge genehmigt" });
+      }
     },
     onError: (e: Error) => {
       toast({ title: "Fehler", description: e.message, variant: "destructive" });
@@ -86,9 +151,18 @@ export default function AdminAnhaengeDetail() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: async (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin-attachment-detail"] });
       queryClient.invalidateQueries({ queryKey: ["admin-order-attachments-grouped"] });
+
+      if (variables.status === "genehmigt") {
+        const completed = await tryAutoComplete(orderId!, contractId!);
+        if (completed) {
+          queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
+          toast({ title: "Anhang genehmigt — Auftrag abgeschlossen und Prämie gutgeschrieben!" });
+          return;
+        }
+      }
       toast({ title: "Status aktualisiert" });
     },
     onError: (e: Error) => {
