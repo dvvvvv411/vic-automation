@@ -296,6 +296,21 @@ export default function AdminAuftragWizard() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="border border-border/60">
+              <CardContent className="py-4 flex items-start gap-4">
+                <Switch
+                  checked={form.is_videochat}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, is_videochat: v }))}
+                />
+                <div>
+                  <Label className="font-medium">Video-Chat Verifizierung aktivieren</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Mitarbeiter müssen vor der Bewertung eine Video-Chat Verifizierung durchführen.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
