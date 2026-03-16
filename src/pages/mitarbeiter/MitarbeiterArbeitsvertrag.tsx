@@ -105,6 +105,10 @@ export default function MitarbeiterArbeitsvertrag() {
   const [idBackPreview, setIdBackPreview] = useState<string | null>(null);
   const [nationalityOpen, setNationalityOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<{ title: string; content: string } | null>(null);
+  const [idType, setIdType] = useState<"personalausweis" | "reisepass">("personalausweis");
+  const [proofOfAddressFile, setProofOfAddressFile] = useState<File | null>(null);
+  const [proofOfAddressPreview, setProofOfAddressPreview] = useState<string | null>(null);
+  const [requiresProofOfAddress, setRequiresProofOfAddress] = useState(false);
 
   const STEPS = [
     "Vorlage wählen",
