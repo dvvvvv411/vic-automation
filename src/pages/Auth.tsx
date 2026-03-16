@@ -74,17 +74,9 @@ const Auth = () => {
     fetchBranding();
   }, []);
 
-  useEffect(() => {
-    if (brandingColor) {
-      const hsl = hexToHSL(brandingColor);
-      if (hsl) {
-        document.documentElement.style.setProperty("--primary", hsl);
-      }
-    }
-    return () => {
-      document.documentElement.style.removeProperty("--primary");
-    };
-  }, [brandingColor]);
+  // Branding color is applied via inline style on the auth wrapper below,
+  // NOT on document.documentElement, to avoid a race condition when
+  // navigating from /auth to /mitarbeiter (which would briefly reset --primary).
 
   useEffect(() => {
     if (user && role) {

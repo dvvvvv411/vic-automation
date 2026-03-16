@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { MitarbeiterSidebar } from "./MitarbeiterSidebar";
 import { ChatWidget } from "@/components/chat/ChatWidget";
-import { ContractSigningView } from "./ContractSigningView";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ShieldX } from "lucide-react";
@@ -36,6 +35,7 @@ export default function MitarbeiterLayout() {
   const [branding, setBranding] = useState<BrandingData | null>(null);
   const [contract, setContract] = useState<ContractData | null>(null);
   const [panelReady, setPanelReady] = useState(false);
+  const [brandingHSL, setBrandingHSL] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -47,14 +47,6 @@ export default function MitarbeiterLayout() {
         img.onerror = () => resolve();
         img.src = src;
       });
-
-    const applyBrandColor = (color: string) => {
-      const hsl = hexToHSL(color);
-      if (hsl) {
-        document.documentElement.style.setProperty("--primary", hsl);
-        document.documentElement.style.setProperty("--ring", hsl);
-      }
-    };
 
     const fetchData = async () => {
       let resolvedBranding: BrandingData | null = null;
@@ -107,28 +99,25 @@ export default function MitarbeiterLayout() {
         }
       }
 
-      // Apply branding color BEFORE rendering
+      // Compute HSL before rendering
+      let hsl: string | null = null;
       if (resolvedBranding?.brand_color) {
-        applyBrandColor(resolvedBranding.brand_color);
+        hsl = hexToHSL(resolvedBranding.brand_color);
       }
 
-      // Preload logo BEFORE rendering
+      // Preload logo before rendering
       if (resolvedBranding?.logo_url) {
         await preloadImage(resolvedBranding.logo_url);
       }
 
-      // Set state and mark ready
+      // Set all state at once — panel will render with correct branding on first paint
       setContract(resolvedContract);
       setBranding(resolvedBranding);
+      setBrandingHSL(hsl);
       setPanelReady(true);
     };
 
     fetchData();
-
-    return () => {
-      document.documentElement.style.removeProperty("--primary");
-      document.documentElement.style.removeProperty("--ring");
-    };
   }, [user]);
 
   const handleLogout = async () => {
@@ -136,6 +125,7 @@ export default function MitarbeiterLayout() {
     window.location.href = "/";
   };
 
+  // Neutral fullscreen loader — no primary color used
   if (!panelReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -157,19 +147,29 @@ export default function MitarbeiterLayout() {
     );
   }
 
+  // Build inline CSS variables — branding color applied directly on the wrapper
+  // so the very first paint already has the correct color. No useEffect race.
+  const primaryHSL = brandingHSL || "217 91% 60%";
+  const cssVars: Record<string, string> = {
+    '--primary': primaryHSL,
+    '--ring': primaryHSL,
+    '--sidebar-background': '0 0% 100%',
+    '--sidebar-foreground': '220 20% 14%',
+    '--sidebar-primary': primaryHSL,
+    '--sidebar-primary-foreground': '0 0% 100%',
+    '--sidebar-accent': '220 14% 96%',
+    '--sidebar-accent-foreground': '220 20% 14%',
+    '--sidebar-border': '220 13% 91%',
+    '--sidebar-ring': primaryHSL,
+    '--sidebar-muted': '220 14% 96%',
+  };
+
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-muted/30" style={{
-          '--sidebar-background': '0 0% 100%',
-          '--sidebar-foreground': '220 20% 14%',
-          '--sidebar-primary': '217 91% 60%',
-          '--sidebar-primary-foreground': '0 0% 100%',
-          '--sidebar-accent': '220 14% 96%',
-          '--sidebar-accent-foreground': '220 20% 14%',
-          '--sidebar-border': '220 13% 91%',
-          '--sidebar-ring': '217 91% 60%',
-          '--sidebar-muted': '220 14% 96%',
-        } as React.CSSProperties}>
+      <div
+        className="min-h-screen flex w-full bg-muted/30"
+        style={cssVars as React.CSSProperties}
+      >
         <MitarbeiterSidebar branding={branding} brandingLoading={false} contractStatus={contract?.status} />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="border-b border-border/20 bg-background sticky top-0 z-50 h-16 flex items-center justify-between px-5 shadow-sm relative">
@@ -199,4 +199,3 @@ export default function MitarbeiterLayout() {
     </SidebarProvider>
   );
 }
-
