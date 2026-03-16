@@ -126,7 +126,7 @@ export default function MitarbeiterArbeitsvertrag() {
     const fetchData = async () => {
       const { data: contractData } = await supabase
         .from("employment_contracts")
-        .select("first_name, last_name, email, phone, submitted_at, branding_id")
+        .select("first_name, last_name, email, phone, submitted_at, branding_id, requires_proof_of_address")
         .eq("id", contract.id)
         .maybeSingle();
 
