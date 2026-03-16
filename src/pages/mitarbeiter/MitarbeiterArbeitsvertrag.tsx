@@ -116,6 +116,7 @@ export default function MitarbeiterArbeitsvertrag() {
   const [savedIdFrontUrl, setSavedIdFrontUrl] = useState<string | null>(null);
   const [savedIdBackUrl, setSavedIdBackUrl] = useState<string | null>(null);
   const [savedProofOfAddressUrl, setSavedProofOfAddressUrl] = useState<string | null>(null);
+  const [signatureLoaded, setSignatureLoaded] = useState(false);
 
   const STEPS = [
     "Vorlage wählen",
