@@ -36,29 +36,15 @@ export default function AdminArbeitsvertraege() {
     queryKey: ["arbeitsvertraege", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      const { data: appointments, error } = await supabase
-        .from("interview_appointments")
-        .select("*, applications!inner(id, first_name, last_name, email, phone, branding_id, brandings(id, company_name))")
-        .eq("status", "erfolgreich")
-        .eq("applications.branding_id", activeBrandingId!)
+      const { data: contracts, error } = await supabase
+        .from("employment_contracts")
+        .select("*, applications(id, first_name, last_name, email, phone, branding_id, brandings(id, company_name))")
+        .eq("branding_id", activeBrandingId!)
+        .neq("status", "offen")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-
-      const appIds = (appointments || []).map((a: any) => a.applications?.id).filter(Boolean);
-      let contracts: any[] = [];
-      if (appIds.length > 0) {
-        const { data: c } = await supabase
-          .from("employment_contracts")
-          .select("*")
-          .in("application_id", appIds);
-        contracts = c || [];
-      }
-
-      return (appointments || []).map((apt: any) => {
-        const contract = contracts.find((c: any) => c.application_id === apt.applications?.id);
-        return { ...apt, contract };
-      });
+      return contracts || [];
     },
   });
 
