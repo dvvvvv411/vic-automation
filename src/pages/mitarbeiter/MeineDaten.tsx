@@ -40,6 +40,9 @@ const MeineDaten = () => {
   const [pendingPayout, setPendingPayout] = useState(0);
   const [rewardHistory, setRewardHistory] = useState<{ title: string; reward: string; date: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contractViewOpen, setContractViewOpen] = useState(false);
+  const [templateContent, setTemplateContent] = useState<string | null>(null);
+  const [brandingSig, setBrandingSig] = useState<any>(null);
 
   useEffect(() => {
     if (!contract?.id) return;
