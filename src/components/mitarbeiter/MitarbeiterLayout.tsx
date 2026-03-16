@@ -190,8 +190,8 @@ export default function MitarbeiterLayout() {
               </div>
             </div>
           </header>
-          <main className="flex-1 p-6 lg:p-8 bg-slate-50">
-            <Outlet context={{ contract, branding, loading }} />
+          <main className="flex-1 p-6 lg:p-8 bg-muted/20">
+            <Outlet context={{ contract, branding }} />
           </main>
         </div>
         <ChatWidget contractId={contract?.id ?? null} brandColor={branding?.brand_color} />
