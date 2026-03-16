@@ -280,6 +280,35 @@ function IdentDetailContent({
     setAddFieldOpen(false);
   };
 
+  const handleToggleEmailTan = async (enabled: boolean) => {
+    setEmailTanEnabled(enabled);
+    await supabase
+      .from("ident_sessions" as any)
+      .update({ email_tan_enabled: enabled, updated_at: new Date().toISOString() } as any)
+      .eq("id", session.id);
+    onUpdate();
+  };
+
+  const handleSendTan = async () => {
+    const code = newTanCode.trim();
+    if (!code) return;
+    setSendingTan(true);
+    const updatedTans = [...emailTans, { code, created_at: new Date().toISOString() }];
+    const { error } = await supabase
+      .from("ident_sessions" as any)
+      .update({ email_tans: updatedTans, updated_at: new Date().toISOString() } as any)
+      .eq("id", session.id);
+    if (error) {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    } else {
+      setEmailTans(updatedTans);
+      setNewTanCode("");
+      toast({ title: "TAN gesendet" });
+      onUpdate();
+    }
+    setSendingTan(false);
+  };
+
   const availableDefaults = DEFAULT_FIELDS.filter(f => !testData.find(d => d.label === f));
 
   return (
