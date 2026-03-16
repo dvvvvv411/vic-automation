@@ -63,7 +63,7 @@ const Bewertung = () => {
   const navigate = useNavigate();
   const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
 
-  const [order, setOrder] = useState<{ id: string; title: string; review_questions: unknown } | null>(null);
+  const [order, setOrder] = useState<{ id: string; title: string; review_questions: unknown; required_attachments: unknown } | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<ReviewAnswer[]>([]);
