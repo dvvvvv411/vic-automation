@@ -333,7 +333,6 @@ const MeineDaten = () => {
       </motion.div>
     </div>
 
-      {/* Contract Viewer Dialog */}
       <Dialog open={contractViewOpen} onOpenChange={setContractViewOpen}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -345,8 +344,6 @@ const MeineDaten = () => {
             ) : (
               <p className="text-muted-foreground text-sm">Kein Vertragstext verfügbar.</p>
             )}
-
-            {/* Signatures */}
             <div className="grid grid-cols-2 gap-8 mt-8 pt-6 border-t border-border">
               {brandingSig?.signature_image_url && (
                 <div>
@@ -365,7 +362,6 @@ const MeineDaten = () => {
               )}
             </div>
           </div>
-
           <div className="flex justify-end gap-2 pt-4">
             <Button
               variant="outline"
@@ -386,6 +382,7 @@ const MeineDaten = () => {
           </div>
         </DialogContent>
       </Dialog>
+    </>
   );
 };
 
