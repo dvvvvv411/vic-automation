@@ -175,7 +175,7 @@ const MeineDaten = () => {
       </motion.div>
 
       {/* Arbeitsvertrag */}
-      {contract?.signed_contract_pdf_url && (
+      {contract && (contract.status === "genehmigt" || contract.status === "eingereicht" || contract?.signed_contract_pdf_url) && (
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
           <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
             <CardHeader className="pb-4">
@@ -191,17 +191,35 @@ const MeineDaten = () => {
                     <FileDown className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">Vertrag unterzeichnet</p>
-                    <p className="text-xs text-muted-foreground">Dein unterschriebener Arbeitsvertrag steht zum Download bereit</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {contract.status === "genehmigt" ? "Vertrag genehmigt" : "Vertrag eingereicht"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Dein Arbeitsvertrag kann hier eingesehen werden</p>
                   </div>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.open(contract.signed_contract_pdf_url!, '_blank')}
+                  onClick={async () => {
+                    // Load template content + branding signature
+                    const { data: ec } = await supabase
+                      .from("employment_contracts")
+                      .select("template_id, signature_data, first_name, last_name, birth_date, street, zip_code, city, employment_type, branding_id")
+                      .eq("id", contract.id)
+                      .maybeSingle();
+                    if (ec?.template_id) {
+                      const { data: tpl } = await supabase.from("contract_templates" as any).select("content, salary").eq("id", ec.template_id).maybeSingle();
+                      setTemplateContent((tpl as any)?.content || null);
+                    }
+                    if (ec?.branding_id) {
+                      const { data: bd } = await supabase.from("brandings").select("signature_image_url, signer_name, signer_title, company_name").eq("id", ec.branding_id).maybeSingle();
+                      setBrandingSig(bd);
+                    }
+                    setContractViewOpen(true);
+                  }}
                 >
-                  <FileDown className="h-4 w-4 mr-1" />
-                  Herunterladen
+                  <Eye className="h-4 w-4 mr-1" />
+                  Anzeigen
                 </Button>
               </div>
             </CardContent>
