@@ -170,7 +170,7 @@ export default function MitarbeiterLayout() {
           '--sidebar-ring': '217 91% 60%',
           '--sidebar-muted': '220 14% 96%',
         } as React.CSSProperties}>
-        <MitarbeiterSidebar branding={branding} brandingLoading={loading} contractStatus={contract?.status} />
+        <MitarbeiterSidebar branding={branding} brandingLoading={false} contractStatus={contract?.status} />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="border-b border-border/20 bg-background sticky top-0 z-50 h-16 flex items-center justify-between px-5 shadow-sm relative">
             <SidebarTrigger />
