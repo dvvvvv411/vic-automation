@@ -141,15 +141,14 @@ export default function AdminArbeitsvertraege() {
     }
   };
 
-  const statusBadge = (contract: any) => {
-    if (!contract) return <Badge variant="outline">Offen</Badge>;
-    switch (contract.status) {
+  const statusBadge = (status: string) => {
+    switch (status) {
       case "eingereicht":
         return <Badge className="bg-yellow-500 text-white border-yellow-500">Eingereicht</Badge>;
-      case "genehmigt":
-        return <Badge className="bg-green-600 text-white border-green-600">Genehmigt</Badge>;
       case "unterzeichnet":
         return <Badge className="bg-blue-600 text-white border-blue-600">Unterzeichnet</Badge>;
+      case "genehmigt":
+        return <Badge className="bg-green-600 text-white border-green-600">Genehmigt</Badge>;
       default:
         return <Badge variant="outline">Offen</Badge>;
     }
