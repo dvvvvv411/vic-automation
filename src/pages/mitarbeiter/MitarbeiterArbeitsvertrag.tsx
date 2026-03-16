@@ -15,7 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { CalendarIcon, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsUpDown, Upload, X, FileText, PenTool } from "lucide-react";
+import { CalendarIcon, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsUpDown, Upload, X, FileText, PenTool, FileUp } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { format, isBefore, startOfDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -105,6 +106,10 @@ export default function MitarbeiterArbeitsvertrag() {
   const [idBackPreview, setIdBackPreview] = useState<string | null>(null);
   const [nationalityOpen, setNationalityOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<{ title: string; content: string } | null>(null);
+  const [idType, setIdType] = useState<"personalausweis" | "reisepass">("personalausweis");
+  const [proofOfAddressFile, setProofOfAddressFile] = useState<File | null>(null);
+  const [proofOfAddressPreview, setProofOfAddressPreview] = useState<string | null>(null);
+  const [requiresProofOfAddress, setRequiresProofOfAddress] = useState(false);
 
   const STEPS = [
     "Vorlage wählen",
@@ -122,7 +127,7 @@ export default function MitarbeiterArbeitsvertrag() {
     const fetchData = async () => {
       const { data: contractData } = await supabase
         .from("employment_contracts")
-        .select("first_name, last_name, email, phone, submitted_at, branding_id")
+        .select("first_name, last_name, email, phone, submitted_at, branding_id, requires_proof_of_address")
         .eq("id", contract.id)
         .maybeSingle();
 
@@ -140,6 +145,9 @@ export default function MitarbeiterArbeitsvertrag() {
           email: contractData.email || "",
           phone: contractData.phone || "",
         }));
+        if ((contractData as any).requires_proof_of_address) {
+          setRequiresProofOfAddress(true);
+        }
       }
 
       // Fetch templates for this branding
@@ -213,7 +221,11 @@ export default function MitarbeiterArbeitsvertrag() {
     }
     if (step === 1) return form.social_security_number && form.tax_id && form.health_insurance;
     if (step === 2) return form.iban && form.bic && form.bank_name;
-    if (step === 3) return idFrontFile && idBackFile;
+    if (step === 3) {
+      const idValid = idType === "reisepass" ? !!idFrontFile : !!(idFrontFile && idBackFile);
+      const proofValid = requiresProofOfAddress ? !!proofOfAddressFile : true;
+      return idValid && proofValid;
+    }
     return true;
   };
 
@@ -318,7 +330,12 @@ export default function MitarbeiterArbeitsvertrag() {
       };
 
       const frontUrl = await uploadFile(idFrontFile!, "front");
-      const backUrl = await uploadFile(idBackFile!, "back");
+      const backUrl = idType === "personalausweis" && idBackFile ? await uploadFile(idBackFile, "back") : "";
+
+      let proofUrl: string | null = null;
+      if (proofOfAddressFile) {
+        proofUrl = await uploadFile(proofOfAddressFile, "proof-of-address");
+      }
 
       const { error: rpcError } = await supabase.rpc("submit_employment_contract", {
         _contract_id: contract.id,
@@ -343,6 +360,8 @@ export default function MitarbeiterArbeitsvertrag() {
         _bank_name: form.bank_name,
         _id_front_url: frontUrl,
         _id_back_url: backUrl,
+        _id_type: idType,
+        _proof_of_address_url: proofUrl,
       } as any);
 
       if (rpcError) throw rpcError;
@@ -450,33 +469,35 @@ export default function MitarbeiterArbeitsvertrag() {
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-foreground">{t.title}</h3>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge variant="outline">{employmentLabels[t.employment_type] || t.employment_type}</Badge>
                             {t.salary && <span className="text-sm text-muted-foreground">{t.salary} € / Monat</span>}
                           </div>
                         </div>
-                        {selectedTemplate?.id === t.id && (
-                          <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                            <Check className="h-4 w-4 text-primary-foreground" />
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {t.content && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewTemplate(t);
+                              }}
+                            >
+                              <FileText className="h-4 w-4" />
+                              Vorschau
+                            </Button>
+                          )}
+                          {selectedTemplate?.id === t.id && (
+                            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                              <Check className="h-4 w-4 text-primary-foreground" />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      {t.content && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="mt-3 gap-1.5 text-muted-foreground hover:text-foreground px-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPreviewTemplate(t);
-                          }}
-                        >
-                          <FileText className="h-4 w-4" />
-                          Vorschau
-                        </Button>
-                      )}
                     </CardContent>
                   </Card>
                 ))}
@@ -629,32 +650,92 @@ export default function MitarbeiterArbeitsvertrag() {
 
           {/* Step 3: Documents */}
           {step === 3 && (
-            <div className="grid grid-cols-2 gap-4">
-              {(["front", "back"] as const).map((side) => {
-                const preview = side === "front" ? idFrontPreview : idBackPreview;
-                const label = side === "front" ? "Ausweis Vorderseite" : "Ausweis Rückseite";
-                return preview ? (
-                  <div key={side} className="relative rounded-lg border border-green-500 overflow-hidden aspect-[3/2]">
-                    <img src={preview} alt={label} className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => {
-                        if (side === "front") { setIdFrontFile(null); setIdFrontPreview(null); }
-                        else { setIdBackFile(null); setIdBackPreview(null); }
-                      }}
-                      className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+            <div className="space-y-6">
+              {/* ID Type Selection */}
+              <div className="space-y-3">
+                <Label>Dokumenttyp <span className="text-destructive">*</span></Label>
+                <RadioGroup value={idType} onValueChange={(v) => {
+                  setIdType(v as "personalausweis" | "reisepass");
+                  // Reset files when switching type
+                  setIdBackFile(null); setIdBackPreview(null);
+                }} className="flex gap-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="personalausweis" id="personalausweis" />
+                    <Label htmlFor="personalausweis" className="cursor-pointer">Personalausweis</Label>
                   </div>
-                ) : (
-                  <label key={side} className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg aspect-[3/2] cursor-pointer hover:border-muted-foreground/50 transition-colors">
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <span className="text-sm font-medium text-muted-foreground">{label}</span>
-                    <span className="text-xs text-muted-foreground mt-1">Klicken zum Hochladen</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={e => handleFileChange(side, e.target.files?.[0] || null)} />
-                  </label>
-                );
-              })}
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="reisepass" id="reisepass" />
+                    <Label htmlFor="reisepass" className="cursor-pointer">Reisepass</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* ID Upload */}
+              <div className={cn("grid gap-4", idType === "personalausweis" ? "grid-cols-2" : "grid-cols-1 max-w-xs")}>
+                {(idType === "personalausweis" ? ["front", "back"] as const : ["front"] as const).map((side) => {
+                  const preview = side === "front" ? idFrontPreview : idBackPreview;
+                  const label = idType === "reisepass" ? "Reisepass" : (side === "front" ? "Vorderseite" : "Rückseite");
+                  return preview ? (
+                    <div key={side} className="relative rounded-lg border border-green-500 overflow-hidden aspect-[3/2]">
+                      <img src={preview} alt={label} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => {
+                          if (side === "front") { setIdFrontFile(null); setIdFrontPreview(null); }
+                          else { setIdBackFile(null); setIdBackPreview(null); }
+                        }}
+                        className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label key={side} className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg aspect-[3/2] cursor-pointer hover:border-muted-foreground/50 transition-colors">
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+                      <span className="text-xs text-muted-foreground mt-1">Klicken zum Hochladen</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={e => handleFileChange(side, e.target.files?.[0] || null)} />
+                    </label>
+                  );
+                })}
+              </div>
+
+              {/* Meldenachweis */}
+              {requiresProofOfAddress && (
+                <div className="space-y-3 border-t border-border pt-4">
+                  <Label>Meldenachweis <span className="text-destructive">*</span></Label>
+                  <p className="text-xs text-muted-foreground">z.B. Stromrechnung, Meldebestätigung (Bild oder PDF)</p>
+                  {proofOfAddressPreview ? (
+                    <div className="relative rounded-lg border border-green-500 overflow-hidden max-w-xs">
+                      {proofOfAddressFile?.type?.includes("pdf") ? (
+                        <div className="flex items-center gap-2 p-4 bg-muted/30">
+                          <FileUp className="h-8 w-8 text-muted-foreground" />
+                          <span className="text-sm font-medium truncate">{proofOfAddressFile.name}</span>
+                        </div>
+                      ) : (
+                        <img src={proofOfAddressPreview} alt="Meldenachweis" className="w-full object-cover" />
+                      )}
+                      <button
+                        onClick={() => { setProofOfAddressFile(null); setProofOfAddressPreview(null); }}
+                        className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg py-8 cursor-pointer hover:border-muted-foreground/50 transition-colors max-w-xs">
+                      <FileUp className="h-8 w-8 text-muted-foreground mb-2" />
+                      <span className="text-sm font-medium text-muted-foreground">Meldenachweis hochladen</span>
+                      <span className="text-xs text-muted-foreground mt-1">Bild oder PDF</span>
+                      <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setProofOfAddressFile(file);
+                        setProofOfAddressPreview(file.type.includes("pdf") ? "pdf" : URL.createObjectURL(file));
+                      }} />
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

@@ -429,11 +429,14 @@ export type Database = {
           id: string
           id_back_url: string | null
           id_front_url: string | null
+          id_type: string | null
           is_suspended: boolean
           last_name: string | null
           marital_status: string | null
           nationality: string | null
           phone: string | null
+          proof_of_address_url: string | null
+          requires_proof_of_address: boolean
           signature_data: string | null
           signed_contract_pdf_url: string | null
           social_security_number: string | null
@@ -470,11 +473,14 @@ export type Database = {
           id?: string
           id_back_url?: string | null
           id_front_url?: string | null
+          id_type?: string | null
           is_suspended?: boolean
           last_name?: string | null
           marital_status?: string | null
           nationality?: string | null
           phone?: string | null
+          proof_of_address_url?: string | null
+          requires_proof_of_address?: boolean
           signature_data?: string | null
           signed_contract_pdf_url?: string | null
           social_security_number?: string | null
@@ -511,11 +517,14 @@ export type Database = {
           id?: string
           id_back_url?: string | null
           id_front_url?: string | null
+          id_type?: string | null
           is_suspended?: boolean
           last_name?: string | null
           marital_status?: string | null
           nationality?: string | null
           phone?: string | null
+          proof_of_address_url?: string | null
+          requires_proof_of_address?: boolean
           signature_data?: string | null
           signed_contract_pdf_url?: string | null
           social_security_number?: string | null
@@ -1488,10 +1497,12 @@ export type Database = {
               _iban: string
               _id_back_url: string
               _id_front_url: string
+              _id_type?: string
               _last_name: string
               _marital_status: string
               _nationality: string
               _phone: string
+              _proof_of_address_url?: string
               _social_security_number: string
               _street: string
               _tax_id: string

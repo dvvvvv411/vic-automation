@@ -1,42 +1,66 @@
 
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-# Plan: 4 Changes + DB Migration
+## Was wurde gemacht
 
-## 1. Fix Auftrags-Cards Description Overflow
-**File**: `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx` (line ~325)
-- Change `line-clamp-2` to `line-clamp-1`
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-## 2. Vorschau Button rechts in Card
-**File**: `src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx`
-- Move the "Vorschau" button to the right side of the card's `flex justify-between` container
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-## 3. ID Document Type Selection + Meldenachweis Upload (Mitarbeiter)
-**File**: `src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx`
-- Add `idType` state (personalausweis/reisepass) with RadioGroup
-- Personalausweis = front + back upload; Reisepass = single image
-- Conditionally show Meldenachweis upload (image/pdf) when `requires_proof_of_address` is true on the contract
-- Update `isStepValid()` and submit logic
+---
 
-## 4. Admin KYC Tab
-**File**: `src/pages/admin/AdminMitarbeiterDetail.tsx` (lines 725-857)
-- Rename tab from "Personalausweis" to "KYC"
-- Add Switch toggle for "Meldenachweis erforderlich" (updates `requires_proof_of_address`)
-- Show ID images with labels based on `id_type` (Personalausweis: Vorderseite/Rueckseite, Reisepass: single image)
-- **Meldenachweis thumbnail preview**: If `proof_of_address_url` is an image, render it as a clickable `<img>` thumbnail (same pattern as the ID images, with `onClick` opening `setImagePreview`). If it's a PDF, show an embedded `<iframe>` or a PDF icon thumbnail with a clickable link to open in new tab. Same styling as the existing ID card previews.
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-## 5. Database Migration
-```sql
-ALTER TABLE public.employment_contracts
-  ADD COLUMN id_type text DEFAULT 'personalausweis',
-  ADD COLUMN proof_of_address_url text,
-  ADD COLUMN requires_proof_of_address boolean NOT NULL DEFAULT false;
-```
+## Was wurde gemacht
 
-## Summary
-| File | Changes |
-|------|---------|
-| `MitarbeiterAuftraege.tsx` | `line-clamp-1` |
-| `MitarbeiterArbeitsvertrag.tsx` | Vorschau button right-aligned, ID type selection, Meldenachweis upload |
-| `AdminMitarbeiterDetail.tsx` | Tab rename to KYC, Meldenachweis toggle + thumbnail preview, id_type labels |
-| DB migration | 3 new columns on `employment_contracts` |
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
+
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+
+---
+
+# Vergütungsmodell pro Branding (abgeschlossen)
+
+## Was wurde gemacht
+
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
