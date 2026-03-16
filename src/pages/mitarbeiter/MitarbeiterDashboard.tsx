@@ -165,7 +165,7 @@ const MitarbeiterDashboard = () => {
       // Fetch contract details (balance, profile)
       const { data: contractDetails } = await supabase
         .from("employment_contracts")
-        .select("balance, first_name, last_name, email, iban, employment_type, submitted_at")
+        .select("balance, first_name, last_name, email, iban, employment_type, submitted_at, status, contract_dismissed")
         .eq("id", contract.id)
         .maybeSingle();
 
@@ -173,6 +173,8 @@ const MitarbeiterDashboard = () => {
         setBalance(Number(contractDetails.balance) || 0);
         setEmploymentType(contractDetails.employment_type || null);
         setContractSubmittedAt(contractDetails.submitted_at || null);
+        setContractStatus(contractDetails.status || null);
+        setContractDismissed((contractDetails as any).contract_dismissed || false);
       }
 
       // Fetch assignments
