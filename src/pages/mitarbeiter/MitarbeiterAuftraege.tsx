@@ -55,8 +55,8 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-const StatusButton = ({ status, orderId, navigate }: { 
-  status: string; orderId: string; navigate: (path: string) => void 
+const StatusButton = ({ status, orderId, navigate, hasIdentSession }: { 
+  status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean
 }) => {
   switch (status) {
     case "in_pruefung":
