@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useOutletContext } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { CalendarIcon, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsUpDown, Upload, X, FileText, PenTool, FileUp } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { format, isBefore, startOfDay } from "date-fns";
+import { format, isBefore, startOfDay, parse } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -75,7 +75,6 @@ interface ContextType {
 
 export default function MitarbeiterArbeitsvertrag() {
   const { contract } = useOutletContext<ContextType>();
-  // step: -1 = template selection, 0-3 = data entry, 4 = summary, 5 = contract preview
   const [step, setStep] = useState(-1);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -88,6 +87,8 @@ export default function MitarbeiterArbeitsvertrag() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [brandingData, setBrandingData] = useState<any>(null);
+  const initialLoadDone = useRef(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: "", phone: "",
@@ -111,6 +112,11 @@ export default function MitarbeiterArbeitsvertrag() {
   const [proofOfAddressPreview, setProofOfAddressPreview] = useState<string | null>(null);
   const [requiresProofOfAddress, setRequiresProofOfAddress] = useState(false);
 
+  // Saved URLs from DB (for resume / final submit without File objects)
+  const [savedIdFrontUrl, setSavedIdFrontUrl] = useState<string | null>(null);
+  const [savedIdBackUrl, setSavedIdBackUrl] = useState<string | null>(null);
+  const [savedProofOfAddressUrl, setSavedProofOfAddressUrl] = useState<string | null>(null);
+
   const STEPS = [
     "Vorlage wählen",
     "Persönliche Informationen",
@@ -121,55 +127,167 @@ export default function MitarbeiterArbeitsvertrag() {
     "Vertragsvorschau",
   ];
 
+  // --- Auto-save debounced ---
+  const debouncedSave = useCallback((formData: typeof form, currentIdType: string, currentTemplate: any) => {
+    if (!contract || !initialLoadDone.current) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      const bdMatch = formData.birth_date.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+      const birthDateIso = bdMatch ? `${bdMatch[3]}-${bdMatch[2]}-${bdMatch[1]}` : null;
+      await supabase.from("employment_contracts").update({
+        first_name: formData.first_name || null,
+        last_name: formData.last_name || null,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        birth_date: birthDateIso,
+        birth_place: formData.birth_place || null,
+        nationality: formData.nationality || null,
+        street: formData.street || null,
+        zip_code: formData.zip_code || null,
+        city: formData.city || null,
+        marital_status: formData.marital_status || null,
+        employment_type: currentTemplate?.employment_type || formData.employment_type || null,
+        desired_start_date: formData.desired_start_date ? format(formData.desired_start_date, "yyyy-MM-dd") : null,
+        social_security_number: formData.social_security_number || null,
+        tax_id: formData.tax_id || null,
+        health_insurance: formData.health_insurance || null,
+        iban: formData.iban || null,
+        bic: formData.bic || null,
+        bank_name: formData.bank_name || null,
+        id_type: currentIdType,
+        template_id: currentTemplate?.id || null,
+      } as any).eq("id", contract.id);
+    }, 1500);
+  }, [contract]);
+
+  // Trigger auto-save on form/idType/template changes
+  useEffect(() => {
+    debouncedSave(form, idType, selectedTemplate);
+  }, [form, idType, selectedTemplate, debouncedSave]);
+
+  // --- Immediate document upload helper ---
+  const uploadDocImmediately = async (file: File, prefix: string): Promise<string> => {
+    const ext = file.name.split(".").pop();
+    const path = `${contract!.id}/${prefix}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("contract-documents").upload(path, file);
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from("contract-documents").getPublicUrl(path);
+    return urlData.publicUrl;
+  };
+
+  // --- Load all contract data ---
   useEffect(() => {
     if (!contract) { setLoadingData(false); return; }
 
     const fetchData = async () => {
-      const { data: contractData } = await supabase
+      const { data: cd } = await supabase
         .from("employment_contracts")
-        .select("first_name, last_name, email, phone, submitted_at, branding_id, requires_proof_of_address")
+        .select("first_name, last_name, email, phone, submitted_at, branding_id, requires_proof_of_address, birth_date, birth_place, nationality, street, zip_code, city, marital_status, employment_type, desired_start_date, social_security_number, tax_id, health_insurance, iban, bic, bank_name, id_front_url, id_back_url, id_type, proof_of_address_url, template_id")
         .eq("id", contract.id)
         .maybeSingle();
 
-      if (contractData?.submitted_at) {
+      if (cd?.submitted_at) {
         setAlreadySubmitted(true);
         setLoadingData(false);
         return;
       }
 
-      if (contractData) {
-        setForm(prev => ({
-          ...prev,
-          first_name: contractData.first_name || "",
-          last_name: contractData.last_name || "",
-          email: contractData.email || "",
-          phone: contractData.phone || "",
-        }));
-        if ((contractData as any).requires_proof_of_address) {
-          setRequiresProofOfAddress(true);
+      if (cd) {
+        // Parse birth_date from ISO to DD.MM.YYYY
+        let birthDateStr = "";
+        if (cd.birth_date) {
+          try {
+            const d = new Date(cd.birth_date + "T00:00:00");
+            birthDateStr = format(d, "dd.MM.yyyy");
+          } catch { birthDateStr = ""; }
+        }
+
+        // Parse desired_start_date
+        let desiredDate: Date | null = null;
+        if (cd.desired_start_date) {
+          try { desiredDate = new Date(cd.desired_start_date + "T00:00:00"); } catch {}
+        }
+
+        setForm({
+          first_name: cd.first_name || "",
+          last_name: cd.last_name || "",
+          email: cd.email || "",
+          phone: cd.phone || "",
+          birth_date: birthDateStr,
+          birth_place: cd.birth_place || "",
+          nationality: cd.nationality || "",
+          street: cd.street || "",
+          zip_code: cd.zip_code || "",
+          city: cd.city || "",
+          marital_status: cd.marital_status || "",
+          employment_type: cd.employment_type || "",
+          desired_start_date: desiredDate,
+          social_security_number: cd.social_security_number || "",
+          tax_id: cd.tax_id || "",
+          health_insurance: cd.health_insurance || "",
+          iban: cd.iban || "",
+          bic: cd.bic || "",
+          bank_name: cd.bank_name || "",
+        });
+
+        if (cd.id_type) setIdType(cd.id_type as any);
+        if (cd.requires_proof_of_address) setRequiresProofOfAddress(true);
+
+        // Restore saved document URLs and previews
+        if (cd.id_front_url) { setSavedIdFrontUrl(cd.id_front_url); setIdFrontPreview(cd.id_front_url); }
+        if (cd.id_back_url) { setSavedIdBackUrl(cd.id_back_url); setIdBackPreview(cd.id_back_url); }
+        if (cd.proof_of_address_url) {
+          setSavedProofOfAddressUrl(cd.proof_of_address_url);
+          setProofOfAddressPreview(cd.proof_of_address_url.endsWith(".pdf") ? "pdf:" + cd.proof_of_address_url : cd.proof_of_address_url);
+        }
+
+        // Fetch templates for this branding
+        const brandingId = cd.branding_id || (contract as any).branding_id;
+        if (brandingId) {
+          const { data: tpls } = await supabase
+            .from("contract_templates" as any)
+            .select("*")
+            .eq("branding_id", brandingId)
+            .eq("is_active", true)
+            .order("employment_type");
+          const loadedTemplates = tpls || [];
+          setTemplates(loadedTemplates);
+
+          // Restore selected template
+          if (cd.template_id && loadedTemplates.length > 0) {
+            const found = loadedTemplates.find((t: any) => t.id === cd.template_id);
+            if (found) setSelectedTemplate(found);
+          }
+
+          const { data: bd } = await supabase
+            .from("brandings")
+            .select("signature_image_url, signer_name, signer_title, company_name")
+            .eq("id", brandingId)
+            .maybeSingle();
+          setBrandingData(bd);
+        }
+
+        // Determine resume step
+        const hasTemplates = (await supabase.from("contract_templates" as any).select("id").eq("branding_id", cd.branding_id || (contract as any).branding_id || "").eq("is_active", true).limit(1)).data?.length ?? 0;
+        
+        if (hasTemplates > 0 && !cd.template_id) {
+          setStep(-1);
+        } else {
+          // Find first incomplete step
+          const personalComplete = cd.first_name && cd.last_name && cd.email && cd.phone && cd.birth_date && cd.birth_place && cd.nationality && cd.street && cd.zip_code && cd.city && cd.marital_status && cd.desired_start_date;
+          const taxComplete = cd.social_security_number && cd.tax_id && cd.health_insurance;
+          const bankComplete = cd.iban && cd.bic && cd.bank_name;
+          const docsComplete = cd.id_front_url && (cd.id_type === "reisepass" || cd.id_back_url);
+
+          if (!personalComplete) setStep(0);
+          else if (!taxComplete) setStep(1);
+          else if (!bankComplete) setStep(2);
+          else if (!docsComplete) setStep(3);
+          else setStep(4); // summary
         }
       }
 
-      // Fetch templates for this branding
-      const brandingId = contractData?.branding_id || (contract as any).branding_id;
-      if (brandingId) {
-        const { data: tpls } = await supabase
-          .from("contract_templates" as any)
-          .select("*")
-          .eq("branding_id", brandingId)
-          .eq("is_active", true)
-          .order("employment_type");
-        setTemplates(tpls || []);
-
-        // Get branding signature info
-        const { data: bd } = await supabase
-          .from("brandings")
-          .select("signature_image_url, signer_name, signer_title, company_name")
-          .eq("id", brandingId)
-          .maybeSingle();
-        setBrandingData(bd);
-      }
-
+      initialLoadDone.current = true;
       setLoadingData(false);
     };
 
@@ -210,8 +328,6 @@ export default function MitarbeiterArbeitsvertrag() {
 
   const updateForm = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
 
-  const dataStep = step - 1; // Offset because step 0 is template selection
-
   const isStepValid = () => {
     if (step === -1) return !!selectedTemplate;
     if (step === 0) {
@@ -222,17 +338,62 @@ export default function MitarbeiterArbeitsvertrag() {
     if (step === 1) return form.social_security_number && form.tax_id && form.health_insurance;
     if (step === 2) return form.iban && form.bic && form.bank_name;
     if (step === 3) {
-      const idValid = idType === "reisepass" ? !!idFrontFile : !!(idFrontFile && idBackFile);
-      const proofValid = requiresProofOfAddress ? !!proofOfAddressFile : true;
+      const hasFront = !!idFrontFile || !!savedIdFrontUrl;
+      const hasBack = !!idBackFile || !!savedIdBackUrl;
+      const idValid = idType === "reisepass" ? hasFront : (hasFront && hasBack);
+      const proofValid = requiresProofOfAddress ? (!!proofOfAddressFile || !!savedProofOfAddressUrl) : true;
       return idValid && proofValid;
     }
     return true;
   };
 
-  const handleFileChange = (side: "front" | "back", file: File | null) => {
+  const handleFileChange = async (side: "front" | "back", file: File | null) => {
     if (!file) return;
-    if (side === "front") { setIdFrontFile(file); setIdFrontPreview(URL.createObjectURL(file)); }
-    else { setIdBackFile(file); setIdBackPreview(URL.createObjectURL(file)); }
+    // Show preview immediately
+    const previewUrl = URL.createObjectURL(file);
+    if (side === "front") { setIdFrontFile(file); setIdFrontPreview(previewUrl); }
+    else { setIdBackFile(file); setIdBackPreview(previewUrl); }
+
+    // Upload immediately and save URL
+    try {
+      const url = await uploadDocImmediately(file, side === "front" ? "front" : "back");
+      if (side === "front") {
+        setSavedIdFrontUrl(url);
+        await supabase.from("employment_contracts").update({ id_front_url: url } as any).eq("id", contract.id);
+      } else {
+        setSavedIdBackUrl(url);
+        await supabase.from("employment_contracts").update({ id_back_url: url } as any).eq("id", contract.id);
+      }
+    } catch (err: any) {
+      toast.error("Upload fehlgeschlagen: " + err.message);
+    }
+  };
+
+  const handleProofUpload = async (file: File) => {
+    setProofOfAddressFile(file);
+    const preview = file.type.includes("pdf") ? "pdf:" + file.name : URL.createObjectURL(file);
+    setProofOfAddressPreview(preview);
+
+    try {
+      const url = await uploadDocImmediately(file, "proof-of-address");
+      setSavedProofOfAddressUrl(url);
+      await supabase.from("employment_contracts").update({ proof_of_address_url: url } as any).eq("id", contract.id);
+    } catch (err: any) {
+      toast.error("Upload fehlgeschlagen: " + err.message);
+    }
+  };
+
+  const removeDoc = async (type: "front" | "back" | "proof") => {
+    if (type === "front") {
+      setIdFrontFile(null); setIdFrontPreview(null); setSavedIdFrontUrl(null);
+      await supabase.from("employment_contracts").update({ id_front_url: null } as any).eq("id", contract.id);
+    } else if (type === "back") {
+      setIdBackFile(null); setIdBackPreview(null); setSavedIdBackUrl(null);
+      await supabase.from("employment_contracts").update({ id_back_url: null } as any).eq("id", contract.id);
+    } else {
+      setProofOfAddressFile(null); setProofOfAddressPreview(null); setSavedProofOfAddressUrl(null);
+      await supabase.from("employment_contracts").update({ proof_of_address_url: null } as any).eq("id", contract.id);
+    }
   };
 
   const replaceTemplatePlaceholders = (content: string) => {
@@ -296,9 +457,7 @@ export default function MitarbeiterArbeitsvertrag() {
     ctx.stroke();
   };
 
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
+  const stopDrawing = () => { setIsDrawing(false); };
 
   const clearCanvas = () => {
     const canvas = canvasRef.current;
@@ -313,29 +472,16 @@ export default function MitarbeiterArbeitsvertrag() {
     const data = canvas.toDataURL("image/png");
     setSignatureData(data);
     setSigDialogOpen(false);
-    // Now submit
     await handleSubmit(data);
   };
 
   const handleSubmit = async (sigData: string) => {
     setSubmitting(true);
     try {
-      const uploadFile = async (file: File, prefix: string) => {
-        const ext = file.name.split(".").pop();
-        const path = `${contract.id}/${prefix}-${Date.now()}.${ext}`;
-        const { error } = await supabase.storage.from("contract-documents").upload(path, file);
-        if (error) throw error;
-        const { data: urlData } = supabase.storage.from("contract-documents").getPublicUrl(path);
-        return urlData.publicUrl;
-      };
-
-      const frontUrl = await uploadFile(idFrontFile!, "front");
-      const backUrl = idType === "personalausweis" && idBackFile ? await uploadFile(idBackFile, "back") : "";
-
-      let proofUrl: string | null = null;
-      if (proofOfAddressFile) {
-        proofUrl = await uploadFile(proofOfAddressFile, "proof-of-address");
-      }
+      // Use saved URLs (already uploaded during draft)
+      const frontUrl = savedIdFrontUrl || "";
+      const backUrl = idType === "personalausweis" ? (savedIdBackUrl || "") : "";
+      const proofUrl = savedProofOfAddressUrl || null;
 
       const { error: rpcError } = await supabase.rpc("submit_employment_contract", {
         _contract_id: contract.id,
@@ -366,7 +512,6 @@ export default function MitarbeiterArbeitsvertrag() {
 
       if (rpcError) throw rpcError;
 
-      // Save signature_data and template_id
       await supabase
         .from("employment_contracts")
         .update({
@@ -417,8 +562,25 @@ export default function MitarbeiterArbeitsvertrag() {
     </div>
   );
 
-  const currentStepIndex = step + 1; // For stepper display (0 = template, 1-4 = data, 5 = summary, 6 = preview)
+  const currentStepIndex = step + 1;
   const totalSteps = templates.length > 0 ? 7 : 6;
+
+  // Helper to get the effective preview URL for a document
+  const getDocPreview = (type: "front" | "back" | "proof") => {
+    if (type === "front") return idFrontPreview;
+    if (type === "back") return idBackPreview;
+    return proofOfAddressPreview;
+  };
+
+  const isProofPdf = (preview: string | null) => {
+    if (!preview) return false;
+    return preview.startsWith("pdf:") || preview.endsWith(".pdf");
+  };
+
+  const getProofDisplayUrl = () => {
+    if (proofOfAddressPreview?.startsWith("pdf:")) return proofOfAddressPreview.slice(4);
+    return proofOfAddressPreview;
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -656,8 +818,7 @@ export default function MitarbeiterArbeitsvertrag() {
                 <Label>Dokumenttyp <span className="text-destructive">*</span></Label>
                 <RadioGroup value={idType} onValueChange={(v) => {
                   setIdType(v as "personalausweis" | "reisepass");
-                  // Reset files when switching type
-                  setIdBackFile(null); setIdBackPreview(null);
+                  if (v === "reisepass") { removeDoc("back"); }
                 }} className="flex gap-4">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="personalausweis" id="personalausweis" />
@@ -679,10 +840,7 @@ export default function MitarbeiterArbeitsvertrag() {
                     <div key={side} className="relative rounded-lg border border-green-500 overflow-hidden aspect-[3/2]">
                       <img src={preview} alt={label} className="w-full h-full object-cover" />
                       <button
-                        onClick={() => {
-                          if (side === "front") { setIdFrontFile(null); setIdFrontPreview(null); }
-                          else { setIdBackFile(null); setIdBackPreview(null); }
-                        }}
+                        onClick={() => removeDoc(side)}
                         className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90"
                       >
                         <X className="h-3.5 w-3.5" />
@@ -706,16 +864,16 @@ export default function MitarbeiterArbeitsvertrag() {
                   <p className="text-xs text-muted-foreground">z.B. Stromrechnung, Meldebestätigung (Bild oder PDF)</p>
                   {proofOfAddressPreview ? (
                     <div className="relative rounded-lg border border-green-500 overflow-hidden max-w-xs">
-                      {proofOfAddressFile?.type?.includes("pdf") ? (
+                      {isProofPdf(proofOfAddressPreview) ? (
                         <div className="flex items-center gap-2 p-4 bg-muted/30">
                           <FileUp className="h-8 w-8 text-muted-foreground" />
-                          <span className="text-sm font-medium truncate">{proofOfAddressFile.name}</span>
+                          <span className="text-sm font-medium truncate">{proofOfAddressFile?.name || "Meldenachweis.pdf"}</span>
                         </div>
                       ) : (
                         <img src={proofOfAddressPreview} alt="Meldenachweis" className="w-full object-cover" />
                       )}
                       <button
-                        onClick={() => { setProofOfAddressFile(null); setProofOfAddressPreview(null); }}
+                        onClick={() => removeDoc("proof")}
                         className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-md hover:bg-destructive/90"
                       >
                         <X className="h-3.5 w-3.5" />
@@ -729,8 +887,7 @@ export default function MitarbeiterArbeitsvertrag() {
                       <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        setProofOfAddressFile(file);
-                        setProofOfAddressPreview(file.type.includes("pdf") ? "pdf" : URL.createObjectURL(file));
+                        handleProofUpload(file);
                       }} />
                     </label>
                   )}
@@ -767,12 +924,34 @@ export default function MitarbeiterArbeitsvertrag() {
                 <SummaryRow label="BIC" value={form.bic} />
                 <SummaryRow label="Bank" value={form.bank_name} />
               </div>
-              <div className="bg-muted/30 rounded-lg p-4">
+              <div className="bg-muted/30 rounded-lg p-4 space-y-2">
                 <h4 className="font-semibold text-sm mb-2">Ausweisdokumente</h4>
+                <p className="text-xs text-muted-foreground mb-1">
+                  {idType === "reisepass" ? "Reisepass" : "Personalausweis"}
+                </p>
                 <div className="flex gap-4">
-                  {idFrontPreview && <img src={idFrontPreview} alt="Vorderseite" className="h-20 rounded border border-border object-cover" />}
-                  {idBackPreview && <img src={idBackPreview} alt="Rückseite" className="h-20 rounded border border-border object-cover" />}
+                  {idFrontPreview && <img src={idFrontPreview} alt={idType === "reisepass" ? "Reisepass" : "Vorderseite"} className="h-20 rounded border border-border object-cover" />}
+                  {idBackPreview && idType === "personalausweis" && <img src={idBackPreview} alt="Rückseite" className="h-20 rounded border border-border object-cover" />}
                 </div>
+                {/* Meldenachweis in summary */}
+                {proofOfAddressPreview && (
+                  <div className="mt-3 pt-3 border-t border-border/50">
+                    <p className="text-xs text-muted-foreground mb-2">Meldenachweis</p>
+                    {isProofPdf(proofOfAddressPreview) ? (
+                      <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg border border-border max-w-xs">
+                        <FileUp className="h-6 w-6 text-muted-foreground shrink-0" />
+                        <span className="text-sm font-medium truncate">{proofOfAddressFile?.name || "Meldenachweis.pdf"}</span>
+                        {savedProofOfAddressUrl && (
+                          <a href={savedProofOfAddressUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline ml-auto shrink-0">
+                            Öffnen
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <img src={proofOfAddressPreview} alt="Meldenachweis" className="h-20 rounded border border-border object-cover" />
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -782,7 +961,6 @@ export default function MitarbeiterArbeitsvertrag() {
             <div className="space-y-6">
               <div className="border border-border rounded-lg p-6 bg-white prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: replaceTemplatePlaceholders(selectedTemplate.content) }} />
               
-              {/* Company Signature */}
               {brandingData?.signature_image_url && (
                 <div className="border-t border-border pt-4">
                   <p className="text-xs text-muted-foreground mb-2">Firmenunterschrift</p>
@@ -807,7 +985,6 @@ export default function MitarbeiterArbeitsvertrag() {
             </div>
           )}
 
-          {/* Step 5 without template: just submit */}
           {step === 5 && !selectedTemplate && null}
         </div>
 

@@ -32,6 +32,14 @@ interface Assignment {
   hasReviewSubmitted: boolean;
 }
 
+const truncateText = (text: string, maxLen: number): string => {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLen) return normalized;
+  const cut = normalized.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > maxLen * 0.6 ? cut.slice(0, lastSpace) : cut) + "...";
+};
+
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   offen: { label: "Offen", color: "text-blue-600 border-blue-300 bg-blue-50", icon: ExternalLink },
   in_pruefung: { label: "In Überprüfung", color: "text-yellow-600 border-yellow-300 bg-yellow-50", icon: Clock },
@@ -322,7 +330,9 @@ const MitarbeiterAuftraege = () => {
                 <CardContent className="flex-1 flex flex-col justify-between gap-4 pt-0">
                   <div className="space-y-3">
                     {a.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-1 pb-3 border-b border-border/30">{a.description}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed pb-3 border-b border-border/30 break-words">
+                        {truncateText(a.description, 120)}
+                      </p>
                     )}
                     {a.reward && !["0", "0€", "0 €"].includes(a.reward.trim()) && (
                       <div className="flex items-center justify-between text-sm">

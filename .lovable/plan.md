@@ -1,83 +1,66 @@
 
-Ziel: 2 Dinge sauber nachziehen:
-1. `/mitarbeiter/arbeitsvertrag` als echten Entwurf speicherbar machen, inkl. Meldenachweis-Preview in der Zusammenfassung
-2. `/mitarbeiter/auftraege` Description-Preview stabil und deterministisch machen statt per kaputtem CSS-Clamp
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-Was ich im Code gefunden habe:
-- `MitarbeiterArbeitsvertrag.tsx` lädt aktuell nur ein paar Felder (`first_name`, `last_name`, `email`, `phone`, `requires_proof_of_address`) und verliert deshalb fast alles beim Verlassen der Seite.
-- Dokumente werden aktuell erst beim finalen Submit hochgeladen. Dadurch kann ein Nutzer nach Verlassen der Seite keine gespeicherten Uploads wiedersehen oder weiterverwenden.
-- Die Zusammenfassung zeigt nur `idFrontPreview`/`idBackPreview`, aber keinen Meldenachweis.
-- Die Auftragskarten nutzen aktuell `line-clamp-1`, was genau das falsche Verhalten erzeugt. Gewünscht ist jetzt ein fester Zeichen-Previewtext mit `...`, plus mehr Platz für den Beschreibungstext.
+## Was wurde gemacht
 
-Umsetzungsplan
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-1. Arbeitsvertrag-Entwurf persistent machen
-Datei: `src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx`
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-- Den initialen Contract-Load auf alle relevanten Felder erweitern:
-  - persönliche Daten
-  - Steuerdaten
-  - Bankdaten
-  - `id_front_url`, `id_back_url`, `id_type`
-  - `proof_of_address_url`
-  - `template_id`
-  - `requires_proof_of_address`
-- Beim Laden die Form vollständig aus `employment_contracts` vorbefüllen.
-- Die gewählte Vertragsvorlage über `template_id` wiederherstellen.
-- Den Wiedereinstieg logisch setzen:
-  - nicht immer wieder bei Schritt 1 starten
-  - stattdessen anhand der schon gespeicherten Daten den ersten unvollständigen Schritt öffnen
-- Auto-Save einbauen:
-  - debounced `update` auf `employment_contracts`, solange noch nicht eingereicht
-  - speichert Textfelder, `employment_type`, `desired_start_date`, `template_id`, `id_type`
-- Wichtige Guard-Logik:
-  - erst speichern, nachdem Initialdaten geladen wurden
-  - verhindern, dass der erste Render leere Werte zurück in die DB schreibt
+---
 
-2. Uploads auch als Entwurf speichern
-Datei: `src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx`
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-- Dokumente nicht erst am finalen Submit behandeln, sondern schon beim Auswählen:
-  - Upload in `contract-documents`
-  - URL sofort in `employment_contracts` speichern
-- Dafür getrennte Zustände für:
-  - gespeicherte URLs
-  - lokale Preview-Anzeige
-- Ergebnis:
-  - Nutzer kann Seite verlassen und später exakt mit denselben Uploads weitermachen
-  - finaler Submit nutzt vorhandene gespeicherte URLs weiter, statt neue `File`-Objekte zu brauchen
-- Auch Entfernen eines Dokuments muss den DB-Wert wieder leeren, damit der Entwurf konsistent bleibt
+## Was wurde gemacht
 
-3. Meldenachweis in der Zusammenfassung anzeigen
-Datei: `src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx`
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-- Im Zusammenfassungs-Schritt unter den Ausweisdokumenten zusätzlich den Meldenachweis rendern, falls vorhanden.
-- Gleiches Anzeigeverhalten wie im Uploadbereich:
-  - Bild => Thumbnail
-  - PDF => Dateikarte/PDF-Hinweis
-- Die Summary darf nicht nur mit lokalen `File`-Previews arbeiten, sondern muss auch gespeicherte URLs korrekt anzeigen.
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
-4. Auftragskarten sauber und fest kürzen
-Datei: `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx`
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
 
-- `line-clamp-1` komplett raus.
-- Stattdessen eine kleine Helper-Funktion für deterministische Textvorschau:
-  - Whitespace normalisieren
-  - auf feste Zeichenanzahl kürzen
-  - möglichst an Wortgrenze schneiden
-  - immer mit `...` enden, wenn gekürzt wurde
-- Damit ist die Vorschau immer gleich lang und nicht abhängig von Browser-/Card-Breite.
-- Zusätzlich den Beschreibungsbereich größer machen:
-  - mehr Höhe/Abstand für den Textblock
-  - etwas angenehmere `leading`/Zeilenhöhe
-  - `break-words`/saubere Umbrüche, damit nichts optisch abgesägt wirkt
-- Ich würde also nicht mehr auf “1 Zeile clampen”, sondern einen etwas größeren, stabilen Previewbereich mit fixem Zeichenlimit bauen.
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
 
-Technische Hinweise
-- Dafür ist keine neue Migration nötig; die benötigten Contract-Spalten sind schon vorhanden.
-- Der kritische Teil ist, dass finales Einreichen auch dann funktioniert, wenn der Nutzer nach einem Reload keine `File`-Objekte mehr im State hat. Deshalb müssen gespeicherte Dokument-URLs als First-Class-State behandelt werden.
-- Für die Resume-Logik ist “erster unvollständiger Schritt” robuster als blind den alten Step lokal zu merken.
+---
 
-Betroffene Dateien
-- `src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx`
-- `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx`
+# Vergütungsmodell pro Branding (abgeschlossen)
+
+## Was wurde gemacht
+
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
