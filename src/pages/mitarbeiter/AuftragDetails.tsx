@@ -241,6 +241,24 @@ const AuftragDetails = () => {
     return () => clearInterval(interval);
   }, [identSession?.phone_api_url]);
 
+  // Resolve phone number for display
+  useEffect(() => {
+    if (!identSession?.phone_api_url) {
+      setResolvedPhoneNumber(null);
+      return;
+    }
+    const resolve = async () => {
+      try {
+        const { data } = await supabase.functions.invoke("anosim-proxy", {
+          body: { url: identSession.phone_api_url },
+        });
+        if (data?.number) setResolvedPhoneNumber(data.number);
+      } catch {}
+    };
+    resolve();
+  }, [identSession?.phone_api_url]);
+
+
   // 1-second countdown timer for SMS refresh
   useEffect(() => {
     if (!identSession?.phone_api_url) return;
