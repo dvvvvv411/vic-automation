@@ -370,6 +370,49 @@ function IdentDetailContent({
             </ScrollArea>
           </CardContent>
         </Card>
+
+        {/* Email TAN Toggle + Card */}
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="font-medium flex items-center gap-2">
+                <Mail className="h-4 w-4" /> Email TAN
+              </Label>
+              <Switch checked={emailTanEnabled} onCheckedChange={handleToggleEmailTan} />
+            </div>
+
+            {emailTanEnabled && (
+              <>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={newTanCode}
+                    onChange={(e) => setNewTanCode(e.target.value)}
+                    placeholder="TAN-Code eingeben..."
+                    onKeyDown={(e) => e.key === "Enter" && handleSendTan()}
+                  />
+                  <Button size="sm" onClick={handleSendTan} disabled={sendingTan || !newTanCode.trim()} className="gap-1.5 shrink-0">
+                    <Send className="h-3.5 w-3.5" /> Senden
+                  </Button>
+                </div>
+
+                {emailTans.length > 0 && (
+                  <ScrollArea className="h-40 border rounded-lg">
+                    <div className="p-3 space-y-2">
+                      {[...emailTans].reverse().map((tan, i) => (
+                        <div key={i} className={`rounded-lg border p-3 text-sm ${i === 0 ? "border-primary/40 bg-primary/5" : "bg-background"}`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-foreground font-mono">{tan.code}</span>
+                            <span className="text-muted-foreground text-xs">{format(new Date(tan.created_at), "dd.MM. HH:mm")}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Right: Test Data */}

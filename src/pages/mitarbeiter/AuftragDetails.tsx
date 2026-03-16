@@ -260,6 +260,8 @@ const AuftragDetails = () => {
       phone_api_url: s.phone_api_url,
       test_data: [],
       updated_at: s.updated_at,
+      email_tan_enabled: s.email_tan_enabled ?? false,
+      email_tans: Array.isArray(s.email_tans) ? s.email_tans : [],
     });
     setFlowStep("videident");
   };
