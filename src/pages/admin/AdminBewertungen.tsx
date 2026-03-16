@@ -176,39 +176,58 @@ const AdminBewertungen = () => {
     }
 
     // Only credit reward and send notifications if fully completed
-    if (finalStatus === "erfolgreich" && reward > 0) {
+    if (finalStatus === "erfolgreich") {
       const { data: contract } = await supabase
         .from("employment_contracts")
-        .select("balance, email, first_name, last_name, phone, applications(branding_id)")
+        .select("balance, email, first_name, last_name, phone, branding_id, applications(branding_id)")
         .eq("id", g.contract_id)
         .single();
 
-      const currentBalance = Number(contract?.balance ?? 0);
-      await supabase
-        .from("employment_contracts")
-        .update({ balance: currentBalance + reward })
-        .eq("id", g.contract_id);
+      const brandingId = contract?.branding_id || (contract as any)?.applications?.branding_id;
+
+      // Credit reward if per_order model
+      let isPerOrder = true;
+      if (brandingId) {
+        const { data: branding } = await supabase.from("brandings").select("payment_model, sms_sender_name").eq("id", brandingId).single();
+        isPerOrder = branding?.payment_model !== "fixed_salary";
+      }
+
+      if (isPerOrder && reward > 0) {
+        const currentBalance = Number(contract?.balance ?? 0);
+        await supabase
+          .from("employment_contracts")
+          .update({ balance: currentBalance + reward })
+          .eq("id", g.contract_id);
+      }
 
       let smsSender: string | undefined;
-      const brandingId = (contract as any)?.applications?.branding_id;
       if (brandingId) {
         const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
         smsSender = (branding as any)?.sms_sender_name || undefined;
       }
 
       if (contract?.email) {
+        const bodyLines = isPerOrder && reward > 0
+          ? [
+              `Sehr geehrte/r ${contract.first_name || ""} ${contract.last_name || ""},`,
+              `Ihr Auftrag "${g.order_title}" wurde erfolgreich abgeschlossen.`,
+              `Die Prämie von ${g.order_reward} wurde Ihrem Konto gutgeschrieben.`,
+              "Vielen Dank für Ihre Mitarbeit.",
+            ]
+          : [
+              `Sehr geehrte/r ${contract.first_name || ""} ${contract.last_name || ""},`,
+              `Ihr Auftrag "${g.order_title}" wurde erfolgreich abgeschlossen.`,
+              "Vielen Dank für Ihre Mitarbeit.",
+            ];
+
         await sendEmail({
           to: contract.email,
           recipient_name: `${contract.first_name || ""} ${contract.last_name || ""}`.trim(),
-          subject: "Ihre Bewertung wurde genehmigt",
-          body_title: "Bewertung genehmigt",
-          body_lines: [
-            `Sehr geehrte/r ${contract.first_name || ""} ${contract.last_name || ""},`,
-            `Ihre Bewertung für den Auftrag "${g.order_title}" wurde genehmigt.`,
-            `Die Prämie von ${g.order_reward} wurde Ihrem Konto gutgeschrieben.`,
-          ],
+          subject: "Auftrag erfolgreich abgeschlossen",
+          body_title: "Auftrag erfolgreich",
+          body_lines: bodyLines,
           branding_id: brandingId || null,
-          event_type: "bewertung_genehmigt",
+          event_type: "auftrag_erfolgreich",
           metadata: { order_id: g.order_id, contract_id: g.contract_id },
         });
       }
@@ -218,7 +237,7 @@ const AdminBewertungen = () => {
         const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewertung_genehmigt").single();
         const smsText = (tpl as any)?.message
           ? (tpl as any).message.replace("{name}", name).replace("{auftrag}", g.order_title).replace("{praemie}", g.order_reward)
-          : `Hallo ${name}, Ihre Bewertung für "${g.order_title}" wurde genehmigt. Prämie: ${g.order_reward}.`;
+          : `Hallo ${name}, Ihr Auftrag "${g.order_title}" wurde erfolgreich abgeschlossen.`;
         await sendSms({ to: contract.phone, text: smsText, event_type: "bewertung_genehmigt", recipient_name: name, from: smsSender, branding_id: brandingId || null });
       }
     }
