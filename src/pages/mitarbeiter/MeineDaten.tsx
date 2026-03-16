@@ -142,7 +142,7 @@ const MeineDaten = () => {
 
   const fullName = [contractDetails.first_name, contractDetails.last_name].filter(Boolean).join(" ") || "—";
 
-  const isFixedSalary = branding?.payment_model === "festgehalt";
+  const isFixedSalary = branding?.payment_model === "fixed_salary";
   const getFixedSalary = () => {
     if (!branding) return 0;
     switch (contractDetails.employment_type?.toLowerCase()) {
