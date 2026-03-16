@@ -480,19 +480,16 @@ const MitarbeiterDashboard = () => {
 
                         <CardHeader className="pb-3 pt-5">
                           <div className="flex items-center justify-between mb-2">
-                            <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
-                              #{order.order_number}
-                            </Badge>
+                            {order.order_number ? (
+                              <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-0.5 bg-muted rounded-full">
+                                #{order.order_number}
+                              </Badge>
+                            ) : <span />}
                             <div className="flex items-center gap-1.5">
                               {order.attachmentsPending && order.assignment_status !== "erfolgreich" && (
                                 <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
                                   <Paperclip className="h-3 w-3 mr-1" />
                                   Anhänge erforderlich
-                                </Badge>
-                              )}
-                              {order.is_placeholder && (
-                                <Badge variant="outline" className="text-[11px] text-muted-foreground rounded-full">
-                                  Platzhalter
                                 </Badge>
                               )}
                               <StatusBadge status={order.assignment_status} />
