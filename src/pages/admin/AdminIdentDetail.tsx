@@ -165,8 +165,7 @@ function IdentDetailContent({
   const [sendingTan, setSendingTan] = useState(false);
   const [idDialogOpen, setIdDialogOpen] = useState(false);
   const [assigningPhone, setAssigningPhone] = useState(false);
-  const [newPhoneLink, setNewPhoneLink] = useState("");
-  const [addingPhone, setAddingPhone] = useState(false);
+  const [addToBranding, setAddToBranding] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch contract details for Mitarbeiterdaten card
