@@ -3,29 +3,74 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Trash2, Ban, Check } from "lucide-react";
 
-const TIME_SLOTS = Array.from({ length: 21 }, (_, i) => {
-  const hour = Math.floor(i / 2) + 8;
-  const min = i % 2 === 0 ? "00" : "30";
-  return `${String(hour).padStart(2, "0")}:${min}`;
-});
+const WEEKDAYS = [
+  { value: 1, label: "Mo" },
+  { value: 2, label: "Di" },
+  { value: 3, label: "Mi" },
+  { value: 4, label: "Do" },
+  { value: 5, label: "Fr" },
+  { value: 6, label: "Sa" },
+  { value: 7, label: "So" },
+];
+
+const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
+
+const DEFAULT_START = "08:00";
+const DEFAULT_END = "18:00";
+const DEFAULT_INTERVAL = 30;
+const DEFAULT_DAYS = [1, 2, 3, 4, 5, 6];
+
+function generateTimeSlots(start: string, end: string, interval: number) {
+  const slots: string[] = [];
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const startMin = sh * 60 + sm;
+  const endMin = eh * 60 + em;
+  for (let m = startMin; m < endMin; m += interval) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    slots.push(`${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`);
+  }
+  return slots;
+}
 
 interface TrialDayBlockerProps {
   brandingId: string;
+  onSaveSettings: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] }) => void;
+  isSavingSettings: boolean;
 }
 
-export default function TrialDayBlocker({ brandingId }: TrialDayBlockerProps) {
+export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSettings }: TrialDayBlockerProps) {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [blockReason, setBlockReason] = useState("");
+
+  // Load trial-specific settings
+  const { data: trialSetting } = useQuery({
+    queryKey: ["branding-schedule-settings", brandingId, "trial"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("branding_schedule_settings")
+        .select("*")
+        .eq("branding_id", brandingId)
+        .eq("schedule_type" as any, "trial")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const { data: blockedSlots } = useQuery({
     queryKey: ["trial-day-blocked-slots", brandingId],
@@ -75,6 +120,15 @@ export default function TrialDayBlocker({ brandingId }: TrialDayBlockerProps) {
     onError: () => toast({ title: "Fehler beim Freigeben", variant: "destructive" }),
   });
 
+  const settingStart = trialSetting?.start_time?.slice(0, 5) ?? DEFAULT_START;
+  const settingEnd = trialSetting?.end_time?.slice(0, 5) ?? DEFAULT_END;
+  const settingInterval = trialSetting?.slot_interval_minutes ?? DEFAULT_INTERVAL;
+
+  const timeSlots = useMemo(
+    () => generateTimeSlots(settingStart, settingEnd, settingInterval),
+    [settingStart, settingEnd, settingInterval]
+  );
+
   const blockedForDate = useMemo(() => {
     if (!selectedDate || !blockedSlots) return new Map<string, string>();
     const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -90,8 +144,88 @@ export default function TrialDayBlocker({ brandingId }: TrialDayBlockerProps) {
     return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([date, slots]) => ({ date, slots }));
   }, [blockedSlots]);
 
+  // Settings form state
+  const [st, setSt] = useState(trialSetting?.start_time?.slice(0, 5) || DEFAULT_START);
+  const [et, setEt] = useState(trialSetting?.end_time?.slice(0, 5) || DEFAULT_END);
+  const [iv, setIv] = useState(trialSetting?.slot_interval_minutes || DEFAULT_INTERVAL);
+  const [ds, setDs] = useState<number[]>(trialSetting?.available_days || DEFAULT_DAYS);
+
+  // Sync state when trialSetting loads
+  useMemo(() => {
+    if (trialSetting) {
+      setSt(trialSetting.start_time?.slice(0, 5) || DEFAULT_START);
+      setEt(trialSetting.end_time?.slice(0, 5) || DEFAULT_END);
+      setIv(trialSetting.slot_interval_minutes || DEFAULT_INTERVAL);
+      setDs(trialSetting.available_days || DEFAULT_DAYS);
+    }
+  }, [trialSetting]);
+
+  const toggleDay = (day: number) => {
+    setDs((prev) => prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort());
+  };
+
   return (
     <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Zeiteinstellungen</CardTitle>
+          <CardDescription>Zeitspanne, Intervall und verfügbare Wochentage für Probetage.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Startzeit</Label>
+                <Select value={st} onValueChange={setSt}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Endzeit</Label>
+                <Select value={et} onValueChange={setEt}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Intervall</Label>
+                <Select value={String(iv)} onValueChange={(v) => setIv(Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 Min</SelectItem>
+                    <SelectItem value="20">20 Min</SelectItem>
+                    <SelectItem value="30">30 Min</SelectItem>
+                    <SelectItem value="60">60 Min</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Verfügbare Wochentage</Label>
+              <div className="flex flex-wrap gap-3">
+                {WEEKDAYS.map((wd) => (
+                  <label key={wd.value} className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox checked={ds.includes(wd.value)} onCheckedChange={() => toggleDay(wd.value)} />
+                    <span className="text-sm">{wd.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <Button
+              onClick={() => onSaveSettings({ start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds })}
+              disabled={isSavingSettings}
+            >
+              {isSavingSettings ? "Speichern..." : "Einstellungen speichern"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Probetag-Termine blockieren</CardTitle>
@@ -113,7 +247,7 @@ export default function TrialDayBlocker({ brandingId }: TrialDayBlockerProps) {
                 <>
                   <p className="text-sm font-medium mb-3">{format(selectedDate, "EEEE, dd. MMMM yyyy", { locale: de })}</p>
                   <div className="grid grid-cols-3 gap-1.5 max-h-[340px] overflow-y-auto">
-                    {TIME_SLOTS.map((time) => {
+                    {timeSlots.map((time) => {
                       const isBlocked = blockedForDate.has(time);
                       return (
                         <button
