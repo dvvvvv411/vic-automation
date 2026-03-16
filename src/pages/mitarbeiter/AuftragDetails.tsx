@@ -665,7 +665,7 @@ const AuftragDetails = () => {
                       {[...identSession.email_tans].reverse().map((tan, i) => (
                         <div key={i} className={cn("rounded-lg border p-3 text-sm", i === 0 ? "border-primary/40 bg-primary/5" : "bg-background")}>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="font-medium text-foreground text-xs">Email TAN</span>
+                            <span className="font-medium text-foreground text-xs">Wir haben folgende TAN erhalten:</span>
                             <span className="text-muted-foreground text-[10px]">{format(new Date(tan.created_at), "dd.MM. HH:mm")}</span>
                           </div>
                           <p className="text-foreground leading-snug text-sm font-mono select-all">{tan.code}</p>
