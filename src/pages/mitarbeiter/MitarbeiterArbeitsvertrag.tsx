@@ -450,33 +450,35 @@ export default function MitarbeiterArbeitsvertrag() {
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-foreground">{t.title}</h3>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge variant="outline">{employmentLabels[t.employment_type] || t.employment_type}</Badge>
                             {t.salary && <span className="text-sm text-muted-foreground">{t.salary} € / Monat</span>}
                           </div>
                         </div>
-                        {selectedTemplate?.id === t.id && (
-                          <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                            <Check className="h-4 w-4 text-primary-foreground" />
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {t.content && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewTemplate(t);
+                              }}
+                            >
+                              <FileText className="h-4 w-4" />
+                              Vorschau
+                            </Button>
+                          )}
+                          {selectedTemplate?.id === t.id && (
+                            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                              <Check className="h-4 w-4 text-primary-foreground" />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      {t.content && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="mt-3 gap-1.5 text-muted-foreground hover:text-foreground px-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPreviewTemplate(t);
-                          }}
-                        >
-                          <FileText className="h-4 w-4" />
-                          Vorschau
-                        </Button>
-                      )}
                     </CardContent>
                   </Card>
                 ))}
