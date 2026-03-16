@@ -80,6 +80,16 @@ export default function AdminDashboard() {
     refetchInterval: 10000,
   });
 
+  const { data: waitingIdentCount, isLoading: l6 } = useQuery({
+    queryKey: ["dash-idents-waiting", activeBrandingId],
+    queryFn: async () => {
+      const { count } = await supabase.from("ident_sessions").select("*", { count: "exact", head: true }).in("status", ["waiting", "data_sent"]).eq("branding_id", activeBrandingId!);
+      return count ?? 0;
+    },
+    enabled: ready,
+    refetchInterval: 30000,
+  });
+
   const { data: recentApps } = useQuery({
     queryKey: ["dash-recent-apps", activeBrandingId],
     queryFn: async () => {
