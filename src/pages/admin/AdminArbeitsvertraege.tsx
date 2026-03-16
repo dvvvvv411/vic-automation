@@ -198,7 +198,7 @@ export default function AdminArbeitsvertraege() {
               <TabsTrigger value="offen">Offen<TabBadge count={counts.offen} /></TabsTrigger>
               <TabsTrigger value="eingereicht">Eingereicht<TabBadge count={counts.eingereicht} /></TabsTrigger>
               <TabsTrigger value="genehmigt">Genehmigt<TabBadge count={counts.genehmigt} /></TabsTrigger>
-              <TabsTrigger value="unterzeichnet">Unterzeichnet<TabBadge count={counts.unterzeichnet} /></TabsTrigger>
+              
             </TabsList>
 
             {/* Single content area for all tabs since filtering is done via sortedItems */}
