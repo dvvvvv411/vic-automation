@@ -1,66 +1,43 @@
 
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
+## Problem
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+`MitarbeiterLayout` lädt das Branding über einen unnötig langen Umweg: erst Contract → dann Application → dann Branding. Das dauert 3 sequenzielle DB-Calls, bevor die Farbe überhaupt bekannt ist. Das `profiles.branding_id`-Feld wird nur als Fallback genutzt, obwohl es die primäre Quelle sein sollte.
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+Außerdem gibt es noch den blauen Fallback `"217 91% 60%"` in Zeile 152, der genau die Standardfarbe ist.
 
----
+## Plan
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+### 1. `src/components/mitarbeiter/MitarbeiterLayout.tsx` – Ladereihenfolge umdrehen
 
-## Was wurde gemacht
+Statt sequenziell erst Contract → Application → Branding zu laden, **parallel** laden:
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+```text
+Promise.all([
+  1. profiles.branding_id → brandings (Logo, Farbe, etc.)
+  2. employment_contracts (Contract-Daten)
+])
+```
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+**Branding kommt direkt aus `profiles.branding_id`** – kein Umweg über Contract/Application mehr. Das spart 2 von 3 sequenziellen Calls für die Farbbestimmung.
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+Danach:
+- HSL berechnen
+- Logo preloaden
+- `showContractLink` bestimmen (status bekannt und nicht "genehmigt")
+- Erst dann `panelReady = true`
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+Den blauen Fallback `"217 91% 60%"` durch einen neutralen Grauton ersetzen (z.B. `"0 0% 45%"`), damit selbst im Edge-Case kein Blau erscheint.
 
----
+### 2. `src/components/mitarbeiter/MitarbeiterSidebar.tsx` – `showContractLink` Prop
 
-# Vergütungsmodell pro Branding (abgeschlossen)
+Statt intern über `contractStatus` zu entscheiden, bekommt die Sidebar ein fertiges `showContractLink: boolean` vom Layout. Wird erst gesetzt wenn Contract-Status bekannt ist → kein Flackern.
 
-## Was wurde gemacht
+### Ergebnis
 
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+- Branding-Farbe wird in 1 DB-Call geladen (profiles → brandings), nicht 3
+- Contract lädt parallel dazu
+- Grauer Spinner bis alles fertig
+- Kein blauer Fallback mehr
+- Kein Arbeitsvertrag-Tab-Flackern
 
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
-
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
