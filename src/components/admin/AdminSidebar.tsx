@@ -57,7 +57,7 @@ const navGroups = [
     items: [
       { title: "Mitarbeiter", url: "/admin/mitarbeiter", icon: Users },
       { title: "Aufträge", url: "/admin/auftraege", icon: ClipboardList },
-      
+      { title: "Idents", url: "/admin/idents", icon: Video },
       { title: "Livechat", url: "/admin/livechat", icon: MessageCircle },
       { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
       { title: "Anhänge", url: "/admin/anhaenge", icon: Paperclip },
