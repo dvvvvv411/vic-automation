@@ -323,6 +323,8 @@ const MitarbeiterAuftraege = () => {
                     orderId={a.order_id} 
                     navigate={navigate}
                     hasIdentSession={a.hasIdentSession}
+                    hasReviewSubmitted={a.hasReviewSubmitted}
+                    attachmentsPending={a.attachmentsPending}
                   />
                 </CardContent>
               </Card>
