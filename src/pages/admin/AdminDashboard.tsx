@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import UpcomingStartDates from "@/components/admin/UpcomingStartDates";
 import UpcomingTrialDays from "@/components/admin/UpcomingTrialDays";
+import WaitingIdents from "@/components/admin/WaitingIdents";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const today = () => format(new Date(), "yyyy-MM-dd");
