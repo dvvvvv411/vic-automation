@@ -291,7 +291,8 @@ const MitarbeiterAuftraege = () => {
                   <StatusButton 
                     status={a.status} 
                     orderId={a.order_id} 
-                    navigate={navigate} 
+                    navigate={navigate}
+                    hasIdentSession={a.hasIdentSession}
                   />
                 </CardContent>
               </Card>

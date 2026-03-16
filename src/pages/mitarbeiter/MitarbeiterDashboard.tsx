@@ -164,10 +164,20 @@ const MitarbeiterDashboard = () => {
         .select("*")
         .in("id", orderIds);
 
+      // Load ident sessions to detect "fortführen" state
+      const { data: identSessions } = await supabase
+        .from("ident_sessions")
+        .select("order_id")
+        .eq("contract_id", contract.id)
+        .in("order_id", orderIds);
+
+      const orderIdsWithSession = new Set((identSessions ?? []).map(s => s.order_id));
+
       if (ordersData) {
         setOrders(ordersData.map((o) => ({ 
           ...o, 
           assignment_status: statusMap[o.id] ?? "offen",
+          hasIdentSession: orderIdsWithSession.has(o.id),
         })));
       }
 
