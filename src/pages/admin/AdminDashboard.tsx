@@ -129,7 +129,6 @@ export default function AdminDashboard() {
     { label: "Offene Verträge", value: contractCount, loading: l3, icon: FileCheck, link: "/admin/arbeitsvertraege", accent: "text-orange-600 bg-orange-50" },
     { label: "Termine heute", value: appointmentTodayCount, loading: l4, icon: CalendarClock, link: "/admin/auftragstermine", accent: "text-violet-600 bg-violet-50" },
     { label: "Ungelesene Chats", value: unreadChatCount, loading: l5, icon: MessageCircle, link: "/admin/livechat", accent: "text-rose-600 bg-rose-50" },
-    { label: "Wartende Idents", value: waitingIdentCount, loading: l6, icon: Video, link: "/admin/idents", accent: "text-teal-600 bg-teal-50" },
   ];
 
   const statusConfig: Record<string, { label: string; className: string }> = {
