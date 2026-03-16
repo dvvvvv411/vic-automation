@@ -81,6 +81,7 @@ const App = () => (
               <Route path="anhaenge" element={<AdminAnhaenge />} />
               
               <Route path="idents" element={<AdminIdents />} />
+              <Route path="idents/:id" element={<AdminIdentDetail />} />
               <Route path="livechat" element={<AdminLivechat />} />
               <Route path="bewertungen" element={<AdminBewertungen />} />
               <Route path="emails" element={<AdminEmails />} />
