@@ -266,6 +266,16 @@ export default function MitarbeiterArbeitsvertrag() {
             .eq("id", brandingId)
             .maybeSingle();
           setBrandingData(bd);
+
+          // Preload signature image so it's cached before step 5
+          if (bd?.signature_image_url) {
+            const img = new window.Image();
+            img.onload = () => setSignatureLoaded(true);
+            img.onerror = () => setSignatureLoaded(true);
+            img.src = bd.signature_image_url;
+          } else {
+            setSignatureLoaded(true);
+          }
         }
 
         // Determine resume step
