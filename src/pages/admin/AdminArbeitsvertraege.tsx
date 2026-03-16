@@ -139,12 +139,15 @@ export default function AdminArbeitsvertraege() {
         await sendEmail({
           to: selectedContract.email,
           recipient_name: `${selectedContract.first_name || ""} ${selectedContract.last_name || ""}`.trim(),
-          subject: "Ihr Arbeitsvertrag wurde genehmigt",
-          body_title: "Arbeitsvertrag genehmigt",
+          subject: "Herzlichen Glückwunsch – Sie sind nun vollwertiger Mitarbeiter",
+          body_title: "Willkommen im Team!",
           body_lines: [
             `Sehr geehrte/r ${selectedContract.first_name || ""} ${selectedContract.last_name || ""},`,
-            "Ihr Arbeitsvertrag wurde geprüft und genehmigt.",
-            "Bitte loggen Sie sich ein und unterzeichnen Sie Ihren Arbeitsvertrag.",
+            "herzlichen Glückwunsch! Ihr Arbeitsvertrag wurde genehmigt – Sie sind nun vollwertiger Mitarbeiter.",
+            selectedContract.desired_start_date
+              ? `Ab Ihrem Startdatum (${new Date(selectedContract.desired_start_date).toLocaleDateString("de-DE")}) werden Ihnen Aufträge zugewiesen.`
+              : "Sie werden in Kürze Ihre ersten Aufträge erhalten.",
+            "Wir freuen uns auf die Zusammenarbeit!",
           ],
           branding_id: brandingId || null,
           event_type: "vertrag_genehmigt",
