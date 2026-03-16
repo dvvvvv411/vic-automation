@@ -277,12 +277,12 @@ const AdminBewertungen = () => {
 
     const { data: contract } = await supabase
       .from("employment_contracts")
-      .select("email, first_name, last_name, phone, applications(branding_id)")
+      .select("email, first_name, last_name, phone")
       .eq("id", g.contract_id)
       .single();
 
     let smsSender: string | undefined;
-    const brandingId = (contract as any)?.applications?.branding_id;
+    const brandingId = await resolveContractBranding(g.contract_id);
     if (brandingId) {
       const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
       smsSender = (branding as any)?.sms_sender_name || undefined;

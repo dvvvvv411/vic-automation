@@ -360,13 +360,8 @@ export default function AdminLivechat() {
     let smsSender: string | undefined;
     let notifyBrandingId: string | null = null;
     if (active) {
-      const { data: contractFull } = await supabase
-        .from("employment_contracts")
-        .select("applications(branding_id)")
-        .eq("id", active.contract_id)
-        .single();
-      const brandingId = (contractFull as any)?.applications?.branding_id;
-      notifyBrandingId = brandingId || null;
+      const brandingId = await resolveContractBranding(active.contract_id);
+      notifyBrandingId = brandingId;
       if (brandingId) {
         const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", brandingId).single();
         smsSender = (branding as any)?.sms_sender_name || undefined;
