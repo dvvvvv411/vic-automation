@@ -382,11 +382,25 @@ const MeineDaten = () => {
                 const el = document.getElementById("contract-pdf-content");
                 if (!el) return;
                 const canvas = await html2canvas(el, { scale: 2, useCORS: true });
-                const imgData = canvas.toDataURL("image/png");
                 const pdf = new jsPDF("p", "mm", "a4");
                 const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+                const A4_HEIGHT_PX = (canvas.width * 297) / 210;
+                let yOffset = 0;
+                let page = 0;
+                while (yOffset < canvas.height) {
+                  if (page > 0) pdf.addPage();
+                  const pageCanvas = document.createElement("canvas");
+                  pageCanvas.width = canvas.width;
+                  const sliceHeight = Math.min(A4_HEIGHT_PX, canvas.height - yOffset);
+                  pageCanvas.height = sliceHeight;
+                  const ctx = pageCanvas.getContext("2d")!;
+                  ctx.drawImage(canvas, 0, yOffset, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+                  const pageImg = pageCanvas.toDataURL("image/png");
+                  const pageH = (sliceHeight * pdfWidth) / canvas.width;
+                  pdf.addImage(pageImg, "PNG", 0, 0, pdfWidth, pageH);
+                  yOffset += A4_HEIGHT_PX;
+                  page++;
+                }
                 pdf.save("arbeitsvertrag.pdf");
               }}
             >
