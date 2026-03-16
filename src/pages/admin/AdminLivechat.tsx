@@ -64,39 +64,23 @@ export default function AdminLivechat() {
     role: "admin",
   });
 
-  const [adminOnlineStatus, setAdminOnlineStatus] = useState(false);
   const [onlineContractIds, setOnlineContractIds] = useState<Set<string>>(new Set());
 
-  const handleOnlineToggle = async (checked: boolean) => {
-    setAdminOnlineStatus(checked);
-    if (user) {
-      await supabase.from("profiles").update({ is_chat_online: checked } as any).eq("id", user.id);
-    }
-  };
-
-  // Load admin profile
+  // Load branding chat profile
   useEffect(() => {
-    if (!user) return;
+    if (!activeBrandingId || !ready) return;
     supabase
-      .from("profiles")
-      .select("avatar_url, display_name, full_name, is_chat_online")
-      .eq("id", user.id)
+      .from("brandings")
+      .select("chat_display_name, chat_avatar_url, chat_online")
+      .eq("id", activeBrandingId)
       .maybeSingle()
       .then(({ data }: any) => {
         if (data) {
-          setAdminAvatar(data.avatar_url);
-          setAdminDisplayName(data.display_name || data.full_name || "");
-          setAdminOnlineStatus(data.is_chat_online ?? false);
+          setAdminAvatar(data.chat_avatar_url);
+          setAdminDisplayName(data.chat_display_name || "");
         }
       });
-  }, [user]);
-
-  const saveDisplayName = async () => {
-    if (!user) return;
-    await supabase.from("profiles").update({ display_name: adminDisplayName } as any).eq("id", user.id);
-    toast.success("Anzeigename gespeichert");
-    setEditingName(false);
-  };
+  }, [activeBrandingId, ready]);
 
   // Load conversations + online status (filtered by branding)
   const loadConversations = useCallback(async () => {
