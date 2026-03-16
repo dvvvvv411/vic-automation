@@ -1,66 +1,40 @@
 
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
+# Änderungen: Anhänge-Status-Buttons & Labels
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+## 1. Mitarbeiter-Übersicht: Button nach Einreichung ändern
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+**Problem**: Nachdem der User Anhänge eingereicht hat, zeigt der Button auf `/mitarbeiter/auftraege` weiterhin "Anhänge einreichen" statt "In Überprüfung".
 
----
+**Lösung in `MitarbeiterAuftraege.tsx`**:
+- Beim Laden der Attachments prüfen, ob alle eingereicht (nicht nur `genehmigt`) sind
+- `attachmentsPending` nur `true` setzen wenn Anhänge noch im Status `entwurf` oder fehlend sind
+- Aktuell: `attachmentsPending = hasReq && !allApproved` — das bleibt auch nach Einreichung `true`, weil `eingereicht !== genehmigt`
+- Fix: `attachmentsPending` auf `false` setzen wenn alle Anhänge mindestens `eingereicht` sind (nicht nur `genehmigt`)
+- Neuer Zustand `attachmentsSubmitted` für den Fall dass alle eingereicht aber noch nicht genehmigt → Button zeigt "In Überprüfung"
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+**StatusButton**: Neuen Fall hinzufügen wenn `attachmentsSubmitted && !attachmentsPending` → disabled Button "Anhänge in Überprüfung" (ähnlich wie `in_pruefung`)
 
-## Was wurde gemacht
+## 2. AuftragDetails Overview: Eingereichte Anhänge anzeigen
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+**Problem**: Wenn der User den Auftrag wieder öffnet und Anhänge eingereicht hat, sieht er nur "In Überprüfung" aber nicht seine hochgeladenen Anhänge.
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+**Lösung in `AuftragDetails.tsx`** (Zeilen ~440-475):
+- Unter der "In Überprüfung" Card: Wenn Anhänge eingereicht sind, eine zusätzliche Card mit Thumbnails der hochgeladenen Dateien anzeigen (read-only, ohne Upload-Buttons)
+- Gleiche Thumbnail-Logik wie im Attachments-Step verwenden
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+## 3. Admin Anhänge-Detail: Richtige Labels anzeigen
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+**Problem**: `getAttachmentLabel` sucht nach `item.label`, aber die `required_attachments` haben `item.title`.
 
----
+**Fix in `AdminAnhaengeDetail.tsx`** (Zeile 83):
+- Ändern von `(item as any)?.label` zu `(item as any)?.title`
 
-# Vergütungsmodell pro Branding (abgeschlossen)
+## Betroffene Dateien
 
-## Was wurde gemacht
+| Datei | Änderung |
+|-------|----------|
+| `MitarbeiterAuftraege.tsx` | `attachmentsPending` Logik + neuer `attachmentsSubmitted` State + StatusButton Anpassung |
+| `AuftragDetails.tsx` | Eingereichte Anhänge als Thumbnails unter "In Überprüfung" Card anzeigen |
+| `AdminAnhaengeDetail.tsx` | `label` → `title` im `getAttachmentLabel` |
 
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
-
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
-
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
