@@ -210,6 +210,7 @@ const MitarbeiterAuftraege = () => {
               title: order.title,
               provider: order.provider,
               reward: order.reward,
+              description: order.description ?? null,
               hasRequiredAttachments: hasReq,
               attachmentsPending: hasReq && !allSubmitted,
               attachmentsSubmitted: allSubmitted && !allApproved,
