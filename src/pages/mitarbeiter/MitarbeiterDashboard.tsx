@@ -190,11 +190,42 @@ const MitarbeiterDashboard = () => {
       const orderIdsWithSession = new Set((identSessions ?? []).map(s => s.order_id));
 
       if (ordersData) {
-        setOrders(ordersData.map((o) => ({ 
-          ...o, 
-          assignment_status: statusMap[o.id] ?? "offen",
-          hasIdentSession: orderIdsWithSession.has(o.id),
-        })));
+        // Load attachments and reviews for attachment-pending detection
+        const { data: attachments } = await supabase
+          .from("order_attachments")
+          .select("order_id, attachment_index, status")
+          .eq("contract_id", contract.id);
+
+        const { data: reviewsForOrders } = await supabase
+          .from("order_reviews")
+          .select("order_id")
+          .eq("contract_id", contract.id)
+          .in("order_id", orderIds);
+
+        const orderIdsWithReview = new Set((reviewsForOrders ?? []).map(r => r.order_id));
+
+        // Group attachments by order_id
+        const attachmentsByOrder: Record<string, Array<{ attachment_index: number; status: string }>> = {};
+        for (const att of attachments ?? []) {
+          if (!attachmentsByOrder[att.order_id]) attachmentsByOrder[att.order_id] = [];
+          attachmentsByOrder[att.order_id].push(att);
+        }
+
+        setOrders(ordersData.map((o) => {
+          const reqAtts = (o.required_attachments as any[] | null) ?? [];
+          const hasReq = reqAtts.length > 0;
+          const orderAtts = attachmentsByOrder[o.id] ?? [];
+          const allApproved = hasReq && reqAtts.every((_: any, i: number) =>
+            orderAtts.some((att) => att.attachment_index === i && att.status === "genehmigt")
+          );
+          return {
+            ...o, 
+            assignment_status: statusMap[o.id] ?? "offen",
+            hasIdentSession: orderIdsWithSession.has(o.id),
+            hasReviewSubmitted: orderIdsWithReview.has(o.id),
+            attachmentsPending: hasReq && !allApproved,
+          };
+        }));
       }
 
       // Fetch reviews with order titles
