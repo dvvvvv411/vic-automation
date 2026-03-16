@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { CalendarIcon, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsUpDown, Upload, X, FileText, PenTool, FileUp } from "lucide-react";
+import { CalendarIcon, Check, CheckCircle2, ChevronLeft, ChevronRight, ChevronsUpDown, Upload, X, FileText, PenTool, FileUp, Trash2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { format, isBefore, startOfDay, parse } from "date-fns";
 import { de } from "date-fns/locale";
@@ -1052,11 +1052,12 @@ export default function MitarbeiterArbeitsvertrag() {
               onTouchEnd={stopDrawing}
             />
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={clearCanvas}>Löschen</Button>
-            <Button variant="outline" onClick={() => setSigDialogOpen(false)}>Abbrechen</Button>
+          <DialogFooter className="flex flex-row justify-between items-center sm:justify-between">
+            <Button variant="ghost" size="icon" onClick={clearCanvas} className="text-muted-foreground">
+              <Trash2 className="h-4 w-4" />
+            </Button>
             <Button onClick={handleSign} disabled={submitting}>
-              {submitting ? "Wird eingereicht..." : "Unterschreiben & Einreichen"}
+              {submitting ? "Wird eingereicht..." : "Bestätigen"}
             </Button>
           </DialogFooter>
         </DialogContent>
