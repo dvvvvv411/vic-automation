@@ -142,6 +142,18 @@ const MeineDaten = () => {
 
   const fullName = [contractDetails.first_name, contractDetails.last_name].filter(Boolean).join(" ") || "—";
 
+  const isFixedSalary = branding?.payment_model === "festgehalt";
+  const getFixedSalary = () => {
+    if (!branding) return 0;
+    switch (contractDetails.employment_type?.toLowerCase()) {
+      case "minijob": return Number(branding.salary_minijob) || 0;
+      case "teilzeit": return Number(branding.salary_teilzeit) || 0;
+      case "vollzeit": return Number(branding.salary_vollzeit) || 0;
+      default: return 0;
+    }
+  };
+  const fixedSalary = getFixedSalary();
+
   const formatIban = (iban: string | null) => {
     if (!iban) return "—";
     return iban.replace(/(.{4})/g, "$1 ").trim();
