@@ -417,7 +417,7 @@ const AuftragDetails = () => {
                   <p className="font-medium text-foreground">{order.provider}</p>
                 </div>
               )}
-              {!isFixedSalary && (
+              {!isFixedSalary && order.reward && !["0", "0€", "0 €"].includes(order.reward.trim()) && (
                 <div>
                   <span className="text-muted-foreground">Prämie</span>
                   <p className="font-semibold text-primary">{order.reward}{order.reward.includes("€") ? "" : " €"}</p>

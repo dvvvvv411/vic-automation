@@ -321,14 +321,15 @@ const MitarbeiterAuftraege = () => {
 
                 <CardContent className="flex-1 flex flex-col justify-between gap-4 pt-0">
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm pb-3 border-b border-border/30">
-                      <span className="text-muted-foreground">Anbieter</span>
-                      <span className="font-medium text-foreground">{a.provider}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Prämie</span>
-                      <span className="font-semibold text-primary">{a.reward}{a.reward.includes("€") ? "" : " €"}</span>
-                    </div>
+                    {a.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 pb-3 border-b border-border/30">{a.description}</p>
+                    )}
+                    {a.reward && !["0", "0€", "0 €"].includes(a.reward.trim()) && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Prämie</span>
+                        <span className="font-semibold text-primary">{a.reward}{a.reward.includes("€") ? "" : " €"}</span>
+                      </div>
+                    )}
 
                   </div>
 
