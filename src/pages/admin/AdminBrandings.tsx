@@ -1,15 +1,7 @@
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -18,68 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, Palette, Trash2, Copy, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { z } from "zod";
-import type { Tables } from "@/integrations/supabase/types";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
-const brandingSchema = z.object({
-  company_name: z.string().min(1, "Unternehmensname erforderlich").max(200),
-  street: z.string().max(200).optional(),
-  zip_code: z.string().max(10).optional(),
-  city: z.string().max(100).optional(),
-  trade_register: z.string().max(100).optional(),
-  register_court: z.string().max(200).optional(),
-  managing_director: z.string().max(200).optional(),
-  vat_id: z.string().max(50).optional(),
-  domain: z.string().max(200).optional(),
-  email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
-  brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Ungültiger Hex-Farbcode"),
-  resend_from_email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
-  resend_from_name: z.string().max(200).optional(),
-  resend_api_key: z.string().max(200).optional(),
-  sms_sender_name: z.string().max(11, "Max. 11 Zeichen").optional(),
-  phone: z.string().max(20, "Max. 20 Zeichen").optional(),
-  payment_model: z.enum(["per_order", "fixed_salary"]),
-  salary_minijob: z.string().optional(),
-  salary_teilzeit: z.string().optional(),
-  salary_vollzeit: z.string().optional(),
-});
-
-type BrandingForm = z.infer<typeof brandingSchema>;
-
-const initialForm: BrandingForm = {
-  company_name: "",
-  street: "",
-  zip_code: "",
-  city: "",
-  trade_register: "",
-  register_court: "",
-  managing_director: "",
-  vat_id: "",
-  domain: "",
-  email: "",
-  brand_color: "#3B82F6",
-  resend_from_email: "",
-  resend_from_name: "",
-  resend_api_key: "",
-  sms_sender_name: "",
-  phone: "",
-  payment_model: "per_order" as const,
-  salary_minijob: "",
-  salary_teilzeit: "",
-  salary_vollzeit: "",
-};
-
 export default function AdminBrandings() {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<BrandingForm>(initialForm);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [editBranding, setEditBranding] = useState<Tables<"brandings"> | null>(null);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
@@ -108,130 +45,6 @@ export default function AdminBrandings() {
     onError: () => toast.error("Fehler beim Löschen"),
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: BrandingForm & { logo_url?: string }) => {
-    const cleaned: Record<string, any> = {};
-      Object.entries(data).forEach(([key, value]) => {
-        if (key === "salary_minijob" || key === "salary_teilzeit" || key === "salary_vollzeit") {
-          cleaned[key] = value ? parseFloat(value as string) : null;
-        } else {
-          cleaned[key] = value === "" ? null : (value as string);
-        }
-      });
-      const { error } = await supabase.from("brandings").insert(cleaned as any);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["brandings"] });
-      closeDialog();
-      toast.success("Branding erstellt");
-    },
-    onError: () => toast.error("Fehler beim Erstellen"),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: BrandingForm & { logo_url?: string } }) => {
-      const cleaned: Record<string, any> = {};
-      Object.entries(data).forEach(([key, value]) => {
-        if (key === "salary_minijob" || key === "salary_teilzeit" || key === "salary_vollzeit") {
-          cleaned[key] = value ? parseFloat(value as string) : null;
-        } else {
-          cleaned[key] = value === "" ? null : (value as string);
-        }
-      });
-      const { error } = await supabase.from("brandings").update(cleaned as any).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["brandings"] });
-      closeDialog();
-      toast.success("Branding aktualisiert");
-    },
-    onError: () => toast.error("Fehler beim Aktualisieren"),
-  });
-
-  const closeDialog = () => {
-    setOpen(false);
-    setForm(initialForm);
-    setLogoFile(null);
-    setErrors({});
-    setEditBranding(null);
-  };
-
-  const openEdit = (branding: Tables<"brandings">) => {
-    setEditBranding(branding);
-    setForm({
-      company_name: branding.company_name || "",
-      street: branding.street || "",
-      zip_code: branding.zip_code || "",
-      city: branding.city || "",
-      trade_register: branding.trade_register || "",
-      register_court: branding.register_court || "",
-      managing_director: branding.managing_director || "",
-      vat_id: branding.vat_id || "",
-      domain: branding.domain || "",
-      email: branding.email || "",
-      brand_color: branding.brand_color || "#3B82F6",
-      resend_from_email: (branding as any).resend_from_email || "",
-      resend_from_name: (branding as any).resend_from_name || "",
-      resend_api_key: (branding as any).resend_api_key || "",
-      sms_sender_name: (branding as any).sms_sender_name || "",
-      phone: (branding as any).phone || "",
-      payment_model: ((branding as any).payment_model === "fixed_salary" ? "fixed_salary" : "per_order") as "per_order" | "fixed_salary",
-      salary_minijob: (branding as any).salary_minijob?.toString() || "",
-      salary_teilzeit: (branding as any).salary_teilzeit?.toString() || "",
-      salary_vollzeit: (branding as any).salary_vollzeit?.toString() || "",
-    });
-    setOpen(true);
-  };
-
-  const handleSubmit = async () => {
-    const result = brandingSchema.safeParse(form);
-    if (!result.success) {
-      const fieldErrors: Record<string, string> = {};
-      result.error.errors.forEach((e) => {
-        if (e.path[0]) fieldErrors[e.path[0] as string] = e.message;
-      });
-      setErrors(fieldErrors);
-      return;
-    }
-    setErrors({});
-
-    let logo_url: string | undefined;
-    if (logoFile) {
-      const ext = logoFile.name.split(".").pop();
-      const path = `${crypto.randomUUID()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("branding-logos")
-        .upload(path, logoFile);
-      if (uploadError) {
-        toast.error("Logo-Upload fehlgeschlagen");
-        return;
-      }
-      const { data: publicUrl } = supabase.storage
-        .from("branding-logos")
-        .getPublicUrl(path);
-      logo_url = publicUrl.publicUrl;
-    }
-
-    if (editBranding) {
-      updateMutation.mutate({
-        id: editBranding.id,
-        data: { ...result.data, ...(logo_url ? { logo_url } : {}) },
-      });
-    } else {
-      createMutation.mutate({ ...result.data, logo_url });
-    }
-  };
-
-  const updateField = (key: keyof BrandingForm, value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: "" }));
-  };
-
-  const isEditing = !!editBranding;
-  const isPending = isEditing ? updateMutation.isPending : createMutation.isPending;
-
   return (
     <>
       <motion.div
@@ -244,247 +57,12 @@ export default function AdminBrandings() {
           <h2 className="text-3xl font-bold tracking-tight text-foreground">Brandings</h2>
           <p className="text-muted-foreground mt-1">Verwalten Sie alle Ihre Landingpage-Brandings.</p>
         </div>
-        <Button onClick={() => { setEditBranding(null); setForm(initialForm); setOpen(true); }}>
+        <Button onClick={() => navigate("/admin/brandings/neu")}>
           <Plus className="h-4 w-4 mr-2" />
           Branding hinzufügen
         </Button>
       </motion.div>
 
-      <Dialog open={open} onOpenChange={(v) => { if (!v) closeDialog(); else setOpen(true); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{isEditing ? "Branding bearbeiten" : "Neues Branding erstellen"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {/* Branding ID (read-only, only in edit mode) */}
-            {isEditing && (
-              <div className="space-y-2">
-                <Label>Branding-ID</Label>
-                <Input value={editBranding.id} disabled className="font-mono text-xs" />
-              </div>
-            )}
-
-            {/* Logo */}
-            <div className="space-y-2">
-              <Label>Logo</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-              />
-              {isEditing && editBranding.logo_url && !logoFile && (
-                <div className="flex items-center gap-2 mt-1">
-                  <img src={editBranding.logo_url} alt="Aktuelles Logo" className="h-8 w-8 rounded object-contain" />
-                  <span className="text-xs text-muted-foreground">Aktuelles Logo</span>
-                </div>
-              )}
-            </div>
-
-            {/* Company Name */}
-            <div className="space-y-2">
-              <Label>Unternehmensname *</Label>
-              <Input
-                value={form.company_name}
-                onChange={(e) => updateField("company_name", e.target.value)}
-                placeholder="Muster GmbH"
-              />
-              {errors.company_name && <p className="text-xs text-destructive">{errors.company_name}</p>}
-            </div>
-
-            {/* Address */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Straße & Hausnummer</Label>
-                <Input value={form.street} onChange={(e) => updateField("street", e.target.value)} placeholder="Musterstr. 1" />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <Label>PLZ</Label>
-                  <Input value={form.zip_code} onChange={(e) => updateField("zip_code", e.target.value)} placeholder="93047" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Stadt</Label>
-                  <Input value={form.city} onChange={(e) => updateField("city", e.target.value)} placeholder="Regensburg" />
-                </div>
-              </div>
-            </div>
-
-            {/* Register */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Handelsregister</Label>
-                <Input value={form.trade_register} onChange={(e) => updateField("trade_register", e.target.value)} placeholder="HRB 16675" />
-              </div>
-              <div className="space-y-2">
-                <Label>Registergericht</Label>
-                <Input value={form.register_court} onChange={(e) => updateField("register_court", e.target.value)} placeholder="Amtsgericht Regensburg" />
-              </div>
-            </div>
-
-            {/* Director & VAT */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Geschäftsführer</Label>
-                <Input value={form.managing_director} onChange={(e) => updateField("managing_director", e.target.value)} placeholder="Max Mustermann" />
-              </div>
-              <div className="space-y-2">
-                <Label>Umsatzsteuer-ID</Label>
-                <Input value={form.vat_id} onChange={(e) => updateField("vat_id", e.target.value)} placeholder="DE123456789" />
-              </div>
-            </div>
-
-            {/* Domain & Email */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Domain</Label>
-                <Input value={form.domain} onChange={(e) => updateField("domain", e.target.value)} placeholder="example.com" />
-              </div>
-              <div className="space-y-2">
-                <Label>E-Mail</Label>
-                <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="info@example.com" />
-                {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-              </div>
-            </div>
-
-            {/* Resend E-Mail-Konfiguration */}
-            <div className="pt-2">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-sm font-medium text-muted-foreground">Resend E-Mail-Konfiguration</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Absender-E-Mail</Label>
-                <Input value={form.resend_from_email} onChange={(e) => updateField("resend_from_email", e.target.value)} placeholder="noreply@example.com" />
-                {errors.resend_from_email && <p className="text-xs text-destructive">{errors.resend_from_email}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Absendername</Label>
-                <Input value={form.resend_from_name} onChange={(e) => updateField("resend_from_name", e.target.value)} placeholder="Muster GmbH" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Resend API Key</Label>
-              <Input type="password" value={form.resend_api_key} onChange={(e) => updateField("resend_api_key", e.target.value)} placeholder="re_..." />
-            </div>
-
-            {/* SMS-Konfiguration */}
-            <div className="pt-2">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-sm font-medium text-muted-foreground">SMS-Konfiguration</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>SMS-Absendername</Label>
-              <Input
-                value={form.sms_sender_name}
-                onChange={(e) => updateField("sms_sender_name", e.target.value)}
-                placeholder="MusterGmbH"
-                maxLength={11}
-              />
-              <p className="text-xs text-muted-foreground">Max. 11 Zeichen (alphanumerisch). Wird als Absender bei SMS angezeigt.</p>
-              {errors.sms_sender_name && <p className="text-xs text-destructive">{errors.sms_sender_name}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label>Telefonnummer</Label>
-              <Input
-                value={form.phone}
-                onChange={(e) => updateField("phone", e.target.value)}
-                placeholder="+49 123 456789"
-                maxLength={20}
-              />
-              <p className="text-xs text-muted-foreground">Wird in SMS-Erinnerungen als Rückrufnummer verwendet.</p>
-              {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
-            </div>
-
-            {/* Vergütungsmodell */}
-            <div className="pt-2">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-sm font-medium text-muted-foreground">Vergütungsmodell</span>
-                <div className="h-px flex-1 bg-border" />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <RadioGroup
-                value={form.payment_model}
-                onValueChange={(v) => setForm((prev) => ({ ...prev, payment_model: v as "per_order" | "fixed_salary" }))}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="per_order" id="per_order" />
-                  <Label htmlFor="per_order" className="cursor-pointer">Vergütung pro Auftrag</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="fixed_salary" id="fixed_salary" />
-                  <Label htmlFor="fixed_salary" className="cursor-pointer">Festgehalt</Label>
-                </div>
-              </RadioGroup>
-
-              {form.payment_model === "fixed_salary" && (
-                <div className="grid grid-cols-3 gap-4 mt-3">
-                  <div className="space-y-2">
-                    <Label>Minijob (€)</Label>
-                    <Input
-                      placeholder="520"
-                      value={form.salary_minijob}
-                      onChange={(e) => updateField("salary_minijob", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Teilzeit (€)</Label>
-                    <Input
-                      placeholder="1500"
-                      value={form.salary_teilzeit}
-                      onChange={(e) => updateField("salary_teilzeit", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Vollzeit (€)</Label>
-                    <Input
-                      placeholder="3000"
-                      value={form.salary_vollzeit}
-                      onChange={(e) => updateField("salary_vollzeit", e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Brand Color */}
-            <div className="space-y-2">
-              <Label>Brandingfarbe</Label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={form.brand_color}
-                  onChange={(e) => updateField("brand_color", e.target.value)}
-                  className="w-10 h-10 rounded-md border border-input cursor-pointer p-0"
-                />
-                <Input
-                  value={form.brand_color}
-                  onChange={(e) => updateField("brand_color", e.target.value)}
-                  placeholder="#3B82F6"
-                  className="w-32"
-                />
-                {errors.brand_color && <p className="text-xs text-destructive">{errors.brand_color}</p>}
-              </div>
-            </div>
-
-            <Button onClick={handleSubmit} disabled={isPending} className="w-full mt-2 shadow-sm hover:shadow-md transition-all">
-              {isPending
-                ? (isEditing ? "Wird gespeichert..." : "Wird erstellt...")
-                : (isEditing ? "Branding speichern" : "Branding erstellen")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Table */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -496,7 +74,7 @@ export default function AdminBrandings() {
           <div className="text-center py-16 border border-dashed border-border rounded-lg">
             <Palette className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground mb-4">Noch keine Brandings vorhanden.</p>
-            <Button variant="outline" onClick={() => setOpen(true)}>
+            <Button variant="outline" onClick={() => navigate("/admin/brandings/neu")}>
               <Plus className="h-4 w-4 mr-2" />
               Erstes Branding hinzufügen
             </Button>
@@ -562,7 +140,7 @@ export default function AdminBrandings() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => openEdit(b)}
+                          onClick={() => navigate(`/admin/brandings/${b.id}`)}
                         >
                           <Pencil className="h-4 w-4 text-muted-foreground" />
                         </Button>

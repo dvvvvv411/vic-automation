@@ -71,6 +71,8 @@ const App = () => (
             >
               <Route index element={<AdminDashboard />} />
               <Route path="brandings" element={<AdminBrandings />} />
+              <Route path="brandings/neu" element={<AdminBrandingForm />} />
+              <Route path="brandings/:id" element={<AdminBrandingForm />} />
               <Route path="bewerbungen" element={<AdminBewerbungen />} />
               <Route path="bewerbungsgespraeche" element={<AdminBewerbungsgespraeche />} />
               <Route path="probetag" element={<AdminProbetag />} />
