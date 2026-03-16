@@ -312,6 +312,7 @@ const AdminBewertungen = () => {
 
   const pendingReviews = grouped.filter((g) => !["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status));
   const approvedReviews = grouped.filter((g) => g.assignment_status === "erfolgreich");
+  const rejectedReviews = grouped.filter((g) => g.assignment_status === "fehlgeschlagen");
 
   const renderTable = (items: GroupedReview[], showActions: boolean) => {
     if (items.length === 0) {
