@@ -235,7 +235,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           <div className="py-8 text-center text-muted-foreground">Laden...</div>
         ) : !items?.length ? (
           <div className="py-8 text-center text-muted-foreground">
-            {mode === "order" ? "Keine unterzeichneten Mitarbeiter vorhanden." : "Keine Aufträge vorhanden."}
+            {mode === "order" ? "Keine Mitarbeiter für dieses Branding vorhanden." : "Keine Aufträge vorhanden."}
           </div>
         ) : (
           <>
