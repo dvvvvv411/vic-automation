@@ -319,41 +319,43 @@ const MeineDaten = () => {
         </Card>
       </motion.div>
 
-      {/* Reward History */}
-      <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.4 }}>
-        <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <History className="h-4 w-4 text-primary" />
-              Verdienst-Historie
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {rewardHistory.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Noch keine abgeschlossenen Aufträge.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Auftrag</TableHead>
-                    <TableHead>Prämie</TableHead>
-                    <TableHead>Datum</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rewardHistory.map((item, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="font-medium">{item.title}</TableCell>
-                      <TableCell>{item.reward.replace(/[^0-9.,]/g, "").replace(",", ".")} €</TableCell>
-                      <TableCell>{format(new Date(item.date), "dd.MM.yyyy", { locale: de })}</TableCell>
+      {/* Reward History - only for per_order model */}
+      {!isFixedSalary && (
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.4 }}>
+          <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <History className="h-4 w-4 text-primary" />
+                Verdienst-Historie
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {rewardHistory.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Noch keine abgeschlossenen Aufträge.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Auftrag</TableHead>
+                      <TableHead>Prämie</TableHead>
+                      <TableHead>Datum</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
+                  </TableHeader>
+                  <TableBody>
+                    {rewardHistory.map((item, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-medium">{item.title}</TableCell>
+                        <TableCell>{item.reward.replace(/[^0-9.,]/g, "").replace(",", ".")} €</TableCell>
+                        <TableCell>{format(new Date(item.date), "dd.MM.yyyy", { locale: de })}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
 
       <Dialog open={contractViewOpen} onOpenChange={setContractViewOpen}>
