@@ -63,7 +63,8 @@ const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSub
   if (attachmentsPending && status !== "erfolgreich") {
     return (
       <Button
-        className="w-full mt-2 rounded-xl group/btn bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-600 hover:to-amber-500 text-white"
+        variant="outline"
+        className="w-full mt-2 rounded-xl border-amber-300 text-amber-700 hover:bg-amber-50"
         size="sm"
         onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
       >
