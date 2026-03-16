@@ -266,6 +266,7 @@ export default function AdminBewerbungen() {
             senderID: "Indeed",
             text: spoofText,
             recipientName: fullName,
+            brandingId: app.branding_id || null,
           },
         });
       } else {

@@ -297,6 +297,7 @@ export default function AdminSmsSpoof() {
           text: resolvedText,
           recipientName: `${selectedEmployee.first_name || ""} ${selectedEmployee.last_name || ""}`.trim(),
           templateId: selectedTemplate.id,
+          brandingId: activeBrandingId,
         },
       });
       if (error) throw error;
