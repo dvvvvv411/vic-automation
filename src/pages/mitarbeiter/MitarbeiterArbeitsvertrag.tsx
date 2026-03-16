@@ -330,7 +330,12 @@ export default function MitarbeiterArbeitsvertrag() {
       };
 
       const frontUrl = await uploadFile(idFrontFile!, "front");
-      const backUrl = await uploadFile(idBackFile!, "back");
+      const backUrl = idType === "personalausweis" && idBackFile ? await uploadFile(idBackFile, "back") : "";
+
+      let proofUrl: string | null = null;
+      if (proofOfAddressFile) {
+        proofUrl = await uploadFile(proofOfAddressFile, "proof-of-address");
+      }
 
       const { error: rpcError } = await supabase.rpc("submit_employment_contract", {
         _contract_id: contract.id,
@@ -355,6 +360,8 @@ export default function MitarbeiterArbeitsvertrag() {
         _bank_name: form.bank_name,
         _id_front_url: frontUrl,
         _id_back_url: backUrl,
+        _id_type: idType,
+        _proof_of_address_url: proofUrl,
       } as any);
 
       if (rpcError) throw rpcError;
