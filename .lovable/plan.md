@@ -1,66 +1,66 @@
 
+# Datenisolierung: Branding-basiert (abgeschlossen)
 
-# Branding-Spalte aus `profiles` statt `employment_contracts`
+## Was wurde gemacht
 
-## Problem
-Die Branding-Spalte in der Mitarbeiter-Tabelle zeigt "–", weil kein Join auf die `brandings`-Tabelle gemacht wird. Der User möchte, dass das Branding aus der `profiles`-Tabelle kommt (über `profiles.branding_id`), nicht aus `employment_contracts`.
+### DB-Migration
+- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
+- `user_has_any_branding()` Security-Definer-Funktion erstellt
+- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
+- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
+- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
+- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
+- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
 
-Zusätzlich soll ein DB-Update alle bestehenden User nachträglich mit dem korrekten `branding_id` in `profiles` befüllen (basierend auf `employment_contracts.branding_id`).
+### Frontend
+- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
+- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
+- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
+- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
+- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
 
-## Änderungen
+---
 
-### 1. DB-Migration: Bestehende Profile backfillen
+# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
 
-```sql
-UPDATE profiles p
-SET branding_id = ec.branding_id
-FROM employment_contracts ec
-WHERE ec.user_id = p.id
-  AND ec.branding_id IS NOT NULL
-  AND p.branding_id IS NULL;
-```
+## Was wurde gemacht
 
-Dies wird als Data-Update über das Insert-Tool ausgeführt (kein Schema-Change).
+### DB-Migration
+- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
+- `order_number` und `provider` auf nullable gesetzt
+- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
+- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
 
-### 2. Frontend: `AdminMitarbeiter.tsx`
+### Frontend - Admin
+- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
+- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
+- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
+- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
+- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
 
-**Query erweitern** — über `user_id` die `profiles`-Tabelle joinen, um `branding_id` aufzulösen:
+### Frontend - Mitarbeiter
+- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
+- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
+- Upload akzeptiert PNG, JPG, JPEG, PDF
 
-```tsx
-.select("id, first_name, last_name, email, phone, temp_password, user_id, application_id, status, desired_start_date, is_suspended, branding_id, profiles(branding_id, brandings:branding_id(company_name))", { count: "exact" })
-```
+### Frontend - AdminMitarbeiterDetail
+- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
 
-Allerdings ist `user_id` kein FK zu `profiles.id` in Supabase's Sicht — daher besser: Separat die `brandings`-Tabelle über `employment_contracts.branding_id` joinen, ODER den einfacheren Weg nutzen:
+---
 
-Da `employment_contracts` bereits `branding_id` hat, ist der einfachste Join:
+# Vergütungsmodell pro Branding (abgeschlossen)
 
-```tsx
-.select("..., brandings:branding_id(company_name)", { count: "exact" })
-```
+## Was wurde gemacht
 
-**Aber** der User will explizit aus `profiles`. Das Problem: `employment_contracts.user_id` hat keinen FK zu `profiles.id`, daher kann PostgREST den Join nicht automatisch machen.
+### DB-Migration
+- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
 
-**Pragmatische Lösung:** Da alle angezeigten Mitarbeiter zum selben `activeBrandingId` gehören (die Query filtert bereits `.eq("branding_id", activeBrandingId!)`), können wir den Branding-Namen einfach aus dem `BrandingContext` nehmen — das ist korrekt und performant.
+### Frontend - Admin
+- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
+- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
 
-### Angepasster Plan
-
-| Schritt | Was | Wie |
-|---------|-----|-----|
-| 1 | Bestehende Profile backfillen | SQL UPDATE via Insert-Tool |
-| 2 | Branding-Name in Tabelle anzeigen | `brandings`-Array aus `useBrandingFilter` nutzen, `activeBrandingName` ableiten |
-
-### Code-Änderung in `AdminMitarbeiter.tsx`
-
-```tsx
-const { activeBrandingId, ready, brandings } = useBrandingFilter();
-const activeBrandingName = brandings.find(b => b.id === activeBrandingId)?.company_name ?? "–";
-```
-
-In der Tabellenzelle (Zeile ~205):
-```tsx
-// Ersetze:
-{(item as any).applications?.brandings?.company_name || "–"}
-// Mit:
-{activeBrandingName}
-```
-
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
+- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
+- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
+- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary

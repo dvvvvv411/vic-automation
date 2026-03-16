@@ -40,7 +40,8 @@ export default function AdminMitarbeiter() {
   const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string; isSuspended: boolean } | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { activeBrandingId, ready } = useBrandingFilter();
+  const { activeBrandingId, ready, brandings } = useBrandingFilter();
+  const activeBrandingName = brandings.find(b => b.id === activeBrandingId)?.company_name ?? "–";
 
   const { data, isLoading } = useQuery({
     queryKey: ["mitarbeiter", page, activeBrandingId],
@@ -212,7 +213,7 @@ export default function AdminMitarbeiter() {
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {(item as any).applications?.brandings?.company_name || "–"}
+                          {activeBrandingName}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">
