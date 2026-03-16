@@ -332,7 +332,7 @@ export default function AdminSmsHistory() {
                       <TableHead>Empfänger</TableHead>
                       <TableHead>Absender</TableHead>
                       <TableHead>Nachricht</TableHead>
-                      <TableHead>Konto</TableHead>
+                      <TableHead>Branding</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
