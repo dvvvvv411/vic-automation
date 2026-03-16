@@ -59,8 +59,8 @@ const StatusBadge = ({ status }: { status: string }) => {
 const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSubmitted, attachmentsPending }: { 
   status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean; hasReviewSubmitted?: boolean; attachmentsPending?: boolean
 }) => {
-  // Special case: review done but attachments still pending
-  if (status === "offen" && hasReviewSubmitted && attachmentsPending) {
+  // Attachments pending takes priority over regular status (except erfolgreich)
+  if (attachmentsPending && status !== "erfolgreich") {
     return (
       <Button
         className="w-full mt-2 rounded-xl group/btn bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-600 hover:to-amber-500 text-white"
@@ -68,7 +68,7 @@ const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSub
         onClick={() => navigate(`/mitarbeiter/auftragdetails/${orderId}`)}
       >
         <Paperclip className="h-3.5 w-3.5 mr-1.5" />
-        Anhänge hinzufügen
+        Anhänge einreichen
       </Button>
     );
   }
@@ -285,16 +285,10 @@ const MitarbeiterAuftraege = () => {
                         #{a.order_number}
                       </Badge>
                       <div className="flex items-center gap-1.5">
-                        {a.status === "offen" && a.hasReviewSubmitted && a.attachmentsPending && (
+                        {a.attachmentsPending && a.status !== "erfolgreich" && (
                           <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
                             <Paperclip className="h-3 w-3 mr-1" />
                             Anhänge erforderlich
-                          </Badge>
-                        )}
-                        {(a.status === "in_pruefung" || a.status === "erfolgreich") && a.attachmentsPending && (
-                          <Badge variant="outline" className="text-[11px] rounded-full text-amber-600 border-amber-300 bg-amber-50">
-                            <Paperclip className="h-3 w-3 mr-1" />
-                            Anhänge ausstehend
                           </Badge>
                         )}
                         <StatusBadge status={a.status} />

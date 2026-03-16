@@ -339,6 +339,22 @@ const AuftragDetails = () => {
       .eq("status", "entwurf");
     if (updateErr) { toast.error("Fehler beim Absenden der Anhänge."); setSubmittingAttachments(false); return; }
     await loadAttachments();
+
+    // If review already submitted, auto-set assignment to in_pruefung
+    const { data: existingReviews } = await supabase
+      .from("order_reviews")
+      .select("id")
+      .eq("order_id", order.id)
+      .eq("contract_id", contract.id)
+      .limit(1);
+    if (existingReviews && existingReviews.length > 0) {
+      await supabase
+        .from("order_assignments")
+        .update({ status: "in_pruefung" })
+        .eq("order_id", order.id)
+        .eq("contract_id", contract.id);
+    }
+
     toast.success("Anhänge erfolgreich eingereicht!");
     setSubmittingAttachments(false);
   };
