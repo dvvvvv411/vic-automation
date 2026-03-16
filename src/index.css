@@ -56,6 +56,15 @@
   }
 }
 
+/* Prose paragraph spacing for TipTap HTML content */
+.prose p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+.prose p:empty {
+  min-height: 1em;
+}
+
 @layer base {
   * {
     @apply border-border;
