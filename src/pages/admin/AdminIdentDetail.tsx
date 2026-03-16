@@ -279,6 +279,14 @@ function IdentDetailContent({
     } else {
       setPhoneUrl(normalizedUrl);
       toast({ title: "Telefonnummer zugewiesen" });
+      // Optionally add to branding phone_numbers
+      if (addToBranding && !phoneEntries.some(e => e.api_url === normalizedUrl)) {
+        await supabase.from("phone_numbers").insert({
+          api_url: normalizedUrl,
+          branding_id: session.branding_id,
+        });
+        queryClient.invalidateQueries({ queryKey: ["phone_numbers", session.branding_id] });
+      }
       // Resolve the number if not yet in map
       if (!phoneDisplayMap[normalizedUrl]) {
         try {
@@ -291,25 +299,6 @@ function IdentDetailContent({
       onUpdate();
     }
     setAssigningPhone(false);
-  };
-
-  const handleAddNewPhone = async () => {
-    const link = newPhoneLink.trim();
-    if (!link) return;
-    setAddingPhone(true);
-    const normalizedUrl = link.replace("/share/orderbooking?", "/api/v1/orderbookingshare?");
-    const { error } = await supabase.from("phone_numbers").insert({
-      api_url: normalizedUrl,
-      branding_id: session.branding_id,
-    });
-    if (error) {
-      toast({ title: "Fehler", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Nummer hinzugefügt" });
-      setNewPhoneLink("");
-      queryClient.invalidateQueries({ queryKey: ["phone_numbers", session.branding_id] });
-    }
-    setAddingPhone(false);
   };
 
   const handleEndSession = async () => {
