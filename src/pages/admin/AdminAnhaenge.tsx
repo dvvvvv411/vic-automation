@@ -1,38 +1,29 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { CheckCircle, XCircle, ExternalLink } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import { useNavigate } from "react-router-dom";
 
-const statusBadge = (status: string) => {
-  switch (status) {
-    case "genehmigt":
-      return <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">Genehmigt</Badge>;
-    case "abgelehnt":
-      return <Badge variant="outline" className="text-red-600 border-red-300 bg-red-50">Abgelehnt</Badge>;
-    case "entwurf":
-      return <Badge variant="outline" className="text-muted-foreground border-border bg-muted">Entwurf</Badge>;
-    default:
-      return <Badge variant="outline" className="text-blue-600 border-blue-300 bg-blue-50">Eingereicht</Badge>;
-  }
+const groupStatus = (statuses: string[]) => {
+  if (statuses.every((s) => s === "genehmigt"))
+    return <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">Genehmigt</Badge>;
+  if (statuses.some((s) => s === "abgelehnt"))
+    return <Badge variant="outline" className="text-red-600 border-red-300 bg-red-50">Abgelehnt</Badge>;
+  return <Badge variant="outline" className="text-blue-600 border-blue-300 bg-blue-50">Eingereicht</Badge>;
 };
 
 export default function AdminAnhaenge() {
-  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { activeBrandingId, ready } = useBrandingFilter();
 
-  const { data: attachments, isLoading } = useQuery({
-    queryKey: ["admin-order-attachments", activeBrandingId],
+  const { data: groups, isLoading } = useQuery({
+    queryKey: ["admin-order-attachments-grouped", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      // Get contract IDs for branding
       const { data: contracts } = await supabase
         .from("employment_contracts")
         .select("id, first_name, last_name")
@@ -42,44 +33,43 @@ export default function AdminAnhaenge() {
 
       const { data, error } = await supabase
         .from("order_attachments" as any)
-        .select("*, orders(title)")
+        .select("*, orders(title, required_attachments)")
         .in("contract_id", contractIds)
+        .neq("status", "entwurf")
         .order("created_at", { ascending: false });
       if (error) throw error;
 
-      // Enrich with employee names
-      const contractMap = Object.fromEntries((contracts ?? []).map((c) => [c.id, `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim()]));
+      const contractMap = Object.fromEntries(
+        (contracts ?? []).map((c) => [c.id, `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim()])
+      );
 
-      return (data ?? []).map((a: any) => ({
-        ...a,
-        employee_name: contractMap[a.contract_id] || "Unbekannt",
-        order_title: a.orders?.title ?? "–",
-      }));
+      // Group by contract_id + order_id
+      const map = new Map<string, any>();
+      for (const a of (data ?? []) as any[]) {
+        const key = `${a.contract_id}__${a.order_id}`;
+        if (!map.has(key)) {
+          const reqAtt = a.orders?.required_attachments;
+          const requiredCount = Array.isArray(reqAtt) ? reqAtt.length : 0;
+          map.set(key, {
+            contract_id: a.contract_id,
+            order_id: a.order_id,
+            employee_name: contractMap[a.contract_id] || "Unbekannt",
+            order_title: a.orders?.title ?? "–",
+            required_count: requiredCount,
+            uploaded_count: 0,
+            statuses: [] as string[],
+            latest_created_at: a.created_at,
+          });
+        }
+        const g = map.get(key)!;
+        g.uploaded_count += 1;
+        g.statuses.push(a.status);
+        if (a.created_at > g.latest_created_at) g.latest_created_at = a.created_at;
+      }
+
+      return Array.from(map.values());
     },
   });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
-        .from("order_attachments" as any)
-        .update({ status, reviewed_at: new Date().toISOString() } as any)
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-order-attachments"] });
-      toast({ title: "Status aktualisiert" });
-    },
-    onError: (e: Error) => {
-      toast({ title: "Fehler", description: e.message, variant: "destructive" });
-    },
-  });
-
-  // Get required attachment title from order
-  const getAttachmentTitle = (attachment: any) => {
-    // We'll show the file_name or fallback
-    return attachment.file_name || `Anhang ${attachment.attachment_index + 1}`;
-  };
 
   return (
     <div className="space-y-6">
@@ -94,55 +84,37 @@ export default function AdminAnhaenge() {
             <TableRow>
               <TableHead>Mitarbeiter</TableHead>
               <TableHead>Auftrag</TableHead>
-              <TableHead>Datei</TableHead>
+              <TableHead>Hochgeladen</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Eingereicht am</TableHead>
-              <TableHead className="text-right">Aktionen</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
               </TableRow>
-            ) : !attachments?.length ? (
+            ) : !groups?.length ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Keine Anhänge vorhanden</TableCell>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Keine Anhänge vorhanden</TableCell>
               </TableRow>
             ) : (
-              attachments.map((a: any) => (
-                <TableRow key={a.id}>
-                  <TableCell className="font-medium">{a.employee_name}</TableCell>
-                  <TableCell>{a.order_title}</TableCell>
+              groups.map((g: any) => (
+                <TableRow
+                  key={`${g.contract_id}__${g.order_id}`}
+                  className="cursor-pointer"
+                  onClick={() => navigate(`/admin/anhaenge/${g.contract_id}/${g.order_id}`)}
+                >
+                  <TableCell className="font-medium">{g.employee_name}</TableCell>
+                  <TableCell>{g.order_title}</TableCell>
                   <TableCell>
-                    <a href={a.file_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-sm">
-                      {getAttachmentTitle(a)}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
+                    <Badge variant="secondary" className="text-xs">
+                      {g.uploaded_count}/{g.required_count || g.uploaded_count}
+                    </Badge>
                   </TableCell>
-                  <TableCell>{statusBadge(a.status)}</TableCell>
-                  <TableCell className="text-muted-foreground">{format(new Date(a.created_at), "dd.MM.yyyy HH:mm")}</TableCell>
-                  <TableCell className="text-right space-x-1">
-                    {a.status === "eingereicht" && (
-                      <>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={() => updateMutation.mutate({ id: a.id, status: "genehmigt" })}>
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Genehmigen</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={() => updateMutation.mutate({ id: a.id, status: "abgelehnt" })}>
-                              <XCircle className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Ablehnen</TooltipContent>
-                        </Tooltip>
-                      </>
-                    )}
+                  <TableCell>{groupStatus(g.statuses)}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {format(new Date(g.latest_created_at), "dd.MM.yyyy HH:mm")}
                   </TableCell>
                 </TableRow>
               ))
