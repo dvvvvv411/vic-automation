@@ -144,6 +144,9 @@ export default function MitarbeiterArbeitsvertrag() {
           email: contractData.email || "",
           phone: contractData.phone || "",
         }));
+        if ((contractData as any).requires_proof_of_address) {
+          setRequiresProofOfAddress(true);
+        }
       }
 
       // Fetch templates for this branding
