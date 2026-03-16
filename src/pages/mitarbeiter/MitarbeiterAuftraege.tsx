@@ -152,7 +152,7 @@ const MitarbeiterAuftraege = () => {
       const orderIds = rawAssignments.map((a) => a.order_id);
       const { data: orders } = await supabase
         .from("orders")
-        .select("id, order_number, title, provider, reward, is_placeholder, required_attachments")
+        .select("id, order_number, title, provider, reward, is_placeholder, required_attachments, description")
         .in("id", orderIds);
 
 
