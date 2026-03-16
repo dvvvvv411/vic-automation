@@ -332,6 +332,60 @@ const MeineDaten = () => {
         </Card>
       </motion.div>
     </div>
+
+      {/* Contract Viewer Dialog */}
+      <Dialog open={contractViewOpen} onOpenChange={setContractViewOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Arbeitsvertrag</DialogTitle>
+          </DialogHeader>
+          <div id="contract-pdf-content">
+            {templateContent ? (
+              <div className="prose prose-sm max-w-none border border-border rounded-lg p-6 bg-white" dangerouslySetInnerHTML={{ __html: templateContent }} />
+            ) : (
+              <p className="text-muted-foreground text-sm">Kein Vertragstext verfügbar.</p>
+            )}
+
+            {/* Signatures */}
+            <div className="grid grid-cols-2 gap-8 mt-8 pt-6 border-t border-border">
+              {brandingSig?.signature_image_url && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Firmenunterschrift</p>
+                  <img src={brandingSig.signature_image_url} alt="Firmenunterschrift" className="h-16 object-contain" />
+                  <p className="text-sm font-medium mt-1">{brandingSig.signer_name}</p>
+                  {brandingSig.signer_title && <p className="text-xs text-muted-foreground">{brandingSig.signer_title}</p>}
+                </div>
+              )}
+              {(contract as any)?.signature_data && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Ihre Unterschrift</p>
+                  <img src={(contract as any).signature_data} alt="Unterschrift" className="h-16 object-contain" />
+                  <p className="text-sm font-medium mt-1">{contractDetails?.first_name} {contractDetails?.last_name}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={async () => {
+                const el = document.getElementById("contract-pdf-content");
+                if (!el) return;
+                const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+                const imgData = canvas.toDataURL("image/png");
+                const pdf = new jsPDF("p", "mm", "a4");
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+                pdf.save("arbeitsvertrag.pdf");
+              }}
+            >
+              <FileDown className="h-4 w-4 mr-1" /> Als PDF speichern
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
   );
 };
 
