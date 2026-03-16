@@ -486,51 +486,8 @@ export default function AdminLivechat() {
                 <Bell className="h-4 w-4" />
               </Button>
             )}
-            {/* Admin profile popover – always visible */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <div className="cursor-pointer">
-                  <AvatarUpload avatarUrl={adminAvatar} name={adminDisplayName || "Admin"} size={36} />
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-4" align="end">
-                <p className="text-xs text-muted-foreground mb-3">Admin-Profil</p>
-                <div className="flex justify-center mb-3">
-                  <AvatarUpload
-                    avatarUrl={adminAvatar}
-                    name={adminDisplayName || "Admin"}
-                    size={56}
-                    editable
-                    onUploaded={(url) => setAdminAvatar(url)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-foreground">Anzeigename</label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={adminDisplayName}
-                      onChange={(e) => setAdminDisplayName(e.target.value)}
-                      placeholder="Dein Name..."
-                      className="h-8 text-sm"
-                    />
-                    <button
-                      onClick={saveDisplayName}
-                      className="shrink-0 h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
-                    >
-                      OK
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-2">
-                  <label className="text-xs font-medium text-foreground">Online-Status</label>
-                  <div className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rounded-full ${adminOnlineStatus ? "bg-green-500" : "bg-muted-foreground/30"}`} />
-                    <span className="text-xs text-muted-foreground">{adminOnlineStatus ? "Online" : "Offline"}</span>
-                    <Switch checked={adminOnlineStatus} onCheckedChange={handleOnlineToggle} />
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+            {/* Admin avatar display */}
+            <AvatarUpload avatarUrl={adminAvatar} name={adminDisplayName || "Admin"} size={36} />
           </div>
         </div>
 
