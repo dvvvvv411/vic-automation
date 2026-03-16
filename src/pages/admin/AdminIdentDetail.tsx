@@ -163,6 +163,20 @@ function IdentDetailContent({
   const [emailTans, setEmailTans] = useState<Array<{ code: string; created_at: string }>>(session.email_tans ?? []);
   const [newTanCode, setNewTanCode] = useState("");
   const [sendingTan, setSendingTan] = useState(false);
+  const [idDialogOpen, setIdDialogOpen] = useState(false);
+
+  // Fetch contract details for Mitarbeiterdaten card
+  const { data: contractDetails } = useQuery({
+    queryKey: ["admin", "contract-details", session.contract_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("employment_contracts")
+        .select("first_name, last_name, email, phone, birth_date, birth_place, nationality, street, zip_code, city, marital_status, id_front_url, id_back_url")
+        .eq("id", session.contract_id)
+        .single();
+      return data;
+    },
+  });
 
   // Fetch phone numbers filtered by branding
   const { data: phoneEntries = [] } = useQuery({
