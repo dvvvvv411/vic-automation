@@ -516,13 +516,14 @@ const MitarbeiterDashboard = () => {
 
                           </div>
 
-                          <StatusButton 
+                        <StatusButton 
                             status={order.assignment_status} 
                             orderId={order.id} 
                             navigate={navigate}
                             hasIdentSession={order.hasIdentSession}
                             hasReviewSubmitted={order.hasReviewSubmitted}
                             attachmentsPending={order.attachmentsPending}
+                            attachmentsSubmitted={order.attachmentsSubmitted}
                           />
                         </CardContent>
                       </Card>

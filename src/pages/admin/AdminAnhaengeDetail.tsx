@@ -182,6 +182,7 @@ export default function AdminAnhaengeDetail() {
             </Card>
           ))}
         </div>
+        </>
       )}
     </div>
   );
