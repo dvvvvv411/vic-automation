@@ -100,9 +100,10 @@ export default function AdminSmsSpoof() {
   const [previewLog, setPreviewLog] = useState<SpoofLog | null>(null);
 
   useEffect(() => {
+    if (!ready) return;
     fetchTemplates();
     fetchLogs();
-  }, []);
+  }, [activeBrandingId, ready]);
 
   const fetchLogs = async () => {
     setLogsLoading(true);
