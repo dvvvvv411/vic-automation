@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Eye, Users, MoreVertical, Pencil, Trash2, Star, Clock, PackageOpen, Video } from "lucide-react";
+import { Plus, Eye, Users, MoreVertical, Pencil, Trash2, Star, Clock, PackageOpen, Video, Paperclip } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -120,6 +120,12 @@ export default function AdminAuftraege() {
                         <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-300 text-xs">
                           <Video className="h-3 w-3 mr-1" />
                           Video-Chat
+                        </Badge>
+                      )}
+                      {Array.isArray(o.required_attachments) && (o.required_attachments as any[]).length > 0 && (
+                        <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-300 text-xs">
+                          <Paperclip className="h-3 w-3 mr-1" />
+                          Anhänge erforderlich
                         </Badge>
                       )}
                       {count > 0 && (
