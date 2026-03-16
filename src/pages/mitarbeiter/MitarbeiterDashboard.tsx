@@ -136,6 +136,8 @@ const MitarbeiterDashboard = () => {
   const [balance, setBalance] = useState<number>(0);
   const [employmentType, setEmploymentType] = useState<string | null>(null);
   const [contractSubmittedAt, setContractSubmittedAt] = useState<string | null>(null);
+  const [contractStatus, setContractStatus] = useState<string | null>(null);
+  const [contractDismissed, setContractDismissed] = useState(false);
 
   const isFixedSalary = branding?.payment_model === "fixed_salary";
 
