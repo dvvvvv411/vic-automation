@@ -968,7 +968,13 @@ export default function MitarbeiterArbeitsvertrag() {
           )}
 
           {/* Step 5: Contract Preview + Sign */}
-          {step === 5 && selectedTemplate && (
+          {step === 5 && selectedTemplate && !signatureLoaded && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-muted-foreground">Vertrag wird geladen…</p>
+            </div>
+          )}
+          {step === 5 && selectedTemplate && signatureLoaded && (
             <div className="space-y-6">
               <div className="border border-border rounded-lg p-6 bg-white prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: replaceTemplatePlaceholders(selectedTemplate.content) }} />
               
