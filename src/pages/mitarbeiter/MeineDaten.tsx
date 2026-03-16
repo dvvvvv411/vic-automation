@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, MapPin, Star, ClipboardCheck, Euro, CreditCard, CalendarClock, History, FileDown } from "lucide-react";
+import { User, Mail, Phone, MapPin, Star, ClipboardCheck, Euro, CreditCard, CalendarClock, History, FileDown, Eye } from "lucide-react";
 import { addMonths, startOfMonth, format, startOfDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null } | null;
