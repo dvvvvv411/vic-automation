@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
@@ -57,7 +57,7 @@ const navGroups = [
     items: [
       { title: "Mitarbeiter", url: "/admin/mitarbeiter", icon: Users },
       { title: "Aufträge", url: "/admin/auftraege", icon: ClipboardList },
-      
+      { title: "Idents", url: "/admin/idents", icon: Video },
       { title: "Livechat", url: "/admin/livechat", icon: MessageCircle },
       { title: "Bewertungen", url: "/admin/bewertungen", icon: Star },
       { title: "Anhänge", url: "/admin/anhaenge", icon: Paperclip },
@@ -168,12 +168,26 @@ export function AdminSidebar() {
     refetchInterval: 30000,
   });
 
+  const { data: identWaitingCount } = useQuery({
+    queryKey: ["badge-idents-waiting", activeBrandingId],
+    enabled: !!activeBrandingId,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("ident_sessions" as any)
+        .select("*", { count: "exact", head: true })
+        .eq("status", "waiting")
+        .eq("branding_id", activeBrandingId!);
+      return count ?? 0;
+    },
+    refetchInterval: 10000,
+  });
+
   const badgeCounts: Record<string, number> = {
     "/admin/bewerbungen": neuCount ?? 0,
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
     "/admin/probetag": probetagTodayCount ?? 0,
     "/admin/arbeitsvertraege": eingereichtCount ?? 0,
-    
+    "/admin/idents": identWaitingCount ?? 0,
     "/admin/livechat": chatUnreadCount ?? 0,
     "/admin/bewertungen": inPruefungCount ?? 0,
   };

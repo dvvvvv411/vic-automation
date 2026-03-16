@@ -480,6 +480,77 @@ export type Database = {
           },
         ]
       }
+      ident_sessions: {
+        Row: {
+          assignment_id: string
+          branding_id: string | null
+          completed_at: string | null
+          contract_id: string
+          created_at: string
+          id: string
+          order_id: string
+          phone_api_url: string | null
+          status: string
+          test_data: Json | null
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          branding_id?: string | null
+          completed_at?: string | null
+          contract_id: string
+          created_at?: string
+          id?: string
+          order_id: string
+          phone_api_url?: string | null
+          status?: string
+          test_data?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          branding_id?: string | null
+          completed_at?: string | null
+          contract_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          phone_api_url?: string | null
+          status?: string
+          test_data?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ident_sessions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "order_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ident_sessions_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ident_sessions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ident_sessions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interview_appointments: {
         Row: {
           application_id: string
@@ -785,6 +856,7 @@ export type Database = {
           id: string
           is_placeholder: boolean
           is_starter_job: boolean
+          is_videochat: boolean
           order_number: string | null
           order_type: string
           playstore_url: string | null
@@ -806,6 +878,7 @@ export type Database = {
           id?: string
           is_placeholder?: boolean
           is_starter_job?: boolean
+          is_videochat?: boolean
           order_number?: string | null
           order_type?: string
           playstore_url?: string | null
@@ -827,6 +900,7 @@ export type Database = {
           id?: string
           is_placeholder?: boolean
           is_starter_job?: boolean
+          is_videochat?: boolean
           order_number?: string | null
           order_type?: string
           playstore_url?: string | null

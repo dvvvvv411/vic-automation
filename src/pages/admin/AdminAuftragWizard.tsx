@@ -40,6 +40,7 @@ const emptyForm = {
   appstore_url: "",
   playstore_url: "",
   is_starter_job: false,
+  is_videochat: false,
   work_steps: [] as WorkStep[],
   review_questions: [] as string[],
   required_attachments: [] as RequiredAttachment[],
@@ -98,6 +99,7 @@ export default function AdminAuftragWizard() {
         appstore_url: existingOrder.appstore_url ?? "",
         playstore_url: existingOrder.playstore_url ?? "",
         is_starter_job: (existingOrder as any).is_starter_job ?? false,
+        is_videochat: (existingOrder as any).is_videochat ?? false,
         work_steps: parseJson((existingOrder as any).work_steps),
         review_questions: parseJson(existingOrder.review_questions),
         required_attachments: parseJson((existingOrder as any).required_attachments),
@@ -116,6 +118,7 @@ export default function AdminAuftragWizard() {
         appstore_url: form.appstore_url || null,
         playstore_url: form.playstore_url || null,
         is_starter_job: form.is_starter_job,
+        is_videochat: form.is_videochat,
         is_placeholder: form.order_type === "platzhalter",
         work_steps: form.work_steps,
         review_questions: form.review_questions,
@@ -289,6 +292,21 @@ export default function AdminAuftragWizard() {
                   <Label className="font-medium">Als Starter-Job für neue Mitarbeiter festlegen</Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Diese Aufgabe wird automatisch jedem neuen Mitarbeiter direkt nach der Registrierung zugewiesen.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/60">
+              <CardContent className="py-4 flex items-start gap-4">
+                <Switch
+                  checked={form.is_videochat}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, is_videochat: v }))}
+                />
+                <div>
+                  <Label className="font-medium">Video-Chat Verifizierung aktivieren</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Mitarbeiter müssen vor der Bewertung eine Video-Chat Verifizierung durchführen.
                   </p>
                 </div>
               </CardContent>

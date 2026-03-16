@@ -20,6 +20,7 @@ import AdminAuftragWizard from "./pages/admin/AdminAuftragWizard";
 import AdminAnhaenge from "./pages/admin/AdminAnhaenge";
 import AdminLivechat from "./pages/admin/AdminLivechat";
 import AdminBewertungen from "./pages/admin/AdminBewertungen";
+import AdminIdents from "./pages/admin/AdminIdents";
 
 import AdminEmails from "./pages/admin/AdminEmails";
 import AdminSmsTemplates from "./pages/admin/AdminSmsTemplates";
@@ -78,6 +79,7 @@ const App = () => (
               <Route path="auftraege/:id/bearbeiten" element={<AdminAuftragWizard />} />
               <Route path="anhaenge" element={<AdminAnhaenge />} />
               
+              <Route path="idents" element={<AdminIdents />} />
               <Route path="livechat" element={<AdminLivechat />} />
               <Route path="bewertungen" element={<AdminBewertungen />} />
               <Route path="emails" element={<AdminEmails />} />
