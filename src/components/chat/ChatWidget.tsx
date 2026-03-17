@@ -30,8 +30,9 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [adminOnline, setAdminOnline] = useState(false);
+  const [chatSchedule, setChatSchedule] = useState<{ from: string | null; until: string | null }>({ from: null, until: null });
   const [adminProfile, setAdminProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
+  const [now, setNow] = useState(new Date());
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playNotification, playSend } = useChatSounds();
