@@ -165,6 +165,15 @@ const MitarbeiterAuftraege = () => {
     if (!contract) { setLoading(false); return; }
 
     const fetchData = async () => {
+      // Get employment type for hourly rate
+      if (isHourlyRate) {
+        const { data: ec } = await supabase
+          .from("employment_contracts")
+          .select("employment_type")
+          .eq("id", contract.id)
+          .maybeSingle();
+        if (ec) setEmploymentType(ec.employment_type);
+      }
       const { data: rawAssignments } = await supabase
         .from("order_assignments")
         .select("order_id, status, assigned_at")
