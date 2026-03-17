@@ -149,6 +149,7 @@ const MitarbeiterDashboard = () => {
   const [contractDismissed, setContractDismissed] = useState(false);
 
   const isFixedSalary = branding?.payment_model === "fixed_salary";
+  const isHourlyRate = isFixedSalary && branding?.hourly_rate_enabled === true;
 
   const getFixedSalary = () => {
     if (!branding) return 0;
@@ -159,6 +160,18 @@ const MitarbeiterDashboard = () => {
       default: return 0;
     }
   };
+
+  const getHourlyRate = () => {
+    if (!branding) return 0;
+    switch (employmentType?.toLowerCase()) {
+      case "minijob": return Number(branding.hourly_rate_minijob) || 0;
+      case "teilzeit": return Number(branding.hourly_rate_teilzeit) || 0;
+      case "vollzeit": return Number(branding.hourly_rate_vollzeit) || 0;
+      default: return 0;
+    }
+  };
+
+  const [hourlyEarnings, setHourlyEarnings] = useState<number>(0);
   const [avgRating, setAvgRating] = useState<number>(0);
   const [reviewCount, setReviewCount] = useState<number>(0);
   const [recentReviews, setRecentReviews] = useState<{order_title: string; avg: number; date: string}[]>([]);
