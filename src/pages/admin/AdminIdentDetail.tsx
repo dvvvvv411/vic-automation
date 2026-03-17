@@ -260,6 +260,44 @@ function IdentDetailContent({
       toast({ title: "Fehler", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Gespeichert", description: "Daten wurden aktualisiert und an den Mitarbeiter gesendet." });
+
+      // Send SMS notification when data is sent
+      if (filteredData.length > 0 && contract?.phone) {
+        try {
+          const { data: tpl } = await supabase
+            .from("sms_templates" as any)
+            .select("message")
+            .eq("event_type", "ident_daten_gesendet")
+            .single();
+          if (tpl) {
+            const msg = (tpl as any).message
+              .replace("{name}", employeeName)
+              .replace("{auftrag}", orderTitle);
+            const branding = session.branding_id || null;
+            // Fetch sender name from branding
+            let senderName: string | undefined;
+            if (branding) {
+              const { data: br } = await supabase
+                .from("brandings")
+                .select("sms_sender_name")
+                .eq("id", branding)
+                .single();
+              senderName = (br as any)?.sms_sender_name || undefined;
+            }
+            await sendSms({
+              to: contract.phone,
+              text: msg,
+              event_type: "ident_daten_gesendet",
+              recipient_name: employeeName,
+              from: senderName,
+              branding_id: branding,
+            });
+          }
+        } catch (e) {
+          console.error("SMS notification failed:", e);
+        }
+      }
+
       onUpdate();
     }
     setSaving(false);
