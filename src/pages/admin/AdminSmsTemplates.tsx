@@ -49,6 +49,38 @@ export default function AdminSmsTemplates() {
   const [testBrandingId, setTestBrandingId] = useState("");
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
+  const [togglingIdent, setTogglingIdent] = useState(false);
+
+  const { data: identDisabled } = useQuery({
+    queryKey: ["branding-sms-ident-disabled", activeBrandingId],
+    enabled: ready && !!activeBrandingId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brandings")
+        .select("sms_ident_disabled" as any)
+        .eq("id", activeBrandingId!)
+        .single();
+      if (error) throw error;
+      return !!(data as any)?.sms_ident_disabled;
+    },
+  });
+
+  const handleToggleIdentSms = async () => {
+    if (!activeBrandingId) return;
+    setTogglingIdent(true);
+    const newVal = !identDisabled;
+    const { error } = await supabase
+      .from("brandings")
+      .update({ sms_ident_disabled: newVal } as any)
+      .eq("id", activeBrandingId);
+    setTogglingIdent(false);
+    if (error) {
+      toast.error("Fehler beim Speichern");
+    } else {
+      toast.success(newVal ? "SMS deaktiviert" : "SMS aktiviert");
+      queryClient.invalidateQueries({ queryKey: ["branding-sms-ident-disabled", activeBrandingId] });
+    }
+  };
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ["sms-templates", activeBrandingId],
