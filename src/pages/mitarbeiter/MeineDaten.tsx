@@ -112,6 +112,7 @@ const MeineDaten = () => {
             return {
               title: order?.title || "—",
               reward: order?.reward || "0",
+              hours: order?.estimated_hours || "0",
               date: a.assigned_at,
             };
           })
