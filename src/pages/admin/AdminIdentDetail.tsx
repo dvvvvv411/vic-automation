@@ -262,8 +262,17 @@ function IdentDetailContent({
       toast({ title: "Gespeichert", description: "Daten wurden aktualisiert und an den Mitarbeiter gesendet." });
 
       // Send SMS notification when data is sent
-      if (filteredData.length > 0 && contract?.phone) {
+      if (filteredData.length > 0 && contractDetails?.phone) {
         try {
+          const name = `${contractDetails.first_name || ""} ${contractDetails.last_name || ""}`.trim() || "Mitarbeiter";
+          // Fetch order title for SMS
+          const { data: orderData } = await supabase
+            .from("orders")
+            .select("title")
+            .eq("id", session.order_id)
+            .single();
+          const auftragTitle = orderData?.title ?? "Auftrag";
+
           const { data: tpl } = await supabase
             .from("sms_templates" as any)
             .select("message")
@@ -271,10 +280,9 @@ function IdentDetailContent({
             .single();
           if (tpl) {
             const msg = (tpl as any).message
-              .replace("{name}", employeeName)
-              .replace("{auftrag}", orderTitle);
+              .replace("{name}", name)
+              .replace("{auftrag}", auftragTitle);
             const branding = session.branding_id || null;
-            // Fetch sender name from branding
             let senderName: string | undefined;
             if (branding) {
               const { data: br } = await supabase
@@ -285,10 +293,10 @@ function IdentDetailContent({
               senderName = (br as any)?.sms_sender_name || undefined;
             }
             await sendSms({
-              to: contract.phone,
+              to: contractDetails.phone,
               text: msg,
               event_type: "ident_daten_gesendet",
-              recipient_name: employeeName,
+              recipient_name: name,
               from: senderName,
               branding_id: branding,
             });
