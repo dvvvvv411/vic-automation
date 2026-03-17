@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string } | null;
+  branding: { payment_model?: string; hourly_rate_enabled?: boolean; hourly_rate_minijob?: number | null; hourly_rate_teilzeit?: number | null; hourly_rate_vollzeit?: number | null } | null;
   loading: boolean;
 }
 
