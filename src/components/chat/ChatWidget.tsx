@@ -33,9 +33,15 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const [chatSchedule, setChatSchedule] = useState<{ from: string | null; until: string | null }>({ from: null, until: null });
   const [adminProfile, setAdminProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
   const [now, setNow] = useState(new Date());
+  // Tick every 60s to keep online status current
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const adminOnline = isChatOnline(chatSchedule.from, chatSchedule.until);
+
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { playNotification, playSend } = useChatSounds();
   const openRef = useRef(open);
   openRef.current = open;
 
