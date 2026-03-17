@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useChatRealtime, type ChatMessage } from "./useChatRealtime";
 import { useChatSounds } from "./useChatSounds";
 import { useChatTyping } from "./useChatTyping";
-
+import { isChatOnline } from "@/lib/isChatOnline";
 
 import { ChatBubble, TypingIndicator, DateSeparator, SystemMessage } from "./ChatBubble";
 import { AvatarUpload } from "./AvatarUpload";
