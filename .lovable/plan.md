@@ -1,86 +1,51 @@
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+## Plan: Branding-basierte SMS-Deaktivierung fuer Ident-Daten
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+### Ansatz
 
----
+Eine neue Spalte `sms_ident_disabled` (boolean, default `false`) auf der `brandings`-Tabelle. Standardmaessig aktiviert (false = SMS wird gesendet), kann pro Branding deaktiviert werden.
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+### Aenderungen
 
-## Was wurde gemacht
+**1. DB-Migration: Neue Spalte auf `brandings`**
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+```sql
+ALTER TABLE public.brandings
+ADD COLUMN sms_ident_disabled boolean NOT NULL DEFAULT false;
+```
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+**2. `src/pages/admin/AdminSmsTemplates.tsx` — Toggle bei ident_daten_gesendet Template**
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+Beim Template mit `event_type === 'ident_daten_gesendet'` einen Switch anzeigen, der den Wert von `brandings.sms_ident_disabled` fuer das aktive Branding toggelt. Query laedt den aktuellen Wert, Switch speichert direkt per Update auf `brandings`.
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+- Aktives Branding kommt aus `useBrandingFilter().activeBrandingId`
+- Label: "SMS bei Ident-Daten deaktivieren" mit Switch
+- Toggle updatet `brandings.sms_ident_disabled` direkt
 
----
+**3. `src/pages/admin/AdminIdentDetail.tsx` — Pruefung vor SMS-Versand**
 
-# Vergütungsmodell pro Branding (abgeschlossen)
+In der `handleSave`-Funktion (Zeile 265-306): Vor dem SMS-Versand den Branding-Wert `sms_ident_disabled` abfragen. Wenn `true`, wird keine SMS gesendet. Die Branding-Query (Zeile 288-293) wird erweitert um `sms_ident_disabled`.
 
-## Was wurde gemacht
+```typescript
+// Erweitere bestehende Branding-Query
+const { data: br } = await supabase
+  .from("brandings")
+  .select("sms_sender_name, sms_ident_disabled")
+  .eq("id", branding)
+  .single();
+if ((br as any)?.sms_ident_disabled) {
+  // Skip SMS
+} else {
+  await sendSms({ ... });
+}
+```
 
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+### Betroffene Dateien
 
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+| Datei | Aenderung |
+|---|---|
+| DB-Migration | `sms_ident_disabled` Spalte auf `brandings` |
+| `src/pages/admin/AdminSmsTemplates.tsx` | Switch-Toggle beim Ident-Template |
+| `src/pages/admin/AdminIdentDetail.tsx` | Pruefung vor SMS-Versand |
 
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
-
----
-
-# Automatische SMS-Erinnerungen 24h vor Terminen (abgeschlossen)
-
-## Was wurde gemacht
-
-### DB-Migration
-- `reminder_sent` (boolean, default false) auf `interview_appointments` und `trial_day_appointments`
-- `pg_cron` und `pg_net` Extensions aktiviert
-
-### DB-Daten
-- Zwei neue SMS-Templates: `gespraech_erinnerung_auto`, `probetag_erinnerung_auto`
-- Stündlicher Cron-Job `appointment-reminders-hourly` eingerichtet
-
-### Edge Function
-- `send-appointment-reminders`: Prüft stündlich Termine in den nächsten 24-25h, sendet Erinnerungs-SMS via `send-sms`, markiert `reminder_sent = true`
-- SMS wird mit korrekter `branding_id` und `event_type` geloggt → erscheint in SMS-History
-
-### Frontend
-- `AdminSmsTemplates.tsx`: Platzhalter für `gespraech_erinnerung_auto` und `probetag_erinnerung_auto` registriert
