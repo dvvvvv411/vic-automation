@@ -39,7 +39,7 @@ const MeineDaten = () => {
   const [contractDetails, setContractDetails] = useState<ContractDetails | null>(null);
   const [stats, setStats] = useState({ ratedOrders: 0, avgRating: 0 });
   const [pendingPayout, setPendingPayout] = useState(0);
-  const [rewardHistory, setRewardHistory] = useState<{ title: string; reward: string; date: string }[]>([]);
+  const [rewardHistory, setRewardHistory] = useState<{ title: string; reward: string; date: string; hours?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [contractViewOpen, setContractViewOpen] = useState(false);
   const [templateContent, setTemplateContent] = useState<string | null>(null);
