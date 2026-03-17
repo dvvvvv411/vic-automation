@@ -345,9 +345,11 @@ export default function AdminBewerbungen() {
       const { error } = await supabase.from("applications").insert(payload as any);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       setOpen(false);
+      const name = `${variables.first_name || ""} ${variables.last_name || ""}`.trim();
+      sendTelegram("bewerbung_eingegangen", `📝 Neue Bewerbung eingegangen\n\nName: ${name}\nE-Mail: ${variables.email || "–"}`, variables.branding_id as string | undefined);
       setForm(initialForm);
       setErrors({});
       setIsIndeed(false);

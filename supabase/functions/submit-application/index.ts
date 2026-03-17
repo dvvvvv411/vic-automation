@@ -195,6 +195,22 @@ Deno.serve(async (req) => {
       console.error("send-email call failed:", emailErr);
     }
 
+    // Send Telegram notification
+    try {
+      const sendTelegramUrl = `${supabaseUrl}/functions/v1/send-telegram`;
+      await fetch(sendTelegramUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+        body: JSON.stringify({
+          event_type: "bewerbung_eingegangen",
+          message: `📝 Neue Bewerbung eingegangen\n\nName: ${first_name} ${last_name}\nE-Mail: ${email}`,
+          branding_id: branding_id || undefined,
+        }),
+      });
+    } catch (tgErr) {
+      console.error("Telegram notification failed:", tgErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true, application_id: application.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
