@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendSms } from "@/lib/sendSms";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -259,6 +260,52 @@ function IdentDetailContent({
       toast({ title: "Fehler", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Gespeichert", description: "Daten wurden aktualisiert und an den Mitarbeiter gesendet." });
+
+      // Send SMS notification when data is sent
+      if (filteredData.length > 0 && contractDetails?.phone) {
+        try {
+          const name = `${contractDetails.first_name || ""} ${contractDetails.last_name || ""}`.trim() || "Mitarbeiter";
+          // Fetch order title for SMS
+          const { data: orderData } = await supabase
+            .from("orders")
+            .select("title")
+            .eq("id", session.order_id)
+            .single();
+          const auftragTitle = orderData?.title ?? "Auftrag";
+
+          const { data: tpl } = await supabase
+            .from("sms_templates" as any)
+            .select("message")
+            .eq("event_type", "ident_daten_gesendet")
+            .single();
+          if (tpl) {
+            const msg = (tpl as any).message
+              .replace("{name}", name)
+              .replace("{auftrag}", auftragTitle);
+            const branding = session.branding_id || null;
+            let senderName: string | undefined;
+            if (branding) {
+              const { data: br } = await supabase
+                .from("brandings")
+                .select("sms_sender_name")
+                .eq("id", branding)
+                .single();
+              senderName = (br as any)?.sms_sender_name || undefined;
+            }
+            await sendSms({
+              to: contractDetails.phone,
+              text: msg,
+              event_type: "ident_daten_gesendet",
+              recipient_name: name,
+              from: senderName,
+              branding_id: branding,
+            });
+          }
+        } catch (e) {
+          console.error("SMS notification failed:", e);
+        }
+      }
+
       onUpdate();
     }
     setSaving(false);

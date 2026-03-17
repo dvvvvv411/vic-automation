@@ -1,0 +1,1 @@
+INSERT INTO sms_templates (event_type, label, message) VALUES ('ident_daten_gesendet', 'Ident-Daten gesendet', 'Hallo {name}, die Testdaten für deinen Auftrag "{auftrag}" wurden eingereicht. Du kannst den Auftrag jetzt bearbeiten.');

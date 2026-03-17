@@ -36,6 +36,7 @@ const PLACEHOLDER_INFO: Record<string, string[]> = {
   probetag_erinnerung_auto: ["{name}", "{datum}", "{uhrzeit}"],
   konto_erstellt: ["{name}"],
   vertrag_eingereicht: ["{name}"],
+  ident_daten_gesendet: ["{name}", "{auftrag}"],
 };
 
 export default function AdminSmsTemplates() {
