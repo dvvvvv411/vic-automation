@@ -250,6 +250,18 @@ export default function AdminSmsTemplates() {
                       {template.event_type}
                     </Badge>
                   </div>
+                  {template.event_type === "ident_daten_gesendet" && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Switch
+                        checked={!identDisabled}
+                        onCheckedChange={handleToggleIdentSms}
+                        disabled={togglingIdent}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        SMS aktiv für dieses Branding
+                      </span>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <Textarea
