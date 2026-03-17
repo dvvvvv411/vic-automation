@@ -78,6 +78,7 @@ const navGroups = [
       { title: "Livechat", url: "/admin/livechat-einstellungen", icon: MessageCircle },
       { title: "Zeitplan", url: "/admin/zeitplan", icon: Clock },
       { title: "Kunden", url: "/admin/kunden", icon: UserPlus },
+      { title: "Caller", url: "/admin/caller", icon: Phone },
     ],
   },
 ];
