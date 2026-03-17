@@ -1,86 +1,100 @@
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+## Stundenlohn-Untermodell fuer Festgehalt-Brandings
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+### Uebersicht
+
+Wenn ein Branding auf "Festgehalt" steht, soll man zusaetzlich waehlen koennen: **Festgehalt** (wie bisher) oder **Stundenlohn**. Bei Stundenlohn wird ein Stundensatz pro Anstellungsart (Minijob/Teilzeit/Vollzeit) hinterlegt. Im Mitarbeiter-Panel wird dann anhand der `estimated_hours` aus erfolgreich abgeschlossenen Auftraegen berechnet, wie viel der Mitarbeiter verdient hat.
 
 ---
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+### 1. Datenbank-Migration
 
-## Was wurde gemacht
+Neue Spalte auf `brandings`:
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+```sql
+ALTER TABLE public.brandings
+  ADD COLUMN hourly_rate_enabled boolean NOT NULL DEFAULT false,
+  ADD COLUMN hourly_rate_minijob numeric,
+  ADD COLUMN hourly_rate_teilzeit numeric,
+  ADD COLUMN hourly_rate_vollzeit numeric;
+```
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
-
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
-
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+Kein neues Vergütungsmodell noetig — `payment_model` bleibt `fixed_salary`, das Boolean `hourly_rate_enabled` steuert die Unterauswahl.
 
 ---
 
-# Vergütungsmodell pro Branding (abgeschlossen)
+### 2. Admin Branding-Formular (`AdminBrandingForm.tsx`)
 
-## Was wurde gemacht
+Wenn `payment_model === "fixed_salary"`:
+- Neue RadioGroup: **Festgehalt** vs **Stundenlohn** (gesteuert durch `hourly_rate_enabled`)
+- Bei Festgehalt: Minijob/Teilzeit/Vollzeit Felder (wie bisher)
+- Bei Stundenlohn: Drei Felder fuer Stundensatz Minijob/Teilzeit/Vollzeit (€/Stunde)
 
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
-
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
-
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
+Formular-Schema erweitern um `hourly_rate_enabled`, `hourly_rate_minijob`, `hourly_rate_teilzeit`, `hourly_rate_vollzeit`.
 
 ---
 
-# Automatische SMS-Erinnerungen 24h vor Terminen (abgeschlossen)
+### 3. MitarbeiterLayout — Branding-Daten erweitern
 
-## Was wurde gemacht
+In `MitarbeiterLayout.tsx` die Branding-Select-Query erweitern um die neuen Spalten: `hourly_rate_enabled`, `hourly_rate_minijob`, `hourly_rate_teilzeit`, `hourly_rate_vollzeit`.
 
-### DB-Migration
-- `reminder_sent` (boolean, default false) auf `interview_appointments` und `trial_day_appointments`
-- `pg_cron` und `pg_net` Extensions aktiviert
+Das BrandingData-Interface entsprechend erweitern und ueber den Outlet-Context an alle Mitarbeiter-Seiten durchreichen.
 
-### DB-Daten
-- Zwei neue SMS-Templates: `gespraech_erinnerung_auto`, `probetag_erinnerung_auto`
-- Stündlicher Cron-Job `appointment-reminders-hourly` eingerichtet
+---
 
-### Edge Function
-- `send-appointment-reminders`: Prüft stündlich Termine in den nächsten 24-25h, sendet Erinnerungs-SMS via `send-sms`, markiert `reminder_sent = true`
-- SMS wird mit korrekter `branding_id` und `event_type` geloggt → erscheint in SMS-History
+### 4. Mitarbeiter-Dashboard (`MitarbeiterDashboard.tsx`)
 
-### Frontend
-- `AdminSmsTemplates.tsx`: Platzhalter für `gespraech_erinnerung_auto` und `probetag_erinnerung_auto` registriert
+**Berechnung bei Stundenlohn:**
+- Lade alle `order_assignments` mit Status `erfolgreich` fuer den Contract
+- Lade die zugehoerigen `orders` inkl. `estimated_hours`
+- Summiere `estimated_hours` aller erfolgreichen Auftraege
+- Multipliziere mit dem Stundensatz des passenden Anstellungstyps
+
+**Anzeige:**
+- Stats-Card "Festgehalt" → zeigt stattdessen berechneten Stundenlohn-Verdienst
+- Label aendert sich zu "Verdienst (Stundenlohn)"
+- `DashboardPayoutSummary` erhaelt den berechneten Betrag statt des fixen Gehalts
+
+Ein Auftrag zaehlt nur als "erfolgreich" wenn:
+- Auftraege OHNE erforderliche Anhaenge: Bewertung genehmigt (Status = `erfolgreich`)
+- Auftraege MIT erforderlichen Anhaengen: Bewertung + Anhaenge genehmigt (Status = `erfolgreich`)
+
+→ Das ist bereits durch den bestehenden Status `erfolgreich` abgedeckt, da dieser erst gesetzt wird wenn beides genehmigt wurde.
+
+---
+
+### 5. Meine Daten (`MeineDaten.tsx`)
+
+**Statistik-Card:**
+- Bei Stundenlohn: Label "Verdienst" statt "Festgehalt", Wert = Summe (erfolgreich_hours × Stundensatz)
+
+**Gehaltsauszahlung:**
+- Bei Stundenlohn: "Voraussichtlicher Betrag" = berechnete Summe der erfolgreichen Auftraege dieses Monats
+
+**Verdienst-Historie:**
+- Aktuell bei `isFixedSalary` ausgeblendet
+- Neue Bedingung: Einblenden wenn `hourly_rate_enabled === true`
+- Tabelle zeigt pro erfolgreichem Auftrag: Titel, Stunden (`estimated_hours`), Betrag (Stunden × Stundensatz), Datum
+- Spalten: Auftrag | Stunden | Verdienst | Datum
+
+---
+
+### 6. Auftraege-Seite (`MitarbeiterAuftraege.tsx`)
+
+Bei Stundenlohn-Modell: Statt Praemie den berechneten Verdienst (estimated_hours × Stundensatz) anzeigen bei erfolgreich abgeschlossenen Auftraegen.
+
+---
+
+### Betroffene Dateien
+
+| Datei | Aenderung |
+|---|---|
+| **Migration** | 4 neue Spalten auf `brandings` |
+| `AdminBrandingForm.tsx` | Unterauswahl Festgehalt/Stundenlohn + Stundensatz-Felder |
+| `MitarbeiterLayout.tsx` | Branding-Query + Interface erweitern |
+| `MitarbeiterDashboard.tsx` | Stundenlohn-Berechnung fuer Stats + Payout |
+| `MeineDaten.tsx` | Stundenlohn-Berechnung + Verdienst-Historie einblenden |
+| `DashboardPayoutSummary.tsx` | Label-Anpassung fuer Stundenlohn |
+| `MitarbeiterAuftraege.tsx` | Verdienst pro Auftrag anzeigen |
+
