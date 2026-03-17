@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useChatRealtime, type ChatMessage } from "./useChatRealtime";
 import { useChatSounds } from "./useChatSounds";
 import { useChatTyping } from "./useChatTyping";
-
+import { isChatOnline } from "@/lib/isChatOnline";
 
 import { ChatBubble, TypingIndicator, DateSeparator, SystemMessage } from "./ChatBubble";
 import { AvatarUpload } from "./AvatarUpload";
@@ -30,8 +30,17 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [adminOnline, setAdminOnline] = useState(false);
+  const [chatSchedule, setChatSchedule] = useState<{ from: string | null; until: string | null }>({ from: null, until: null });
   const [adminProfile, setAdminProfile] = useState<{ avatar_url: string | null; display_name: string | null }>({ avatar_url: null, display_name: null });
+  const [now, setNow] = useState(new Date());
+  // Tick every 60s to keep online status current
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const adminOnline = isChatOnline(chatSchedule.from, chatSchedule.until);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playNotification, playSend } = useChatSounds();
@@ -110,13 +119,13 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
 
       const { data: branding } = await supabase
         .from("brandings")
-        .select("chat_display_name, chat_avatar_url, chat_online")
+        .select("chat_display_name, chat_avatar_url, chat_online_from, chat_online_until")
         .eq("id", brandingId)
         .maybeSingle();
       if (branding) {
         const p = { avatar_url: (branding as any).chat_avatar_url, display_name: (branding as any).chat_display_name };
         setAdminProfile(p);
-        setAdminOnline((branding as any).chat_online ?? false);
+        setChatSchedule({ from: (branding as any).chat_online_from, until: (branding as any).chat_online_until });
         sessionStorage.setItem(cacheKey, JSON.stringify(p));
       }
 
@@ -129,7 +138,12 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
           table: "brandings",
           filter: `id=eq.${brandingId}`,
         }, (payload: any) => {
-          setAdminOnline(payload.new.chat_online ?? false);
+          if (payload.new.chat_online_from !== undefined || payload.new.chat_online_until !== undefined) {
+            setChatSchedule(prev => ({
+              from: payload.new.chat_online_from ?? prev.from,
+              until: payload.new.chat_online_until ?? prev.until,
+            }));
+          }
           if (payload.new.chat_display_name !== undefined || payload.new.chat_avatar_url !== undefined) {
             setAdminProfile(prev => ({
               avatar_url: payload.new.chat_avatar_url ?? prev.avatar_url,
