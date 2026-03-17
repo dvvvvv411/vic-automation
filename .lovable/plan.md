@@ -84,3 +84,28 @@
 
 ### Frontend
 - `AdminSmsTemplates.tsx`: Platzhalter für `gespraech_erinnerung_auto` und `probetag_erinnerung_auto` registriert
+
+---
+
+# Stundenlohn-Untermodell für Festgehalt-Brandings (abgeschlossen)
+
+## Was wurde gemacht
+
+### DB-Migration
+- `hourly_rate_enabled` (boolean, default false), `hourly_rate_minijob`, `hourly_rate_teilzeit`, `hourly_rate_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+
+### Frontend - Admin
+- `AdminBrandingForm.tsx`: Bei Festgehalt neue Unterauswahl (RadioGroup) zwischen "Festgehalt" und "Stundenlohn"
+- Bei Stundenlohn: Drei Felder für Stundensatz pro Anstellungsart (€/Std.)
+- Schema und initialForm um neue Felder erweitert
+
+### Frontend - Mitarbeiter
+- `MitarbeiterLayout.tsx`: Branding-Query und Interface um hourly_rate-Felder erweitert
+- `MitarbeiterDashboard.tsx`: Bei Stundenlohn-Modell wird Verdienst aus erfolgreichen Aufträgen berechnet (estimated_hours × Stundensatz)
+- `DashboardPayoutSummary.tsx`: Zeigt berechneten Stundenlohn-Verdienst statt Festgehalt
+- `MeineDaten.tsx`: Statistik-Card zeigt "Verdienst" statt "Festgehalt"; Verdienst-Historie wird bei Stundenlohn eingeblendet mit Spalten Auftrag/Stunden/Verdienst/Datum
+- `MitarbeiterAuftraege.tsx`: Bei erfolgreich abgeschlossenen Aufträgen wird der berechnete Verdienst (Stunden × Stundensatz) angezeigt
+
+### Logik
+- Ein Auftrag zählt nur als "erfolgreich" wenn Bewertung + ggf. Anhänge genehmigt (bestehender Status `erfolgreich`)
+- Stunden werden aus `orders.estimated_hours` entnommen
