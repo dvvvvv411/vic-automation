@@ -86,7 +86,7 @@ const navGroups = [
 export function AdminSidebar() {
   const { user, signOut } = useAuth();
   const { hasAccess, loading: permissionsLoading } = useAdminPermissions();
-  const { isKunde } = useUserRole();
+  const { isKunde, isCaller } = useUserRole();
   const { brandings, activeBrandingId, setActiveBrandingId } = useBranding();
   const [brandingOpen, setBrandingOpen] = useState(false);
 
