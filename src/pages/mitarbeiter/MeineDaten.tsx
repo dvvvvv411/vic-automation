@@ -65,7 +65,7 @@ const MeineDaten = () => {
           .eq("contract_id", contract.id),
         supabase
           .from("order_assignments")
-          .select("order_id, assigned_at, orders(title, reward)")
+          .select("order_id, assigned_at, orders(title, reward, estimated_hours)")
           .eq("contract_id", contract.id)
           .eq("status", "erfolgreich"),
       ]);
