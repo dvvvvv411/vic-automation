@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
+import { sendTelegram } from "@/lib/sendTelegram";
 import { sendSms } from "@/lib/sendSms";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 import { createShortLink } from "@/lib/createShortLink";
@@ -344,9 +345,11 @@ export default function AdminBewerbungen() {
       const { error } = await supabase.from("applications").insert(payload as any);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       setOpen(false);
+      const name = `${variables.first_name || ""} ${variables.last_name || ""}`.trim();
+      sendTelegram("bewerbung_eingegangen", `📝 Neue Bewerbung eingegangen\n\nName: ${name}\nE-Mail: ${variables.email || "–"}`, variables.branding_id as string | undefined);
       setForm(initialForm);
       setErrors({});
       setIsIndeed(false);

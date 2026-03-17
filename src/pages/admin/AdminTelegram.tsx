@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const EVENT_TYPES = [
+  { key: "bewerbung_eingegangen", label: "Neue Bewerbung", desc: "Neue Bewerbung ist eingegangen" },
   { key: "gespraech_gebucht", label: "Bewerbungsgespräch gebucht", desc: "Bewerber bucht ein Bewerbungsgespräch" },
   { key: "konto_erstellt", label: "Konto erstellt", desc: "Neuer Mitarbeiter registriert sich" },
   { key: "vertrag_eingereicht", label: "Arbeitsvertrag eingereicht", desc: "Mitarbeiter reicht Vertragsdaten ein" },
