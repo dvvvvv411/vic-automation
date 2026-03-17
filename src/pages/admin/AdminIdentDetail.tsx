@@ -284,22 +284,26 @@ function IdentDetailContent({
               .replace("{auftrag}", auftragTitle);
             const branding = session.branding_id || null;
             let senderName: string | undefined;
+            let identDisabled = false;
             if (branding) {
               const { data: br } = await supabase
                 .from("brandings")
-                .select("sms_sender_name")
+                .select("sms_sender_name, sms_ident_disabled" as any)
                 .eq("id", branding)
                 .single();
               senderName = (br as any)?.sms_sender_name || undefined;
+              identDisabled = !!(br as any)?.sms_ident_disabled;
             }
-            await sendSms({
-              to: contractDetails.phone,
-              text: msg,
-              event_type: "ident_daten_gesendet",
-              recipient_name: name,
-              from: senderName,
-              branding_id: branding,
-            });
+            if (!identDisabled) {
+              await sendSms({
+                to: contractDetails.phone,
+                text: msg,
+                event_type: "ident_daten_gesendet",
+                recipient_name: name,
+                from: senderName,
+                branding_id: branding,
+              });
+            }
           }
         } catch (e) {
           console.error("SMS notification failed:", e);

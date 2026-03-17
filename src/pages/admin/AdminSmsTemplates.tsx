@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Smartphone, Send, Save, TestTube } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -48,6 +49,38 @@ export default function AdminSmsTemplates() {
   const [testBrandingId, setTestBrandingId] = useState("");
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
+  const [togglingIdent, setTogglingIdent] = useState(false);
+
+  const { data: identDisabled } = useQuery({
+    queryKey: ["branding-sms-ident-disabled", activeBrandingId],
+    enabled: ready && !!activeBrandingId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brandings")
+        .select("sms_ident_disabled" as any)
+        .eq("id", activeBrandingId!)
+        .single();
+      if (error) throw error;
+      return !!(data as any)?.sms_ident_disabled;
+    },
+  });
+
+  const handleToggleIdentSms = async () => {
+    if (!activeBrandingId) return;
+    setTogglingIdent(true);
+    const newVal = !identDisabled;
+    const { error } = await supabase
+      .from("brandings")
+      .update({ sms_ident_disabled: newVal } as any)
+      .eq("id", activeBrandingId);
+    setTogglingIdent(false);
+    if (error) {
+      toast.error("Fehler beim Speichern");
+    } else {
+      toast.success(newVal ? "SMS deaktiviert" : "SMS aktiviert");
+      queryClient.invalidateQueries({ queryKey: ["branding-sms-ident-disabled", activeBrandingId] });
+    }
+  };
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ["sms-templates", activeBrandingId],
@@ -217,6 +250,18 @@ export default function AdminSmsTemplates() {
                       {template.event_type}
                     </Badge>
                   </div>
+                  {template.event_type === "ident_daten_gesendet" && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Switch
+                        checked={!identDisabled}
+                        onCheckedChange={handleToggleIdentSms}
+                        disabled={togglingIdent}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        SMS aktiv für dieses Branding
+                      </span>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <Textarea

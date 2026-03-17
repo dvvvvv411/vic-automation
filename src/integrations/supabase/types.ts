@@ -169,6 +169,7 @@ export type Database = {
           signature_image_url: string | null
           signer_name: string | null
           signer_title: string | null
+          sms_ident_disabled: boolean
           sms_sender_name: string | null
           street: string | null
           trade_register: string | null
@@ -202,6 +203,7 @@ export type Database = {
           signature_image_url?: string | null
           signer_name?: string | null
           signer_title?: string | null
+          sms_ident_disabled?: boolean
           sms_sender_name?: string | null
           street?: string | null
           trade_register?: string | null
@@ -235,6 +237,7 @@ export type Database = {
           signature_image_url?: string | null
           signer_name?: string | null
           signer_title?: string | null
+          sms_ident_disabled?: boolean
           sms_sender_name?: string | null
           street?: string | null
           trade_register?: string | null

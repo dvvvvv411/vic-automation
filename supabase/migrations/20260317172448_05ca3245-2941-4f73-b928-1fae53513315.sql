@@ -1,0 +1,1 @@
+ALTER TABLE public.brandings ADD COLUMN sms_ident_disabled boolean NOT NULL DEFAULT false;
