@@ -312,6 +312,30 @@ const MitarbeiterDashboard = () => {
         setRecentReviews(recent);
       }
 
+      // Calculate hourly earnings from successful assignments
+      if (isHourlyRate) {
+        const { data: successAssignments } = await supabase
+          .from("order_assignments")
+          .select("order_id")
+          .eq("contract_id", contract.id)
+          .eq("status", "erfolgreich");
+
+        if (successAssignments?.length) {
+          const successOrderIds = successAssignments.map(a => a.order_id);
+          const { data: successOrders } = await supabase
+            .from("orders")
+            .select("estimated_hours")
+            .in("id", successOrderIds);
+
+          let totalHours = 0;
+          for (const o of successOrders ?? []) {
+            const h = parseFloat(o.estimated_hours || "0");
+            if (!isNaN(h)) totalHours += h;
+          }
+          setHourlyEarnings(totalHours * getHourlyRate());
+        }
+      }
+
       setDataLoading(false);
     };
 
