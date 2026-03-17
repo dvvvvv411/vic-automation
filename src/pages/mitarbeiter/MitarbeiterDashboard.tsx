@@ -20,7 +20,7 @@ const truncateText = (text: string, maxLen: number): string => {
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string | null; employment_type?: string | null } | null;
-  branding: { logo_url: string | null; company_name: string; brand_color: string | null; payment_model?: string | null; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null } | null;
+  branding: { logo_url: string | null; company_name: string; brand_color: string | null; payment_model?: string | null; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null; hourly_rate_enabled?: boolean; hourly_rate_minijob?: number | null; hourly_rate_teilzeit?: number | null; hourly_rate_vollzeit?: number | null } | null;
   loading: boolean;
 }
 
