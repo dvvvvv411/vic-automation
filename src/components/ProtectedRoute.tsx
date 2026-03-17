@@ -25,7 +25,7 @@ const ProtectedRoute = ({ children, allowedRole }: ProtectedRouteProps) => {
 
   const allowed = Array.isArray(allowedRole) ? allowedRole : [allowedRole];
   if (!role || !allowed.includes(role)) {
-    if (role === "admin" || role === "kunde") return <Navigate to="/admin" replace />;
+    if (role === "admin" || role === "kunde" || role === "caller") return <Navigate to="/admin" replace />;
     if (role === "user") return <Navigate to="/mitarbeiter" replace />;
     return <Navigate to="/auth" replace />;
   }

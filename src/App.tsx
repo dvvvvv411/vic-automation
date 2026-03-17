@@ -33,6 +33,7 @@ import AdminZeitplan from "./pages/admin/AdminZeitplan";
 import AdminTelefonnummern from "./pages/admin/AdminTelefonnummern";
 import AdminSmsSpoof from "./pages/admin/AdminSmsSpoof";
 import AdminKunden from "./pages/admin/AdminKunden";
+import AdminCaller from "./pages/admin/AdminCaller";
 import AdminSmsHistory from "./pages/admin/AdminSmsHistory";
 import AdminProbetag from "./pages/admin/AdminProbetag";
 import AdminVertragsvorlagen from "./pages/admin/AdminVertragsvorlagen";
@@ -67,7 +68,7 @@ const App = () => (
             <Route
               path="/admin"
               element={
-                <ProtectedRoute allowedRole={["admin", "kunde"]}>
+                <ProtectedRoute allowedRole={["admin", "kunde", "caller"]}>
                   <AdminLayout />
                 </ProtectedRoute>
               }
@@ -104,6 +105,7 @@ const App = () => (
               <Route path="vertragsvorlagen/neu" element={<AdminVertragsvorlageForm />} />
               <Route path="vertragsvorlagen/:id" element={<AdminVertragsvorlageForm />} />
               <Route path="kunden" element={<AdminKunden />} />
+              <Route path="caller" element={<AdminCaller />} />
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
             <Route path="/probetag/:id" element={<Probetag />} />

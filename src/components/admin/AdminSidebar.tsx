@@ -34,6 +34,7 @@ const KUNDE_HIDDEN_PATHS = [
   "/admin/telegram",
   "/admin/kunden",
   "/admin/sms-history",
+  "/admin/caller",
 ];
 
 const navGroups = [
@@ -77,6 +78,7 @@ const navGroups = [
       { title: "Livechat", url: "/admin/livechat-einstellungen", icon: MessageCircle },
       { title: "Zeitplan", url: "/admin/zeitplan", icon: Clock },
       { title: "Kunden", url: "/admin/kunden", icon: UserPlus },
+      { title: "Caller", url: "/admin/caller", icon: Phone },
     ],
   },
 ];
@@ -84,7 +86,7 @@ const navGroups = [
 export function AdminSidebar() {
   const { user, signOut } = useAuth();
   const { hasAccess, loading: permissionsLoading } = useAdminPermissions();
-  const { isKunde } = useUserRole();
+  const { isKunde, isCaller } = useUserRole();
   const { brandings, activeBrandingId, setActiveBrandingId } = useBranding();
   const [brandingOpen, setBrandingOpen] = useState(false);
 
@@ -224,7 +226,7 @@ export function AdminSidebar() {
         {/* Brand */}
         <div className="px-3 py-5 mb-1">
           <h2 className="text-lg font-bold tracking-tight text-white">
-            Vic <span className="text-[hsl(var(--sidebar-primary))]">{isKunde ? "Kunde" : "Admin"}</span>
+            Vic <span className="text-[hsl(var(--sidebar-primary))]">{isCaller ? "Caller" : isKunde ? "Kunde" : "Admin"}</span>
           </h2>
           <p className="text-[11px] text-[hsl(var(--sidebar-foreground))] mt-0.5 opacity-60">Kontrollpanel</p>
         </div>
@@ -281,6 +283,7 @@ export function AdminSidebar() {
           const visibleItems = group.items.filter((item) => {
             if (!hasAccess(item.url)) return false;
             if (isKunde && KUNDE_HIDDEN_PATHS.includes(item.url)) return false;
+            if (isCaller && KUNDE_HIDDEN_PATHS.includes(item.url)) return false;
             return true;
           });
           if (visibleItems.length === 0) return null;

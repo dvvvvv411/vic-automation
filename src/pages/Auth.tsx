@@ -82,7 +82,7 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && role) {
-      navigate(role === "admin" ? "/admin" : "/mitarbeiter", { replace: true });
+      navigate(role === "admin" || role === "kunde" || role === "caller" ? "/admin" : "/mitarbeiter", { replace: true });
     }
   }, [user, role, navigate]);
 

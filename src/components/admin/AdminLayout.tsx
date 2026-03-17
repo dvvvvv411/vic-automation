@@ -15,11 +15,12 @@ const KUNDE_BLOCKED_PATHS = [
   "/admin/telegram",
   "/admin/kunden",
   "/admin/sms-history",
+  "/admin/caller",
 ];
 
 export default function AdminLayout() {
   const { allowedPaths, loading, hasAccess } = useAdminPermissions();
-  const { isKunde, loading: roleLoading } = useUserRole();
+  const { isKunde, isCaller, loading: roleLoading } = useUserRole();
   const { user } = useAuth();
   const location = useLocation();
 
@@ -31,7 +32,7 @@ export default function AdminLayout() {
     );
   }
 
-  if (isKunde && KUNDE_BLOCKED_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"))) {
+  if ((isKunde || isCaller) && KUNDE_BLOCKED_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"))) {
     return <Navigate to="/admin" replace />;
   }
 
