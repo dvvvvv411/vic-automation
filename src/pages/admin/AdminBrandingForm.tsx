@@ -62,6 +62,10 @@ const initialForm: BrandingForm = {
   salary_minijob: "",
   salary_teilzeit: "",
   salary_vollzeit: "",
+  hourly_rate_enabled: false,
+  hourly_rate_minijob: "",
+  hourly_rate_teilzeit: "",
+  hourly_rate_vollzeit: "",
 };
 
 export default function AdminBrandingForm() {
