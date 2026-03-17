@@ -115,6 +115,10 @@ export default function AdminBrandingForm() {
         salary_minijob: branding.salary_minijob?.toString() || "",
         salary_teilzeit: branding.salary_teilzeit?.toString() || "",
         salary_vollzeit: branding.salary_vollzeit?.toString() || "",
+        hourly_rate_enabled: branding.hourly_rate_enabled ?? false,
+        hourly_rate_minijob: branding.hourly_rate_minijob?.toString() || "",
+        hourly_rate_teilzeit: branding.hourly_rate_teilzeit?.toString() || "",
+        hourly_rate_vollzeit: branding.hourly_rate_vollzeit?.toString() || "",
       });
     }
   }, [branding]);
