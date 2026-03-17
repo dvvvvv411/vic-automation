@@ -360,12 +360,27 @@ const MitarbeiterAuftraege = () => {
                         {truncateText(a.description, 120)}
                       </p>
                     )}
-                    {a.reward && !["0", "0€", "0 €"].includes(a.reward.trim()) && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Prämie</span>
-                        <span className="font-semibold text-primary">{a.reward}{a.reward.includes("€") ? "" : " €"}</span>
-                      </div>
-                    )}
+                    {(() => {
+                      if (isHourlyRate && a.status === "erfolgreich") {
+                        const hours = parseFloat(a.estimated_hours || "0");
+                        const earnings = isNaN(hours) ? 0 : hours * getHourlyRate();
+                        return (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Verdienst ({isNaN(hours) ? "—" : hours.toFixed(1)} Std.)</span>
+                            <span className="font-semibold text-primary">{earnings.toFixed(2)} €</span>
+                          </div>
+                        );
+                      }
+                      if (a.reward && !["0", "0€", "0 €"].includes(a.reward.trim())) {
+                        return (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Prämie</span>
+                            <span className="font-semibold text-primary">{a.reward}{a.reward.includes("€") ? "" : " €"}</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
 
                   </div>
 
