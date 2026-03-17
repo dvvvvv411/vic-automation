@@ -20,7 +20,7 @@ const KUNDE_BLOCKED_PATHS = [
 
 export default function AdminLayout() {
   const { allowedPaths, loading, hasAccess } = useAdminPermissions();
-  const { isKunde, loading: roleLoading } = useUserRole();
+  const { isKunde, isCaller, loading: roleLoading } = useUserRole();
   const { user } = useAuth();
   const location = useLocation();
 
