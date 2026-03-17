@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Smartphone, Send, Save, TestTube } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
