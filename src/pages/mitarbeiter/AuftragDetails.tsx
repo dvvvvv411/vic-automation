@@ -96,6 +96,7 @@ const AuftragDetails = () => {
   const [completingIdent, setCompletingIdent] = useState(false);
   const [smsCountdown, setSmsCountdown] = useState(5);
   const [resolvedPhoneNumber, setResolvedPhoneNumber] = useState<string | null>(null);
+  const [emailTanRequested, setEmailTanRequested] = useState(false);
 
   const loadAttachments = useCallback(async () => {
     if (!contract || !id) return;
