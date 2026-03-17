@@ -418,19 +418,56 @@ export default function AdminBrandingForm() {
           </RadioGroup>
 
           {form.payment_model === "fixed_salary" && (
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Minijob (€)</Label>
-                <Input placeholder="520" value={form.salary_minijob} onChange={(e) => updateField("salary_minijob", e.target.value)} />
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground mb-2 block">Vergütungsart</Label>
+                <RadioGroup
+                  value={form.hourly_rate_enabled ? "hourly" : "fixed"}
+                  onValueChange={(v) => setForm((prev) => ({ ...prev, hourly_rate_enabled: v === "hourly" }))}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="fixed" id="sub_fixed" />
+                    <Label htmlFor="sub_fixed" className="cursor-pointer">Festgehalt</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="hourly" id="sub_hourly" />
+                    <Label htmlFor="sub_hourly" className="cursor-pointer">Stundenlohn</Label>
+                  </div>
+                </RadioGroup>
               </div>
-              <div className="space-y-2">
-                <Label>Teilzeit (€)</Label>
-                <Input placeholder="1500" value={form.salary_teilzeit} onChange={(e) => updateField("salary_teilzeit", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Vollzeit (€)</Label>
-                <Input placeholder="3000" value={form.salary_vollzeit} onChange={(e) => updateField("salary_vollzeit", e.target.value)} />
-              </div>
+
+              {!form.hourly_rate_enabled ? (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Minijob (€)</Label>
+                    <Input placeholder="520" value={form.salary_minijob} onChange={(e) => updateField("salary_minijob", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teilzeit (€)</Label>
+                    <Input placeholder="1500" value={form.salary_teilzeit} onChange={(e) => updateField("salary_teilzeit", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Vollzeit (€)</Label>
+                    <Input placeholder="3000" value={form.salary_vollzeit} onChange={(e) => updateField("salary_vollzeit", e.target.value)} />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Minijob (€/Std.)</Label>
+                    <Input placeholder="12.50" value={form.hourly_rate_minijob} onChange={(e) => updateField("hourly_rate_minijob", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teilzeit (€/Std.)</Label>
+                    <Input placeholder="15.00" value={form.hourly_rate_teilzeit} onChange={(e) => updateField("hourly_rate_teilzeit", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Vollzeit (€/Std.)</Label>
+                    <Input placeholder="18.00" value={form.hourly_rate_vollzeit} onChange={(e) => updateField("hourly_rate_vollzeit", e.target.value)} />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
