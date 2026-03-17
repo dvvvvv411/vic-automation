@@ -283,6 +283,7 @@ export function AdminSidebar() {
           const visibleItems = group.items.filter((item) => {
             if (!hasAccess(item.url)) return false;
             if (isKunde && KUNDE_HIDDEN_PATHS.includes(item.url)) return false;
+            if (isCaller && KUNDE_HIDDEN_PATHS.includes(item.url)) return false;
             return true;
           });
           if (visibleItems.length === 0) return null;
