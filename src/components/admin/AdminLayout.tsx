@@ -5,7 +5,7 @@ import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAuth } from "@/contexts/AuthContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
-import { Bell, Search, Settings } from "lucide-react";
+import {} from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const KUNDE_BLOCKED_PATHS = [
