@@ -23,6 +23,7 @@ const EVENT_TYPES = [
   { key: "auftragstermin_gebucht", label: "Auftragstermin gebucht", desc: "Mitarbeiter bucht einen Auftragstermin" },
   { key: "chat_nachricht", label: "Chat-Nachricht", desc: "Mitarbeiter schreibt im Livechat" },
   { key: "bewertung_eingereicht", label: "Bewertung eingereicht", desc: "Mitarbeiter schickt Bewertung ab" },
+  { key: "email_tan_angefordert", label: "Email TAN angefordert", desc: "Mitarbeiter wartet auf Email TAN Eingabe" },
 ];
 
 interface TelegramChat {

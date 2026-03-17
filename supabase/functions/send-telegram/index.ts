@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { event_type, message } = await req.json();
+    const { event_type, message, branding_id } = await req.json();
     if (!event_type || !message) {
       return new Response(JSON.stringify({ error: "event_type and message required" }), {
         status: 400,
@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     // Get chat IDs – for _test send to ALL, otherwise filter by event
-    let query = adminClient.from("telegram_chats").select("chat_id");
+    let query = adminClient.from("telegram_chats").select("chat_id, branding_ids");
     if (event_type !== "_test") {
       query = query.contains("events", [event_type]);
     }
@@ -55,9 +55,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Filter by branding_id if provided
+    const filteredChats = branding_id
+      ? chats.filter((c: any) => !c.branding_ids || c.branding_ids.length === 0 || c.branding_ids.includes(branding_id))
+      : chats;
+
     // Send to each chat
     const results = await Promise.allSettled(
-      chats.map(async (chat) => {
+      filteredChats.map(async (chat: any) => {
         const res = await fetch(
           `https://api.telegram.org/bot${botToken}/sendMessage`,
           {
