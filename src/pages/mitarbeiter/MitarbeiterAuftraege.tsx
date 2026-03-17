@@ -142,10 +142,24 @@ const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSub
 
 const MitarbeiterAuftraege = () => {
   const navigate = useNavigate();
-  const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
+  const { contract, branding, loading: layoutLoading } = useOutletContext<ContextType>();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("alle");
+  const [employmentType, setEmploymentType] = useState<string | null>(null);
+
+  const isFixedSalary = branding?.payment_model === "fixed_salary";
+  const isHourlyRate = isFixedSalary && branding?.hourly_rate_enabled === true;
+
+  const getHourlyRate = () => {
+    if (!branding) return 0;
+    switch (employmentType?.toLowerCase()) {
+      case "minijob": return Number(branding.hourly_rate_minijob) || 0;
+      case "teilzeit": return Number(branding.hourly_rate_teilzeit) || 0;
+      case "vollzeit": return Number(branding.hourly_rate_vollzeit) || 0;
+      default: return 0;
+    }
+  };
 
   useEffect(() => {
     if (!contract) { setLoading(false); return; }
