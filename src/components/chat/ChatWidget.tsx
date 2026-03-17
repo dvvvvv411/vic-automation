@@ -119,13 +119,13 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
 
       const { data: branding } = await supabase
         .from("brandings")
-        .select("chat_display_name, chat_avatar_url, chat_online")
+        .select("chat_display_name, chat_avatar_url, chat_online_from, chat_online_until")
         .eq("id", brandingId)
         .maybeSingle();
       if (branding) {
         const p = { avatar_url: (branding as any).chat_avatar_url, display_name: (branding as any).chat_display_name };
         setAdminProfile(p);
-        setAdminOnline((branding as any).chat_online ?? false);
+        setChatSchedule({ from: (branding as any).chat_online_from, until: (branding as any).chat_online_until });
         sessionStorage.setItem(cacheKey, JSON.stringify(p));
       }
 
