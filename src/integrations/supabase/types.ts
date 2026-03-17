@@ -1497,6 +1497,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_caller: { Args: { _user_id: string }; Returns: boolean }
       is_kunde: { Args: { _user_id: string }; Returns: boolean }
       submit_employment_contract:
         | {
