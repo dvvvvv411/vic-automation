@@ -71,7 +71,7 @@ export default function AdminIdentDetail() {
     queryFn: async () => {
       const { data } = await supabase
         .from("employment_contracts")
-        .select("first_name, last_name, phone")
+        .select("first_name, last_name")
         .eq("id", session!.contract_id)
         .single();
       return data;
