@@ -147,6 +147,8 @@ export type Database = {
           chat_avatar_url: string | null
           chat_display_name: string | null
           chat_online: boolean
+          chat_online_from: string
+          chat_online_until: string
           city: string | null
           company_name: string
           created_at: string
@@ -181,6 +183,8 @@ export type Database = {
           chat_avatar_url?: string | null
           chat_display_name?: string | null
           chat_online?: boolean
+          chat_online_from?: string
+          chat_online_until?: string
           city?: string | null
           company_name: string
           created_at?: string
@@ -215,6 +219,8 @@ export type Database = {
           chat_avatar_url?: string | null
           chat_display_name?: string | null
           chat_online?: boolean
+          chat_online_from?: string
+          chat_online_until?: string
           city?: string | null
           company_name?: string
           created_at?: string
