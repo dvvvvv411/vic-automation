@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string } | null;
+  branding: { payment_model?: string; hourly_rate_enabled?: boolean; hourly_rate_minijob?: number | null; hourly_rate_teilzeit?: number | null; hourly_rate_vollzeit?: number | null } | null;
   loading: boolean;
 }
 
@@ -30,6 +31,7 @@ interface Assignment {
   attachmentsSubmitted: boolean;
   hasIdentSession: boolean;
   hasReviewSubmitted: boolean;
+  estimated_hours: string | null;
 }
 
 const truncateText = (text: string, maxLen: number): string => {
@@ -140,15 +142,38 @@ const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSub
 
 const MitarbeiterAuftraege = () => {
   const navigate = useNavigate();
-  const { contract, loading: layoutLoading } = useOutletContext<ContextType>();
+  const { contract, branding, loading: layoutLoading } = useOutletContext<ContextType>();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("alle");
+  const [employmentType, setEmploymentType] = useState<string | null>(null);
+
+  const isFixedSalary = branding?.payment_model === "fixed_salary";
+  const isHourlyRate = isFixedSalary && branding?.hourly_rate_enabled === true;
+
+  const getHourlyRate = () => {
+    if (!branding) return 0;
+    switch (employmentType?.toLowerCase()) {
+      case "minijob": return Number(branding.hourly_rate_minijob) || 0;
+      case "teilzeit": return Number(branding.hourly_rate_teilzeit) || 0;
+      case "vollzeit": return Number(branding.hourly_rate_vollzeit) || 0;
+      default: return 0;
+    }
+  };
 
   useEffect(() => {
     if (!contract) { setLoading(false); return; }
 
     const fetchData = async () => {
+      // Get employment type for hourly rate
+      if (isHourlyRate) {
+        const { data: ec } = await supabase
+          .from("employment_contracts")
+          .select("employment_type")
+          .eq("id", contract.id)
+          .maybeSingle();
+        if (ec) setEmploymentType(ec.employment_type);
+      }
       const { data: rawAssignments } = await supabase
         .from("order_assignments")
         .select("order_id, status, assigned_at")
@@ -160,7 +185,7 @@ const MitarbeiterAuftraege = () => {
       const orderIds = rawAssignments.map((a) => a.order_id);
       const { data: orders } = await supabase
         .from("orders")
-        .select("id, order_number, title, provider, reward, is_placeholder, required_attachments, description")
+        .select("id, order_number, title, provider, reward, is_placeholder, required_attachments, description, estimated_hours")
         .in("id", orderIds);
 
 
@@ -219,6 +244,7 @@ const MitarbeiterAuftraege = () => {
               provider: order.provider,
               reward: order.reward,
               description: order.description ?? null,
+              estimated_hours: order.estimated_hours ?? null,
               hasRequiredAttachments: hasReq,
               attachmentsPending: hasReq && !allSubmitted,
               attachmentsSubmitted: allSubmitted && !allApproved,
@@ -334,12 +360,27 @@ const MitarbeiterAuftraege = () => {
                         {truncateText(a.description, 120)}
                       </p>
                     )}
-                    {a.reward && !["0", "0€", "0 €"].includes(a.reward.trim()) && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Prämie</span>
-                        <span className="font-semibold text-primary">{a.reward}{a.reward.includes("€") ? "" : " €"}</span>
-                      </div>
-                    )}
+                    {(() => {
+                      if (isHourlyRate && a.status === "erfolgreich") {
+                        const hours = parseFloat(a.estimated_hours || "0");
+                        const earnings = isNaN(hours) ? 0 : hours * getHourlyRate();
+                        return (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Verdienst ({isNaN(hours) ? "—" : hours.toFixed(1)} Std.)</span>
+                            <span className="font-semibold text-primary">{earnings.toFixed(2)} €</span>
+                          </div>
+                        );
+                      }
+                      if (a.reward && !["0", "0€", "0 €"].includes(a.reward.trim())) {
+                        return (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Prämie</span>
+                            <span className="font-semibold text-primary">{a.reward}{a.reward.includes("€") ? "" : " €"}</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
 
                   </div>
 

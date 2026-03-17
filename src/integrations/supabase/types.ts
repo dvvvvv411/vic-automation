@@ -155,6 +155,10 @@ export type Database = {
           created_by: string | null
           domain: string | null
           email: string | null
+          hourly_rate_enabled: boolean
+          hourly_rate_minijob: number | null
+          hourly_rate_teilzeit: number | null
+          hourly_rate_vollzeit: number | null
           id: string
           logo_url: string | null
           managing_director: string | null
@@ -191,6 +195,10 @@ export type Database = {
           created_by?: string | null
           domain?: string | null
           email?: string | null
+          hourly_rate_enabled?: boolean
+          hourly_rate_minijob?: number | null
+          hourly_rate_teilzeit?: number | null
+          hourly_rate_vollzeit?: number | null
           id?: string
           logo_url?: string | null
           managing_director?: string | null
@@ -227,6 +235,10 @@ export type Database = {
           created_by?: string | null
           domain?: string | null
           email?: string | null
+          hourly_rate_enabled?: boolean
+          hourly_rate_minijob?: number | null
+          hourly_rate_teilzeit?: number | null
+          hourly_rate_vollzeit?: number | null
           id?: string
           logo_url?: string | null
           managing_director?: string | null

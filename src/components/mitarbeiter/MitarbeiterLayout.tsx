@@ -17,6 +17,10 @@ interface BrandingData {
   salary_minijob: number | null;
   salary_teilzeit: number | null;
   salary_vollzeit: number | null;
+  hourly_rate_enabled: boolean;
+  hourly_rate_minijob: number | null;
+  hourly_rate_teilzeit: number | null;
+  hourly_rate_vollzeit: number | null;
 }
 
 interface ContractData {
@@ -73,7 +77,7 @@ export default function MitarbeiterLayout() {
       if (brandingId) {
         const { data: brandingData } = await supabase
           .from("brandings")
-          .select("logo_url, company_name, brand_color, payment_model, salary_minijob, salary_teilzeit, salary_vollzeit")
+          .select("logo_url, company_name, brand_color, payment_model, salary_minijob, salary_teilzeit, salary_vollzeit, hourly_rate_enabled, hourly_rate_minijob, hourly_rate_teilzeit, hourly_rate_vollzeit")
           .eq("id", brandingId)
           .maybeSingle();
 

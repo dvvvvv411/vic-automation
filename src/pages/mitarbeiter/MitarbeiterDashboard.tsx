@@ -20,7 +20,7 @@ const truncateText = (text: string, maxLen: number): string => {
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string | null; employment_type?: string | null } | null;
-  branding: { logo_url: string | null; company_name: string; brand_color: string | null; payment_model?: string | null; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null } | null;
+  branding: { logo_url: string | null; company_name: string; brand_color: string | null; payment_model?: string | null; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null; hourly_rate_enabled?: boolean; hourly_rate_minijob?: number | null; hourly_rate_teilzeit?: number | null; hourly_rate_vollzeit?: number | null } | null;
   loading: boolean;
 }
 
@@ -149,6 +149,7 @@ const MitarbeiterDashboard = () => {
   const [contractDismissed, setContractDismissed] = useState(false);
 
   const isFixedSalary = branding?.payment_model === "fixed_salary";
+  const isHourlyRate = isFixedSalary && branding?.hourly_rate_enabled === true;
 
   const getFixedSalary = () => {
     if (!branding) return 0;
@@ -159,6 +160,18 @@ const MitarbeiterDashboard = () => {
       default: return 0;
     }
   };
+
+  const getHourlyRate = () => {
+    if (!branding) return 0;
+    switch (employmentType?.toLowerCase()) {
+      case "minijob": return Number(branding.hourly_rate_minijob) || 0;
+      case "teilzeit": return Number(branding.hourly_rate_teilzeit) || 0;
+      case "vollzeit": return Number(branding.hourly_rate_vollzeit) || 0;
+      default: return 0;
+    }
+  };
+
+  const [hourlyEarnings, setHourlyEarnings] = useState<number>(0);
   const [avgRating, setAvgRating] = useState<number>(0);
   const [reviewCount, setReviewCount] = useState<number>(0);
   const [recentReviews, setRecentReviews] = useState<{order_title: string; avg: number; date: string}[]>([]);
@@ -299,6 +312,30 @@ const MitarbeiterDashboard = () => {
         setRecentReviews(recent);
       }
 
+      // Calculate hourly earnings from successful assignments
+      if (isHourlyRate) {
+        const { data: successAssignments } = await supabase
+          .from("order_assignments")
+          .select("order_id")
+          .eq("contract_id", contract.id)
+          .eq("status", "erfolgreich");
+
+        if (successAssignments?.length) {
+          const successOrderIds = successAssignments.map(a => a.order_id);
+          const { data: successOrders } = await supabase
+            .from("orders")
+            .select("estimated_hours")
+            .in("id", successOrderIds);
+
+          let totalHours = 0;
+          for (const o of successOrders ?? []) {
+            const h = parseFloat(o.estimated_hours || "0");
+            if (!isNaN(h)) totalHours += h;
+          }
+          setHourlyEarnings(totalHours * getHourlyRate());
+        }
+      }
+
       setDataLoading(false);
     };
 
@@ -311,9 +348,11 @@ const MitarbeiterDashboard = () => {
 
   const stats = [
     { label: "Zugewiesene Tests", value: orders.length.toString(), icon: Smartphone, detail: orders.length === 1 ? "1 Test" : `${orders.length} Tests` },
-    isFixedSalary
-      ? { label: "Festgehalt", value: `${fixedSalary.toFixed(2)} €`, icon: Euro, detail: employmentType ? employmentType.charAt(0).toUpperCase() + employmentType.slice(1) : "Festgehalt" }
-      : { label: "Guthaben", value: `${balance.toFixed(2)} €`, icon: Euro, detail: "Aktueller Kontostand" },
+    isHourlyRate
+      ? { label: "Verdienst (Stundenlohn)", value: `${hourlyEarnings.toFixed(2)} €`, icon: Euro, detail: `${getHourlyRate().toFixed(2)} €/Std.` }
+      : isFixedSalary
+        ? { label: "Festgehalt", value: `${fixedSalary.toFixed(2)} €`, icon: Euro, detail: employmentType ? employmentType.charAt(0).toUpperCase() + employmentType.slice(1) : "Festgehalt" }
+        : { label: "Guthaben", value: `${balance.toFixed(2)} €`, icon: Euro, detail: "Aktueller Kontostand" },
     { label: "Offene Aufträge", value: orders.filter((o) => o.assignment_status === "offen" || o.assignment_status === "fehlgeschlagen").length.toString(), icon: ClipboardList, detail: "Handlungsbedarf" },
     { label: "Bewertung", value: avgRating > 0 ? avgRating.toFixed(1) : "—", icon: Star, detail: reviewCount > 0 ? `${reviewCount} Bewertung${reviewCount !== 1 ? "en" : ""}` : "Noch keine" },
   ];
@@ -547,7 +586,7 @@ const MitarbeiterDashboard = () => {
       {/* Summary Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <DashboardReviewsSummary recentReviews={recentReviews} />
-        <DashboardPayoutSummary balance={isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary} />
+        <DashboardPayoutSummary balance={isHourlyRate ? hourlyEarnings : isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary && !isHourlyRate} />
       </div>
     </div>
   );

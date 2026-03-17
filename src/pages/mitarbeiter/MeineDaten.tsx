@@ -15,7 +15,7 @@ import jsPDF from "jspdf";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null; signature_data?: string | null; template_id?: string | null; submitted_at?: string | null } | null;
-  branding: { logo_url: string | null; company_name: string; brand_color: string | null; signature_image_url?: string | null; signer_name?: string | null; signer_title?: string | null; payment_model?: string; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null } | null;
+  branding: { logo_url: string | null; company_name: string; brand_color: string | null; signature_image_url?: string | null; signer_name?: string | null; signer_title?: string | null; payment_model?: string; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null; hourly_rate_enabled?: boolean; hourly_rate_minijob?: number | null; hourly_rate_teilzeit?: number | null; hourly_rate_vollzeit?: number | null } | null;
   loading: boolean;
 }
 
@@ -39,7 +39,7 @@ const MeineDaten = () => {
   const [contractDetails, setContractDetails] = useState<ContractDetails | null>(null);
   const [stats, setStats] = useState({ ratedOrders: 0, avgRating: 0 });
   const [pendingPayout, setPendingPayout] = useState(0);
-  const [rewardHistory, setRewardHistory] = useState<{ title: string; reward: string; date: string }[]>([]);
+  const [rewardHistory, setRewardHistory] = useState<{ title: string; reward: string; date: string; hours?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [contractViewOpen, setContractViewOpen] = useState(false);
   const [templateContent, setTemplateContent] = useState<string | null>(null);
@@ -65,7 +65,7 @@ const MeineDaten = () => {
           .eq("contract_id", contract.id),
         supabase
           .from("order_assignments")
-          .select("order_id, assigned_at, orders(title, reward)")
+          .select("order_id, assigned_at, orders(title, reward, estimated_hours)")
           .eq("contract_id", contract.id)
           .eq("status", "erfolgreich"),
       ]);
@@ -112,6 +112,7 @@ const MeineDaten = () => {
             return {
               title: order?.title || "—",
               reward: order?.reward || "0",
+              hours: order?.estimated_hours || "0",
               date: a.assigned_at,
             };
           })
@@ -143,6 +144,8 @@ const MeineDaten = () => {
   const fullName = [contractDetails.first_name, contractDetails.last_name].filter(Boolean).join(" ") || "—";
 
   const isFixedSalary = branding?.payment_model === "fixed_salary";
+  const isHourlyRate = isFixedSalary && branding?.hourly_rate_enabled === true;
+  
   const getFixedSalary = () => {
     if (!branding) return 0;
     switch (contractDetails.employment_type?.toLowerCase()) {
@@ -152,7 +155,27 @@ const MeineDaten = () => {
       default: return 0;
     }
   };
+
+  const getHourlyRate = () => {
+    if (!branding) return 0;
+    switch (contractDetails.employment_type?.toLowerCase()) {
+      case "minijob": return Number(branding.hourly_rate_minijob) || 0;
+      case "teilzeit": return Number(branding.hourly_rate_teilzeit) || 0;
+      case "vollzeit": return Number(branding.hourly_rate_vollzeit) || 0;
+      default: return 0;
+    }
+  };
+
   const fixedSalary = getFixedSalary();
+  const hourlyRate = getHourlyRate();
+
+  // Calculate hourly earnings from reward history
+  const hourlyEarnings = isHourlyRate
+    ? rewardHistory.reduce((sum, item) => {
+        const h = parseFloat(item.hours || "0");
+        return sum + (isNaN(h) ? 0 : h * hourlyRate);
+      }, 0)
+    : 0;
 
   const formatIban = (iban: string | null) => {
     if (!iban) return "—";
@@ -257,12 +280,14 @@ const MeineDaten = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               <StatCard icon={ClipboardCheck} label="Bewertete Aufträge" value={String(stats.ratedOrders)} />
               <StatCard icon={Star} label="Ø Bewertung" value={stats.avgRating > 0 ? String(stats.avgRating) : "—"} showStars rating={stats.avgRating} />
-              {isFixedSalary
-                ? <StatCard icon={Euro} label="Festgehalt" value={`€${fixedSalary.toFixed(2)}`} />
-                : <StatCard icon={Euro} label="Kontostand" value={`€${Number(contractDetails.balance).toFixed(2)}`} />
+              {isHourlyRate
+                ? <StatCard icon={Euro} label="Verdienst" value={`€${hourlyEarnings.toFixed(2)}`} />
+                : isFixedSalary
+                  ? <StatCard icon={Euro} label="Festgehalt" value={`€${fixedSalary.toFixed(2)}`} />
+                  : <StatCard icon={Euro} label="Kontostand" value={`€${Number(contractDetails.balance).toFixed(2)}`} />
               }
             </div>
           </CardContent>
@@ -309,8 +334,8 @@ const MeineDaten = () => {
                     {(() => { const t = new Date(); const d = t.getDate() < 15 ? new Date(t.getFullYear(), t.getMonth(), 15) : new Date(t.getFullYear(), t.getMonth() + 1, 15); return format(d, "dd.MM.yyyy", { locale: de }); })()}
                   </p>
                   <div className="border-t border-border pt-3">
-                    <p className="text-xs text-muted-foreground">{isFixedSalary ? "Betrag" : "Voraussichtlicher Betrag"}</p>
-                    <p className="text-2xl font-bold text-primary">€{isFixedSalary ? fixedSalary.toFixed(2) : pendingPayout.toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">{isFixedSalary && !isHourlyRate ? "Betrag" : "Voraussichtlicher Betrag"}</p>
+                    <p className="text-2xl font-bold text-primary">€{isHourlyRate ? hourlyEarnings.toFixed(2) : isFixedSalary ? fixedSalary.toFixed(2) : pendingPayout.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -319,8 +344,8 @@ const MeineDaten = () => {
         </Card>
       </motion.div>
 
-      {/* Reward History - only for per_order model */}
-      {!isFixedSalary && (
+      {/* Reward History - for per_order OR hourly_rate model */}
+      {(!isFixedSalary || isHourlyRate) && (
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.4 }}>
           <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
             <CardHeader className="pb-4">
@@ -337,18 +362,29 @@ const MeineDaten = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Auftrag</TableHead>
-                      <TableHead>Prämie</TableHead>
+                      {isHourlyRate && <TableHead>Stunden</TableHead>}
+                      <TableHead>{isHourlyRate ? "Verdienst" : "Prämie"}</TableHead>
                       <TableHead>Datum</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rewardHistory.map((item, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="font-medium">{item.title}</TableCell>
-                        <TableCell>{item.reward.replace(/[^0-9.,]/g, "").replace(",", ".")} €</TableCell>
-                        <TableCell>{format(new Date(item.date), "dd.MM.yyyy", { locale: de })}</TableCell>
-                      </TableRow>
-                    ))}
+                    {rewardHistory.map((item, i) => {
+                      const hours = parseFloat(item.hours || "0");
+                      const earnings = isHourlyRate ? (isNaN(hours) ? 0 : hours * hourlyRate) : 0;
+                      return (
+                        <TableRow key={i}>
+                          <TableCell className="font-medium">{item.title}</TableCell>
+                          {isHourlyRate && <TableCell>{isNaN(hours) ? "—" : hours.toFixed(1)} Std.</TableCell>}
+                          <TableCell>
+                            {isHourlyRate
+                              ? `${earnings.toFixed(2)} €`
+                              : `${item.reward.replace(/[^0-9.,]/g, "").replace(",", ".")} €`
+                            }
+                          </TableCell>
+                          <TableCell>{format(new Date(item.date), "dd.MM.yyyy", { locale: de })}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}

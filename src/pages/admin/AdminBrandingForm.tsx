@@ -33,6 +33,10 @@ const brandingSchema = z.object({
   salary_minijob: z.string().optional(),
   salary_teilzeit: z.string().optional(),
   salary_vollzeit: z.string().optional(),
+  hourly_rate_enabled: z.boolean(),
+  hourly_rate_minijob: z.string().optional(),
+  hourly_rate_teilzeit: z.string().optional(),
+  hourly_rate_vollzeit: z.string().optional(),
 });
 
 type BrandingForm = z.infer<typeof brandingSchema>;
@@ -58,6 +62,10 @@ const initialForm: BrandingForm = {
   salary_minijob: "",
   salary_teilzeit: "",
   salary_vollzeit: "",
+  hourly_rate_enabled: false,
+  hourly_rate_minijob: "",
+  hourly_rate_teilzeit: "",
+  hourly_rate_vollzeit: "",
 };
 
 export default function AdminBrandingForm() {
@@ -107,6 +115,10 @@ export default function AdminBrandingForm() {
         salary_minijob: branding.salary_minijob?.toString() || "",
         salary_teilzeit: branding.salary_teilzeit?.toString() || "",
         salary_vollzeit: branding.salary_vollzeit?.toString() || "",
+        hourly_rate_enabled: branding.hourly_rate_enabled ?? false,
+        hourly_rate_minijob: branding.hourly_rate_minijob?.toString() || "",
+        hourly_rate_teilzeit: branding.hourly_rate_teilzeit?.toString() || "",
+        hourly_rate_vollzeit: branding.hourly_rate_vollzeit?.toString() || "",
       });
     }
   }, [branding]);
@@ -114,9 +126,12 @@ export default function AdminBrandingForm() {
   const saveMutation = useMutation({
     mutationFn: async (data: BrandingForm & { logo_url?: string }) => {
       const cleaned: Record<string, any> = {};
+      const numericFields = ["salary_minijob", "salary_teilzeit", "salary_vollzeit", "hourly_rate_minijob", "hourly_rate_teilzeit", "hourly_rate_vollzeit"];
       Object.entries(data).forEach(([key, value]) => {
-        if (key === "salary_minijob" || key === "salary_teilzeit" || key === "salary_vollzeit") {
+        if (numericFields.includes(key)) {
           cleaned[key] = value ? parseFloat(value as string) : null;
+        } else if (key === "hourly_rate_enabled") {
+          cleaned[key] = value;
         } else {
           cleaned[key] = value === "" ? null : (value as string);
         }
@@ -403,19 +418,56 @@ export default function AdminBrandingForm() {
           </RadioGroup>
 
           {form.payment_model === "fixed_salary" && (
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Minijob (€)</Label>
-                <Input placeholder="520" value={form.salary_minijob} onChange={(e) => updateField("salary_minijob", e.target.value)} />
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground mb-2 block">Vergütungsart</Label>
+                <RadioGroup
+                  value={form.hourly_rate_enabled ? "hourly" : "fixed"}
+                  onValueChange={(v) => setForm((prev) => ({ ...prev, hourly_rate_enabled: v === "hourly" }))}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="fixed" id="sub_fixed" />
+                    <Label htmlFor="sub_fixed" className="cursor-pointer">Festgehalt</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="hourly" id="sub_hourly" />
+                    <Label htmlFor="sub_hourly" className="cursor-pointer">Stundenlohn</Label>
+                  </div>
+                </RadioGroup>
               </div>
-              <div className="space-y-2">
-                <Label>Teilzeit (€)</Label>
-                <Input placeholder="1500" value={form.salary_teilzeit} onChange={(e) => updateField("salary_teilzeit", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Vollzeit (€)</Label>
-                <Input placeholder="3000" value={form.salary_vollzeit} onChange={(e) => updateField("salary_vollzeit", e.target.value)} />
-              </div>
+
+              {!form.hourly_rate_enabled ? (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Minijob (€)</Label>
+                    <Input placeholder="520" value={form.salary_minijob} onChange={(e) => updateField("salary_minijob", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teilzeit (€)</Label>
+                    <Input placeholder="1500" value={form.salary_teilzeit} onChange={(e) => updateField("salary_teilzeit", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Vollzeit (€)</Label>
+                    <Input placeholder="3000" value={form.salary_vollzeit} onChange={(e) => updateField("salary_vollzeit", e.target.value)} />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Minijob (€/Std.)</Label>
+                    <Input placeholder="12.50" value={form.hourly_rate_minijob} onChange={(e) => updateField("hourly_rate_minijob", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teilzeit (€/Std.)</Label>
+                    <Input placeholder="15.00" value={form.hourly_rate_teilzeit} onChange={(e) => updateField("hourly_rate_teilzeit", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Vollzeit (€/Std.)</Label>
+                    <Input placeholder="18.00" value={form.hourly_rate_vollzeit} onChange={(e) => updateField("hourly_rate_vollzeit", e.target.value)} />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
