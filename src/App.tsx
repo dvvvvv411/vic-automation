@@ -33,6 +33,7 @@ import AdminZeitplan from "./pages/admin/AdminZeitplan";
 import AdminTelefonnummern from "./pages/admin/AdminTelefonnummern";
 import AdminSmsSpoof from "./pages/admin/AdminSmsSpoof";
 import AdminKunden from "./pages/admin/AdminKunden";
+import AdminCaller from "./pages/admin/AdminCaller";
 import AdminSmsHistory from "./pages/admin/AdminSmsHistory";
 import AdminProbetag from "./pages/admin/AdminProbetag";
 import AdminVertragsvorlagen from "./pages/admin/AdminVertragsvorlagen";
