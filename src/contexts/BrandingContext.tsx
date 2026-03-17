@@ -32,7 +32,7 @@ const STORAGE_KEY = "vic-active-branding-id";
 
 export function BrandingProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const { isAdmin, isKunde, loading: roleLoading } = useUserRole();
+  const { isAdmin, isKunde, isCaller, loading: roleLoading } = useUserRole();
   const queryClient = useQueryClient();
   const userId = user?.id ?? null;
 
