@@ -344,8 +344,8 @@ const MeineDaten = () => {
         </Card>
       </motion.div>
 
-      {/* Reward History - only for per_order model */}
-      {!isFixedSalary && (
+      {/* Reward History - for per_order OR hourly_rate model */}
+      {(!isFixedSalary || isHourlyRate) && (
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.4 }}>
           <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
             <CardHeader className="pb-4">
@@ -362,18 +362,29 @@ const MeineDaten = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Auftrag</TableHead>
-                      <TableHead>Prämie</TableHead>
+                      {isHourlyRate && <TableHead>Stunden</TableHead>}
+                      <TableHead>{isHourlyRate ? "Verdienst" : "Prämie"}</TableHead>
                       <TableHead>Datum</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rewardHistory.map((item, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="font-medium">{item.title}</TableCell>
-                        <TableCell>{item.reward.replace(/[^0-9.,]/g, "").replace(",", ".")} €</TableCell>
-                        <TableCell>{format(new Date(item.date), "dd.MM.yyyy", { locale: de })}</TableCell>
-                      </TableRow>
-                    ))}
+                    {rewardHistory.map((item, i) => {
+                      const hours = parseFloat(item.hours || "0");
+                      const earnings = isHourlyRate ? (isNaN(hours) ? 0 : hours * hourlyRate) : 0;
+                      return (
+                        <TableRow key={i}>
+                          <TableCell className="font-medium">{item.title}</TableCell>
+                          {isHourlyRate && <TableCell>{isNaN(hours) ? "—" : hours.toFixed(1)} Std.</TableCell>}
+                          <TableCell>
+                            {isHourlyRate
+                              ? `${earnings.toFixed(2)} €`
+                              : `${item.reward.replace(/[^0-9.,]/g, "").replace(",", ".")} €`
+                            }
+                          </TableCell>
+                          <TableCell>{format(new Date(item.date), "dd.MM.yyyy", { locale: de })}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
