@@ -280,12 +280,14 @@ const MeineDaten = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               <StatCard icon={ClipboardCheck} label="Bewertete Aufträge" value={String(stats.ratedOrders)} />
               <StatCard icon={Star} label="Ø Bewertung" value={stats.avgRating > 0 ? String(stats.avgRating) : "—"} showStars rating={stats.avgRating} />
-              {isFixedSalary
-                ? <StatCard icon={Euro} label="Festgehalt" value={`€${fixedSalary.toFixed(2)}`} />
-                : <StatCard icon={Euro} label="Kontostand" value={`€${Number(contractDetails.balance).toFixed(2)}`} />
+              {isHourlyRate
+                ? <StatCard icon={Euro} label="Verdienst" value={`€${hourlyEarnings.toFixed(2)}`} />
+                : isFixedSalary
+                  ? <StatCard icon={Euro} label="Festgehalt" value={`€${fixedSalary.toFixed(2)}`} />
+                  : <StatCard icon={Euro} label="Kontostand" value={`€${Number(contractDetails.balance).toFixed(2)}`} />
               }
             </div>
           </CardContent>
