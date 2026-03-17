@@ -138,7 +138,12 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
           table: "brandings",
           filter: `id=eq.${brandingId}`,
         }, (payload: any) => {
-          setAdminOnline(payload.new.chat_online ?? false);
+          if (payload.new.chat_online_from !== undefined || payload.new.chat_online_until !== undefined) {
+            setChatSchedule(prev => ({
+              from: payload.new.chat_online_from ?? prev.from,
+              until: payload.new.chat_online_until ?? prev.until,
+            }));
+          }
           if (payload.new.chat_display_name !== undefined || payload.new.chat_avatar_url !== undefined) {
             setAdminProfile(prev => ({
               avatar_url: payload.new.chat_avatar_url ?? prev.avatar_url,
