@@ -3,34 +3,49 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { AvatarUpload } from "@/components/chat/AvatarUpload";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
+import { isChatOnline } from "@/lib/isChatOnline";
+
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
+  const h = String(i).padStart(2, "0");
+  return { value: `${h}:00`, label: `${h}:00` };
+});
 
 export default function AdminLivechatEinstellungen() {
   const { activeBrandingId, ready } = useBrandingFilter();
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [chatOnline, setChatOnline] = useState(false);
+  const [onlineFrom, setOnlineFrom] = useState("08:00");
+  const [onlineUntil, setOnlineUntil] = useState("17:00");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [now, setNow] = useState(new Date());
+
+  // Tick every 60s to keep the preview status current
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!activeBrandingId || !ready) return;
     setLoading(true);
     supabase
       .from("brandings")
-      .select("chat_display_name, chat_avatar_url, chat_online")
+      .select("chat_display_name, chat_avatar_url, chat_online_from, chat_online_until")
       .eq("id", activeBrandingId)
       .maybeSingle()
       .then(({ data }: any) => {
         if (data) {
           setDisplayName(data.chat_display_name ?? "");
           setAvatarUrl(data.chat_avatar_url ?? null);
-          setChatOnline(data.chat_online ?? false);
+          setOnlineFrom((data.chat_online_from ?? "08:00:00").slice(0, 5));
+          setOnlineUntil((data.chat_online_until ?? "17:00:00").slice(0, 5));
         }
         setLoading(false);
       });
@@ -44,7 +59,8 @@ export default function AdminLivechatEinstellungen() {
       .update({
         chat_display_name: displayName || null,
         chat_avatar_url: avatarUrl,
-        chat_online: chatOnline,
+        chat_online_from: onlineFrom + ":00",
+        chat_online_until: onlineUntil + ":00",
       } as any)
       .eq("id", activeBrandingId);
     setSaving(false);
@@ -55,14 +71,7 @@ export default function AdminLivechatEinstellungen() {
     }
   };
 
-  const handleOnlineToggle = async (checked: boolean) => {
-    setChatOnline(checked);
-    if (!activeBrandingId) return;
-    await supabase
-      .from("brandings")
-      .update({ chat_online: checked } as any)
-      .eq("id", activeBrandingId);
-  };
+  const currentlyOnline = isChatOnline(onlineFrom, onlineUntil);
 
   if (!ready || loading) {
     return (
@@ -115,18 +124,40 @@ export default function AdminLivechatEinstellungen() {
             />
           </div>
 
-          {/* Online Status */}
-          <div className="flex items-center justify-between max-w-sm">
-            <div className="space-y-0.5">
-              <Label>Online-Status</Label>
-              <p className="text-xs text-muted-foreground">
-                Mitarbeiter sehen ob der Chat aktiv ist
-              </p>
+          {/* Online-Zeiten */}
+          <div className="space-y-3">
+            <Label>Erreichbarkeit</Label>
+            <p className="text-xs text-muted-foreground">
+              Chat wird als "Online" angezeigt zwischen diesen Uhrzeiten.
+            </p>
+            <div className="flex items-center gap-3 max-w-sm">
+              <Select value={onlineFrom} onValueChange={setOnlineFrom}>
+                <SelectTrigger className="w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {HOUR_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">bis</span>
+              <Select value={onlineUntil} onValueChange={setOnlineUntil}>
+                <SelectTrigger className="w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {HOUR_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex items-center gap-2">
-              <span className={`h-2.5 w-2.5 rounded-full ${chatOnline ? "bg-green-500" : "bg-muted-foreground/30"}`} />
-              <span className="text-sm text-muted-foreground">{chatOnline ? "Online" : "Offline"}</span>
-              <Switch checked={chatOnline} onCheckedChange={handleOnlineToggle} />
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`h-2.5 w-2.5 rounded-full ${currentlyOnline ? "bg-green-500" : "bg-muted-foreground/30"}`} />
+              <span className="text-sm text-muted-foreground">
+                Aktuell {currentlyOnline ? "online" : "offline"}
+              </span>
             </div>
           </div>
 
