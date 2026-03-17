@@ -32,5 +32,5 @@ export const useUserRole = () => {
     fetchRole();
   }, [user]);
 
-  return { role, loading, isAdmin: role === "admin", isKunde: role === "kunde" };
+  return { role, loading, isAdmin: role === "admin", isKunde: role === "kunde", isCaller: role === "caller" };
 };

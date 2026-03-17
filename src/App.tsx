@@ -105,6 +105,7 @@ const App = () => (
               <Route path="vertragsvorlagen/neu" element={<AdminVertragsvorlageForm />} />
               <Route path="vertragsvorlagen/:id" element={<AdminVertragsvorlageForm />} />
               <Route path="kunden" element={<AdminKunden />} />
+              <Route path="caller" element={<AdminCaller />} />
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
             <Route path="/probetag/:id" element={<Probetag />} />

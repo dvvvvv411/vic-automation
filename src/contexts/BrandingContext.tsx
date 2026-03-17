@@ -41,7 +41,7 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
   );
 
   const { data: brandings = [], isLoading } = useQuery({
-    queryKey: ["available-brandings", userId, isAdmin, isKunde],
+    queryKey: ["available-brandings", userId, isAdmin, isKunde, isCaller],
     enabled: !!userId && !roleLoading,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
@@ -54,7 +54,7 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
         return data ?? [];
       }
-      // Kunde: only assigned brandings
+      // Kunde or Caller: only assigned brandings
       const { data: assignments, error: aErr } = await supabase
         .from("kunde_brandings")
         .select("branding_id")
