@@ -226,7 +226,7 @@ export function AdminSidebar() {
         {/* Brand */}
         <div className="px-3 py-5 mb-1">
           <h2 className="text-lg font-bold tracking-tight text-white">
-            Vic <span className="text-[hsl(var(--sidebar-primary))]">{isKunde ? "Kunde" : "Admin"}</span>
+            Vic <span className="text-[hsl(var(--sidebar-primary))]">{isCaller ? "Caller" : isKunde ? "Kunde" : "Admin"}</span>
           </h2>
           <p className="text-[11px] text-[hsl(var(--sidebar-foreground))] mt-0.5 opacity-60">Kontrollpanel</p>
         </div>
