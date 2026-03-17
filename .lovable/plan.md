@@ -1,86 +1,90 @@
-# Datenisolierung: Branding-basiert (abgeschlossen)
 
-## Was wurde gemacht
 
-### DB-Migration
-- `branding_id` zu 6 Tabellen hinzugefügt: `phone_numbers`, `orders`, `chat_templates`, `sms_spoof_templates`, `sms_spoof_logs`, `employment_contracts`
-- `user_has_any_branding()` Security-Definer-Funktion erstellt
-- Alle RLS-Policies für ~16 Tabellen auf Branding-basiert umgeschrieben
-- Superadmin-Logik: Admins ohne Branding-Zuweisung sehen weiterhin alles
-- `employment_contracts.branding_id` wird automatisch per Trigger aus `applications.branding_id` befüllt
-- `contracts_for_branding_ids()` nutzt jetzt direkt `employment_contracts.branding_id`
-- RLS-Policies für `employment_contracts` nutzen direkt `branding_id` statt `apps_for_branding_ids()`
+## Plan: Caller-Rolle implementieren
 
-### Frontend
-- `useBrandingFilter` Hook erstellt (ersetzt `useUserQueryKey`)
-- ~20 Admin-Seiten auf branding-basierte Query-Keys umgestellt
-- Inserts für `orders` und `phone_numbers` senden jetzt `branding_id` mit
-- `employment_contracts` Queries nutzen direkt `.eq("branding_id", ...)` statt `applications!inner(branding_id)` Join
-- `AdminBewertungen` filtert Bewertungen über Mitarbeiter-Branding statt über Order-Branding
+### Uebersicht
 
----
+Neuer Rang "caller" im System. Caller sind eingeschraenkte Admin-Accounts die nur Zugriff auf entweder `/admin/bewerbungsgespraeche` oder `/admin/probetag` haben. Verwaltung ueber `/admin/caller`.
 
-# Auftrags-Erstellung & Anhänge-System (abgeschlossen)
+### 1. Datenbank-Aenderungen
 
-## Was wurde gemacht
+**Migration 1: app_role Enum erweitern + Hilfsfunktion**
 
-### DB-Migration
-- `orders` Tabelle erweitert: `description`, `order_type`, `estimated_hours`, `is_starter_job`, `work_steps` (jsonb), `required_attachments` (jsonb)
-- `order_number` und `provider` auf nullable gesetzt
-- Neue Tabelle `order_attachments` mit RLS-Policies (Mitarbeiter: eigene lesen/einfügen, Admins: lesen/updaten/löschen)
-- Storage-Bucket `order-attachments` erstellt mit RLS-Policies
+```sql
+ALTER TYPE public.app_role ADD VALUE 'caller';
 
-### Frontend - Admin
-- 4-Schritt Auftragserstellungs-Wizard (`AdminAuftragWizard.tsx`): Grundinfos, Arbeitsschritte, Bewertungsfragen, Erforderliche Anhänge
-- Routen: `/admin/auftraege/neu`, `/admin/auftraege/:id/bearbeiten`
-- Auftrageliste (`AdminAuftraege.tsx`) komplett refactored: Dialog entfernt, Link zum Wizard
-- Neue Seite `AdminAnhaenge.tsx` für Anhänge-Verwaltung (Genehmigen/Ablehnen)
-- Sidebar: "Anhänge" Eintrag unter "Bewertungen" hinzugefügt
+CREATE OR REPLACE FUNCTION public.is_caller(_user_id uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = _user_id AND role = 'caller') $$;
+```
 
-### Frontend - Mitarbeiter
-- `AuftragDetails.tsx`: Arbeitsschritte-Anzeige, Anhänge-Upload mit Status-Tracking
-- Bewertungs-Freischaltung (`review_unlocked`) komplett entfernt – Mitarbeiter können immer eigenständig bewerten
-- Upload akzeptiert PNG, JPG, JPEG, PDF
+**Migration 2: RLS-Policies aktualisieren**
 
-### Frontend - AdminMitarbeiterDetail
-- Aufträge-Tab zeigt jetzt "Anhänge ausstehend" Badge wenn erforderliche Anhänge noch nicht genehmigt sind
+Caller muessen auf dieselben Tabellen zugreifen wie Kunden, aber nur fuer ihre zugewiesenen Brandings. Die bestehenden RLS-Policies fuer `applications`, `interview_appointments`, `trial_day_appointments`, `employment_contracts`, `brandings`, `ident_sessions` etc. muessen um `is_caller()` Checks erweitert werden (analog zu `is_kunde()`).
 
----
+Beispiel-Pattern fuer jede betroffene Policy:
+```sql
+-- Bestehend: ... OR (is_kunde(auth.uid()) AND (...branding check...))
+-- Neu:       ... OR (is_caller(auth.uid()) AND (...branding check...))
+```
 
-# Vergütungsmodell pro Branding (abgeschlossen)
+Betroffene Tabellen: `applications`, `interview_appointments`, `trial_day_appointments`, `employment_contracts`, `brandings`, `email_logs`, `sms_logs`, `branding_schedule_settings`, `schedule_blocked_slots`.
 
-## Was wurde gemacht
+Caller nutzen ebenfalls `kunde_brandings` fuer die Branding-Zuweisung (kein neuer Table noetig), also greift `user_branding_ids()` automatisch.
 
-### DB-Migration
-- `payment_model` (text, default 'per_order'), `salary_minijob`, `salary_teilzeit`, `salary_vollzeit` (numeric, nullable) auf `brandings` hinzugefügt
+### 2. Edge Function: `create-caller-account`
 
-### Frontend - Admin
-- `AdminBrandings.tsx`: RadioGroup für Vergütungsmodell (pro Auftrag / Festgehalt) + bedingte Gehaltsfelder für Minijob/Teilzeit/Vollzeit
-- `AdminAuftragWizard.tsx`: Vergütungsfeld wird bei Festgehalt-Branding ausgeblendet, reward wird automatisch auf "0" gesetzt
+Neue Edge Function analog zu `create-kunde-account`:
+- Erstellt Auth-User mit Email/Passwort
+- Loescht auto-erstellte 'user'-Rolle, setzt 'caller'
+- Fuegt `admin_permissions` Eintrag ein (entweder `/admin/bewerbungsgespraeche` oder `/admin/probetag`)
+- Fuegt `kunde_brandings` Eintraege fuer zugewiesene Brandings ein
 
-### Frontend - Mitarbeiter
-- `MitarbeiterLayout.tsx`: Branding-Daten um payment_model und Gehaltsspalten erweitert
-- `MitarbeiterDashboard.tsx`: Stats-Grid zeigt "Festgehalt" statt "Guthaben" bei fixed_salary; Prämie-Zeile in Auftrags-Cards ausgeblendet
-- `DashboardPayoutSummary.tsx`: Zeigt Festgehalt statt Balance bei fixed_salary
-- `AuftragDetails.tsx`: Prämie-Anzeige ausgeblendet bei fixed_salary
+Input: `{ email, password, callerType: "bewerbungsgespraeche" | "probetag", brandingIds: string[] }`
 
----
+### 3. Frontend-Aenderungen
 
-# Automatische SMS-Erinnerungen 24h vor Terminen (abgeschlossen)
+| Datei | Aenderung |
+|---|---|
+| `src/hooks/useUserRole.ts` | `isCaller` Property hinzufuegen, 'caller' als AppRole |
+| `src/components/ProtectedRoute.tsx` | 'caller' in allowedRoles fuer /admin |
+| `src/App.tsx` | Route `/admin/caller` + Import, ProtectedRoute um 'caller' erweitern |
+| `src/contexts/BrandingContext.tsx` | `isCaller` behandeln (Brandings aus `kunde_brandings` laden, wie Kunde) |
+| `src/components/admin/AdminSidebar.tsx` | Caller-Rolle behandeln: nur erlaubte Pfade zeigen, Branding-Switcher anzeigen |
+| `src/components/admin/AdminLayout.tsx` | 'caller' Rolle erlauben, Pfad-Blocking fuer Caller analog zu Kunde |
+| `src/pages/admin/AdminCaller.tsx` | **Neue Seite**: Caller-Konten verwalten (Liste + Erstellen-Dialog mit Email, Passwort, Typ-Auswahl, Branding-Zuweisung) |
 
-## Was wurde gemacht
+**AdminSidebar Caller-Logik:**
+- Wenn `isCaller`: Alle Nav-Items ausblenden ausser dem erlaubten Pfad (via `useAdminPermissions`)
+- Kein "Uebersicht"-Link, kein Einstellungen-Bereich
+- Branding-Switcher bleibt sichtbar
 
-### DB-Migration
-- `reminder_sent` (boolean, default false) auf `interview_appointments` und `trial_day_appointments`
-- `pg_cron` und `pg_net` Extensions aktiviert
+**AdminLayout Caller-Logik:**
+- Caller die auf nicht-erlaubte Pfade navigieren werden zum erlaubten Pfad redirected
+- Laedt synchron mit Permissions, kein Flackern (wie bei bestehenden admin_permissions)
 
-### DB-Daten
-- Zwei neue SMS-Templates: `gespraech_erinnerung_auto`, `probetag_erinnerung_auto`
-- Stündlicher Cron-Job `appointment-reminders-hourly` eingerichtet
+**AdminCaller.tsx UI:**
+- Aehnlich wie AdminKunden: Card-Liste der Caller
+- Erstellen-Dialog: Email, Passwort, Radio-Button (Bewerbungsgespraeche / Probetage), Branding-Checkboxen
+- Anzeige: Name, Typ-Badge, zugewiesene Brandings
+- Loeschen-Button
 
-### Edge Function
-- `send-appointment-reminders`: Prüft stündlich Termine in den nächsten 24-25h, sendet Erinnerungs-SMS via `send-sms`, markiert `reminder_sent = true`
-- SMS wird mit korrekter `branding_id` und `event_type` geloggt → erscheint in SMS-History
+### 4. Keine Flicker-Garantie
 
-### Frontend
-- `AdminSmsTemplates.tsx`: Platzhalter für `gespraech_erinnerung_auto` und `probetag_erinnerung_auto` registriert
+Die bestehende `useAdminPermissions`-Logik blockiert bereits das Rendering bis Permissions geladen sind. Da Caller ihre `admin_permissions` Eintraege haben, wird die Sidebar sofort korrekt gerendert ohne nachtraegliches Ausblenden.
+
+### Betroffene Dateien (Zusammenfassung)
+
+| Datei | Art |
+|---|---|
+| DB Migration (app_role + is_caller + RLS) | Neu |
+| `supabase/functions/create-caller-account/index.ts` | Neu |
+| `src/pages/admin/AdminCaller.tsx` | Neu |
+| `src/hooks/useUserRole.ts` | Aendern |
+| `src/components/ProtectedRoute.tsx` | Aendern |
+| `src/App.tsx` | Aendern |
+| `src/contexts/BrandingContext.tsx` | Aendern |
+| `src/components/admin/AdminSidebar.tsx` | Aendern |
+| `src/components/admin/AdminLayout.tsx` | Aendern |
+
