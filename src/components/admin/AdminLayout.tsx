@@ -15,6 +15,7 @@ const KUNDE_BLOCKED_PATHS = [
   "/admin/telegram",
   "/admin/kunden",
   "/admin/sms-history",
+  "/admin/caller",
 ];
 
 export default function AdminLayout() {
