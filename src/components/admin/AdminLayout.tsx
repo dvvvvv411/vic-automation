@@ -32,7 +32,7 @@ export default function AdminLayout() {
     );
   }
 
-  if (isKunde && KUNDE_BLOCKED_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"))) {
+  if ((isKunde || isCaller) && KUNDE_BLOCKED_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"))) {
     return <Navigate to="/admin" replace />;
   }
 
