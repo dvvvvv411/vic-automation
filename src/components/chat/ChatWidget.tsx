@@ -42,6 +42,8 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
   const adminOnline = isChatOnline(chatSchedule.from, chatSchedule.until);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { playNotification, playSend } = useChatSounds();
   const openRef = useRef(open);
   openRef.current = open;
 
