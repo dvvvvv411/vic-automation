@@ -586,7 +586,7 @@ const MitarbeiterDashboard = () => {
       {/* Summary Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <DashboardReviewsSummary recentReviews={recentReviews} />
-        <DashboardPayoutSummary balance={isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary} />
+        <DashboardPayoutSummary balance={isHourlyRate ? hourlyEarnings : isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary && !isHourlyRate} />
       </div>
     </div>
   );
