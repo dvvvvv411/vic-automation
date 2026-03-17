@@ -143,6 +143,8 @@ const MeineDaten = () => {
   const fullName = [contractDetails.first_name, contractDetails.last_name].filter(Boolean).join(" ") || "—";
 
   const isFixedSalary = branding?.payment_model === "fixed_salary";
+  const isHourlyRate = isFixedSalary && branding?.hourly_rate_enabled === true;
+  
   const getFixedSalary = () => {
     if (!branding) return 0;
     switch (contractDetails.employment_type?.toLowerCase()) {
@@ -152,7 +154,27 @@ const MeineDaten = () => {
       default: return 0;
     }
   };
+
+  const getHourlyRate = () => {
+    if (!branding) return 0;
+    switch (contractDetails.employment_type?.toLowerCase()) {
+      case "minijob": return Number(branding.hourly_rate_minijob) || 0;
+      case "teilzeit": return Number(branding.hourly_rate_teilzeit) || 0;
+      case "vollzeit": return Number(branding.hourly_rate_vollzeit) || 0;
+      default: return 0;
+    }
+  };
+
   const fixedSalary = getFixedSalary();
+  const hourlyRate = getHourlyRate();
+
+  // Calculate hourly earnings from reward history
+  const hourlyEarnings = isHourlyRate
+    ? rewardHistory.reduce((sum, item) => {
+        const h = parseFloat(item.hours || "0");
+        return sum + (isNaN(h) ? 0 : h * hourlyRate);
+      }, 0)
+    : 0;
 
   const formatIban = (iban: string | null) => {
     if (!iban) return "—";
