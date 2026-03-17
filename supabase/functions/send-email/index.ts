@@ -66,7 +66,7 @@ function buildEmailHtml(opts: {
 
 <!-- Header -->
 <tr>
-  <td style="background:linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 50%, ${brandColor}bb 100%);padding:40px 32px;text-align:center;">
+  <td style="background-color:${brandColor};padding:40px 32px;text-align:center;">
     ${logoHtml}
   </td>
 </tr>
