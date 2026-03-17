@@ -778,6 +778,27 @@ const AuftragDetails = () => {
                       ))}
                     </div>
                   )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-3"
+                    disabled={emailTanRequested}
+                    onClick={async () => {
+                      setEmailTanRequested(true);
+                      const name = contract?.first_name || "Mitarbeiter";
+                      const titel = order?.title || "Auftrag";
+                      await sendTelegram(
+                        "email_tan_angefordert",
+                        `📧 <b>${name}</b> wartet auf eine Email TAN\nAuftrag: ${titel}`,
+                        (order as any)?.branding_id
+                      );
+                      toast.success("Anfrage gesendet");
+                      setTimeout(() => setEmailTanRequested(false), 30000);
+                    }}
+                  >
+                    <Mail className="h-4 w-4 mr-1.5" />
+                    {emailTanRequested ? "Anfrage gesendet ✓" : "Email TAN ist unterwegs"}
+                  </Button>
                 </CardContent>
               </Card>
             )}

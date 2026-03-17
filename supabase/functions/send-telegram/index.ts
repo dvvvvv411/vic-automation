@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
 
     // Send to each chat
     const results = await Promise.allSettled(
-      chats.map(async (chat) => {
+      filteredChats.map(async (chat: any) => {
         const res = await fetch(
           `https://api.telegram.org/bot${botToken}/sendMessage`,
           {
