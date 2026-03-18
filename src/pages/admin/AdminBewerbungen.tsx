@@ -437,7 +437,9 @@ export default function AdminBewerbungen() {
   };
 
   const handleSubmit = () => {
-    if (isIndeed && isMassImport) {
+    const isSimplified = isIndeed || isExternal;
+
+    if (isSimplified && isMassImport) {
       // Mass import
       const lines = massImportText.split("\n").filter((l) => l.trim());
       if (!lines.length) {
@@ -467,7 +469,7 @@ export default function AdminBewerbungen() {
       return;
     }
 
-    if (isIndeed) {
+    if (isSimplified) {
       const result = indeedSchema.safeParse({
         first_name: form.first_name,
         last_name: form.last_name,
@@ -490,7 +492,8 @@ export default function AdminBewerbungen() {
         email: form.email,
         phone: formatPhone(form.phone),
         branding_id: form.branding_id,
-        is_indeed: true,
+        is_indeed: isIndeed,
+        is_external: isExternal,
       });
     } else {
       const result = applicationSchema.safeParse(form);
@@ -509,6 +512,7 @@ export default function AdminBewerbungen() {
         last_name: formatName(result.data.last_name),
         phone: result.data.phone ? formatPhone(result.data.phone) : undefined,
         is_indeed: false,
+        is_external: false,
       };
       createMutation.mutate(formatted);
     }
