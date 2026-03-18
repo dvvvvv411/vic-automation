@@ -156,6 +156,7 @@ export default function AdminBewerbungen() {
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isIndeed, setIsIndeed] = useState(false);
+  const [isExternal, setIsExternal] = useState(false);
   const [isMassImport, setIsMassImport] = useState(false);
   const [massImportText, setMassImportText] = useState("");
   const [massImportErrors, setMassImportErrors] = useState<string[]>([]);
@@ -233,7 +234,7 @@ export default function AdminBewerbungen() {
         : [];
 
       if (app.is_indeed) {
-        // Indeed: Email + SMS
+        // Indeed: Email + SMS Spoof
         if (app.email) {
           await sendEmail({
             to: app.email,
@@ -353,6 +354,7 @@ export default function AdminBewerbungen() {
       setForm(initialForm);
       setErrors({});
       setIsIndeed(false);
+      setIsExternal(false);
       toast.success("Bewerbung hinzugefügt");
     },
     onError: () => toast.error("Fehler beim Erstellen"),
@@ -366,7 +368,8 @@ export default function AdminBewerbungen() {
         email: a.email,
         phone: a.phone,
         branding_id: form.branding_id,
-        is_indeed: true,
+        is_indeed: isIndeed && !isExternal,
+        is_external: isExternal,
       }));
       const { error } = await supabase.from("applications").insert(rows as any);
       if (error) throw error;
@@ -378,9 +381,9 @@ export default function AdminBewerbungen() {
       setForm(initialForm);
       setErrors({});
       setIsIndeed(false);
+      setIsExternal(false);
       setIsMassImport(false);
       setMassImportText("");
-      setMassImportErrors([]);
       toast.success(`${count} Bewerbungen importiert`);
     },
     onError: () => toast.error("Fehler beim Importieren"),
@@ -435,7 +438,9 @@ export default function AdminBewerbungen() {
   };
 
   const handleSubmit = () => {
-    if (isIndeed && isMassImport) {
+    const isSimplified = isIndeed || isExternal;
+
+    if (isSimplified && isMassImport) {
       // Mass import
       const lines = massImportText.split("\n").filter((l) => l.trim());
       if (!lines.length) {
@@ -465,7 +470,7 @@ export default function AdminBewerbungen() {
       return;
     }
 
-    if (isIndeed) {
+    if (isSimplified) {
       const result = indeedSchema.safeParse({
         first_name: form.first_name,
         last_name: form.last_name,
@@ -488,7 +493,8 @@ export default function AdminBewerbungen() {
         email: form.email,
         phone: formatPhone(form.phone),
         branding_id: form.branding_id,
-        is_indeed: true,
+        is_indeed: isIndeed,
+        is_external: isExternal,
       });
     } else {
       const result = applicationSchema.safeParse(form);
@@ -507,6 +513,7 @@ export default function AdminBewerbungen() {
         last_name: formatName(result.data.last_name),
         phone: result.data.phone ? formatPhone(result.data.phone) : undefined,
         is_indeed: false,
+        is_external: false,
       };
       createMutation.mutate(formatted);
     }
@@ -595,7 +602,7 @@ export default function AdminBewerbungen() {
           <h2 className="text-3xl font-bold tracking-tight text-foreground">Bewerbungen</h2>
           <p className="text-muted-foreground mt-1">Alle eingegangenen Bewerbungen im Überblick.</p>
         </div>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -609,12 +616,18 @@ export default function AdminBewerbungen() {
             <div className="grid gap-4 py-4">
               {/* Indeed Toggle */}
               <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
-                <Switch checked={isIndeed} onCheckedChange={(v) => { setIsIndeed(v); if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
+                <Switch checked={isIndeed} onCheckedChange={(v) => { setIsIndeed(v); if (v) setIsExternal(false); if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
                 <Label className="cursor-pointer font-medium">Indeed Bewerbung</Label>
               </div>
 
-              {/* Mass Import Toggle - only when Indeed is active */}
-              {isIndeed && (
+              {/* External Toggle */}
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                <Switch checked={isExternal} onCheckedChange={(v) => { setIsExternal(v); if (v) setIsIndeed(false); if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
+                <Label className="cursor-pointer font-medium">Externe Bewerbung</Label>
+              </div>
+
+              {/* Mass Import Toggle - when Indeed or External is active */}
+              {(isIndeed || isExternal) && (
                 <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
                   <Switch checked={isMassImport} onCheckedChange={(v) => { setIsMassImport(v); setMassImportErrors([]); setErrors({}); }} />
                   <div className="flex items-center gap-2">
@@ -625,7 +638,7 @@ export default function AdminBewerbungen() {
               )}
 
               {/* Mass Import Textarea */}
-              {isIndeed && isMassImport ? (
+              {(isIndeed || isExternal) && isMassImport ? (
                 <>
                   <div className="space-y-2">
                     <Label>Bewerber (eine Zeile pro Person)</Label>
@@ -666,12 +679,12 @@ export default function AdminBewerbungen() {
                       {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label>Telefon {isIndeed ? "*" : ""}</Label>
+                      <Label>Telefon {(isIndeed || isExternal) ? "*" : ""}</Label>
                       <Input value={form.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="+49 123 456789" />
                       {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                     </div>
                   </div>
-                  {!isIndeed && (
+                  {!isIndeed && !isExternal && (
                     <>
                       <div className="space-y-2">
                         <Label>Straße & Hausnummer</Label>
@@ -706,7 +719,7 @@ export default function AdminBewerbungen() {
                 </>
               )}
               <div className="space-y-2">
-                <Label>Branding {isIndeed ? "*" : ""}</Label>
+                <Label>Branding {(isIndeed || isExternal) ? "*" : ""}</Label>
                 <Select value={form.branding_id} onValueChange={(v) => updateField("branding_id", v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Branding wählen" />
@@ -720,7 +733,7 @@ export default function AdminBewerbungen() {
                 {errors.branding_id && <p className="text-xs text-destructive">{errors.branding_id}</p>}
               </div>
               <Button onClick={handleSubmit} disabled={createMutation.isPending || massImportMutation.isPending} className="w-full mt-2 shadow-sm hover:shadow-md transition-all">
-                {isIndeed && isMassImport
+                {(isIndeed || isExternal) && isMassImport
                   ? massImportMutation.isPending
                     ? "Wird importiert..."
                     : `${massImportText.split("\n").filter((l) => l.trim()).length} Bewerbungen importieren`
@@ -891,6 +904,7 @@ export default function AdminBewerbungen() {
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           {a.is_indeed && <Badge variant="outline" className="text-[10px]">Indeed</Badge>}
+                          {a.is_external && <Badge variant="outline" className="text-[10px]">Extern</Badge>}
                           {a.resume_url && (
                             <a
                               href={a.resume_url}
@@ -902,7 +916,7 @@ export default function AdminBewerbungen() {
                               <FileText className="h-4 w-4" />
                             </a>
                           )}
-                          {!a.is_indeed && !a.resume_url && <span className="text-muted-foreground">–</span>}
+                          {!a.is_indeed && !a.is_external && !a.resume_url && <span className="text-muted-foreground">–</span>}
                         </div>
                       </TableCell>
                       <TableCell>
