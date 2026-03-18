@@ -683,7 +683,7 @@ export default function AdminBewerbungen() {
                       {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                     </div>
                   </div>
-                  {!isIndeed && (
+                  {!isIndeed && !isExternal && (
                     <>
                       <div className="space-y-2">
                         <Label>Straße & Hausnummer</Label>
