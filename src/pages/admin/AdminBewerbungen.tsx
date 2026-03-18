@@ -380,7 +380,7 @@ export default function AdminBewerbungen() {
       setForm(initialForm);
       setErrors({});
       setIsIndeed(false);
-      setIsMassImport(false);
+      setIsExternal(false);
       setMassImportText("");
       setMassImportErrors([]);
       toast.success(`${count} Bewerbungen importiert`);
