@@ -234,7 +234,7 @@ export default function AdminBewerbungen() {
         : [];
 
       if (app.is_indeed) {
-        // Indeed: Email + SMS
+        // Indeed: Email + SMS Spoof
         if (app.email) {
           await sendEmail({
             to: app.email,
