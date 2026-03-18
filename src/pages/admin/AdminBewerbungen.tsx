@@ -367,7 +367,8 @@ export default function AdminBewerbungen() {
         email: a.email,
         phone: a.phone,
         branding_id: form.branding_id,
-        is_indeed: true,
+        is_indeed: isIndeed && !isExternal,
+        is_external: isExternal,
       }));
       const { error } = await supabase.from("applications").insert(rows as any);
       if (error) throw error;
