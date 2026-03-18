@@ -109,3 +109,21 @@
 ### Logik
 - Ein Auftrag zählt nur als "erfolgreich" wenn Bewertung + ggf. Anhänge genehmigt (bestehender Status `erfolgreich`)
 - Stunden werden aus `orders.estimated_hours` entnommen
+
+---
+
+# Externe Bewerbung — Toggle, Mass Import & Badge (abgeschlossen)
+
+## Was wurde gemacht
+
+### DB-Migration
+- `is_external` (boolean, default false) auf `applications` hinzugefügt
+
+### Frontend - AdminBewerbungen.tsx
+- Neuer Toggle "Externe Bewerbung" unter Indeed-Toggle, exklusiv zueinander
+- Bei Extern: gleiche reduzierte Felder wie Indeed (Vorname, Nachname, Email, Telefon, Branding)
+- Mass Import bei Extern verfügbar mit gleichem Format wie Indeed
+- Submit-Logik: `is_external: true, is_indeed: false` bei Extern
+- Accept-Logik: Externe Bewerbungen nutzen normale SMS (nicht Spoof), da `is_indeed === false`
+- Badge "Extern" in der Tabelle neben Indeed-Badge
+- "–" nur wenn weder Indeed noch Extern noch CV
