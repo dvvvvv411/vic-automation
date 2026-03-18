@@ -678,7 +678,7 @@ export default function AdminBewerbungen() {
                       {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label>Telefon {isIndeed ? "*" : ""}</Label>
+                      <Label>Telefon {(isIndeed || isExternal) ? "*" : ""}</Label>
                       <Input value={form.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="+49 123 456789" />
                       {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                     </div>
