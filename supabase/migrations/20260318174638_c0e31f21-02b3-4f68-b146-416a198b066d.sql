@@ -1,0 +1,1 @@
+ALTER TABLE public.applications ADD COLUMN is_external boolean NOT NULL DEFAULT false;

@@ -45,6 +45,7 @@ export type Database = {
           employment_type: string | null
           first_name: string
           id: string
+          is_external: boolean
           is_indeed: boolean
           last_name: string
           phone: string | null
@@ -62,6 +63,7 @@ export type Database = {
           employment_type?: string | null
           first_name: string
           id?: string
+          is_external?: boolean
           is_indeed?: boolean
           last_name: string
           phone?: string | null
@@ -79,6 +81,7 @@ export type Database = {
           employment_type?: string | null
           first_name?: string
           id?: string
+          is_external?: boolean
           is_indeed?: boolean
           last_name?: string
           phone?: string | null
