@@ -382,8 +382,8 @@ export default function AdminBewerbungen() {
       setErrors({});
       setIsIndeed(false);
       setIsExternal(false);
+      setIsMassImport(false);
       setMassImportText("");
-      setMassImportErrors([]);
       toast.success(`${count} Bewerbungen importiert`);
     },
     onError: () => toast.error("Fehler beim Importieren"),
