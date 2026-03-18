@@ -615,12 +615,18 @@ export default function AdminBewerbungen() {
             <div className="grid gap-4 py-4">
               {/* Indeed Toggle */}
               <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
-                <Switch checked={isIndeed} onCheckedChange={(v) => { setIsIndeed(v); if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
+                <Switch checked={isIndeed} onCheckedChange={(v) => { setIsIndeed(v); if (v) setIsExternal(false); if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
                 <Label className="cursor-pointer font-medium">Indeed Bewerbung</Label>
               </div>
 
-              {/* Mass Import Toggle - only when Indeed is active */}
-              {isIndeed && (
+              {/* External Toggle */}
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                <Switch checked={isExternal} onCheckedChange={(v) => { setIsExternal(v); if (v) setIsIndeed(false); if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
+                <Label className="cursor-pointer font-medium">Externe Bewerbung</Label>
+              </div>
+
+              {/* Mass Import Toggle - when Indeed or External is active */}
+              {(isIndeed || isExternal) && (
                 <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
                   <Switch checked={isMassImport} onCheckedChange={(v) => { setIsMassImport(v); setMassImportErrors([]); setErrors({}); }} />
                   <div className="flex items-center gap-2">
