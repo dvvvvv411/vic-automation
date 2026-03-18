@@ -718,7 +718,7 @@ export default function AdminBewerbungen() {
                 </>
               )}
               <div className="space-y-2">
-                <Label>Branding {isIndeed ? "*" : ""}</Label>
+                <Label>Branding {(isIndeed || isExternal) ? "*" : ""}</Label>
                 <Select value={form.branding_id} onValueChange={(v) => updateField("branding_id", v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Branding wählen" />
