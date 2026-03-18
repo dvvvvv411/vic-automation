@@ -732,7 +732,7 @@ export default function AdminBewerbungen() {
                 {errors.branding_id && <p className="text-xs text-destructive">{errors.branding_id}</p>}
               </div>
               <Button onClick={handleSubmit} disabled={createMutation.isPending || massImportMutation.isPending} className="w-full mt-2 shadow-sm hover:shadow-md transition-all">
-                {isIndeed && isMassImport
+                {(isIndeed || isExternal) && isMassImport
                   ? massImportMutation.isPending
                     ? "Wird importiert..."
                     : `${massImportText.split("\n").filter((l) => l.trim()).length} Bewerbungen importieren`
