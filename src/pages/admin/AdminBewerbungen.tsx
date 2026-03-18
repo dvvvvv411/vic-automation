@@ -637,7 +637,7 @@ export default function AdminBewerbungen() {
               )}
 
               {/* Mass Import Textarea */}
-              {isIndeed && isMassImport ? (
+              {(isIndeed || isExternal) && isMassImport ? (
                 <>
                   <div className="space-y-2">
                     <Label>Bewerber (eine Zeile pro Person)</Label>
