@@ -903,6 +903,7 @@ export default function AdminBewerbungen() {
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           {a.is_indeed && <Badge variant="outline" className="text-[10px]">Indeed</Badge>}
+                          {a.is_external && <Badge variant="outline" className="text-[10px]">Extern</Badge>}
                           {a.resume_url && (
                             <a
                               href={a.resume_url}
@@ -914,7 +915,7 @@ export default function AdminBewerbungen() {
                               <FileText className="h-4 w-4" />
                             </a>
                           )}
-                          {!a.is_indeed && !a.resume_url && <span className="text-muted-foreground">–</span>}
+                          {!a.is_indeed && !a.is_external && !a.resume_url && <span className="text-muted-foreground">–</span>}
                         </div>
                       </TableCell>
                       <TableCell>
