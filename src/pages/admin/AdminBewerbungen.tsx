@@ -355,6 +355,7 @@ export default function AdminBewerbungen() {
       setErrors({});
       setIsIndeed(false);
       setIsExternal(false);
+      toast.success("Bewerbung hinzugefügt");
     },
     onError: () => toast.error("Fehler beim Erstellen"),
   });
