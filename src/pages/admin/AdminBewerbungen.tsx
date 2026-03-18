@@ -354,7 +354,7 @@ export default function AdminBewerbungen() {
       setForm(initialForm);
       setErrors({});
       setIsIndeed(false);
-      toast.success("Bewerbung hinzugefügt");
+      setIsExternal(false);
     },
     onError: () => toast.error("Fehler beim Erstellen"),
   });
