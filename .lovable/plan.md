@@ -1,37 +1,44 @@
 
 
-## Fix: Kunde kann keine Indeed-Bewerbung akzeptieren
+## Subdomain-Prefix fuer Brandings
 
-### Ursache
+### Uebersicht
 
-In Zeile 216 von `AdminBewerbungen.tsx` wird `createShortLink()` aufgerufen, das einen Eintrag in die Tabelle `short_links` erstellt. Die RLS-Policy fuer INSERT auf `short_links` erlaubt aber nur `admin`:
+Neues Feld `subdomain_prefix` auf `brandings` (Default `web`). Wird im Branding-Formular editierbar und in `buildBrandingUrl.ts` statt des hardcodierten `web.` verwendet.
+
+### 1. Datenbank-Migration
 
 ```sql
-has_role(auth.uid(), 'admin'::app_role)
+ALTER TABLE public.brandings
+  ADD COLUMN subdomain_prefix text NOT NULL DEFAULT 'web';
 ```
 
-Wenn ein Kunde-Account die Bewerbung akzeptiert, schlaegt der Insert fehl.
+Damit bekommen alle bestehenden Brandings automatisch `web` als Prefix.
 
-### Loesung
+### 2. AdminBrandingForm.tsx
 
-Die bestehende INSERT-Policy auf `short_links` erweitern, sodass auch `kunde`-Nutzer Eintraege erstellen koennen:
+Neues Eingabefeld "Subdomain-Prefix" in der Stammdaten-Card, unter dem Domain-Feld:
+- Label: "Subdomain-Prefix"
+- Placeholder: `web`
+- Hinweistext: "Wird als Subdomain vor der Domain verwendet, z.B. web.example.com"
+- Formular-Schema erweitern um `subdomain_prefix: z.string().max(50).optional()`
 
-```sql
-DROP POLICY "Admins can insert short_links" ON public.short_links;
-CREATE POLICY "Admins and Kunden can insert short_links"
-  ON public.short_links FOR INSERT
-  TO public
-  WITH CHECK (
-    has_role(auth.uid(), 'admin'::app_role)
-    OR is_kunde(auth.uid())
-  );
+### 3. buildBrandingUrl.ts
+
+Query erweitern um `subdomain_prefix`. Statt `https://web.${domain}` wird `https://${prefix}.${domain}` verwendet:
+
+```typescript
+.select("domain, subdomain_prefix")
+...
+const prefix = data.subdomain_prefix || "web";
+return `https://${prefix}.${domain}${path}`;
 ```
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| Migration | RLS-Policy auf `short_links` erweitern |
-
-Keine Code-Aenderungen noetig — nur die Datenbank-Policy.
+| Migration | `subdomain_prefix` Spalte auf `brandings` |
+| `AdminBrandingForm.tsx` | Neues Eingabefeld |
+| `buildBrandingUrl.ts` | Prefix aus DB statt hardcoded `web` |
 
