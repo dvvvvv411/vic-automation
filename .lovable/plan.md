@@ -1,45 +1,100 @@
 
+## Befund
 
-## SMS-Absendername aus Branding bei Bewerbungsgespraech-Buchung
+- Der Probetag-Termin ist **korrekt gespeichert**:
+  - Termin: **21.03.2026, 11:00**
+  - Bewerbung: **Tobias Papst**
+  - Branding: **Efficient Flow Solutions GmbH**
+- Auch Mail- und SMS-Logs hängen am **Efficient-Flow-Branding**.  
+  Das heißt: **Die Buchungsseite speichert nicht falsch**, sondern der Datensatz ist da und dem richtigen Branding zugeordnet.
 
-### Problem
+## Echte Ursache
 
-In `Bewerbungsgespraech.tsx` (Zeile 217-223) wird `sendSms` ohne `from`-Parameter aufgerufen. Dadurch verwendet die Edge Function den Default-Absender "Vic" statt den im Branding konfigurierten `sms_sender_name`.
+Die Admin-Seite `/admin/probetag` sendet den richtigen Filter an Supabase. Im Browser ist sogar ein Request mit der Efficient-Flow-Branding-ID zu sehen, aber die Response ist trotzdem:
 
-### Aenderung
-
-**Datei: `src/pages/Bewerbungsgespraech.tsx`**
-
-Vor dem SMS-Versand den `sms_sender_name` aus dem Branding laden und als `from` uebergeben:
-
-```typescript
-let smsSender: string | undefined;
-if (application.branding_id) {
-  const { data: branding } = await supabase
-    .from("brandings")
-    .select("sms_sender_name")
-    .eq("id", application.branding_id)
-    .single();
-  smsSender = (branding as any)?.sms_sender_name || undefined;
-}
-await sendSms({
-  to: application.phone,
-  text: smsText,
-  event_type: "gespraech_bestaetigung",
-  recipient_name: applicantName,
-  from: smsSender,
-  branding_id: application.branding_id,
-});
+```text
+[]
 ```
 
-Gleiche Pruefung auch in `Probetag.tsx` durchfuehren, falls dort dasselbe Problem besteht.
+Der Grund ist **RLS auf `trial_day_appointments`**:
 
-### Betroffene Dateien
+- Für `trial_day_appointments` gibt es aktuell **keine SELECT-Policy für admin/kunde**
+- Es gibt dort nur:
+  - `anon` SELECT
+  - `caller` SELECT
+- Folge: Ein eingeloggter Admin/Kunde bekommt **stille leere Ergebnisse** statt eines Fehlers
 
-| Datei | Aenderung |
+Darum siehst du auf `/admin/probetag` nichts, obwohl der Termin existiert.
+
+## Was ich umsetzen würde
+
+### 1. RLS für `trial_day_appointments` reparieren
+Die Policies für `trial_day_appointments` an die funktionierende Logik von `interview_appointments` angleichen.
+
+Konkret:
+- fehlende **SELECT-Policy für admin/kunde** ergänzen
+- prüfen, ob DELETE/UPDATE/INSERT ebenfalls sauber konsistent sind
+
+Beispielrichtung:
+
+```sql
+create policy "Admins can select trial_day_appointments"
+on public.trial_day_appointments
+for select
+to authenticated
+using (
+  has_role(auth.uid(), 'admin')
+  or (
+    is_kunde(auth.uid())
+    and (
+      not user_has_any_branding(auth.uid())
+      or application_id in (select apps_for_branding_ids(auth.uid()))
+    )
+  )
+  or (
+    is_caller(auth.uid())
+    and application_id in (select apps_for_branding_ids(auth.uid()))
+  )
+);
+```
+
+### 2. Keine Änderung an der Branding-Zuordnung der Buchung
+Am Insert selbst muss ich für dieses Problem **nichts an der Branding-Speicherung umbauen**.  
+Die Zuordnung läuft bereits korrekt über `applications.branding_id`.
+
+### 3. Telegram-Fix direkt mit erledigen
+Es gibt zusätzlich noch den bereits gefundenen Bug:
+`src/pages/Probetag.tsx` ruft `sendTelegram(...)` **ohne `branding_id`** auf.
+
+Dadurch kommen branding-gefilterte Telegram-Chats nicht an.  
+Das würde ich im selben Durchgang mitfixen:
+
+```ts
+await sendTelegram("probetag_gebucht", message, application.branding_id);
+```
+
+## Betroffene Stellen
+
+| Bereich | Änderung |
 |---|---|
-| `src/pages/Bewerbungsgespraech.tsx` | `sms_sender_name` laden, als `from` uebergeben |
-| `src/pages/Probetag.tsx` | Gleiche Aenderung falls `from` fehlt |
+| `supabase/migrations/...` | fehlende RLS-Policy für `trial_day_appointments` ergänzen |
+| `src/pages/Probetag.tsx` | `branding_id` an Telegram-Aufruf übergeben |
 
-Keine DB-Migration noetig.
+## Erwartetes Ergebnis
 
+Nach der Umsetzung:
+
+- der vorhandene Efficient-Flow-Probetag erscheint auf `/admin/probetag`
+- neue Probetag-Termine sind für Admin/Kunde korrekt sichtbar
+- Telegram-Nachrichten können wieder brandingbasiert zugestellt werden
+
+## Technische Kurzfassung
+
+Das Problem ist **nicht**:
+- falsches Branding beim Buchen
+- falscher Admin-Filter
+- fehlender Datensatz
+
+Das Problem ist:
+- **falsche/fehlende RLS-SELECT-Policy auf `trial_day_appointments`**
+- plus separat: **fehlende `branding_id` beim Telegram-Versand**
