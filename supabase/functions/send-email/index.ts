@@ -30,6 +30,7 @@ function buildEmailHtml(opts: {
   buttonUrl?: string;
   footerLines?: string[];
   footerAddress: string;
+  footerDetails?: { managingDirector?: string; phone?: string; registerCourt?: string; tradeRegister?: string; vatId?: string };
 }): string {
   const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress } = opts;
 
