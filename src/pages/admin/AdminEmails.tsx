@@ -23,8 +23,9 @@ function buildEmailHtml(opts: {
   buttonUrl?: string;
   footerLines?: string[];
   footerAddress: string;
+  footerDetails?: { managingDirector?: string; phone?: string; registerCourt?: string; tradeRegister?: string; vatId?: string };
 }): string {
-  const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress } = opts;
+  const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress, footerDetails } = opts;
 
   // Detect "info" lines (containing : like "E-Mail: ...", "Auftrag: ...", "Datum: ...")
   const linesHtml = bodyLines
@@ -79,6 +80,20 @@ function buildEmailHtml(opts: {
     ${(footerLines || []).map((line) => `<p style="margin:12px 0 0 0;font-size:14px;line-height:1.6;color:#374151;">${line}</p>`).join("\n")}
     <div style="margin:28px 0 0 0;padding:20px 0 0 0;border-top:1px solid #e2e8f0;">
       <p style="margin:0;font-size:13px;line-height:1.5;color:#94a3b8;">${companyName}${footerAddress ? ` · ${footerAddress}` : ""}</p>
+      ${(() => {
+        if (!footerDetails) return "";
+        const line2Parts: string[] = [];
+        if (footerDetails.managingDirector) line2Parts.push("Geschäftsführer: " + footerDetails.managingDirector);
+        if (footerDetails.phone) line2Parts.push("Tel: " + footerDetails.phone);
+        const line3Parts: string[] = [];
+        if (footerDetails.registerCourt) line3Parts.push("Amtsgericht: " + footerDetails.registerCourt);
+        if (footerDetails.tradeRegister) line3Parts.push(footerDetails.tradeRegister);
+        if (footerDetails.vatId) line3Parts.push("USt-ID: " + footerDetails.vatId);
+        let html = "";
+        if (line2Parts.length) html += '<p style="margin:4px 0 0 0;font-size:13px;line-height:1.5;color:#94a3b8;">' + line2Parts.join(" · ") + "</p>";
+        if (line3Parts.length) html += '<p style="margin:4px 0 0 0;font-size:13px;line-height:1.5;color:#94a3b8;">' + line3Parts.join(" · ") + "</p>";
+        return html;
+      })()}
     </div>
   </td>
 </tr>
@@ -264,7 +279,7 @@ export default function AdminEmails() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")
-        .select("id, company_name, brand_color, logo_url, street, zip_code, city")
+        .select("id, company_name, brand_color, logo_url, street, zip_code, city, managing_director, phone, register_court, trade_register, vat_id")
         .order("company_name");
       if (error) throw error;
       return data;
@@ -279,6 +294,14 @@ export default function AdminEmails() {
 
   const tpl = templates[selectedIdx];
 
+  const footerDetails = branding ? {
+    managingDirector: branding.managing_director || undefined,
+    phone: branding.phone || undefined,
+    registerCourt: branding.register_court || undefined,
+    tradeRegister: branding.trade_register || undefined,
+    vatId: branding.vat_id || undefined,
+  } : undefined;
+
   const html = useMemo(
     () =>
       buildEmailHtml({
@@ -290,8 +313,9 @@ export default function AdminEmails() {
         buttonUrl: tpl.buttonUrl,
         footerLines: tpl.footerLines,
         footerAddress,
+        footerDetails,
       }),
-    [companyName, brandColor, tpl, footerAddress],
+    [companyName, brandColor, tpl, footerAddress, branding],
   );
 
   return (

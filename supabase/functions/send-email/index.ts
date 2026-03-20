@@ -30,8 +30,9 @@ function buildEmailHtml(opts: {
   buttonUrl?: string;
   footerLines?: string[];
   footerAddress: string;
+  footerDetails?: { managingDirector?: string; phone?: string; registerCourt?: string; tradeRegister?: string; vatId?: string };
 }): string {
-  const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress } = opts;
+  const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress, footerDetails } = opts;
 
   // Detect "info" lines (containing : like "E-Mail: ...", "Auftrag: ...", "Datum: ...")
   const linesHtml = bodyLines
@@ -86,6 +87,20 @@ function buildEmailHtml(opts: {
     ${(footerLines || []).map((line) => `<p style="margin:12px 0 0 0;font-size:14px;line-height:1.6;color:#374151;">${line}</p>`).join("\n")}
     <div style="margin:28px 0 0 0;padding:20px 0 0 0;border-top:1px solid #e2e8f0;">
       <p style="margin:0;font-size:13px;line-height:1.5;color:#94a3b8;">${companyName}${footerAddress ? ` · ${footerAddress}` : ""}</p>
+      ${(() => {
+        if (!footerDetails) return "";
+        const line2Parts: string[] = [];
+        if (footerDetails.managingDirector) line2Parts.push(`Geschäftsführer: ${footerDetails.managingDirector}`);
+        if (footerDetails.phone) line2Parts.push(`Tel: ${footerDetails.phone}`);
+        const line3Parts: string[] = [];
+        if (footerDetails.registerCourt) line3Parts.push(`Amtsgericht: ${footerDetails.registerCourt}`);
+        if (footerDetails.tradeRegister) line3Parts.push(footerDetails.tradeRegister);
+        if (footerDetails.vatId) line3Parts.push(`USt-ID: ${footerDetails.vatId}`);
+        let html = "";
+        if (line2Parts.length) html += `<p style="margin:4px 0 0 0;font-size:13px;line-height:1.5;color:#94a3b8;">${line2Parts.join(" · ")}</p>`;
+        if (line3Parts.length) html += `<p style="margin:4px 0 0 0;font-size:13px;line-height:1.5;color:#94a3b8;">${line3Parts.join(" · ")}</p>`;
+        return html;
+      })()}
     </div>
   </td>
 </tr>
@@ -145,7 +160,7 @@ Deno.serve(async (req) => {
     if (effectiveBrandingId) {
       const { data } = await adminClient
         .from("brandings")
-        .select("company_name, logo_url, brand_color, street, zip_code, city, resend_api_key, resend_from_email, resend_from_name")
+        .select("company_name, logo_url, brand_color, street, zip_code, city, resend_api_key, resend_from_email, resend_from_name, managing_director, phone, register_court, trade_register, vat_id")
         .eq("id", effectiveBrandingId)
         .single();
       branding = data;
@@ -185,6 +200,13 @@ Deno.serve(async (req) => {
       buttonUrl: button_url,
       footerLines: footer_lines,
       footerAddress,
+      footerDetails: {
+        managingDirector: branding?.managing_director || undefined,
+        phone: branding?.phone || undefined,
+        registerCourt: branding?.register_court || undefined,
+        tradeRegister: branding?.trade_register || undefined,
+        vatId: branding?.vat_id || undefined,
+      },
     });
 
     // Build Resend payload
