@@ -1,100 +1,54 @@
 
-## Befund
+Ziel: Telegram für Probetag-Buchungen wirklich aktivieren. Der Trigger auf der Buchungsseite funktioniert bereits, aber es gibt aktuell keinen passenden Empfänger.
 
-- Der Probetag-Termin ist **korrekt gespeichert**:
-  - Termin: **21.03.2026, 11:00**
-  - Bewerbung: **Tobias Papst**
-  - Branding: **Efficient Flow Solutions GmbH**
-- Auch Mail- und SMS-Logs hängen am **Efficient-Flow-Branding**.  
-  Das heißt: **Die Buchungsseite speichert nicht falsch**, sondern der Datensatz ist da und dem richtigen Branding zugeordnet.
+1. Befund
+- `src/pages/Probetag.tsx` ruft bereits `sendTelegram("probetag_gebucht", ..., application.branding_id)` auf.
+- Die `send-telegram` Edge Function wurde zum Buchungszeitpunkt gestartet, also wurde sie aufgerufen.
+- In `telegram_chats` gibt es aktuell keinen Chat mit dem Event `probetag_gebucht`.
+- In `src/pages/admin/AdminTelegram.tsx` fehlt `probetag_gebucht` komplett in `EVENT_TYPES`. Deshalb kann man den Event im Admin gar nicht aktivieren.
+- Der Efficient-Flow-Chat ist vorhanden und korrekt auf das Branding gefiltert, aber seine `events`-Liste enthält nur z. B. `gespraech_gebucht`, nicht `probetag_gebucht`.
 
-## Echte Ursache
+2. Umsetzung
+- `src/pages/admin/AdminTelegram.tsx`
+  - `EVENT_TYPES` um `probetag_gebucht` ergänzen.
+  - Dadurch erscheint der Event:
+    - beim Anlegen neuer Telegram-Chats
+    - beim Bearbeiten bestehender Chats
+    - in der Event-Übersicht
 
-Die Admin-Seite `/admin/probetag` sendet den richtigen Filter an Supabase. Im Browser ist sogar ein Request mit der Efficient-Flow-Branding-ID zu sehen, aber die Response ist trotzdem:
+- `supabase/migrations/...`
+  - Eine kleine Backfill-Migration ergänzen, damit bestehende Chat-Konfigurationen sofort repariert werden.
+  - Vorschlag: `probetag_gebucht` automatisch zu allen Chats hinzufügen, die bereits `gespraech_gebucht` abonniert haben.
+  - Das ist die konservativste sinnvolle Regel, weil beide Events fachlich zu Terminbuchungen gehören und genau diese Lücke hier entstanden ist.
 
-```text
-[]
-```
+  Beispielrichtung:
+  ```sql
+  update public.telegram_chats
+  set events = array_append(events, 'probetag_gebucht')
+  where 'gespraech_gebucht' = any(events)
+    and not ('probetag_gebucht' = any(events));
+  ```
 
-Der Grund ist **RLS auf `trial_day_appointments`**:
+- `src/lib/sendTelegram.ts` oder `supabase/functions/send-telegram/index.ts`
+  - Diagnose verbessern:
+    - Response von `supabase.functions.invoke("send-telegram")` auswerten
+    - wenn `sent = 0`, im Client oder in der Function einen klaren Warnhinweis loggen
+  - So sieht man künftig sofort, ob ein Event ausgelöst wurde, aber kein Chat dafür konfiguriert war.
 
-- Für `trial_day_appointments` gibt es aktuell **keine SELECT-Policy für admin/kunde**
-- Es gibt dort nur:
-  - `anon` SELECT
-  - `caller` SELECT
-- Folge: Ein eingeloggter Admin/Kunde bekommt **stille leere Ergebnisse** statt eines Fehlers
+3. Was ich nicht ändern würde
+- `src/pages/Probetag.tsx` selbst muss für dieses konkrete Problem nicht nochmals geändert werden; der `branding_id`-Fix ist dort schon drin.
+- Die Branding-Zuordnung ist nicht das Problem mehr.
 
-Darum siehst du auf `/admin/probetag` nichts, obwohl der Termin existiert.
+4. Erwartetes Ergebnis
+- Bestehende Efficient-Flow-Chat-Konfigurationen erhalten `probetag_gebucht` automatisch, wenn sie schon `gespraech_gebucht` abonniert hatten.
+- Neue Probetag-Buchungen schicken danach wieder Telegram-Nachrichten.
+- Im Admin kann der Event anschließend sichtbar geprüft und manuell ein-/ausgeschaltet werden.
+- Künftige Fehlkonfigurationen sind leichter erkennbar, weil `sent: 0` nicht mehr still verschluckt wird.
 
-## Was ich umsetzen würde
-
-### 1. RLS für `trial_day_appointments` reparieren
-Die Policies für `trial_day_appointments` an die funktionierende Logik von `interview_appointments` angleichen.
-
-Konkret:
-- fehlende **SELECT-Policy für admin/kunde** ergänzen
-- prüfen, ob DELETE/UPDATE/INSERT ebenfalls sauber konsistent sind
-
-Beispielrichtung:
-
-```sql
-create policy "Admins can select trial_day_appointments"
-on public.trial_day_appointments
-for select
-to authenticated
-using (
-  has_role(auth.uid(), 'admin')
-  or (
-    is_kunde(auth.uid())
-    and (
-      not user_has_any_branding(auth.uid())
-      or application_id in (select apps_for_branding_ids(auth.uid()))
-    )
-  )
-  or (
-    is_caller(auth.uid())
-    and application_id in (select apps_for_branding_ids(auth.uid()))
-  )
-);
-```
-
-### 2. Keine Änderung an der Branding-Zuordnung der Buchung
-Am Insert selbst muss ich für dieses Problem **nichts an der Branding-Speicherung umbauen**.  
-Die Zuordnung läuft bereits korrekt über `applications.branding_id`.
-
-### 3. Telegram-Fix direkt mit erledigen
-Es gibt zusätzlich noch den bereits gefundenen Bug:
-`src/pages/Probetag.tsx` ruft `sendTelegram(...)` **ohne `branding_id`** auf.
-
-Dadurch kommen branding-gefilterte Telegram-Chats nicht an.  
-Das würde ich im selben Durchgang mitfixen:
-
-```ts
-await sendTelegram("probetag_gebucht", message, application.branding_id);
-```
-
-## Betroffene Stellen
-
-| Bereich | Änderung |
-|---|---|
-| `supabase/migrations/...` | fehlende RLS-Policy für `trial_day_appointments` ergänzen |
-| `src/pages/Probetag.tsx` | `branding_id` an Telegram-Aufruf übergeben |
-
-## Erwartetes Ergebnis
-
-Nach der Umsetzung:
-
-- der vorhandene Efficient-Flow-Probetag erscheint auf `/admin/probetag`
-- neue Probetag-Termine sind für Admin/Kunde korrekt sichtbar
-- Telegram-Nachrichten können wieder brandingbasiert zugestellt werden
-
-## Technische Kurzfassung
-
-Das Problem ist **nicht**:
-- falsches Branding beim Buchen
-- falscher Admin-Filter
-- fehlender Datensatz
-
-Das Problem ist:
-- **falsche/fehlende RLS-SELECT-Policy auf `trial_day_appointments`**
-- plus separat: **fehlende `branding_id` beim Telegram-Versand**
+5. Technische Details
+- Betroffene Dateien:
+  - `src/pages/admin/AdminTelegram.tsx`
+  - `src/lib/sendTelegram.ts` oder `supabase/functions/send-telegram/index.ts`
+  - `supabase/migrations/...`
+- Kein neues Secret nötig.
+- Keine Änderung an RLS nötig, solange `telegram_chats` bereits vom Admin verwaltet werden kann.
