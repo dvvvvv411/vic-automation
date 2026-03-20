@@ -217,11 +217,21 @@ export default function Probetag() {
         const smsText = (tpl as any)?.message
           ? ((tpl as any).message as string).replace("{name}", application.first_name).replace("{datum}", formattedDate).replace("{uhrzeit}", selectedTime!)
           : `Hallo ${application.first_name}, Ihr Probetag ist bestätigt: ${formattedDate} um ${selectedTime} Uhr. Wir freuen uns auf Sie!`;
+        let smsSender: string | undefined;
+        if (application.branding_id) {
+          const { data: branding } = await supabase
+            .from("brandings")
+            .select("sms_sender_name")
+            .eq("id", application.branding_id)
+            .single();
+          smsSender = (branding as any)?.sms_sender_name || undefined;
+        }
         await sendSms({
           to: application.phone,
           text: smsText,
           event_type: "probetag_bestaetigung",
           recipient_name: applicantName,
+          from: smsSender,
           branding_id: application.branding_id,
         });
       }
