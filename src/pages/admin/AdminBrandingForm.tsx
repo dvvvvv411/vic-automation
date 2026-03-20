@@ -52,6 +52,7 @@ const initialForm: BrandingForm = {
   managing_director: "",
   vat_id: "",
   domain: "",
+  subdomain_prefix: "",
   email: "",
   brand_color: "#3B82F6",
   resend_from_email: "",
