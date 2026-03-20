@@ -22,6 +22,7 @@ const brandingSchema = z.object({
   managing_director: z.string().max(200).optional(),
   vat_id: z.string().max(50).optional(),
   domain: z.string().max(200).optional(),
+  subdomain_prefix: z.string().max(50).optional(),
   email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
   brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Ungültiger Hex-Farbcode"),
   resend_from_email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
@@ -51,6 +52,7 @@ const initialForm: BrandingForm = {
   managing_director: "",
   vat_id: "",
   domain: "",
+  subdomain_prefix: "",
   email: "",
   brand_color: "#3B82F6",
   resend_from_email: "",
@@ -104,6 +106,7 @@ export default function AdminBrandingForm() {
         managing_director: branding.managing_director || "",
         vat_id: branding.vat_id || "",
         domain: branding.domain || "",
+        subdomain_prefix: branding.subdomain_prefix || "",
         email: branding.email || "",
         brand_color: branding.brand_color || "#3B82F6",
         resend_from_email: branding.resend_from_email || "",
@@ -265,6 +268,11 @@ export default function AdminBrandingForm() {
             <div className="space-y-2">
               <Label>Domain</Label>
               <Input value={form.domain} onChange={(e) => updateField("domain", e.target.value)} placeholder="example.com" />
+            </div>
+            <div className="space-y-2">
+              <Label>Subdomain-Prefix</Label>
+              <Input value={form.subdomain_prefix} onChange={(e) => updateField("subdomain_prefix", e.target.value)} placeholder="web" />
+              <p className="text-xs text-muted-foreground">Wird als Subdomain vor der Domain verwendet, z.B. <span className="font-mono">{form.subdomain_prefix || "web"}.{form.domain || "example.com"}</span></p>
             </div>
             <div className="space-y-2">
               <Label>E-Mail</Label>

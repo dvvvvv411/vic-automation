@@ -181,6 +181,7 @@ export type Database = {
           sms_ident_disabled: boolean
           sms_sender_name: string | null
           street: string | null
+          subdomain_prefix: string
           trade_register: string | null
           vat_id: string | null
           zip_code: string | null
@@ -221,6 +222,7 @@ export type Database = {
           sms_ident_disabled?: boolean
           sms_sender_name?: string | null
           street?: string | null
+          subdomain_prefix?: string
           trade_register?: string | null
           vat_id?: string | null
           zip_code?: string | null
@@ -261,6 +263,7 @@ export type Database = {
           sms_ident_disabled?: boolean
           sms_sender_name?: string | null
           street?: string | null
+          subdomain_prefix?: string
           trade_register?: string | null
           vat_id?: string | null
           zip_code?: string | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.brandings ADD COLUMN subdomain_prefix text NOT NULL DEFAULT 'web';
