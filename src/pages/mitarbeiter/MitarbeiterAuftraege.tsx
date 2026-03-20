@@ -71,8 +71,8 @@ const StatusBadge = ({ status }: { status: string }) => {
 const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSubmitted, attachmentsPending, attachmentsSubmitted }: { 
   status: string; orderId: string; navigate: (path: string) => void; hasIdentSession?: boolean; hasReviewSubmitted?: boolean; attachmentsPending?: boolean; attachmentsSubmitted?: boolean
 }) => {
-  // Attachments submitted but not yet approved → show "In Überprüfung"
-  if (attachmentsSubmitted && status !== "erfolgreich") {
+  // Attachments submitted but not yet approved → show "In Überprüfung" (only after review)
+  if (hasReviewSubmitted && attachmentsSubmitted && status !== "erfolgreich") {
     return (
       <Button className="w-full mt-2 rounded-xl" size="sm" disabled variant="outline">
         <Clock className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
