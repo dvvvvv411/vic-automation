@@ -279,7 +279,7 @@ export default function AdminEmails() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")
-        .select("id, company_name, brand_color, logo_url, street, zip_code, city")
+        .select("id, company_name, brand_color, logo_url, street, zip_code, city, managing_director, phone, register_court, trade_register, vat_id")
         .order("company_name");
       if (error) throw error;
       return data;
