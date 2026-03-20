@@ -16,6 +16,7 @@ import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 const EVENT_TYPES = [
   { key: "bewerbung_eingegangen", label: "Neue Bewerbung", desc: "Neue Bewerbung ist eingegangen" },
   { key: "gespraech_gebucht", label: "Bewerbungsgespräch gebucht", desc: "Bewerber bucht ein Bewerbungsgespräch" },
+  { key: "probetag_gebucht", label: "Probetag gebucht", desc: "Bewerber bucht einen Probetag" },
   { key: "konto_erstellt", label: "Konto erstellt", desc: "Neuer Mitarbeiter registriert sich" },
   { key: "vertrag_eingereicht", label: "Arbeitsvertrag eingereicht", desc: "Mitarbeiter reicht Vertragsdaten ein" },
   { key: "vertrag_unterzeichnet", label: "Vertrag unterzeichnet", desc: "Mitarbeiter unterzeichnet Vertrag" },
