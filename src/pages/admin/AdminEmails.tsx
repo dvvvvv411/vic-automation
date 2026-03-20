@@ -23,8 +23,9 @@ function buildEmailHtml(opts: {
   buttonUrl?: string;
   footerLines?: string[];
   footerAddress: string;
+  footerDetails?: { managingDirector?: string; phone?: string; registerCourt?: string; tradeRegister?: string; vatId?: string };
 }): string {
-  const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress } = opts;
+  const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress, footerDetails } = opts;
 
   // Detect "info" lines (containing : like "E-Mail: ...", "Auftrag: ...", "Datum: ...")
   const linesHtml = bodyLines
