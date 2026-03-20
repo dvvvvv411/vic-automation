@@ -65,8 +65,8 @@ const StatusButton = ({ status, orderId, navigate, hasIdentSession, hasReviewSub
     );
   }
 
-  // Attachments pending takes priority over regular status (except erfolgreich)
-  if (attachmentsPending && status !== "erfolgreich") {
+  // Attachments pending takes priority over regular status (only after review submitted)
+  if (hasReviewSubmitted && attachmentsPending && status !== "erfolgreich") {
     return (
       <Button
         variant="outline"
