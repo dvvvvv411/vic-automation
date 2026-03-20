@@ -1,44 +1,36 @@
 
 
-## Subdomain-Prefix fuer Brandings
+## Detaillierte Fusszeile fuer automatische E-Mails
 
 ### Uebersicht
 
-Neues Feld `subdomain_prefix` auf `brandings` (Default `web`). Wird im Branding-Formular editierbar und in `buildBrandingUrl.ts` statt des hardcodierten `web.` verwendet.
+Die E-Mail-Fusszeile zeigt aktuell nur Firmenname und Adresse. Sie soll erweitert werden um: Geschaeftsfuehrer, Telefonnummer, Handelsregister-Nummer, Amtsgericht, Umsatzsteuer-ID. Alle Felder existieren bereits in der `brandings`-Tabelle — keine DB-Migration noetig.
 
-### 1. Datenbank-Migration
+### Aenderungen
 
-```sql
-ALTER TABLE public.brandings
-  ADD COLUMN subdomain_prefix text NOT NULL DEFAULT 'web';
+**1. Edge Function `send-email/index.ts`**
+
+- Branding-Query erweitern um `managing_director, phone, register_court, trade_register, vat_id`
+- Diese Werte an `buildEmailHtml` durchreichen (neuer Parameter `footerDetails`)
+- Footer-HTML erweitern: Unter der bestehenden Zeile (Firmenname · Adresse) weitere Zeilen mit den neuen Feldern, nur wenn befuellt
+
+Footer-Aufbau:
+```
+Firmenname · Strasse, PLZ Ort
+Geschaeftsfuehrer: Max Mustermann · Tel: +49 123 456
+Amtsgericht: Muenchen · HRB 123456 · USt-ID: DE123456789
 ```
 
-Damit bekommen alle bestehenden Brandings automatisch `web` als Prefix.
+**2. Admin E-Mail-Vorschau `AdminEmails.tsx`**
 
-### 2. AdminBrandingForm.tsx
-
-Neues Eingabefeld "Subdomain-Prefix" in der Stammdaten-Card, unter dem Domain-Feld:
-- Label: "Subdomain-Prefix"
-- Placeholder: `web`
-- Hinweistext: "Wird als Subdomain vor der Domain verwendet, z.B. web.example.com"
-- Formular-Schema erweitern um `subdomain_prefix: z.string().max(50).optional()`
-
-### 3. buildBrandingUrl.ts
-
-Query erweitern um `subdomain_prefix`. Statt `https://web.${domain}` wird `https://${prefix}.${domain}` verwendet:
-
-```typescript
-.select("domain, subdomain_prefix")
-...
-const prefix = data.subdomain_prefix || "web";
-return `https://${prefix}.${domain}${path}`;
-```
+- Gleiche Aenderungen am client-seitigen `buildEmailHtml`-Mirror
+- Branding-Query erweitern um die 5 zusaetzlichen Felder
+- Footer-Details an die Render-Funktion durchreichen
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| Migration | `subdomain_prefix` Spalte auf `brandings` |
-| `AdminBrandingForm.tsx` | Neues Eingabefeld |
-| `buildBrandingUrl.ts` | Prefix aus DB statt hardcoded `web` |
+| `supabase/functions/send-email/index.ts` | Branding-Query + Footer-HTML erweitern |
+| `src/pages/admin/AdminEmails.tsx` | Gleiche Footer-Erweiterung im Preview-Mirror |
 
