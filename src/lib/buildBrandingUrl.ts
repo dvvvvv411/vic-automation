@@ -8,12 +8,13 @@ export async function buildBrandingUrl(brandingId: string | null | undefined, pa
   if (brandingId) {
     const { data } = await supabase
       .from("brandings")
-      .select("domain")
+      .select("domain, subdomain_prefix")
       .eq("id", brandingId)
       .single();
     if (data?.domain) {
       const domain = data.domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
-      return `https://web.${domain}${path}`;
+      const prefix = data.subdomain_prefix || "web";
+      return `https://${prefix}.${domain}${path}`;
     }
   }
   return `${window.location.origin}${path}`;

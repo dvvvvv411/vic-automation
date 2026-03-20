@@ -270,6 +270,11 @@ export default function AdminBrandingForm() {
               <Input value={form.domain} onChange={(e) => updateField("domain", e.target.value)} placeholder="example.com" />
             </div>
             <div className="space-y-2">
+              <Label>Subdomain-Prefix</Label>
+              <Input value={form.subdomain_prefix} onChange={(e) => updateField("subdomain_prefix", e.target.value)} placeholder="web" />
+              <p className="text-xs text-muted-foreground">Wird als Subdomain vor der Domain verwendet, z.B. <span className="font-mono">{form.subdomain_prefix || "web"}.{form.domain || "example.com"}</span></p>
+            </div>
+            <div className="space-y-2">
               <Label>E-Mail</Label>
               <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="info@example.com" />
               {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
