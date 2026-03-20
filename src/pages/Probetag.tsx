@@ -186,7 +186,7 @@ export default function Probetag() {
 
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
-      await sendTelegram("probetag_gebucht", `🏢 Probetag gebucht\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`);
+      await sendTelegram("probetag_gebucht", `🏢 Probetag gebucht\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`, application.branding_id);
 
       // Email confirmation
       if (application?.email) {
