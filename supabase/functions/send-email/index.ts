@@ -85,21 +85,19 @@ function buildEmailHtml(opts: {
 <tr>
   <td style="background-color:#ffffff;padding:0 36px 32px 36px;">
     ${(footerLines || []).map((line) => `<p style="margin:12px 0 0 0;font-size:14px;line-height:1.6;color:#374151;">${line}</p>`).join("\n")}
-    <div style="margin:28px 0 0 0;padding:20px 0 0 0;border-top:1px solid #e2e8f0;">
-      <p style="margin:0;font-size:13px;line-height:1.5;color:#94a3b8;">${companyName}${footerAddress ? ` · ${footerAddress}` : ""}</p>
+    <div style="margin:28px 0 0 0;padding:24px 20px;border-top:1px solid #e2e8f0;background-color:#f8fafc;border-radius:0 0 16px 16px;">
+      <p style="margin:0 0 2px 0;font-size:14px;font-weight:600;color:#334155;text-align:center;">${companyName}</p>
+      ${footerAddress ? `<p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">${footerAddress}</p>` : ""}
       ${(() => {
         if (!footerDetails) return "";
-        const line2Parts: string[] = [];
-        if (footerDetails.managingDirector) line2Parts.push(`Geschäftsführer: ${footerDetails.managingDirector}`);
-        if (footerDetails.phone) line2Parts.push(`Tel: ${footerDetails.phone}`);
-        const line3Parts: string[] = [];
-        if (footerDetails.registerCourt) line3Parts.push(`Amtsgericht: ${footerDetails.registerCourt}`);
-        if (footerDetails.tradeRegister) line3Parts.push(footerDetails.tradeRegister);
-        if (footerDetails.vatId) line3Parts.push(`USt-ID: ${footerDetails.vatId}`);
-        let html = "";
-        if (line2Parts.length) html += `<p style="margin:4px 0 0 0;font-size:13px;line-height:1.5;color:#94a3b8;">${line2Parts.join(" · ")}</p>`;
-        if (line3Parts.length) html += `<p style="margin:4px 0 0 0;font-size:13px;line-height:1.5;color:#94a3b8;">${line3Parts.join(" · ")}</p>`;
-        return html;
+        const rows: string[] = [];
+        if (footerDetails.managingDirector) rows.push(`<tr><td style="padding:3px 12px 3px 0;font-size:12px;color:#94a3b8;white-space:nowrap;">Geschäftsführer</td><td style="padding:3px 0;font-size:12px;color:#64748b;">${footerDetails.managingDirector}</td></tr>`);
+        if (footerDetails.phone) rows.push(`<tr><td style="padding:3px 12px 3px 0;font-size:12px;color:#94a3b8;white-space:nowrap;">Telefon</td><td style="padding:3px 0;font-size:12px;color:#64748b;">${footerDetails.phone}</td></tr>`);
+        if (footerDetails.registerCourt) rows.push(`<tr><td style="padding:3px 12px 3px 0;font-size:12px;color:#94a3b8;white-space:nowrap;">Amtsgericht</td><td style="padding:3px 0;font-size:12px;color:#64748b;">${footerDetails.registerCourt}</td></tr>`);
+        if (footerDetails.tradeRegister) rows.push(`<tr><td style="padding:3px 12px 3px 0;font-size:12px;color:#94a3b8;white-space:nowrap;">Handelsregister</td><td style="padding:3px 0;font-size:12px;color:#64748b;">${footerDetails.tradeRegister}</td></tr>`);
+        if (footerDetails.vatId) rows.push(`<tr><td style="padding:3px 12px 3px 0;font-size:12px;color:#94a3b8;white-space:nowrap;">USt-ID</td><td style="padding:3px 0;font-size:12px;color:#64748b;">${footerDetails.vatId}</td></tr>`);
+        if (!rows.length) return "";
+        return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:12px auto 0 auto;">${rows.join("")}</table>`;
       })()}
     </div>
   </td>
