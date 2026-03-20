@@ -294,6 +294,14 @@ export default function AdminEmails() {
 
   const tpl = templates[selectedIdx];
 
+  const footerDetails = branding ? {
+    managingDirector: branding.managing_director || undefined,
+    phone: branding.phone || undefined,
+    registerCourt: branding.register_court || undefined,
+    tradeRegister: branding.trade_register || undefined,
+    vatId: branding.vat_id || undefined,
+  } : undefined;
+
   const html = useMemo(
     () =>
       buildEmailHtml({
@@ -305,8 +313,9 @@ export default function AdminEmails() {
         buttonUrl: tpl.buttonUrl,
         footerLines: tpl.footerLines,
         footerAddress,
+        footerDetails,
       }),
-    [companyName, brandColor, tpl, footerAddress],
+    [companyName, brandColor, tpl, footerAddress, branding],
   );
 
   return (

@@ -200,6 +200,13 @@ Deno.serve(async (req) => {
       buttonUrl: button_url,
       footerLines: footer_lines,
       footerAddress,
+      footerDetails: {
+        managingDirector: branding?.managing_director || undefined,
+        phone: branding?.phone || undefined,
+        registerCourt: branding?.register_court || undefined,
+        tradeRegister: branding?.trade_register || undefined,
+        vatId: branding?.vat_id || undefined,
+      },
     });
 
     // Build Resend payload
