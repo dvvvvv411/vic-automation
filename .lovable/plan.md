@@ -1,36 +1,40 @@
 
 
-## Detaillierte Fusszeile fuer automatische E-Mails
+## E-Mail-Fusszeile schoener gestalten
 
-### Uebersicht
+### Problem
 
-Die E-Mail-Fusszeile zeigt aktuell nur Firmenname und Adresse. Sie soll erweitert werden um: Geschaeftsfuehrer, Telefonnummer, Handelsregister-Nummer, Amtsgericht, Umsatzsteuer-ID. Alle Felder existieren bereits in der `brandings`-Tabelle — keine DB-Migration noetig.
+Aktuell sind Firmenname, Adresse, Geschaeftsfuehrer, Telefon, Amtsgericht, HRB und USt-ID als dichte Textbloecke mit `·`-Trennern aneinandergereiht — schwer lesbar.
 
-### Aenderungen
+### Neues Design
 
-**1. Edge Function `send-email/index.ts`**
+Statt Fliesstext wird eine strukturierte zweispaltige Tabelle mit Icons/Labels verwendet:
 
-- Branding-Query erweitern um `managing_director, phone, register_court, trade_register, vat_id`
-- Diese Werte an `buildEmailHtml` durchreichen (neuer Parameter `footerDetails`)
-- Footer-HTML erweitern: Unter der bestehenden Zeile (Firmenname · Adresse) weitere Zeilen mit den neuen Feldern, nur wenn befuellt
+```text
+─────────────────────────────────────────
+  Firmenname
+  Strasse, PLZ Ort
 
-Footer-Aufbau:
+  Geschäftsführer    Max Mustermann
+  Telefon            +49 123 456789
+  Amtsgericht        München
+  Handelsregister    HRB 123456
+  USt-ID             DE123456789
+─────────────────────────────────────────
 ```
-Firmenname · Strasse, PLZ Ort
-Geschaeftsfuehrer: Max Mustermann · Tel: +49 123 456
-Amtsgericht: Muenchen · HRB 123456 · USt-ID: DE123456789
-```
 
-**2. Admin E-Mail-Vorschau `AdminEmails.tsx`**
-
-- Gleiche Aenderungen am client-seitigen `buildEmailHtml`-Mirror
-- Branding-Query erweitern um die 5 zusaetzlichen Felder
-- Footer-Details an die Render-Funktion durchreichen
+- Jedes Detail bekommt eine eigene Zeile mit grauem Label links und Wert rechts
+- Firmenname + Adresse zentriert oben, leicht groesser
+- Einzelne Zeilen nur wenn Wert vorhanden
+- Subtile Hintergrundfarbe (`#f8fafc`) fuer den gesamten Footer-Block
+- Kleinere Schrift (12px) fuer die Detail-Zeilen, Labels in `color:#94a3b8`, Werte in `#64748b`
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `supabase/functions/send-email/index.ts` | Branding-Query + Footer-HTML erweitern |
-| `src/pages/admin/AdminEmails.tsx` | Gleiche Footer-Erweiterung im Preview-Mirror |
+| `supabase/functions/send-email/index.ts` | Footer-HTML in `buildEmailHtml` neu gestalten |
+| `src/pages/admin/AdminEmails.tsx` | Gleiche Aenderung im client-seitigen Mirror |
+
+Keine DB-Aenderungen. Edge Function wird redeployed.
 
