@@ -1,40 +1,45 @@
 
 
-## E-Mail-Fusszeile schoener gestalten
+## SMS-Absendername aus Branding bei Bewerbungsgespraech-Buchung
 
 ### Problem
 
-Aktuell sind Firmenname, Adresse, Geschaeftsfuehrer, Telefon, Amtsgericht, HRB und USt-ID als dichte Textbloecke mit `·`-Trennern aneinandergereiht — schwer lesbar.
+In `Bewerbungsgespraech.tsx` (Zeile 217-223) wird `sendSms` ohne `from`-Parameter aufgerufen. Dadurch verwendet die Edge Function den Default-Absender "Vic" statt den im Branding konfigurierten `sms_sender_name`.
 
-### Neues Design
+### Aenderung
 
-Statt Fliesstext wird eine strukturierte zweispaltige Tabelle mit Icons/Labels verwendet:
+**Datei: `src/pages/Bewerbungsgespraech.tsx`**
 
-```text
-─────────────────────────────────────────
-  Firmenname
-  Strasse, PLZ Ort
+Vor dem SMS-Versand den `sms_sender_name` aus dem Branding laden und als `from` uebergeben:
 
-  Geschäftsführer    Max Mustermann
-  Telefon            +49 123 456789
-  Amtsgericht        München
-  Handelsregister    HRB 123456
-  USt-ID             DE123456789
-─────────────────────────────────────────
+```typescript
+let smsSender: string | undefined;
+if (application.branding_id) {
+  const { data: branding } = await supabase
+    .from("brandings")
+    .select("sms_sender_name")
+    .eq("id", application.branding_id)
+    .single();
+  smsSender = (branding as any)?.sms_sender_name || undefined;
+}
+await sendSms({
+  to: application.phone,
+  text: smsText,
+  event_type: "gespraech_bestaetigung",
+  recipient_name: applicantName,
+  from: smsSender,
+  branding_id: application.branding_id,
+});
 ```
 
-- Jedes Detail bekommt eine eigene Zeile mit grauem Label links und Wert rechts
-- Firmenname + Adresse zentriert oben, leicht groesser
-- Einzelne Zeilen nur wenn Wert vorhanden
-- Subtile Hintergrundfarbe (`#f8fafc`) fuer den gesamten Footer-Block
-- Kleinere Schrift (12px) fuer die Detail-Zeilen, Labels in `color:#94a3b8`, Werte in `#64748b`
+Gleiche Pruefung auch in `Probetag.tsx` durchfuehren, falls dort dasselbe Problem besteht.
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `supabase/functions/send-email/index.ts` | Footer-HTML in `buildEmailHtml` neu gestalten |
-| `src/pages/admin/AdminEmails.tsx` | Gleiche Aenderung im client-seitigen Mirror |
+| `src/pages/Bewerbungsgespraech.tsx` | `sms_sender_name` laden, als `from` uebergeben |
+| `src/pages/Probetag.tsx` | Gleiche Aenderung falls `from` fehlt |
 
-Keine DB-Aenderungen. Edge Function wird redeployed.
+Keine DB-Migration noetig.
 
