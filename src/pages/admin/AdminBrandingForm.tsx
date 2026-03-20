@@ -106,6 +106,7 @@ export default function AdminBrandingForm() {
         managing_director: branding.managing_director || "",
         vat_id: branding.vat_id || "",
         domain: branding.domain || "",
+        subdomain_prefix: branding.subdomain_prefix || "",
         email: branding.email || "",
         brand_color: branding.brand_color || "#3B82F6",
         resend_from_email: branding.resend_from_email || "",
