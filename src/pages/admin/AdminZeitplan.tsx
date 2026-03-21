@@ -29,7 +29,11 @@ const WEEKDAYS = [
   { value: 7, label: "So" },
 ];
 
-const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = (i % 2) * 30;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+});
 
 function generateTimeSlots(start: string, end: string, interval: number) {
   const slots: string[] = [];
