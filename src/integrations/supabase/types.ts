@@ -164,6 +164,8 @@ export type Database = {
           created_by: string | null
           domain: string | null
           email: string | null
+          email_logo_enabled: boolean
+          email_logo_url: string | null
           hourly_rate_enabled: boolean
           hourly_rate_minijob: number | null
           hourly_rate_teilzeit: number | null
@@ -205,6 +207,8 @@ export type Database = {
           created_by?: string | null
           domain?: string | null
           email?: string | null
+          email_logo_enabled?: boolean
+          email_logo_url?: string | null
           hourly_rate_enabled?: boolean
           hourly_rate_minijob?: number | null
           hourly_rate_teilzeit?: number | null
@@ -246,6 +250,8 @@ export type Database = {
           created_by?: string | null
           domain?: string | null
           email?: string | null
+          email_logo_enabled?: boolean
+          email_logo_url?: string | null
           hourly_rate_enabled?: boolean
           hourly_rate_minijob?: number | null
           hourly_rate_teilzeit?: number | null
