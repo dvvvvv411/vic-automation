@@ -1,0 +1,1 @@
+UPDATE public.brandings SET main_job_title = 'Mitarbeiter für Onlineprozess-Tests (Quality Assurance)' WHERE main_job_title IS NULL;
