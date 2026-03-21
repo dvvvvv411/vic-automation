@@ -318,6 +318,8 @@ export default function AdminEmails() {
         footerLines: tpl.footerLines,
         footerAddress,
         footerDetails,
+        emailLogoEnabled: (branding as any)?.email_logo_enabled || false,
+        emailLogoUrl: (branding as any)?.email_logo_url || undefined,
       }),
     [companyName, brandColor, tpl, footerAddress, branding],
   );
