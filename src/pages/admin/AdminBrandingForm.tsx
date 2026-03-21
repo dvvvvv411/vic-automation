@@ -71,6 +71,8 @@ const initialForm: BrandingForm = {
   hourly_rate_minijob: "",
   hourly_rate_teilzeit: "",
   hourly_rate_vollzeit: "",
+  email_logo_enabled: false,
+  email_logo_url: "",
 };
 
 export default function AdminBrandingForm() {
