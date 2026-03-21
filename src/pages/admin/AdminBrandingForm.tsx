@@ -25,6 +25,7 @@ const brandingSchema = z.object({
   domain: z.string().max(200).optional(),
   subdomain_prefix: z.string().max(50).optional(),
   email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
+  main_job_title: z.string().max(300).optional(),
   brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Ungültiger Hex-Farbcode"),
   resend_from_email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
   resend_from_name: z.string().max(200).optional(),
@@ -57,6 +58,7 @@ const initialForm: BrandingForm = {
   domain: "",
   subdomain_prefix: "",
   email: "",
+  main_job_title: "",
   brand_color: "#3B82F6",
   resend_from_email: "",
   resend_from_name: "",
@@ -113,6 +115,7 @@ export default function AdminBrandingForm() {
         domain: branding.domain || "",
         subdomain_prefix: branding.subdomain_prefix || "",
         email: branding.email || "",
+        main_job_title: (branding as any).main_job_title || "",
         brand_color: branding.brand_color || "#3B82F6",
         resend_from_email: branding.resend_from_email || "",
         resend_from_name: branding.resend_from_name || "",
@@ -299,6 +302,16 @@ export default function AdminBrandingForm() {
               placeholder="Muster GmbH"
             />
             {errors.company_name && <p className="text-xs text-destructive">{errors.company_name}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Haupt-Jobtitel</Label>
+            <Input
+              value={form.main_job_title}
+              onChange={(e) => updateField("main_job_title", e.target.value)}
+              placeholder="z.B. Mitarbeiter für Onlineprozess-Tests (Quality Assurance)"
+            />
+            <p className="text-xs text-muted-foreground">Haupt-Stellenanzeigentitel über den Bewerber gesammelt werden.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

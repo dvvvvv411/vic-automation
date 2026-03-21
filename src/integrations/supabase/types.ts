@@ -172,6 +172,7 @@ export type Database = {
           hourly_rate_vollzeit: number | null
           id: string
           logo_url: string | null
+          main_job_title: string | null
           managing_director: string | null
           payment_model: string
           phone: string | null
@@ -215,6 +216,7 @@ export type Database = {
           hourly_rate_vollzeit?: number | null
           id?: string
           logo_url?: string | null
+          main_job_title?: string | null
           managing_director?: string | null
           payment_model?: string
           phone?: string | null
@@ -258,6 +260,7 @@ export type Database = {
           hourly_rate_vollzeit?: number | null
           id?: string
           logo_url?: string | null
+          main_job_title?: string | null
           managing_director?: string | null
           payment_model?: string
           phone?: string | null
