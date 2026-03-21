@@ -327,7 +327,7 @@ export default function AdminEmails() {
         companyName,
         brandColor,
         bodyTitle: tpl.bodyTitle,
-        bodyLines: tpl.bodyLines(companyName),
+        bodyLines: tpl.bodyLines(companyName, mainJobTitle),
         buttonText: tpl.buttonText,
         buttonUrl: tpl.buttonUrl,
         footerLines: tpl.footerLines,
