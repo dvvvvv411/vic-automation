@@ -31,6 +31,8 @@ function buildEmailHtml(opts: {
   footerLines?: string[];
   footerAddress: string;
   footerDetails?: { managingDirector?: string; phone?: string; registerCourt?: string; tradeRegister?: string; vatId?: string };
+  emailLogoEnabled?: boolean;
+  emailLogoUrl?: string;
 }): string {
   const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress, footerDetails } = opts;
 
@@ -55,7 +57,11 @@ function buildEmailHtml(opts: {
       </table>`
     : "";
 
-  const logoHtml = `<span style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${companyName}</span>`;
+  const emailLogoEnabled = opts.emailLogoEnabled || false;
+  const emailLogoUrl = opts.emailLogoUrl || "";
+  const logoHtml = emailLogoEnabled && emailLogoUrl
+    ? `<img src="${emailLogoUrl}" alt="${companyName}" style="max-height:48px;max-width:280px;display:block;margin:0 auto;" />`
+    : `<span style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${companyName}</span>`;
 
   return `<!DOCTYPE html>
 <html lang="de">
@@ -158,7 +164,7 @@ Deno.serve(async (req) => {
     if (effectiveBrandingId) {
       const { data } = await adminClient
         .from("brandings")
-        .select("company_name, logo_url, brand_color, street, zip_code, city, resend_api_key, resend_from_email, resend_from_name, managing_director, phone, register_court, trade_register, vat_id")
+        .select("company_name, logo_url, brand_color, street, zip_code, city, resend_api_key, resend_from_email, resend_from_name, managing_director, phone, register_court, trade_register, vat_id, email_logo_enabled, email_logo_url")
         .eq("id", effectiveBrandingId)
         .single();
       branding = data;
@@ -205,6 +211,8 @@ Deno.serve(async (req) => {
         tradeRegister: branding?.trade_register || undefined,
         vatId: branding?.vat_id || undefined,
       },
+      emailLogoEnabled: branding?.email_logo_enabled || false,
+      emailLogoUrl: branding?.email_logo_url || undefined,
     });
 
     // Build Resend payload

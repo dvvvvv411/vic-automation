@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,8 @@ const brandingSchema = z.object({
   hourly_rate_minijob: z.string().optional(),
   hourly_rate_teilzeit: z.string().optional(),
   hourly_rate_vollzeit: z.string().optional(),
+  email_logo_enabled: z.boolean(),
+  email_logo_url: z.string().max(500).optional(),
 });
 
 type BrandingForm = z.infer<typeof brandingSchema>;
@@ -68,6 +71,8 @@ const initialForm: BrandingForm = {
   hourly_rate_minijob: "",
   hourly_rate_teilzeit: "",
   hourly_rate_vollzeit: "",
+  email_logo_enabled: false,
+  email_logo_url: "",
 };
 
 export default function AdminBrandingForm() {
@@ -122,6 +127,8 @@ export default function AdminBrandingForm() {
         hourly_rate_minijob: branding.hourly_rate_minijob?.toString() || "",
         hourly_rate_teilzeit: branding.hourly_rate_teilzeit?.toString() || "",
         hourly_rate_vollzeit: branding.hourly_rate_vollzeit?.toString() || "",
+        email_logo_enabled: (branding as any).email_logo_enabled ?? false,
+        email_logo_url: (branding as any).email_logo_url || "",
       });
     }
   }, [branding]);
@@ -250,6 +257,36 @@ export default function AdminBrandingForm() {
               <div className="flex items-center gap-2 mt-1">
                 <img src={branding.logo_url} alt="Aktuelles Logo" className="h-8 w-8 rounded object-contain" />
                 <span className="text-xs text-muted-foreground">Aktuelles Logo</span>
+              </div>
+            )}
+          </div>
+
+          {/* E-Mail Logo Toggle */}
+          <div className="space-y-3 pt-2 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Logo im E-Mail-Header</Label>
+                <p className="text-xs text-muted-foreground">Zeigt ein Bild statt des Unternehmensnamens im E-Mail-Header an.</p>
+              </div>
+              <Switch
+                checked={form.email_logo_enabled}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, email_logo_enabled: checked }))}
+              />
+            </div>
+            {form.email_logo_enabled && (
+              <div className="space-y-2">
+                <Label>Logo-URL für E-Mail-Header</Label>
+                <Input
+                  value={form.email_logo_url || ""}
+                  onChange={(e) => updateField("email_logo_url", e.target.value)}
+                  placeholder="https://example.com/logo.png"
+                />
+                {form.email_logo_url && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <img src={form.email_logo_url} alt="E-Mail Logo Vorschau" className="h-8 rounded object-contain" />
+                    <span className="text-xs text-muted-foreground">Vorschau</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

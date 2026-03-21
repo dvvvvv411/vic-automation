@@ -24,6 +24,8 @@ function buildEmailHtml(opts: {
   footerLines?: string[];
   footerAddress: string;
   footerDetails?: { managingDirector?: string; phone?: string; registerCourt?: string; tradeRegister?: string; vatId?: string };
+  emailLogoEnabled?: boolean;
+  emailLogoUrl?: string;
 }): string {
   const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress, footerDetails } = opts;
 
@@ -48,7 +50,11 @@ function buildEmailHtml(opts: {
       </table>`
     : "";
 
-  const logoHtml = `<span style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${companyName}</span>`;
+  const emailLogoEnabled = opts.emailLogoEnabled || false;
+  const emailLogoUrl = opts.emailLogoUrl || "";
+  const logoHtml = emailLogoEnabled && emailLogoUrl
+    ? `<img src="${emailLogoUrl}" alt="${companyName}" style="max-height:48px;max-width:280px;display:block;margin:0 auto;" />`
+    : `<span style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${companyName}</span>`;
 
   return `<!DOCTYPE html>
 <html lang="de">
@@ -277,7 +283,7 @@ export default function AdminEmails() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")
-        .select("id, company_name, brand_color, logo_url, street, zip_code, city, managing_director, phone, register_court, trade_register, vat_id")
+        .select("id, company_name, brand_color, logo_url, street, zip_code, city, managing_director, phone, register_court, trade_register, vat_id, email_logo_enabled, email_logo_url")
         .order("company_name");
       if (error) throw error;
       return data;
@@ -312,6 +318,8 @@ export default function AdminEmails() {
         footerLines: tpl.footerLines,
         footerAddress,
         footerDetails,
+        emailLogoEnabled: (branding as any)?.email_logo_enabled || false,
+        emailLogoUrl: (branding as any)?.email_logo_url || undefined,
       }),
     [companyName, brandColor, tpl, footerAddress, branding],
   );
