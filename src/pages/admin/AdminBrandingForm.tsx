@@ -304,6 +304,16 @@ export default function AdminBrandingForm() {
             {errors.company_name && <p className="text-xs text-destructive">{errors.company_name}</p>}
           </div>
 
+          <div className="space-y-2">
+            <Label>Haupt-Jobtitel</Label>
+            <Input
+              value={form.main_job_title}
+              onChange={(e) => updateField("main_job_title", e.target.value)}
+              placeholder="z.B. Mitarbeiter für Onlineprozess-Tests (Quality Assurance)"
+            />
+            <p className="text-xs text-muted-foreground">Haupt-Stellenanzeigentitel über den Bewerber gesammelt werden.</p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Domain</Label>
