@@ -24,6 +24,8 @@ function buildEmailHtml(opts: {
   footerLines?: string[];
   footerAddress: string;
   footerDetails?: { managingDirector?: string; phone?: string; registerCourt?: string; tradeRegister?: string; vatId?: string };
+  emailLogoEnabled?: boolean;
+  emailLogoUrl?: string;
 }): string {
   const { companyName, brandColor, bodyTitle, bodyLines, buttonText, buttonUrl, footerLines, footerAddress, footerDetails } = opts;
 
