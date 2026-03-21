@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     const { data: templates } = await db
       .from("sms_templates")
       .select("event_type, message")
-      .in("event_type", ["gespraech_erinnerung_auto", "probetag_erinnerung_auto"]);
+      .in("event_type", ["gespraech_erinnerung_auto", "probetag_erinnerung_auto", "erster_arbeitstag_erinnerung_auto"]);
 
     const templateMap: Record<string, string> = {};
     for (const t of templates ?? []) {
