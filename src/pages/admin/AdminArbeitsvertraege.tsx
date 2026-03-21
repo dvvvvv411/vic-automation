@@ -40,7 +40,7 @@ export default function AdminArbeitsvertraege() {
     queryFn: async () => {
       const { data: contracts, error } = await supabase
         .from("employment_contracts")
-        .select("*, applications(id, first_name, last_name, email, phone, branding_id, brandings(id, company_name))")
+        .select("*, applications(id, first_name, last_name, email, phone, branding_id, brandings(id, company_name)), contract_templates(title)")
         .eq("branding_id", activeBrandingId!)
         .neq("status", "offen")
         .order("created_at", { ascending: false });
