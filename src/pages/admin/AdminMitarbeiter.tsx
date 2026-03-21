@@ -219,13 +219,21 @@ export default function AdminMitarbeiter() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">
-                            {item.status === "unterzeichnet" ? (
+                            {item.status === "genehmigt" ? (
+                              <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
+                                Genehmigt
+                              </Badge>
+                            ) : item.status === "unterzeichnet" ? (
                               <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
                                 Unterzeichnet
                               </Badge>
+                            ) : item.status === "eingereicht" ? (
+                              <Badge variant="outline" className="text-blue-600 border-blue-300 bg-blue-50">
+                                Eingereicht
+                              </Badge>
                             ) : (
                               <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50">
-                                Nicht unterzeichnet
+                                Offen
                               </Badge>
                             )}
                             {item.is_suspended && (
