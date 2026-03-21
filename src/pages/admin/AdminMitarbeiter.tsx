@@ -99,8 +99,9 @@ export default function AdminMitarbeiter() {
     const today = startOfToday();
 
     const sorted = [...items].sort((a: any, b: any) => {
-      const rankA = a.status === "unterzeichnet" ? 0 : 1;
-      const rankB = b.status === "unterzeichnet" ? 0 : 1;
+      const statusRank = (s: string) => s === "genehmigt" || s === "unterzeichnet" ? 0 : s === "eingereicht" ? 1 : 2;
+      const rankA = statusRank(a.status);
+      const rankB = statusRank(b.status);
       if (rankA !== rankB) return rankA - rankB;
 
       const dateA = a.desired_start_date ? parseISO(a.desired_start_date) : null;
