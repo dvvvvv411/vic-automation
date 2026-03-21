@@ -25,7 +25,11 @@ const WEEKDAYS = [
   { value: 7, label: "So" },
 ];
 
-const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = (i % 2) * 30;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+});
 
 const DEFAULT_START = "08:00";
 const DEFAULT_END = "18:00";
@@ -48,7 +52,7 @@ function generateTimeSlots(start: string, end: string, interval: number) {
 
 interface TrialDayBlockerProps {
   brandingId: string;
-  onSaveSettings: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] }) => void;
+  onSaveSettings: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null }) => void;
   isSavingSettings: boolean;
 }
 
@@ -149,6 +153,10 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
   const [et, setEt] = useState(trialSetting?.end_time?.slice(0, 5) || DEFAULT_END);
   const [iv, setIv] = useState(trialSetting?.slot_interval_minutes || DEFAULT_INTERVAL);
   const [ds, setDs] = useState<number[]>(trialSetting?.available_days || DEFAULT_DAYS);
+  const [wst, setWst] = useState(trialSetting?.weekend_start_time?.slice(0, 5) || "");
+  const [wet, setWet] = useState(trialSetting?.weekend_end_time?.slice(0, 5) || "");
+
+  const hasWeekend = ds.includes(6) || ds.includes(7);
 
   // Sync state when trialSetting loads
   useMemo(() => {
@@ -157,6 +165,8 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
       setEt(trialSetting.end_time?.slice(0, 5) || DEFAULT_END);
       setIv(trialSetting.slot_interval_minutes || DEFAULT_INTERVAL);
       setDs(trialSetting.available_days || DEFAULT_DAYS);
+      setWst(trialSetting.weekend_start_time?.slice(0, 5) || "");
+      setWet(trialSetting.weekend_end_time?.slice(0, 5) || "");
     }
   }, [trialSetting]);
 
@@ -216,8 +226,40 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
                 ))}
               </div>
             </div>
+            {hasWeekend && (
+              <div className="space-y-2 rounded-lg border border-border p-4">
+                <Label className="text-sm font-medium">Wochenendzeiten (Sa & So)</Label>
+                <p className="text-xs text-muted-foreground">Abweichende Zeiten für Samstag und Sonntag. Leer lassen = gleiche Zeiten wie unter der Woche.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Startzeit Wochenende</Label>
+                    <Select value={wst} onValueChange={setWst}>
+                      <SelectTrigger><SelectValue placeholder="Wie Wochentage" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="reset">Wie Wochentage</SelectItem>
+                        {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Endzeit Wochenende</Label>
+                    <Select value={wet} onValueChange={setWet}>
+                      <SelectTrigger><SelectValue placeholder="Wie Wochentage" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="reset">Wie Wochentage</SelectItem>
+                        {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
             <Button
-              onClick={() => onSaveSettings({ start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds })}
+              onClick={() => onSaveSettings({
+                start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds,
+                weekend_start_time: wst && wst !== "reset" ? wst : null,
+                weekend_end_time: wet && wet !== "reset" ? wet : null,
+              })}
               disabled={isSavingSettings}
             >
               {isSavingSettings ? "Speichern..." : "Einstellungen speichern"}
