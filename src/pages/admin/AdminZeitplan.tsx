@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Trash2, Ban, Check, CalendarOff, ClipboardList } from "lucide-react";
 
 import TrialDayBlocker from "@/components/admin/TrialDayBlocker";
+import FirstWorkdayBlocker from "@/components/admin/FirstWorkdayBlocker";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const WEEKDAYS = [
