@@ -152,6 +152,20 @@ const templates: TemplateDefinition[] = [
     footerLines: ['Schauen Sie sich noch einmal die Stellenanzeige an: <a href="https://example.com/karriere" target="_blank" style="color:#3B82F6;text-decoration:underline;">https://example.com/karriere</a>'],
   },
   {
+    eventType: "bewerbung_angenommen_extern",
+    label: "Bewerbung angenommen (Extern)",
+    subject: (c) => `Ihre Bewerbung wurde angenommen – ${c}`,
+    bodyTitle: "Ihre Bewerbung wurde angenommen",
+    bodyLines: (c, jobTitle) => [
+      "Sehr geehrte/r Max Mustermann,",
+      `wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung über Instagram/Facebook${jobTitle ? ` als „${jobTitle}"` : ""} bei ${c} angenommen wurde.`,
+      "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch über den folgenden Link.",
+    ],
+    buttonText: "Gesprächstermin buchen",
+    buttonUrl: "https://example.com/bewerbungsgespraech/abc123",
+    footerLines: ['Schauen Sie sich noch einmal die Stellenanzeige an: <a href="https://example.com/karriere" target="_blank" style="color:#3B82F6;text-decoration:underline;">https://example.com/karriere</a>'],
+  },
+  {
     eventType: "gespraech_erfolgreich",
     label: "Gespräch erfolgreich",
     subject: (c) => `Nächster Schritt: Probetag – ${c}`,
