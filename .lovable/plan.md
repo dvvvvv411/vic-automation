@@ -1,30 +1,27 @@
 
 
-## Logo im E-Mail-Header statt Unternehmensname
+## Vertragsvorlage (Template-Titel) in Admin-Ansichten anzeigen
 
-### Umsetzung
+### Ziel
+Wenn ein Mitarbeiter seine Vertragsvorlage gewählt hat (`template_id` in `employment_contracts`), soll der Titel der Vorlage aus `contract_templates` an drei Stellen angezeigt werden.
 
-**1. Datenbank-Migration**: Zwei neue Spalten in `brandings`:
-- `email_logo_enabled` (boolean, default false)
-- `email_logo_url` (text, nullable)
+### Änderungen
 
-**2. AdminBrandingForm.tsx**: Unter dem Logo-Upload einen neuen Abschnitt einfügen:
-- Switch/Toggle "Logo im E-Mail-Header anzeigen" (statt Unternehmensname)
-- Wenn aktiviert: Eingabefeld für die Bild-URL
-- Neue Felder `email_logo_enabled` und `email_logo_url` im Formular-State und Schema ergänzen, mitspeichern
+**1. `AdminMitarbeiterDetail.tsx` — Übersicht-Tab, Persönliche Daten**
+- Query erweitern: `select("*, applications(brandings(company_name)), contract_templates(title)")` (Join über `template_id`)
+- Neues Feld in den `leftFields` oder `rightFields` der "Persönliche Daten"-Sektion einfügen: `{ key: "contract_templates.title", label: "Vertragsform" }` — da `EditableDualSection` nur flache Keys unterstützt, den Wert als berechnetes Feld im `data`-Objekt einsetzen (z.B. `contract.template_title = contract.contract_templates?.title`) und als nicht-editierbares Feld darstellen (read-only InfoRow nach den editierbaren Feldern).
 
-**3. send-email Edge Function**: Die `logoHtml`-Zeile anpassen:
-- Wenn `email_logo_enabled` true und `email_logo_url` gesetzt: `<img>` mit der URL und `alt="${companyName}"` rendern
-- Sonst: wie bisher den Unternehmensnamen als Text
+**2. `AdminArbeitsvertraege.tsx` — Cards in der Liste**
+- Query erweitern: `select("*, applications(...), contract_templates(title)")`
+- In der Card unter den bestehenden Info-Zeilen (E-Mail, Telefon, Branding, Startdatum) eine weitere Zeile mit `FileText`-Icon und dem Template-Titel hinzufügen, wenn vorhanden.
 
-**4. E-Mail-Vorschau** (`AdminEmails.tsx`): Falls die Vorschau den Header rendert, dort ebenfalls die Logo-Logik einbauen.
+**3. `AdminArbeitsvertraege.tsx` — Detail-Popup (Dialog)**
+- Im "Persönliche Informationen"-Block eine neue `InfoRow` für "Vertragsform" mit dem Template-Titel einfügen.
 
-### Betroffene Dateien
+**4. `MitarbeiterDetailPopup.tsx` — Popup-Detailansicht**
+- Query erweitern: `select("*, applications(brandings(company_name)), contract_templates(title)")`
+- `InfoRow` für "Vertragsform" in der "Persönliche Daten"-Card ergänzen.
 
-| Datei | Änderung |
-|---|---|
-| Migration | `email_logo_enabled` + `email_logo_url` Spalten |
-| `src/pages/admin/AdminBrandingForm.tsx` | Toggle + URL-Eingabefeld |
-| `supabase/functions/send-email/index.ts` | Logo-Bild statt Text im Header |
-| `src/pages/admin/AdminEmails.tsx` | Vorschau-Header anpassen (falls nötig) |
+### Keine DB-Migration nötig
+Die Spalte `template_id` existiert bereits und `contract_templates` hat bereits eine `title`-Spalte. Es wird nur der Supabase-Join genutzt.
 
