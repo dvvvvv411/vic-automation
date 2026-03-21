@@ -39,6 +39,8 @@ const brandingSchema = z.object({
   hourly_rate_minijob: z.string().optional(),
   hourly_rate_teilzeit: z.string().optional(),
   hourly_rate_vollzeit: z.string().optional(),
+  email_logo_enabled: z.boolean(),
+  email_logo_url: z.string().max(500).optional(),
 });
 
 type BrandingForm = z.infer<typeof brandingSchema>;
