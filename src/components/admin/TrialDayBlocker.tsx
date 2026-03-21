@@ -153,6 +153,10 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
   const [et, setEt] = useState(trialSetting?.end_time?.slice(0, 5) || DEFAULT_END);
   const [iv, setIv] = useState(trialSetting?.slot_interval_minutes || DEFAULT_INTERVAL);
   const [ds, setDs] = useState<number[]>(trialSetting?.available_days || DEFAULT_DAYS);
+  const [wst, setWst] = useState(trialSetting?.weekend_start_time?.slice(0, 5) || "");
+  const [wet, setWet] = useState(trialSetting?.weekend_end_time?.slice(0, 5) || "");
+
+  const hasWeekend = ds.includes(6) || ds.includes(7);
 
   // Sync state when trialSetting loads
   useMemo(() => {
@@ -161,6 +165,8 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
       setEt(trialSetting.end_time?.slice(0, 5) || DEFAULT_END);
       setIv(trialSetting.slot_interval_minutes || DEFAULT_INTERVAL);
       setDs(trialSetting.available_days || DEFAULT_DAYS);
+      setWst(trialSetting.weekend_start_time?.slice(0, 5) || "");
+      setWet(trialSetting.weekend_end_time?.slice(0, 5) || "");
     }
   }, [trialSetting]);
 
