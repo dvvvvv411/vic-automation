@@ -1,4 +1,4 @@
-import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video, ScrollText } from "lucide-react";
+import { LayoutDashboard, Palette, FileText, Calendar, FileCheck, LogOut, Users, ClipboardList, MessageCircle, Star, Mail, Smartphone, Send, Clock, Phone, MessageSquareText, UserPlus, History, Building2, ChevronsUpDown, Paperclip, Video, ScrollText, Briefcase } from "lucide-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { NavLink } from "@/components/NavLink";
@@ -50,6 +50,7 @@ const navGroups = [
       { title: "Bewerbungen", url: "/admin/bewerbungen", icon: FileText },
       { title: "Bewerbungsgespräche", url: "/admin/bewerbungsgespraeche", icon: Calendar },
       { title: "Probetage", url: "/admin/probetag", icon: Building2 },
+      { title: "1. Arbeitstag", url: "/admin/erster-arbeitstag", icon: Briefcase },
       { title: "Arbeitsverträge", url: "/admin/arbeitsvertraege", icon: FileCheck },
     ],
   },

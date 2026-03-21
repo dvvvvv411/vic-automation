@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     const { data: templates } = await db
       .from("sms_templates")
       .select("event_type, message")
-      .in("event_type", ["gespraech_erinnerung_auto", "probetag_erinnerung_auto"]);
+      .in("event_type", ["gespraech_erinnerung_auto", "probetag_erinnerung_auto", "erster_arbeitstag_erinnerung_auto"]);
 
     const templateMap: Record<string, string> = {};
     for (const t of templates ?? []) {
@@ -167,6 +167,71 @@ Deno.serve(async (req) => {
         console.log(`Reminder sent for trial day ${apt.id}`);
       } else {
         console.error(`Failed to send reminder for trial day ${apt.id}:`, await smsRes.text());
+      }
+    }
+
+    // --- First workday appointments ---
+    const { data: firstWorkdays } = await db
+      .from("first_workday_appointments")
+      .select("id, appointment_date, appointment_time, application_id, applications!inner(first_name, last_name, phone, branding_id)")
+      .eq("reminder_sent", false)
+      .eq("status", "neu")
+      .gte("appointment_date", todayStr)
+      .lte("appointment_date", tomorrowStr);
+
+    for (const apt of firstWorkdays ?? []) {
+      const aptDateTime = new Date(`${apt.appointment_date}T${apt.appointment_time}`);
+      if (aptDateTime <= now || aptDateTime > in25h) continue;
+
+      const app = (apt as any).applications;
+      if (!app?.phone) continue;
+
+      const template = templateMap["erster_arbeitstag_erinnerung_auto"];
+      if (!template) continue;
+
+      let senderName: string | undefined;
+      if (app.branding_id) {
+        const { data: branding } = await db
+          .from("brandings")
+          .select("sms_sender_name")
+          .eq("id", app.branding_id)
+          .single();
+        senderName = branding?.sms_sender_name || undefined;
+      }
+
+      const name = `${app.first_name} ${app.last_name}`.trim();
+      const uhrzeit = apt.appointment_time?.substring(0, 5) || "";
+      const datum = apt.appointment_date || "";
+      const text = template
+        .replace(/{name}/g, name)
+        .replace(/{uhrzeit}/g, uhrzeit)
+        .replace(/{datum}/g, datum);
+
+      const smsRes = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify({
+          to: app.phone,
+          text,
+          event_type: "erster_arbeitstag_erinnerung_auto",
+          recipient_name: name,
+          from: senderName,
+          branding_id: app.branding_id || null,
+        }),
+      });
+
+      if (smsRes.ok) {
+        await db
+          .from("first_workday_appointments")
+          .update({ reminder_sent: true } as any)
+          .eq("id", apt.id);
+        sentCount++;
+        console.log(`Reminder sent for first workday ${apt.id}`);
+      } else {
+        console.error(`Failed to send reminder for first workday ${apt.id}:`, await smsRes.text());
       }
     }
 

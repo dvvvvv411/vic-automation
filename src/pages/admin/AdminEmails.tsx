@@ -242,6 +242,31 @@ const templates: TemplateDefinition[] = [
     ],
   },
   {
+    eventType: "probetag_erfolgreich",
+    label: "Probetag erfolgreich",
+    subject: (c) => `Ihr Probetag war erfolgreich – ${c}`,
+    bodyTitle: "Ihr Probetag war erfolgreich!",
+    bodyLines: (c) => [
+      "Sehr geehrte/r Max Mustermann,",
+      `wir freuen uns, Ihnen mitteilen zu können, dass Ihr Probetag bei ${c} erfolgreich war. Wir haben Ihre Ergebnisse geprüft und sind sehr zufrieden.`,
+      "Als nächsten Schritt bitten wir Sie, Ihre persönlichen Daten zu vervollständigen und den Arbeitsvertrag auszufüllen.",
+      "Wir freuen uns auf die Zusammenarbeit!",
+    ],
+  },
+  {
+    eventType: "erster_arbeitstag_bestaetigung",
+    label: "1. Arbeitstag Bestätigung",
+    subject: () => "Ihr 1. Arbeitstag am 25. April 2026",
+    bodyTitle: "Terminbestätigung – 1. Arbeitstag",
+    bodyLines: () => [
+      "Hallo Max,",
+      "Ihr 1. Arbeitstag wurde erfolgreich gebucht.",
+      "Datum: 25. April 2026",
+      "Uhrzeit: 09:00 Uhr",
+      "Wir freuen uns auf Sie!",
+    ],
+  },
+  {
     eventType: "auftrag_zugewiesen",
     label: "Neuer Auftrag zugewiesen",
     subject: (c) => `Neuer Auftrag – ${c}`,
