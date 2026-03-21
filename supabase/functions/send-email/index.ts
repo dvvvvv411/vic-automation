@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
     if (effectiveBrandingId) {
       const { data } = await adminClient
         .from("brandings")
-        .select("company_name, logo_url, brand_color, street, zip_code, city, resend_api_key, resend_from_email, resend_from_name, managing_director, phone, register_court, trade_register, vat_id")
+        .select("company_name, logo_url, brand_color, street, zip_code, city, resend_api_key, resend_from_email, resend_from_name, managing_director, phone, register_court, trade_register, vat_id, email_logo_enabled, email_logo_url")
         .eq("id", effectiveBrandingId)
         .single();
       branding = data;
