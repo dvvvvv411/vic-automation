@@ -182,6 +182,7 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
                         <InfoRow label="Nationalität" value={contract.nationality} />
                         <InfoRow label="Familienstand" value={contract.marital_status} />
                         <InfoRow label="Beschäftigungsart" value={contract.employment_type} />
+                        <InfoRow label="Vertragsform" value={(contract as any)?.contract_templates?.title} />
                         <InfoRow label="Gewünschtes Startdatum" value={formatDate(contract.desired_start_date)} />
                       </CardContent>
                     </Card>

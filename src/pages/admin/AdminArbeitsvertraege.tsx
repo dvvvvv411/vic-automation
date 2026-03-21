@@ -414,6 +414,7 @@ export default function AdminArbeitsvertraege() {
                   <InfoRow label="PLZ & Stadt" value={`${selectedContract.zip_code || ""} ${selectedContract.city || ""}`} />
                   <InfoRow label="Familienstand" value={selectedContract.marital_status} />
                   <InfoRow label="Art der Beschäftigung" value={selectedContract.employment_type} />
+                  <InfoRow label="Vertragsform" value={selectedContract.contract_templates?.title} />
                   <InfoRow label="Gewünschtes Startdatum" value={selectedContract.desired_start_date} />
                 </div>
               </div>
