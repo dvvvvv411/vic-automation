@@ -25,6 +25,7 @@ const brandingSchema = z.object({
   domain: z.string().max(200).optional(),
   subdomain_prefix: z.string().max(50).optional(),
   email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
+  main_job_title: z.string().max(300).optional(),
   brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Ungültiger Hex-Farbcode"),
   resend_from_email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
   resend_from_name: z.string().max(200).optional(),
