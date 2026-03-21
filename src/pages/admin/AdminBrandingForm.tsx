@@ -261,6 +261,36 @@ export default function AdminBrandingForm() {
             )}
           </div>
 
+          {/* E-Mail Logo Toggle */}
+          <div className="space-y-3 pt-2 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Logo im E-Mail-Header</Label>
+                <p className="text-xs text-muted-foreground">Zeigt ein Bild statt des Unternehmensnamens im E-Mail-Header an.</p>
+              </div>
+              <Switch
+                checked={form.email_logo_enabled}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, email_logo_enabled: checked }))}
+              />
+            </div>
+            {form.email_logo_enabled && (
+              <div className="space-y-2">
+                <Label>Logo-URL für E-Mail-Header</Label>
+                <Input
+                  value={form.email_logo_url || ""}
+                  onChange={(e) => updateField("email_logo_url", e.target.value)}
+                  placeholder="https://example.com/logo.png"
+                />
+                {form.email_logo_url && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <img src={form.email_logo_url} alt="E-Mail Logo Vorschau" className="h-8 rounded object-contain" />
+                    <span className="text-xs text-muted-foreground">Vorschau</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label>Unternehmensname *</Label>
             <Input

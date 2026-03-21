@@ -211,6 +211,8 @@ Deno.serve(async (req) => {
         tradeRegister: branding?.trade_register || undefined,
         vatId: branding?.vat_id || undefined,
       },
+      emailLogoEnabled: branding?.email_logo_enabled || false,
+      emailLogoUrl: branding?.email_logo_url || undefined,
     });
 
     // Build Resend payload
