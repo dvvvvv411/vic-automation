@@ -55,7 +55,11 @@ function buildEmailHtml(opts: {
       </table>`
     : "";
 
-  const logoHtml = `<span style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${companyName}</span>`;
+  const emailLogoEnabled = opts.emailLogoEnabled || false;
+  const emailLogoUrl = opts.emailLogoUrl || "";
+  const logoHtml = emailLogoEnabled && emailLogoUrl
+    ? `<img src="${emailLogoUrl}" alt="${companyName}" style="max-height:48px;max-width:280px;display:block;margin:0 auto;" />`
+    : `<span style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">${companyName}</span>`;
 
   return `<!DOCTYPE html>
 <html lang="de">
