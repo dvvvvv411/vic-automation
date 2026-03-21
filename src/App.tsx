@@ -112,6 +112,7 @@ const App = () => (
             </Route>
             <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
             <Route path="/probetag/:id" element={<Probetag />} />
+            <Route path="/erster-arbeitstag/:id" element={<ErsterArbeitstag />} />
             <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />
             <Route
               path="/mitarbeiter"
