@@ -1,52 +1,50 @@
 
 
-## Problem
+## Plan: 30-Minuten-Takt für Zeitauswahl + separate Wochenendzeiten
 
-Die "Anhänge einreichen"-Buttons und "Anhänge erforderlich"-Badges werden sofort angezeigt, auch wenn der Mitarbeiter die Bewertung noch gar nicht abgegeben hat. Die Anhänge sind aber der letzte Schritt — erst nach der Bewertung relevant.
+### 1. TIME_OPTIONS auf 30-Minuten-Takt erweitern
 
-## Ursache
+**Betroffene Dateien:**
+- `src/pages/admin/AdminZeitplan.tsx`
+- `src/components/admin/TrialDayBlocker.tsx`
 
-In beiden Dateien (`MitarbeiterDashboard.tsx` und `MitarbeiterAuftraege.tsx`) prüfen die `StatusButton`-Komponente und die Badge-Anzeige nur `attachmentsPending`, aber nicht ob `hasReviewSubmitted === true` ist.
-
-## Umsetzung
-
-### 1. `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`
-
-Drei Stellen anpassen:
-
-- **StatusButton**: Die beiden Attachment-Checks (`attachmentsSubmitted` und `attachmentsPending`) jeweils zusätzlich an `hasReviewSubmitted` koppeln. Wenn keine Bewertung abgegeben → normaler "Auftrag starten/fortführen"-Button.
-- **Badge "Anhänge erforderlich"**: Ebenfalls nur anzeigen wenn `hasReviewSubmitted === true`.
-
-### 2. `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx`
-
-Gleiche Logik:
-
-- **StatusButton**: `attachmentsSubmitted`- und `attachmentsPending`-Checks nur greifen lassen wenn `hasReviewSubmitted`.
-- **Badge "Anhänge erforderlich"**: Nur rendern wenn `hasReviewSubmitted === true`.
-
-### Konkrete Änderungen
-
-In beiden `StatusButton`-Komponenten:
-
+Aktuell:
 ```typescript
-// Vorher:
-if (attachmentsSubmitted && status !== "erfolgreich") { ... }
-if (attachmentsPending && status !== "erfolgreich") { ... }
-
-// Nachher:
-if (hasReviewSubmitted && attachmentsSubmitted && status !== "erfolgreich") { ... }
-if (hasReviewSubmitted && attachmentsPending && status !== "erfolgreich") { ... }
+const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
+```
+Neu: 48 Einträge (00:00, 00:30, 01:00, 01:30, ..., 23:30):
+```typescript
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = (i % 2) * 30;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+});
 ```
 
-Bei beiden Badge-Renderstellen:
+### 2. Separate Wochenendzeiten (Sa/So)
 
-```typescript
-// Vorher:
-{a.attachmentsPending && a.status !== "erfolgreich" && (
+**Datenbank-Migration**: Zwei neue Spalten in `branding_schedule_settings`:
+- `weekend_start_time` (time, default NULL)
+- `weekend_end_time` (time, default NULL)
 
-// Nachher:
-{a.hasReviewSubmitted && a.attachmentsPending && a.status !== "erfolgreich" && (
-```
+Wenn NULL, gelten die normalen `start_time`/`end_time`. Wenn gesetzt, gelten diese Zeiten für Sa (6) und So (7).
 
-Keine weiteren Änderungen nötig. Die Daten (`hasReviewSubmitted`) werden bereits korrekt geladen.
+**Admin UI** (`AdminZeitplan.tsx` BrandingScheduleForm + `TrialDayBlocker.tsx`):
+- Unter den Wochentag-Checkboxen einen neuen Abschnitt "Wochenendzeiten (Sa & So)" anzeigen, wenn Sa oder So aktiviert ist.
+- Zwei zusätzliche Select-Felder: Startzeit Wochenende, Endzeit Wochenende.
+- Beim Speichern `weekend_start_time` und `weekend_end_time` mitsenden.
+
+**Booking-Seiten** (`Bewerbungsgespraech.tsx` + `Probetag.tsx`):
+- Beim Generieren der Zeitslots prüfen, ob der gewählte Tag Sa oder So ist.
+- Falls ja und `weekend_start_time`/`weekend_end_time` gesetzt: diese Zeiten statt der normalen verwenden.
+
+### 3. Zusammenfassung der Änderungen
+
+| Datei | Änderung |
+|---|---|
+| `supabase/migrations/...` | `weekend_start_time` und `weekend_end_time` Spalten hinzufügen |
+| `src/pages/admin/AdminZeitplan.tsx` | TIME_OPTIONS 30-Min-Takt, Wochenendzeiten-UI in BrandingScheduleForm, Speichern erweitern |
+| `src/components/admin/TrialDayBlocker.tsx` | TIME_OPTIONS 30-Min-Takt, Wochenendzeiten-UI, Speichern erweitern |
+| `src/pages/Bewerbungsgespraech.tsx` | Wochenendzeiten bei Slot-Generierung berücksichtigen |
+| `src/pages/Probetag.tsx` | Wochenendzeiten bei Slot-Generierung berücksichtigen |
 
