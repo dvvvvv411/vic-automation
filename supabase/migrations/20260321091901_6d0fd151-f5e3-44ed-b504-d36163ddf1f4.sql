@@ -1,0 +1,1 @@
+ALTER TABLE public.brandings ADD COLUMN main_job_title text;
