@@ -1,25 +1,42 @@
 
 
-## Haupt-Jobtitel Feld im Branding
+## Eigene E-Mail für externe Bewerbungen
 
 ### Ziel
-Neues optionales Textfeld `main_job_title` in der Branding-Verwaltung, um den Haupt-Stellenanzeigentitel zu speichern (z.B. "Mitarbeiter für Onlineprozess-Tests (Quality Assurance)").
+Wenn eine externe Bewerbung (`is_external = true`) akzeptiert wird, soll eine angepasste "Bewerbung angenommen"-E-Mail versendet werden, die:
+- Erwähnt, dass sich der Bewerber über Instagram/Facebook beworben hat
+- Den `main_job_title` aus dem Branding enthält
+- Ansonsten identisch zur normalen "Bewerbung angenommen"-E-Mail ist
 
 ### Änderungen
 
-**1. DB-Migration**: Neue Spalte `main_job_title` (text, nullable) in `brandings`.
+**1. `AdminBewerbungen.tsx` — Accept-Mutation (Zeile ~274)**
+Neue Bedingung `app.is_external` vor dem `else`-Block einfügen:
+- Branding-Query erweitern um `main_job_title`
+- Eigene `body_lines` mit Hinweis auf Social-Media-Bewerbung und Jobtitel
+- `event_type: "bewerbung_angenommen_extern"`
+- Danach SMS senden wie im normalen Flow (kein Spoof)
 
-**2. AdminBrandingForm.tsx**: 
-- Feld im Schema, initialForm und useEffect ergänzen
-- Eingabefeld in der "Stammdaten"-Card unter dem Unternehmensnamen einfügen mit Label "Haupt-Jobtitel" und Platzhalter "z.B. Mitarbeiter für Onlineprozess-Tests (Quality Assurance)"
+Beispiel body_lines:
+```
+"wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung über Instagram/Facebook als „{main_job_title}" angenommen wurde."
+```
 
-**3. Bestehende Brandings aktualisieren**: Per INSERT-Tool alle vorhandenen Brandings mit dem Wert "Mitarbeiter für Onlineprozess-Tests (Quality Assurance)" befüllen.
+**2. `AdminEmails.tsx` — Neues Template in der Vorschau-Liste**
+Neuen Eintrag nach "Bewerbung angenommen" einfügen:
+- `eventType: "bewerbung_angenommen_extern"`
+- `label: "Bewerbung angenommen (Extern)"`
+- Branding-Query in der Vorschau muss `main_job_title` laden
+- `bodyLines` mit Social-Media-Hinweis und Jobtitel-Platzhalter
+
+Da der Jobtitel dynamisch aus dem Branding kommt, muss die `bodyLines`-Funktion den Jobtitel als zweiten Parameter erhalten oder separat geladen werden. Die Preview-Komponente lädt bereits Branding-Daten — diese Query um `main_job_title` erweitern.
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| Migration | `main_job_title` Spalte |
-| `AdminBrandingForm.tsx` | Schema + Eingabefeld |
-| SQL Update | Bestehende Brandings mit Default-Wert befüllen |
+| `src/pages/admin/AdminBewerbungen.tsx` | Neue Bedingung für `is_external` im Accept-Flow |
+| `src/pages/admin/AdminEmails.tsx` | Neues Template + `main_job_title` in Branding-Query |
+
+### Keine DB-Migration nötig
 
