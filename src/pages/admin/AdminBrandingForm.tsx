@@ -115,6 +115,7 @@ export default function AdminBrandingForm() {
         domain: branding.domain || "",
         subdomain_prefix: branding.subdomain_prefix || "",
         email: branding.email || "",
+        main_job_title: (branding as any).main_job_title || "",
         brand_color: branding.brand_color || "#3B82F6",
         resend_from_email: branding.resend_from_email || "",
         resend_from_name: branding.resend_from_name || "",
