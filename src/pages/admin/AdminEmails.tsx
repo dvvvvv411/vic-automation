@@ -306,6 +306,7 @@ export default function AdminEmails() {
 
   const branding = brandings?.find((b) => b.id === selectedBrandingId);
   const companyName = branding?.company_name || "Unternehmen";
+  const mainJobTitle = (branding as any)?.main_job_title || "";
   const brandColor = branding?.brand_color || "#3B82F6";
   const footerParts = [branding?.street, `${branding?.zip_code || ""} ${branding?.city || ""}`.trim()].filter(Boolean);
   const footerAddress = footerParts.join(", ");
