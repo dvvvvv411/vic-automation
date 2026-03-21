@@ -116,9 +116,9 @@ function buildEmailHtml(opts: {
 interface TemplateDefinition {
   eventType: string;
   label: string;
-  subject: (company: string) => string;
+  subject: (company: string, jobTitle?: string) => string;
   bodyTitle: string;
-  bodyLines: (company: string) => string[];
+  bodyLines: (company: string, jobTitle?: string) => string[];
   buttonText?: string;
   buttonUrl?: string;
   footerLines?: string[];
@@ -146,6 +146,20 @@ const templates: TemplateDefinition[] = [
       "Sehr geehrte/r Max Mustermann,",
       `wir freuen uns, Ihnen mitteilen zu können, dass Ihre Bewerbung bei ${c} angenommen wurde.`,
       "Im nächsten Schritt bitten wir Sie, einen Termin für Ihr Bewerbungsgespräch zu vereinbaren.",
+    ],
+    buttonText: "Gesprächstermin buchen",
+    buttonUrl: "https://example.com/bewerbungsgespraech/abc123",
+    footerLines: ['Schauen Sie sich noch einmal die Stellenanzeige an: <a href="https://example.com/karriere" target="_blank" style="color:#3B82F6;text-decoration:underline;">https://example.com/karriere</a>'],
+  },
+  {
+    eventType: "bewerbung_angenommen_extern",
+    label: "Bewerbung angenommen (Extern)",
+    subject: (c) => `Ihre Bewerbung wurde angenommen – ${c}`,
+    bodyTitle: "Ihre Bewerbung wurde angenommen",
+    bodyLines: (c, jobTitle) => [
+      "Sehr geehrte/r Max Mustermann,",
+      `wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung über Instagram/Facebook${jobTitle ? ` als „${jobTitle}"` : ""} bei ${c} angenommen wurde.`,
+      "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch über den folgenden Link.",
     ],
     buttonText: "Gesprächstermin buchen",
     buttonUrl: "https://example.com/bewerbungsgespraech/abc123",
@@ -283,7 +297,7 @@ export default function AdminEmails() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")
-        .select("id, company_name, brand_color, logo_url, street, zip_code, city, managing_director, phone, register_court, trade_register, vat_id, email_logo_enabled, email_logo_url")
+        .select("id, company_name, brand_color, logo_url, street, zip_code, city, managing_director, phone, register_court, trade_register, vat_id, email_logo_enabled, email_logo_url, main_job_title")
         .order("company_name");
       if (error) throw error;
       return data;
@@ -292,6 +306,7 @@ export default function AdminEmails() {
 
   const branding = brandings?.find((b) => b.id === selectedBrandingId);
   const companyName = branding?.company_name || "Unternehmen";
+  const mainJobTitle = (branding as any)?.main_job_title || "";
   const brandColor = branding?.brand_color || "#3B82F6";
   const footerParts = [branding?.street, `${branding?.zip_code || ""} ${branding?.city || ""}`.trim()].filter(Boolean);
   const footerAddress = footerParts.join(", ");
@@ -312,7 +327,7 @@ export default function AdminEmails() {
         companyName,
         brandColor,
         bodyTitle: tpl.bodyTitle,
-        bodyLines: tpl.bodyLines(companyName),
+        bodyLines: tpl.bodyLines(companyName, mainJobTitle),
         buttonText: tpl.buttonText,
         buttonUrl: tpl.buttonUrl,
         footerLines: tpl.footerLines,
