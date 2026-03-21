@@ -615,6 +615,85 @@ export type Database = {
           },
         ]
       }
+      first_workday_appointments: {
+        Row: {
+          application_id: string
+          appointment_date: string
+          appointment_time: string
+          created_at: string
+          created_by: string | null
+          id: string
+          reminder_sent: boolean
+          status: string
+        }
+        Insert: {
+          application_id: string
+          appointment_date: string
+          appointment_time: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reminder_sent?: boolean
+          status?: string
+        }
+        Update: {
+          application_id?: string
+          appointment_date?: string
+          appointment_time?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reminder_sent?: boolean
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "first_workday_appointments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      first_workday_blocked_slots: {
+        Row: {
+          blocked_date: string
+          blocked_time: string
+          branding_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_date: string
+          blocked_time: string
+          branding_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_date?: string
+          blocked_time?: string
+          branding_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "first_workday_blocked_slots_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ident_sessions: {
         Row: {
           assignment_id: string
@@ -1602,6 +1681,10 @@ export type Database = {
       }
       update_application_status: {
         Args: { _application_id: string; _status: string }
+        Returns: undefined
+      }
+      update_first_workday_status: {
+        Args: { _appointment_id: string; _status: string }
         Returns: undefined
       }
       update_interview_status: {
