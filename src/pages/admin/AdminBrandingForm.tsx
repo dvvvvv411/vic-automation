@@ -58,6 +58,7 @@ const initialForm: BrandingForm = {
   domain: "",
   subdomain_prefix: "",
   email: "",
+  main_job_title: "",
   brand_color: "#3B82F6",
   resend_from_email: "",
   resend_from_name: "",
