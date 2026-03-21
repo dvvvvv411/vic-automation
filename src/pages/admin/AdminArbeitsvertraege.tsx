@@ -321,6 +321,11 @@ export default function AdminArbeitsvertraege() {
                               <CalendarIcon className="h-3.5 w-3.5" />{startDate}
                             </span>
                           )}
+                          {item.contract_templates?.title && (
+                            <span className="flex items-center gap-1">
+                              <FileCheck className="h-3.5 w-3.5" />{item.contract_templates.title}
+                            </span>
+                          )}
                         </div>
                       </div>
 
