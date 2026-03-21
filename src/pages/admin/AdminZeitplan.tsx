@@ -317,14 +317,18 @@ function BrandingScheduleForm({
   onSave,
   isSaving,
 }: {
-  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] };
-  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[] }) => void;
+  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null };
+  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null }) => void;
   isSaving: boolean;
 }) {
   const [st, setSt] = useState(existing?.start_time?.slice(0, 5) || DEFAULT_START);
   const [et, setEt] = useState(existing?.end_time?.slice(0, 5) || DEFAULT_END);
   const [iv, setIv] = useState(existing?.slot_interval_minutes || DEFAULT_INTERVAL);
   const [ds, setDs] = useState<number[]>(existing?.available_days || DEFAULT_DAYS);
+  const [wst, setWst] = useState(existing?.weekend_start_time?.slice(0, 5) || "");
+  const [wet, setWet] = useState(existing?.weekend_end_time?.slice(0, 5) || "");
+
+  const hasWeekend = ds.includes(6) || ds.includes(7);
 
   const toggleDay = (day: number) => {
     setDs((prev) => prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort());
@@ -375,7 +379,39 @@ function BrandingScheduleForm({
           ))}
         </div>
       </div>
-      <Button onClick={() => onSave({ start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds })} disabled={isSaving}>
+      {hasWeekend && (
+        <div className="space-y-2 rounded-lg border border-border p-4">
+          <Label className="text-sm font-medium">Wochenendzeiten (Sa & So)</Label>
+          <p className="text-xs text-muted-foreground">Abweichende Zeiten für Samstag und Sonntag. Leer lassen = gleiche Zeiten wie unter der Woche.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+            <div className="space-y-2">
+              <Label className="text-xs">Startzeit Wochenende</Label>
+              <Select value={wst} onValueChange={setWst}>
+                <SelectTrigger><SelectValue placeholder="Wie Wochentage" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="reset">Wie Wochentage</SelectItem>
+                  {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Endzeit Wochenende</Label>
+              <Select value={wet} onValueChange={setWet}>
+                <SelectTrigger><SelectValue placeholder="Wie Wochentage" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="reset">Wie Wochentage</SelectItem>
+                  {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      )}
+      <Button onClick={() => onSave({
+        start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds,
+        weekend_start_time: wst && wst !== "reset" ? wst : null,
+        weekend_end_time: wet && wet !== "reset" ? wet : null,
+      })} disabled={isSaving}>
         {isSaving ? "Speichern..." : "Einstellungen speichern"}
       </Button>
     </div>

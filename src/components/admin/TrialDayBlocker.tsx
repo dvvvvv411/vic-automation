@@ -226,8 +226,40 @@ export default function TrialDayBlocker({ brandingId, onSaveSettings, isSavingSe
                 ))}
               </div>
             </div>
+            {hasWeekend && (
+              <div className="space-y-2 rounded-lg border border-border p-4">
+                <Label className="text-sm font-medium">Wochenendzeiten (Sa & So)</Label>
+                <p className="text-xs text-muted-foreground">Abweichende Zeiten für Samstag und Sonntag. Leer lassen = gleiche Zeiten wie unter der Woche.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Startzeit Wochenende</Label>
+                    <Select value={wst} onValueChange={setWst}>
+                      <SelectTrigger><SelectValue placeholder="Wie Wochentage" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="reset">Wie Wochentage</SelectItem>
+                        {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Endzeit Wochenende</Label>
+                    <Select value={wet} onValueChange={setWet}>
+                      <SelectTrigger><SelectValue placeholder="Wie Wochentage" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="reset">Wie Wochentage</SelectItem>
+                        {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t} Uhr</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
             <Button
-              onClick={() => onSaveSettings({ start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds })}
+              onClick={() => onSaveSettings({
+                start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds,
+                weekend_start_time: wst && wst !== "reset" ? wst : null,
+                weekend_end_time: wet && wet !== "reset" ? wet : null,
+              })}
               disabled={isSavingSettings}
             >
               {isSavingSettings ? "Speichern..." : "Einstellungen speichern"}
