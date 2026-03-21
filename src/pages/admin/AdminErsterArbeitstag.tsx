@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { sendEmail } from "@/lib/sendEmail";
-import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +8,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Copy } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
@@ -20,7 +18,7 @@ import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 const PAGE_SIZE = 20;
 type ViewMode = "default" | "past" | "future";
 
-export default function AdminProbetag() {
+export default function AdminErsterArbeitstag() {
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("default");
   const [search, setSearch] = useState("");
@@ -33,11 +31,11 @@ export default function AdminProbetag() {
   const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["trial-day-appointments-admin", page, viewMode, activeBrandingId],
+    queryKey: ["first-workday-appointments-admin", page, viewMode, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
       let query = supabase
-        .from("trial_day_appointments" as any)
+        .from("first_workday_appointments" as any)
         .select("*, applications!inner(first_name, last_name, email, phone, employment_type, branding_id, brandings(id, company_name))", { count: "exact" })
         .eq("applications.branding_id", activeBrandingId!);
 
@@ -73,7 +71,7 @@ export default function AdminProbetag() {
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
 
   const handleStatusUpdate = async (item: any, newStatus: string) => {
-    const { error } = await supabase.rpc("update_trial_day_status" as any, {
+    const { error } = await supabase.rpc("update_first_workday_status" as any, {
       _appointment_id: item.id,
       _status: newStatus,
     });
@@ -82,37 +80,7 @@ export default function AdminProbetag() {
       return;
     }
     toast.success(`Status auf "${newStatus}" gesetzt.`);
-    queryClient.invalidateQueries({ queryKey: ["trial-day-appointments-admin"] });
-
-    // Send probetag_erfolgreich email when marking as successful
-    if (newStatus === "erfolgreich" && item.applications?.email) {
-      const app = item.applications;
-      const fullName = `${app.first_name} ${app.last_name}`.trim();
-      const brandingId = app.branding_id;
-
-      let companyName = app.brandings?.company_name || "Unternehmen";
-
-      await sendEmail({
-        to: app.email,
-        recipient_name: fullName,
-        subject: `Ihr Probetag war erfolgreich – ${companyName}`,
-        body_title: "Ihr Probetag war erfolgreich!",
-        body_lines: [
-          `Sehr geehrte/r ${fullName},`,
-          `wir freuen uns, Ihnen mitteilen zu können, dass Ihr Probetag bei ${companyName} erfolgreich war. Wir haben Ihre Ergebnisse geprüft und sind sehr zufrieden.`,
-          "Als nächsten Schritt bitten wir Sie, Ihre persönlichen Daten zu vervollständigen und den Arbeitsvertrag auszufüllen.",
-          "Wir freuen uns auf die Zusammenarbeit!",
-        ],
-        event_type: "probetag_erfolgreich",
-        branding_id: brandingId,
-      });
-    }
-  };
-
-  const handleCopyFirstWorkdayLink = async (applicationId: string, brandingId: string | null) => {
-    const url = await buildBrandingUrl(brandingId, `/erster-arbeitstag/${applicationId}`);
-    navigator.clipboard.writeText(url);
-    toast.success("Link für 1. Arbeitstag kopiert!");
+    queryClient.invalidateQueries({ queryKey: ["first-workday-appointments-admin"] });
   };
 
   const toggleView = (mode: ViewMode) => {
@@ -134,7 +102,7 @@ export default function AdminProbetag() {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-8">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">Probetag-Termine</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">1. Arbeitstag-Termine</h2>
         <p className="text-muted-foreground mt-1">
           {viewMode === "default" && "Termine von heute und morgen."}
           {viewMode === "past" && "Vergangene Termine."}
@@ -168,7 +136,7 @@ export default function AdminProbetag() {
           return !filteredItems.length ? (
             <div className="text-center py-16 border border-dashed border-border rounded-lg">
               <Calendar className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">Keine Probetag-Termine in dieser Ansicht.</p>
+              <p className="text-muted-foreground">Keine 1. Arbeitstag-Termine in dieser Ansicht.</p>
             </div>
           ) : (
             <>
@@ -209,11 +177,6 @@ export default function AdminProbetag() {
                             {item.status !== "erfolgreich" && (
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(item, "erfolgreich")} title="Als erfolgreich markieren">
                                 <CheckCircle className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {item.status === "erfolgreich" && (
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleCopyFirstWorkdayLink(item.application_id, item.applications?.branding_id)} title="Link für 1. Arbeitstag kopieren">
-                                <Copy className="h-4 w-4" />
                               </Button>
                             )}
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => handleStatusUpdate(item, "fehlgeschlagen")} title="Als fehlgeschlagen markieren">
