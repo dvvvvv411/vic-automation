@@ -116,9 +116,9 @@ function buildEmailHtml(opts: {
 interface TemplateDefinition {
   eventType: string;
   label: string;
-  subject: (company: string) => string;
+  subject: (company: string, jobTitle?: string) => string;
   bodyTitle: string;
-  bodyLines: (company: string) => string[];
+  bodyLines: (company: string, jobTitle?: string) => string[];
   buttonText?: string;
   buttonUrl?: string;
   footerLines?: string[];
