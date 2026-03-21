@@ -40,7 +40,7 @@ export default function AdminArbeitsvertraege() {
     queryFn: async () => {
       const { data: contracts, error } = await supabase
         .from("employment_contracts")
-        .select("*, applications(id, first_name, last_name, email, phone, branding_id, brandings(id, company_name))")
+        .select("*, applications(id, first_name, last_name, email, phone, branding_id, brandings(id, company_name)), contract_templates(title)")
         .eq("branding_id", activeBrandingId!)
         .neq("status", "offen")
         .order("created_at", { ascending: false });
@@ -321,6 +321,11 @@ export default function AdminArbeitsvertraege() {
                               <CalendarIcon className="h-3.5 w-3.5" />{startDate}
                             </span>
                           )}
+                          {item.contract_templates?.title && (
+                            <span className="flex items-center gap-1">
+                              <FileCheck className="h-3.5 w-3.5" />{item.contract_templates.title}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -409,6 +414,7 @@ export default function AdminArbeitsvertraege() {
                   <InfoRow label="PLZ & Stadt" value={`${selectedContract.zip_code || ""} ${selectedContract.city || ""}`} />
                   <InfoRow label="Familienstand" value={selectedContract.marital_status} />
                   <InfoRow label="Art der Beschäftigung" value={selectedContract.employment_type} />
+                  <InfoRow label="Vertragsform" value={selectedContract.contract_templates?.title} />
                   <InfoRow label="Gewünschtes Startdatum" value={selectedContract.desired_start_date} />
                 </div>
               </div>

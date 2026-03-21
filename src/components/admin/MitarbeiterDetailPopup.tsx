@@ -78,7 +78,7 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employment_contracts")
-        .select("*, applications(brandings(company_name))")
+        .select("*, applications(brandings(company_name)), contract_templates(title)")
         .eq("id", contractId)
         .maybeSingle();
       if (error) throw error;
@@ -182,6 +182,7 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
                         <InfoRow label="Nationalität" value={contract.nationality} />
                         <InfoRow label="Familienstand" value={contract.marital_status} />
                         <InfoRow label="Beschäftigungsart" value={contract.employment_type} />
+                        <InfoRow label="Vertragsform" value={(contract as any)?.contract_templates?.title} />
                         <InfoRow label="Gewünschtes Startdatum" value={formatDate(contract.desired_start_date)} />
                       </CardContent>
                     </Card>
