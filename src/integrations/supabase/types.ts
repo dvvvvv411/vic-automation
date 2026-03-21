@@ -111,6 +111,8 @@ export type Database = {
           schedule_type: string
           slot_interval_minutes: number
           start_time: string
+          weekend_end_time: string | null
+          weekend_start_time: string | null
         }
         Insert: {
           available_days?: number[]
@@ -122,6 +124,8 @@ export type Database = {
           schedule_type?: string
           slot_interval_minutes?: number
           start_time?: string
+          weekend_end_time?: string | null
+          weekend_start_time?: string | null
         }
         Update: {
           available_days?: number[]
@@ -133,6 +137,8 @@ export type Database = {
           schedule_type?: string
           slot_interval_minutes?: number
           start_time?: string
+          weekend_end_time?: string | null
+          weekend_start_time?: string | null
         }
         Relationships: [
           {
