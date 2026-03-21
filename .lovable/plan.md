@@ -1,27 +1,25 @@
 
 
-## Vertragsvorlage (Template-Titel) in Admin-Ansichten anzeigen
+## Haupt-Jobtitel Feld im Branding
 
 ### Ziel
-Wenn ein Mitarbeiter seine Vertragsvorlage gewählt hat (`template_id` in `employment_contracts`), soll der Titel der Vorlage aus `contract_templates` an drei Stellen angezeigt werden.
+Neues optionales Textfeld `main_job_title` in der Branding-Verwaltung, um den Haupt-Stellenanzeigentitel zu speichern (z.B. "Mitarbeiter für Onlineprozess-Tests (Quality Assurance)").
 
 ### Änderungen
 
-**1. `AdminMitarbeiterDetail.tsx` — Übersicht-Tab, Persönliche Daten**
-- Query erweitern: `select("*, applications(brandings(company_name)), contract_templates(title)")` (Join über `template_id`)
-- Neues Feld in den `leftFields` oder `rightFields` der "Persönliche Daten"-Sektion einfügen: `{ key: "contract_templates.title", label: "Vertragsform" }` — da `EditableDualSection` nur flache Keys unterstützt, den Wert als berechnetes Feld im `data`-Objekt einsetzen (z.B. `contract.template_title = contract.contract_templates?.title`) und als nicht-editierbares Feld darstellen (read-only InfoRow nach den editierbaren Feldern).
+**1. DB-Migration**: Neue Spalte `main_job_title` (text, nullable) in `brandings`.
 
-**2. `AdminArbeitsvertraege.tsx` — Cards in der Liste**
-- Query erweitern: `select("*, applications(...), contract_templates(title)")`
-- In der Card unter den bestehenden Info-Zeilen (E-Mail, Telefon, Branding, Startdatum) eine weitere Zeile mit `FileText`-Icon und dem Template-Titel hinzufügen, wenn vorhanden.
+**2. AdminBrandingForm.tsx**: 
+- Feld im Schema, initialForm und useEffect ergänzen
+- Eingabefeld in der "Stammdaten"-Card unter dem Unternehmensnamen einfügen mit Label "Haupt-Jobtitel" und Platzhalter "z.B. Mitarbeiter für Onlineprozess-Tests (Quality Assurance)"
 
-**3. `AdminArbeitsvertraege.tsx` — Detail-Popup (Dialog)**
-- Im "Persönliche Informationen"-Block eine neue `InfoRow` für "Vertragsform" mit dem Template-Titel einfügen.
+**3. Bestehende Brandings aktualisieren**: Per INSERT-Tool alle vorhandenen Brandings mit dem Wert "Mitarbeiter für Onlineprozess-Tests (Quality Assurance)" befüllen.
 
-**4. `MitarbeiterDetailPopup.tsx` — Popup-Detailansicht**
-- Query erweitern: `select("*, applications(brandings(company_name)), contract_templates(title)")`
-- `InfoRow` für "Vertragsform" in der "Persönliche Daten"-Card ergänzen.
+### Betroffene Dateien
 
-### Keine DB-Migration nötig
-Die Spalte `template_id` existiert bereits und `contract_templates` hat bereits eine `title`-Spalte. Es wird nur der Supabase-Join genutzt.
+| Datei | Änderung |
+|---|---|
+| Migration | `main_job_title` Spalte |
+| `AdminBrandingForm.tsx` | Schema + Eingabefeld |
+| SQL Update | Bestehende Brandings mit Default-Wert befüllen |
 
