@@ -99,17 +99,24 @@ export default function AdminZeitplan() {
 
   // Save branding-specific settings
   const saveSettingsMutation = useMutation({
-    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string }) => {
+    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null }) => {
+      const upsertData: any = {
+        branding_id: activeBrandingId!,
+        start_time: params.start_time + ":00",
+        end_time: params.end_time + ":00",
+        slot_interval_minutes: params.slot_interval_minutes,
+        available_days: params.available_days,
+        schedule_type: params.schedule_type,
+      };
+      if (params.weekend_start_time !== undefined) {
+        upsertData.weekend_start_time = params.weekend_start_time ? params.weekend_start_time + ":00" : null;
+      }
+      if (params.weekend_end_time !== undefined) {
+        upsertData.weekend_end_time = params.weekend_end_time ? params.weekend_end_time + ":00" : null;
+      }
       const { error } = await supabase
         .from("branding_schedule_settings")
-        .upsert({
-          branding_id: activeBrandingId!,
-          start_time: params.start_time + ":00",
-          end_time: params.end_time + ":00",
-          slot_interval_minutes: params.slot_interval_minutes,
-          available_days: params.available_days,
-          schedule_type: params.schedule_type,
-        } as any, { onConflict: "branding_id,schedule_type" as any });
+        .upsert(upsertData, { onConflict: "branding_id,schedule_type" as any });
       if (error) throw error;
     },
     onSuccess: () => {
