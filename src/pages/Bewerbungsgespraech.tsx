@@ -119,11 +119,17 @@ export default function Bewerbungsgespraech() {
   const scheduleEnd = scheduleSettings?.end_time?.slice(0, 5) ?? "18:00";
   const scheduleInterval = scheduleSettings?.slot_interval_minutes ?? 20;
   const availableDays = scheduleSettings?.available_days ?? [1, 2, 3, 4, 5, 6];
+  const weekendStart = scheduleSettings?.weekend_start_time?.slice(0, 5) || null;
+  const weekendEnd = scheduleSettings?.weekend_end_time?.slice(0, 5) || null;
 
-  const TIME_SLOTS = useMemo(
-    () => generateTimeSlots(scheduleStart, scheduleEnd, scheduleInterval),
-    [scheduleStart, scheduleEnd, scheduleInterval]
-  );
+  const TIME_SLOTS = useMemo(() => {
+    if (!selectedDate) return generateTimeSlots(scheduleStart, scheduleEnd, scheduleInterval);
+    const dayOfWeek = selectedDate.getDay(); // 0=Sun, 6=Sat
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const effectiveStart = isWeekend && weekendStart ? weekendStart : scheduleStart;
+    const effectiveEnd = isWeekend && weekendEnd ? weekendEnd : scheduleEnd;
+    return generateTimeSlots(effectiveStart, effectiveEnd, scheduleInterval);
+  }, [selectedDate, scheduleStart, scheduleEnd, scheduleInterval, weekendStart, weekendEnd]);
 
   const brandColor = application?.brandings?.brand_color || "#3B82F6";
   const logoUrl = application?.brandings?.logo_url;
