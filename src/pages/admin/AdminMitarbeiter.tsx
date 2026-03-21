@@ -99,8 +99,9 @@ export default function AdminMitarbeiter() {
     const today = startOfToday();
 
     const sorted = [...items].sort((a: any, b: any) => {
-      const rankA = a.status === "unterzeichnet" ? 0 : 1;
-      const rankB = b.status === "unterzeichnet" ? 0 : 1;
+      const statusRank = (s: string) => s === "genehmigt" || s === "unterzeichnet" ? 0 : s === "eingereicht" ? 1 : 2;
+      const rankA = statusRank(a.status);
+      const rankB = statusRank(b.status);
       if (rankA !== rankB) return rankA - rankB;
 
       const dateA = a.desired_start_date ? parseISO(a.desired_start_date) : null;
@@ -218,13 +219,21 @@ export default function AdminMitarbeiter() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">
-                            {item.status === "unterzeichnet" ? (
+                            {item.status === "genehmigt" ? (
+                              <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
+                                Genehmigt
+                              </Badge>
+                            ) : item.status === "unterzeichnet" ? (
                               <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
                                 Unterzeichnet
                               </Badge>
+                            ) : item.status === "eingereicht" ? (
+                              <Badge variant="outline" className="text-blue-600 border-blue-300 bg-blue-50">
+                                Eingereicht
+                              </Badge>
                             ) : (
                               <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50">
-                                Nicht unterzeichnet
+                                Offen
                               </Badge>
                             )}
                             {item.is_suspended && (
