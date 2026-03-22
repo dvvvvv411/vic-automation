@@ -96,6 +96,27 @@ export default function AdminMitarbeiter() {
     setSuspendTarget(null);
   };
 
+  const handleDeleteEmployee = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-employee", {
+        body: { contractId: deleteTarget.id },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || "Fehler beim Löschen.");
+      } else {
+        toast.success("Mitarbeiter und Benutzerkonto gelöscht.");
+        queryClient.invalidateQueries({ queryKey: ["mitarbeiter"] });
+      }
+    } catch {
+      toast.error("Fehler beim Löschen.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
+
   const sortedAndFiltered = useMemo(() => {
     const items = data?.items ?? [];
     const today = startOfToday();
