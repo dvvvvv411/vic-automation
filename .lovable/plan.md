@@ -1,32 +1,41 @@
 
 
-## SMS fuer externe Bewerber: Link entfernen, Hinweis auf Email
+## Probetag & 1. Arbeitstag: Gemeinsame Zeitplanung
 
-### Problem
-Die externe SMS nutzt noch das `bewerbung_angenommen` Template mit `{link}`. Stattdessen soll ein eigenes Template ohne Link verwendet werden, mit Hinweis dass der Termin ueber den Link in der Email gebucht werden soll.
+### Ziel
+Probetag- und 1. Arbeitstag-Termine sollen sich gegenseitig blockieren — ein gebuchter Probetag-Slot ist auch fuer 1. Arbeitstag nicht mehr verfuegbar und umgekehrt.
 
 ### Aenderungen
 
-**1. DB-Migration: Neues SMS-Template einfuegen**
-- `event_type: 'bewerbung_angenommen_extern'`
-- `label: 'Bewerbung angenommen (Extern)'`
-- `message: 'Hallo {name}, Ihre Bewerbung ueber Instagram/Facebook als {jobtitel} wurde angenommen! Bitte buchen Sie Ihren Termin ueber den Link in der Email, die Sie erhalten haben.'`
-- Kein `{link}` Platzhalter
+**1. `Probetag.tsx` — bookedSlots Query (Zeile 92-110)**
+- Zusaetzlich `first_workday_appointments` fuer die gleichen Branding-Applications laden
+- Beide Ergebnisse zusammenfuehren in ein gemeinsames Array
 
-**2. `AdminBewerbungen.tsx` — Zeile 303-317**
-- Template laden aus `bewerbung_angenommen_extern` statt `bewerbung_angenommen`
-- Platzhalter-Ersetzung: `{name}` und `{jobtitel}` (kein `{link}`)
-- `event_type` auf `"bewerbung_angenommen_extern"` aendern
-- Fallback-Text ohne Link, mit Hinweis auf Email
+**2. `ErsterArbeitstag.tsx` — bookedSlots Query (Zeile 90-107)**
+- Zusaetzlich `trial_day_appointments` fuer die gleichen Branding-Applications laden
+- Beide Ergebnisse zusammenfuehren in ein gemeinsames Array
 
-**3. `AdminSmsTemplates.tsx` — PLACEHOLDER_INFO**
-- Neuer Eintrag: `bewerbung_angenommen_extern: ["{name}", "{jobtitel}"]`
+**3. `ErsterArbeitstag.tsx` — Schedule Settings (Zeile 76-88)**
+- `schedule_type` von `"first_workday"` auf `"trial"` aendern, damit beide denselben Zeitplan nutzen
+
+**4. `AdminZeitplan.tsx` — Tab "1. Arbeitstag" entfernen**
+- Den separaten Tab fuer 1. Arbeitstag entfernen, da Probetag-Einstellungen jetzt fuer beide gelten
+- TrialDayBlocker-Tab umbenennen zu "Probetag & 1. Arbeitstag"
+
+**5. `ErsterArbeitstag.tsx` — blockedSlotsData Query (Zeile 109-120)**
+- Zusaetzlich `trial_day_blocked_slots` laden und mit `first_workday_blocked_slots` zusammenfuehren
+
+**6. `Probetag.tsx` — blockedSlotsData Query (Zeile 112-124)**
+- Zusaetzlich `first_workday_blocked_slots` laden und mit `trial_day_blocked_slots` zusammenfuehren
+
+### Kein DB-Aenderung noetig
+Die bestehenden Tabellen bleiben unveraendert. Nur die Frontend-Logik wird angepasst, damit beide Buchungsseiten die Termine der jeweils anderen Tabelle als belegt betrachten.
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| Migration | INSERT neues SMS-Template |
-| `AdminBewerbungen.tsx` | Eigenes Template + kein Link |
-| `AdminSmsTemplates.tsx` | Platzhalter-Info ohne {link} |
+| `Probetag.tsx` | Auch first_workday_appointments + blocked_slots laden |
+| `ErsterArbeitstag.tsx` | Auch trial_day_appointments + blocked_slots laden, schedule_type "trial" nutzen |
+| `AdminZeitplan.tsx` | 1. Arbeitstag-Tab entfernen, Probetag-Tab umbenennen |
 
