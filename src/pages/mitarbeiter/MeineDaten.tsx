@@ -166,8 +166,19 @@ const MeineDaten = () => {
     }
   };
 
+  const getEstimatedMonthlySalary = () => {
+    if (!branding) return 0;
+    switch (contractDetails.employment_type?.toLowerCase()) {
+      case "minijob": return Number((branding as any).estimated_salary_minijob) || 0;
+      case "teilzeit": return Number((branding as any).estimated_salary_teilzeit) || 0;
+      case "vollzeit": return Number((branding as any).estimated_salary_vollzeit) || 0;
+      default: return 0;
+    }
+  };
+
   const fixedSalary = getFixedSalary();
   const hourlyRate = getHourlyRate();
+  const estimatedSalary = getEstimatedMonthlySalary();
 
   // Calculate hourly earnings from reward history
   const hourlyEarnings = isHourlyRate
