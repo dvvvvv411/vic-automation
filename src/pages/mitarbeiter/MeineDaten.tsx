@@ -346,7 +346,7 @@ const MeineDaten = () => {
                   </p>
                   <div className="border-t border-border pt-3">
                     <p className="text-xs text-muted-foreground">{isFixedSalary && !isHourlyRate ? "Betrag" : "Voraussichtlicher Betrag"}</p>
-                    <p className="text-2xl font-bold text-primary">€{isHourlyRate ? hourlyEarnings.toFixed(2) : isFixedSalary ? fixedSalary.toFixed(2) : pendingPayout.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-primary">€{isHourlyRate && contractDetails.employment_type?.toLowerCase() === 'minijob' && estimatedSalary > 0 ? estimatedSalary.toFixed(2) : isHourlyRate ? hourlyEarnings.toFixed(2) : isFixedSalary ? fixedSalary.toFixed(2) : pendingPayout.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
