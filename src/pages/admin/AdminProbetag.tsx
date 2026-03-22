@@ -94,8 +94,8 @@ export default function AdminProbetag() {
       const app = item.applications;
       const fullName = `${app.first_name} ${app.last_name}`.trim();
       const brandingId = app.branding_id;
-
-      let companyName = app.brandings?.company_name || "Unternehmen";
+      const companyName = app.brandings?.company_name || "Unternehmen";
+      const authUrl = await buildBrandingUrl(brandingId, "/auth");
 
       await sendEmail({
         to: app.email,
@@ -108,6 +108,8 @@ export default function AdminProbetag() {
           "Als nächsten Schritt bitten wir Sie, Ihre persönlichen Daten zu vervollständigen und den Arbeitsvertrag auszufüllen.",
           "Wir freuen uns auf die Zusammenarbeit!",
         ],
+        button_text: "Jetzt anmelden",
+        button_url: authUrl,
         event_type: "probetag_erfolgreich",
         branding_id: brandingId,
       });
