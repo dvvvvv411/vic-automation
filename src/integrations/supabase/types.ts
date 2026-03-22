@@ -166,6 +166,9 @@ export type Database = {
           email: string | null
           email_logo_enabled: boolean
           email_logo_url: string | null
+          estimated_salary_minijob: number | null
+          estimated_salary_teilzeit: number | null
+          estimated_salary_vollzeit: number | null
           hourly_rate_enabled: boolean
           hourly_rate_minijob: number | null
           hourly_rate_teilzeit: number | null
@@ -210,6 +213,9 @@ export type Database = {
           email?: string | null
           email_logo_enabled?: boolean
           email_logo_url?: string | null
+          estimated_salary_minijob?: number | null
+          estimated_salary_teilzeit?: number | null
+          estimated_salary_vollzeit?: number | null
           hourly_rate_enabled?: boolean
           hourly_rate_minijob?: number | null
           hourly_rate_teilzeit?: number | null
@@ -254,6 +260,9 @@ export type Database = {
           email?: string | null
           email_logo_enabled?: boolean
           email_logo_url?: string | null
+          estimated_salary_minijob?: number | null
+          estimated_salary_teilzeit?: number | null
+          estimated_salary_vollzeit?: number | null
           hourly_rate_enabled?: boolean
           hourly_rate_minijob?: number | null
           hourly_rate_teilzeit?: number | null

@@ -40,6 +40,9 @@ const brandingSchema = z.object({
   hourly_rate_minijob: z.string().optional(),
   hourly_rate_teilzeit: z.string().optional(),
   hourly_rate_vollzeit: z.string().optional(),
+  estimated_salary_minijob: z.string().optional(),
+  estimated_salary_teilzeit: z.string().optional(),
+  estimated_salary_vollzeit: z.string().optional(),
   email_logo_enabled: z.boolean(),
   email_logo_url: z.string().max(500).optional(),
 });
@@ -73,6 +76,9 @@ const initialForm: BrandingForm = {
   hourly_rate_minijob: "",
   hourly_rate_teilzeit: "",
   hourly_rate_vollzeit: "",
+  estimated_salary_minijob: "",
+  estimated_salary_teilzeit: "",
+  estimated_salary_vollzeit: "",
   email_logo_enabled: false,
   email_logo_url: "",
 };
@@ -130,6 +136,9 @@ export default function AdminBrandingForm() {
         hourly_rate_minijob: branding.hourly_rate_minijob?.toString() || "",
         hourly_rate_teilzeit: branding.hourly_rate_teilzeit?.toString() || "",
         hourly_rate_vollzeit: branding.hourly_rate_vollzeit?.toString() || "",
+        estimated_salary_minijob: (branding as any).estimated_salary_minijob?.toString() || "",
+        estimated_salary_teilzeit: (branding as any).estimated_salary_teilzeit?.toString() || "",
+        estimated_salary_vollzeit: (branding as any).estimated_salary_vollzeit?.toString() || "",
         email_logo_enabled: (branding as any).email_logo_enabled ?? false,
         email_logo_url: (branding as any).email_logo_url || "",
       });
@@ -139,7 +148,7 @@ export default function AdminBrandingForm() {
   const saveMutation = useMutation({
     mutationFn: async (data: BrandingForm & { logo_url?: string }) => {
       const cleaned: Record<string, any> = {};
-      const numericFields = ["salary_minijob", "salary_teilzeit", "salary_vollzeit", "hourly_rate_minijob", "hourly_rate_teilzeit", "hourly_rate_vollzeit"];
+      const numericFields = ["salary_minijob", "salary_teilzeit", "salary_vollzeit", "hourly_rate_minijob", "hourly_rate_teilzeit", "hourly_rate_vollzeit", "estimated_salary_minijob", "estimated_salary_teilzeit", "estimated_salary_vollzeit"];
       Object.entries(data).forEach(([key, value]) => {
         if (numericFields.includes(key)) {
           cleaned[key] = value ? parseFloat(value as string) : null;
@@ -526,6 +535,26 @@ export default function AdminBrandingForm() {
                   </div>
                 </div>
               )}
+
+              {/* Voraussichtlicher Monatsgehalt - visible for both fixed and hourly */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label className="text-sm font-medium text-muted-foreground">Voraussichtlicher Monatsgehalt</Label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Minijob (€)</Label>
+                    <Input placeholder="520" value={form.estimated_salary_minijob} onChange={(e) => updateField("estimated_salary_minijob", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teilzeit (€)</Label>
+                    <Input placeholder="1500" value={form.estimated_salary_teilzeit} onChange={(e) => updateField("estimated_salary_teilzeit", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Vollzeit (€)</Label>
+                    <Input placeholder="3000" value={form.estimated_salary_vollzeit} onChange={(e) => updateField("estimated_salary_vollzeit", e.target.value)} />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Wird dem Mitarbeiter als voraussichtliches Monatsgehalt angezeigt.</p>
+              </div>
             </div>
           )}
         </CardContent>

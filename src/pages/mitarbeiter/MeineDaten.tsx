@@ -15,7 +15,7 @@ import jsPDF from "jspdf";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null; signature_data?: string | null; template_id?: string | null; submitted_at?: string | null } | null;
-  branding: { logo_url: string | null; company_name: string; brand_color: string | null; signature_image_url?: string | null; signer_name?: string | null; signer_title?: string | null; payment_model?: string; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null; hourly_rate_enabled?: boolean; hourly_rate_minijob?: number | null; hourly_rate_teilzeit?: number | null; hourly_rate_vollzeit?: number | null } | null;
+  branding: { logo_url: string | null; company_name: string; brand_color: string | null; signature_image_url?: string | null; signer_name?: string | null; signer_title?: string | null; payment_model?: string; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null; hourly_rate_enabled?: boolean; hourly_rate_minijob?: number | null; hourly_rate_teilzeit?: number | null; hourly_rate_vollzeit?: number | null; estimated_salary_minijob?: number | null; estimated_salary_teilzeit?: number | null; estimated_salary_vollzeit?: number | null } | null;
   loading: boolean;
 }
 
@@ -166,8 +166,19 @@ const MeineDaten = () => {
     }
   };
 
+  const getEstimatedMonthlySalary = () => {
+    if (!branding) return 0;
+    switch (contractDetails.employment_type?.toLowerCase()) {
+      case "minijob": return Number((branding as any).estimated_salary_minijob) || 0;
+      case "teilzeit": return Number((branding as any).estimated_salary_teilzeit) || 0;
+      case "vollzeit": return Number((branding as any).estimated_salary_vollzeit) || 0;
+      default: return 0;
+    }
+  };
+
   const fixedSalary = getFixedSalary();
   const hourlyRate = getHourlyRate();
+  const estimatedSalary = getEstimatedMonthlySalary();
 
   // Calculate hourly earnings from reward history
   const hourlyEarnings = isHourlyRate
@@ -284,7 +295,7 @@ const MeineDaten = () => {
               <StatCard icon={ClipboardCheck} label="Bewertete Aufträge" value={String(stats.ratedOrders)} />
               <StatCard icon={Star} label="Ø Bewertung" value={stats.avgRating > 0 ? String(stats.avgRating) : "—"} showStars rating={stats.avgRating} />
               {isHourlyRate
-                ? <StatCard icon={Euro} label="Verdienst" value={`€${hourlyEarnings.toFixed(2)}`} />
+                ? <StatCard icon={Euro} label="Voraussichtl. Gehalt" value={estimatedSalary > 0 ? `€${estimatedSalary.toFixed(2)}` : "—"} />
                 : isFixedSalary
                   ? <StatCard icon={Euro} label="Festgehalt" value={`€${fixedSalary.toFixed(2)}`} />
                   : <StatCard icon={Euro} label="Kontostand" value={`€${Number(contractDetails.balance).toFixed(2)}`} />
