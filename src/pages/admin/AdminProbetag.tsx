@@ -30,6 +30,7 @@ export default function AdminProbetag() {
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
