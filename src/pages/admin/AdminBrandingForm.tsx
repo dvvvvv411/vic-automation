@@ -148,7 +148,7 @@ export default function AdminBrandingForm() {
   const saveMutation = useMutation({
     mutationFn: async (data: BrandingForm & { logo_url?: string }) => {
       const cleaned: Record<string, any> = {};
-      const numericFields = ["salary_minijob", "salary_teilzeit", "salary_vollzeit", "hourly_rate_minijob", "hourly_rate_teilzeit", "hourly_rate_vollzeit"];
+      const numericFields = ["salary_minijob", "salary_teilzeit", "salary_vollzeit", "hourly_rate_minijob", "hourly_rate_teilzeit", "hourly_rate_vollzeit", "estimated_salary_minijob", "estimated_salary_teilzeit", "estimated_salary_vollzeit"];
       Object.entries(data).forEach(([key, value]) => {
         if (numericFields.includes(key)) {
           cleaned[key] = value ? parseFloat(value as string) : null;
