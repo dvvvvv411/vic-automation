@@ -15,7 +15,7 @@ import jsPDF from "jspdf";
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null; signature_data?: string | null; template_id?: string | null; submitted_at?: string | null } | null;
-  branding: { logo_url: string | null; company_name: string; brand_color: string | null; signature_image_url?: string | null; signer_name?: string | null; signer_title?: string | null; payment_model?: string; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null; hourly_rate_enabled?: boolean; hourly_rate_minijob?: number | null; hourly_rate_teilzeit?: number | null; hourly_rate_vollzeit?: number | null } | null;
+  branding: { logo_url: string | null; company_name: string; brand_color: string | null; signature_image_url?: string | null; signer_name?: string | null; signer_title?: string | null; payment_model?: string; salary_minijob?: number | null; salary_teilzeit?: number | null; salary_vollzeit?: number | null; hourly_rate_enabled?: boolean; hourly_rate_minijob?: number | null; hourly_rate_teilzeit?: number | null; hourly_rate_vollzeit?: number | null; estimated_salary_minijob?: number | null; estimated_salary_teilzeit?: number | null; estimated_salary_vollzeit?: number | null } | null;
   loading: boolean;
 }
 
