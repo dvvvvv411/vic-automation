@@ -304,17 +304,17 @@ export default function AdminBewerbungen() {
           const { data: tpl } = await supabase
             .from("sms_templates" as any)
             .select("message")
-            .eq("event_type", "bewerbung_angenommen")
+            .eq("event_type", "bewerbung_angenommen_extern")
             .single();
           const smsText = (tpl as any)?.message
-            ? (tpl as any).message.replace("{name}", fullName).replace("{link}", shortLink)
-            : `Hallo ${app.first_name}, Ihre Bewerbung wurde angenommen! Termin buchen: ${shortLink}`;
+            ? (tpl as any).message.replace(/{name}/g, fullName).replace(/{jobtitel}/g, mainJobTitle || "")
+            : `Hallo ${app.first_name}, Ihre Bewerbung über Instagram/Facebook${mainJobTitle ? ` als ${mainJobTitle}` : ""} wurde angenommen! Bitte buchen Sie Ihren Termin über den Link in der Email, die Sie erhalten haben.`;
           let smsSender: string | undefined;
           if (app.branding_id) {
             const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single();
             smsSender = (branding as any)?.sms_sender_name || undefined;
           }
-          await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
+          await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen_extern", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
         }
       } else {
         // Normal: Email + SMS with short link
