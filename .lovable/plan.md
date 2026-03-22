@@ -1,29 +1,32 @@
 
 
-## Eigene SMS fuer externe Bewerber
+## SMS fuer externe Bewerber: Link entfernen, Hinweis auf Email
 
-### Ziel
-Externe Bewerber (is_external) sollen beim Akzeptieren eine eigene SMS erhalten, die Instagram/Facebook und den Jobtitel erwaehnt — analog zur bereits existierenden externen Email.
+### Problem
+Die externe SMS nutzt noch das `bewerbung_angenommen` Template mit `{link}`. Stattdessen soll ein eigenes Template ohne Link verwendet werden, mit Hinweis dass der Termin ueber den Link in der Email gebucht werden soll.
 
 ### Aenderungen
 
-**1. `AdminBewerbungen.tsx` — Zeile 303-317 (is_external SMS-Block)**
-- Statt `bewerbung_angenommen` Template das neue `bewerbung_angenommen_extern` Template laden
-- `mainJobTitle` ist bereits geladen (Zeile 276-283) — in der SMS-Ersetzung `{jobtitel}` und `{unternehmen}` als Platzhalter verwenden
+**1. DB-Migration: Neues SMS-Template einfuegen**
+- `event_type: 'bewerbung_angenommen_extern'`
+- `label: 'Bewerbung angenommen (Extern)'`
+- `message: 'Hallo {name}, Ihre Bewerbung ueber Instagram/Facebook als {jobtitel} wurde angenommen! Bitte buchen Sie Ihren Termin ueber den Link in der Email, die Sie erhalten haben.'`
+- Kein `{link}` Platzhalter
+
+**2. `AdminBewerbungen.tsx` — Zeile 303-317**
+- Template laden aus `bewerbung_angenommen_extern` statt `bewerbung_angenommen`
+- Platzhalter-Ersetzung: `{name}` und `{jobtitel}` (kein `{link}`)
 - `event_type` auf `"bewerbung_angenommen_extern"` aendern
-- Fallback-Text: `Hallo {name}, Ihre Bewerbung ueber Instagram/Facebook als {jobtitel} wurde angenommen! Termin buchen: {link}`
+- Fallback-Text ohne Link, mit Hinweis auf Email
 
-**2. `AdminSmsTemplates.tsx` — PLACEHOLDER_INFO (Zeile 26-28)**
-- Neuen Eintrag hinzufuegen: `bewerbung_angenommen_extern: ["{name}", "{jobtitel}", "{link}"]`
-
-**3. DB: Neues SMS-Template einfuegen**
-- Migration: `INSERT INTO sms_templates` mit `event_type: 'bewerbung_angenommen_extern'`, `label: 'Bewerbung angenommen (Extern)'`, `message: 'Hallo {name}, Ihre Bewerbung ueber Instagram/Facebook als {jobtitel} wurde angenommen! Termin buchen: {link}'`
+**3. `AdminSmsTemplates.tsx` — PLACEHOLDER_INFO**
+- Neuer Eintrag: `bewerbung_angenommen_extern: ["{name}", "{jobtitel}"]`
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| Migration | Neues SMS-Template Row |
-| `AdminBewerbungen.tsx` | Eigenes Template + event_type fuer externe SMS |
-| `AdminSmsTemplates.tsx` | Platzhalter-Info fuer neues Template |
+| Migration | INSERT neues SMS-Template |
+| `AdminBewerbungen.tsx` | Eigenes Template + kein Link |
+| `AdminSmsTemplates.tsx` | Platzhalter-Info ohne {link} |
 
