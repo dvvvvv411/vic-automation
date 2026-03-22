@@ -308,6 +308,22 @@ export default function AdminMitarbeiter() {
                               </TooltipTrigger>
                               <TooltipContent>{item.is_suspended ? "Entsperren" : "Sperren"}</TooltipContent>
                             </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive hover:bg-red-50"
+                                  onClick={() => setDeleteTarget({
+                                    id: item.id,
+                                    name: `${item.first_name ?? ""} ${item.last_name ?? ""}`.trim(),
+                                  })}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Löschen</TooltipContent>
+                            </Tooltip>
                           </div>
                         </TableCell>
                       </TableRow>
