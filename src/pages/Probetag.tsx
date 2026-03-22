@@ -88,38 +88,41 @@ export default function Probetag() {
     },
   });
 
-  // Load booked trial day slots filtered by branding (to prevent double bookings)
+  // Load booked slots from BOTH trial_day AND first_workday (shared schedule)
   const { data: bookedSlots } = useQuery({
     queryKey: ["trial-day-booked-slots", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
-      // Get all applications with the same branding
       const { data: apps } = await supabase
         .from("applications")
         .select("id")
         .eq("branding_id", brandingId!);
       if (!apps || apps.length === 0) return [];
       const appIds = apps.map((a) => a.id);
-      const { data, error } = await supabase
-        .from("trial_day_appointments" as any)
-        .select("appointment_date, appointment_time")
-        .in("application_id", appIds);
-      if (error) throw error;
-      return (data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>;
+      const [trialRes, fwRes] = await Promise.all([
+        supabase.from("trial_day_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
+        supabase.from("first_workday_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
+      ]);
+      return [
+        ...((trialRes.data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>),
+        ...((fwRes.data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>),
+      ];
     },
   });
 
-  // Load blocked slots filtered by branding
+  // Load blocked slots from BOTH trial_day AND first_workday
   const { data: blockedSlotsData } = useQuery({
     queryKey: ["trial-day-blocked-slots-public", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("trial_day_blocked_slots" as any)
-        .select("blocked_date, blocked_time")
-        .eq("branding_id", brandingId!);
-      if (error) throw error;
-      return (data || []) as unknown as Array<{ blocked_date: string; blocked_time: string }>;
+      const [trialRes, fwRes] = await Promise.all([
+        supabase.from("trial_day_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
+        supabase.from("first_workday_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
+      ]);
+      return [
+        ...((trialRes.data || []) as unknown as Array<{ blocked_date: string; blocked_time: string }>),
+        ...((fwRes.data || []) as unknown as Array<{ blocked_date: string; blocked_time: string }>),
+      ];
     },
   });
 

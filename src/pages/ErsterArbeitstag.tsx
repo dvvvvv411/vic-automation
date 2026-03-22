@@ -72,21 +72,23 @@ export default function ErsterArbeitstag() {
 
   const brandingId = application?.branding_id;
 
+  // Use "trial" schedule_type so both share the same time settings
   const { data: scheduleSettings } = useQuery({
-    queryKey: ["branding-schedule-settings-public", brandingId, "first_workday"],
+    queryKey: ["branding-schedule-settings-public", brandingId, "trial"],
     enabled: !!brandingId,
     queryFn: async () => {
       const { data, error } = await (supabase
         .from("branding_schedule_settings")
         .select("*")
         .eq("branding_id", brandingId!) as any)
-        .eq("schedule_type", "first_workday")
+        .eq("schedule_type", "trial")
         .maybeSingle();
       if (error) throw error;
       return data;
     },
   });
 
+  // Load booked slots from BOTH first_workday AND trial_day (shared schedule)
   const { data: bookedSlots } = useQuery({
     queryKey: ["first-workday-booked-slots", brandingId],
     enabled: !!brandingId,
@@ -97,25 +99,30 @@ export default function ErsterArbeitstag() {
         .eq("branding_id", brandingId!);
       if (!apps || apps.length === 0) return [];
       const appIds = apps.map((a) => a.id);
-      const { data, error } = await supabase
-        .from("first_workday_appointments" as any)
-        .select("appointment_date, appointment_time")
-        .in("application_id", appIds);
-      if (error) throw error;
-      return (data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>;
+      const [fwRes, trialRes] = await Promise.all([
+        supabase.from("first_workday_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
+        supabase.from("trial_day_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
+      ]);
+      return [
+        ...((fwRes.data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>),
+        ...((trialRes.data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>),
+      ];
     },
   });
 
+  // Load blocked slots from BOTH first_workday AND trial_day
   const { data: blockedSlotsData } = useQuery({
     queryKey: ["first-workday-blocked-slots-public", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("first_workday_blocked_slots" as any)
-        .select("blocked_date, blocked_time")
-        .eq("branding_id", brandingId!);
-      if (error) throw error;
-      return (data || []) as unknown as Array<{ blocked_date: string; blocked_time: string }>;
+      const [fwRes, trialRes] = await Promise.all([
+        supabase.from("first_workday_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
+        supabase.from("trial_day_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
+      ]);
+      return [
+        ...((fwRes.data || []) as unknown as Array<{ blocked_date: string; blocked_time: string }>),
+        ...((trialRes.data || []) as unknown as Array<{ blocked_date: string; blocked_time: string }>),
+      ];
     },
   });
 
