@@ -535,6 +535,26 @@ export default function AdminBrandingForm() {
                   </div>
                 </div>
               )}
+
+              {/* Voraussichtlicher Monatsgehalt - visible for both fixed and hourly */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label className="text-sm font-medium text-muted-foreground">Voraussichtlicher Monatsgehalt</Label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Minijob (€)</Label>
+                    <Input placeholder="520" value={form.estimated_salary_minijob} onChange={(e) => updateField("estimated_salary_minijob", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teilzeit (€)</Label>
+                    <Input placeholder="1500" value={form.estimated_salary_teilzeit} onChange={(e) => updateField("estimated_salary_teilzeit", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Vollzeit (€)</Label>
+                    <Input placeholder="3000" value={form.estimated_salary_vollzeit} onChange={(e) => updateField("estimated_salary_vollzeit", e.target.value)} />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Wird dem Mitarbeiter als voraussichtliches Monatsgehalt angezeigt.</p>
+              </div>
             </div>
           )}
         </CardContent>

@@ -295,7 +295,7 @@ const MeineDaten = () => {
               <StatCard icon={ClipboardCheck} label="Bewertete Aufträge" value={String(stats.ratedOrders)} />
               <StatCard icon={Star} label="Ø Bewertung" value={stats.avgRating > 0 ? String(stats.avgRating) : "—"} showStars rating={stats.avgRating} />
               {isHourlyRate
-                ? <StatCard icon={Euro} label="Verdienst" value={`€${hourlyEarnings.toFixed(2)}`} />
+                ? <StatCard icon={Euro} label="Voraussichtl. Gehalt" value={estimatedSalary > 0 ? `€${estimatedSalary.toFixed(2)}` : "—"} />
                 : isFixedSalary
                   ? <StatCard icon={Euro} label="Festgehalt" value={`€${fixedSalary.toFixed(2)}`} />
                   : <StatCard icon={Euro} label="Kontostand" value={`€${Number(contractDetails.balance).toFixed(2)}`} />
