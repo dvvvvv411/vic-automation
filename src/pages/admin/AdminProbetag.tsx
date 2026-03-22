@@ -253,6 +253,31 @@ export default function AdminProbetag() {
           );
         })()}
       </motion.div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Termin löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Der Probetag-Termin von {deleteTarget?.name} wird unwiderruflich gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={async () => {
+                const { error } = await supabase.from("trial_day_appointments" as any).delete().eq("id", deleteTarget!.id);
+                if (error) { toast.error("Fehler beim Löschen."); }
+                else { toast.success("Termin gelöscht."); queryClient.invalidateQueries({ queryKey: ["trial-day-appointments-admin"] }); }
+                setDeleteTarget(null);
+              }}
+            >
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

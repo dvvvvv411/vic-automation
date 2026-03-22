@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.create-caller-account]
 verify_jwt = false
+
+[functions.delete-employee]
+verify_jwt = false
