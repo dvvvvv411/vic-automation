@@ -38,6 +38,8 @@ export default function AdminMitarbeiter() {
   const [search, setSearch] = useState("");
   const [assignContract, setAssignContract] = useState<{ id: string; label: string } | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string; isSuspended: boolean } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { activeBrandingId, ready, brandings } = useBrandingFilter();
