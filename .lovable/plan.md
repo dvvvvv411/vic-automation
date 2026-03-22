@@ -1,34 +1,24 @@
 
 
-## Voraussichtlicher Monatsgehalt bei Stundenlohn
+## Voraussichtlicher Betrag bei Minijob in Gehaltsauszahlung-Card
 
 ### Ziel
-Neue Eingabefelder im Branding für "voraussichtlicher Monatsgehalt" pro Anstellungsart (nur sichtbar bei Festgehalt + Stundenlohn). Der Wert wird in der Mitarbeiter "Meine Daten"-Seite in der Verdienst-StatCard angezeigt.
+Bei Minijob-Verträgen mit Stundenlohn soll in der Gehaltsauszahlung-Card (MeineDaten + Dashboard) der voraussichtliche Monatsgehalt aus dem Branding angezeigt werden statt der berechneten Stundenlohn-Summe.
 
 ### Änderungen
 
-**1. DB-Migration**: 3 neue nullable Spalten in `brandings`:
-- `estimated_salary_minijob` (numeric)
-- `estimated_salary_teilzeit` (numeric)
-- `estimated_salary_vollzeit` (numeric)
+**1. `MeineDaten.tsx` — Zeile 348-349 (Gehaltsauszahlung-Card)**
+- Neue Bedingung: wenn `isHourlyRate` UND `employment_type === 'minijob'` UND `estimatedSalary > 0`, dann `estimatedSalary` anzeigen statt `hourlyEarnings`
+- Label bleibt "Voraussichtlicher Betrag"
 
-**2. `AdminBrandingForm.tsx`**:
-- Schema + initialForm + useEffect um die 3 Felder erweitern
-- `numericFields`-Array um die 3 Keys erweitern
-- Unter dem Stundenlohn-Grid (Zeile ~527) ein weiteres Grid mit Label "Voraussichtlicher Monatsgehalt" und 3 Inputs (Minijob/Teilzeit/Vollzeit in €)
-
-**3. `MeineDaten.tsx`**:
-- Branding-ContextType um die 3 neuen Felder erweitern
-- Neue Hilfsfunktion `getEstimatedMonthlySalary()` analog zu `getFixedSalary()` die basierend auf `employment_type` den passenden Wert liefert
-- In der StatCard-Zeile (Zeile ~286): wenn `isHourlyRate`, den Label auf "Voraussichtl. Gehalt" ändern und den estimated-Wert anzeigen statt `hourlyEarnings`
-
-**Keine weiteren Änderungen** — Verdienst-Historie, Payout-Card etc. bleiben unverändert.
+**2. `MitarbeiterDashboard.tsx` — Zeile 589 (DashboardPayoutSummary)**
+- Branding-ContextType um `estimated_salary_minijob` erweitern
+- Gleiche Bedingung: bei Minijob + Stundenlohn den estimated-Wert aus Branding übergeben statt `hourlyEarnings`
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| Migration | 3 neue Spalten |
-| `AdminBrandingForm.tsx` | Schema + 3 Inputs unter Stundenlohn |
-| `MeineDaten.tsx` | StatCard zeigt voraussichtlichen Monatsgehalt |
+| `MeineDaten.tsx` | Bedingung für Minijob in Payout-Betrag |
+| `MitarbeiterDashboard.tsx` | Bedingung für Minijob in DashboardPayoutSummary-Balance |
 
