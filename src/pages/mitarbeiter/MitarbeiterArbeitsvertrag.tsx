@@ -1086,7 +1086,7 @@ export default function MitarbeiterArbeitsvertrag() {
             <DialogTitle>{previewTemplate?.title}</DialogTitle>
           </DialogHeader>
           {previewTemplate?.content && (
-            <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: previewTemplate.content }} />
+            <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: previewTemplate.content.replace(/<(p|li|tr|div|span)[^>]*>([^<]*\{\{[^}]*\}\}[^<]*)<\/\1>/gi, "").replace(/<(p|li|tr|div|span)[^>]*>[^<]*<[^>]+>[^<]*\{\{[^}]*\}\}.*?<\/\1>/gi, "") }} />
           )}
         </DialogContent>
       </Dialog>

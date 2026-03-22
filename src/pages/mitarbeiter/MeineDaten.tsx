@@ -252,7 +252,7 @@ const MeineDaten = () => {
                   onClick={async () => {
                     const { data: ec } = await supabase
                       .from("employment_contracts")
-                      .select("template_id, signature_data, first_name, last_name, birth_date, street, zip_code, city, employment_type, branding_id, submitted_at")
+                      .select("template_id, signature_data, first_name, last_name, birth_date, birth_place, nationality, marital_status, social_security_number, tax_id, phone, email, street, zip_code, city, employment_type, desired_start_date, branding_id, submitted_at")
                       .eq("id", contract.id)
                       .maybeSingle();
                     setContractExtra({
@@ -262,8 +262,35 @@ const MeineDaten = () => {
                       submitted_at: ec?.submitted_at ?? undefined,
                     });
                     if (ec?.template_id) {
-                      const { data: tpl } = await supabase.from("contract_templates" as any).select("content, salary").eq("id", ec.template_id).maybeSingle();
-                      setTemplateContent((tpl as any)?.content || null);
+                      const { data: tpl } = await supabase.from("contract_templates" as any).select("content, salary, employment_type").eq("id", ec.template_id).maybeSingle();
+                      const rawContent = (tpl as any)?.content || null;
+                      if (rawContent && ec) {
+                        const replacements: Record<string, string> = {
+                          vorname: ec.first_name || "",
+                          nachname: ec.last_name || "",
+                          name: `${ec.first_name || ""} ${ec.last_name || ""}`.trim(),
+                          email: ec.email || "",
+                          telefon: ec.phone || "",
+                          geburtsdatum: ec.birth_date || "",
+                          geburtsort: ec.birth_place || "",
+                          nationalitaet: ec.nationality || "",
+                          strasse: ec.street || "",
+                          plz: ec.zip_code || "",
+                          stadt: ec.city || "",
+                          familienstand: ec.marital_status || "",
+                          startdatum: ec.desired_start_date ? format(new Date(ec.desired_start_date), "dd.MM.yyyy", { locale: de }) : "",
+                          gehalt: (tpl as any)?.salary ? `${(tpl as any).salary} €` : "",
+                          anstellungsart: (tpl as any)?.employment_type || ec.employment_type || "",
+                          firma: branding?.company_name || "",
+                        };
+                        let replaced = rawContent;
+                        for (const [key, value] of Object.entries(replacements)) {
+                          replaced = replaced.replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "gi"), value);
+                        }
+                        setTemplateContent(replaced);
+                      } else {
+                        setTemplateContent(rawContent);
+                      }
                     }
                     if (ec?.branding_id) {
                       const { data: bd } = await supabase.from("brandings").select("signature_image_url, signer_name, signer_title, company_name").eq("id", ec.branding_id).maybeSingle();
