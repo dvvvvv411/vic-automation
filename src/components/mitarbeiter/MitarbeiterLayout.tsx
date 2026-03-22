@@ -21,6 +21,9 @@ interface BrandingData {
   hourly_rate_minijob: number | null;
   hourly_rate_teilzeit: number | null;
   hourly_rate_vollzeit: number | null;
+  estimated_salary_minijob: number | null;
+  estimated_salary_teilzeit: number | null;
+  estimated_salary_vollzeit: number | null;
 }
 
 interface ContractData {
