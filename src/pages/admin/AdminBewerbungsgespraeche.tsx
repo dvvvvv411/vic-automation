@@ -42,6 +42,7 @@ export default function AdminBewerbungsgespraeche() {
   const [search, setSearch] = useState("");
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [reminderPreview, setReminderPreview] = useState<{ item: any; message: string; name: string; phone: string; brandingId?: string; senderName?: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
