@@ -1,24 +1,27 @@
 
 
-## Voraussichtlicher Betrag bei Minijob in Gehaltsauszahlung-Card
+## Fix: Platzhalter in Vertragsvorschau ersetzen
 
-### Ziel
-Bei Minijob-Verträgen mit Stundenlohn soll in der Gehaltsauszahlung-Card (MeineDaten + Dashboard) der voraussichtliche Monatsgehalt aus dem Branding angezeigt werden statt der berechneten Stundenlohn-Summe.
+### Problem
+1. **MeineDaten.tsx** (Arbeitsvertrag anzeigen): `templateContent` wird roh angezeigt ohne Platzhalter-Ersetzung — `{{ startdatum }}` bleibt sichtbar
+2. **MitarbeiterArbeitsvertrag.tsx** (Vorschau-Popup bei Vorlagenauswahl): Zeigt ebenfalls rohen Content ohne Ersetzung — Zeilen mit `{{ variablen }}` sollen hier ausgeblendet werden, da der User noch keine Daten eingegeben hat
 
-### Änderungen
+### Aenderungen
 
-**1. `MeineDaten.tsx` — Zeile 348-349 (Gehaltsauszahlung-Card)**
-- Neue Bedingung: wenn `isHourlyRate` UND `employment_type === 'minijob'` UND `estimatedSalary > 0`, dann `estimatedSalary` anzeigen statt `hourlyEarnings`
-- Label bleibt "Voraussichtlicher Betrag"
+**1. `MeineDaten.tsx` — Zeile 252-267 + Zeile 415**
+- Beim Laden des Vertrags zusaetzlich `desired_start_date`, `birth_place`, `nationality`, `marital_status`, `social_security_number`, `tax_id`, `phone`, `email`, `employment_type` laden (teilweise schon da)
+- `salary` aus Template mitspeichern
+- Neue Hilfsfunktion `replaceContractPlaceholders(content)` die alle `{{ variable }}`-Platzhalter mit den geladenen Vertragsdaten ersetzt (gleiche Logik wie in MitarbeiterArbeitsvertrag.tsx)
+- In Zeile 415 `templateContent` durch `replaceContractPlaceholders(templateContent)` ersetzen
 
-**2. `MitarbeiterDashboard.tsx` — Zeile 589 (DashboardPayoutSummary)**
-- Branding-ContextType um `estimated_salary_minijob` erweitern
-- Gleiche Bedingung: bei Minijob + Stundenlohn den estimated-Wert aus Branding übergeben statt `hourlyEarnings`
+**2. `MitarbeiterArbeitsvertrag.tsx` — Zeile 1088-1090 (Vorschau-Dialog bei Vorlagenauswahl)**
+- Content durch eine Funktion filtern die alle HTML-Absaetze/Zeilen entfernt, die `{{ ... }}` Platzhalter enthalten
+- Einfache Regex: Alle `<p>...</p>` oder `<li>...</li>` Bloecke die `{{` enthalten werden ausgeblendet
 
 ### Betroffene Dateien
 
-| Datei | Änderung |
+| Datei | Aenderung |
 |---|---|
-| `MeineDaten.tsx` | Bedingung für Minijob in Payout-Betrag |
-| `MitarbeiterDashboard.tsx` | Bedingung für Minijob in DashboardPayoutSummary-Balance |
+| `MeineDaten.tsx` | Platzhalter-Ersetzung mit Vertragsdaten |
+| `MitarbeiterArbeitsvertrag.tsx` | Zeilen mit Variablen im Vorschau-Popup ausblenden |
 
