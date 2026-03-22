@@ -1,41 +1,57 @@
 
 
-## Probetag & 1. Arbeitstag: Gemeinsame Zeitplanung
+## Plan: 4 Aenderungen
 
-### Ziel
-Probetag- und 1. Arbeitstag-Termine sollen sich gegenseitig blockieren — ein gebuchter Probetag-Slot ist auch fuer 1. Arbeitstag nicht mehr verfuegbar und umgekehrt.
+### 1. Mitarbeiter loeschen (Edge Function + AdminMitarbeiter.tsx)
 
-### Aenderungen
+Da der User auch aus Supabase Auth geloescht werden soll, brauchen wir eine Edge Function mit `service_role_key` — das geht nicht vom Client.
 
-**1. `Probetag.tsx` — bookedSlots Query (Zeile 92-110)**
-- Zusaetzlich `first_workday_appointments` fuer die gleichen Branding-Applications laden
-- Beide Ergebnisse zusammenfuehren in ein gemeinsames Array
+**Neue Edge Function `delete-employee/index.ts`:**
+- Verifiziert dass der Aufrufer Admin ist (gleiche Logik wie create-caller-account)
+- Empfaengt `contractId` im Body
+- Laedt `user_id` aus `employment_contracts` fuer die gegebene contractId
+- Loescht den `employment_contracts` Eintrag (CASCADE loescht zugehoerige Daten)
+- Falls `user_id` vorhanden: loescht den Auth-User via `adminClient.auth.admin.deleteUser(userId)`
+- Loescht auch `user_roles` und `profiles` fuer den User
 
-**2. `ErsterArbeitstag.tsx` — bookedSlots Query (Zeile 90-107)**
-- Zusaetzlich `trial_day_appointments` fuer die gleichen Branding-Applications laden
-- Beide Ergebnisse zusammenfuehren in ein gemeinsames Array
+**`supabase/config.toml`:** Eintrag `[functions.delete-employee]` mit `verify_jwt = false`
 
-**3. `ErsterArbeitstag.tsx` — Schedule Settings (Zeile 76-88)**
-- `schedule_type` von `"first_workday"` auf `"trial"` aendern, damit beide denselben Zeitplan nutzen
+**`AdminMitarbeiter.tsx`:**
+- Neuer Trash2-Button neben Sperren-Button
+- AlertDialog Bestaetigung ("Mitarbeiter und Benutzerkonto endgueltig loeschen?")
+- Ruft `supabase.functions.invoke("delete-employee", { body: { contractId } })` auf
+- Query invalidieren nach Loeschung
 
-**4. `AdminZeitplan.tsx` — Tab "1. Arbeitstag" entfernen**
-- Den separaten Tab fuer 1. Arbeitstag entfernen, da Probetag-Einstellungen jetzt fuer beide gelten
-- TrialDayBlocker-Tab umbenennen zu "Probetag & 1. Arbeitstag"
+### 2. Termine loeschen (3 Dateien)
+- **AdminBewerbungsgespraeche.tsx**: Trash2-Button in Aktionen-Spalte, `interview_appointments` DELETE mit AlertDialog
+- **AdminProbetag.tsx**: Trash2-Button, `trial_day_appointments` DELETE
+- **AdminErsterArbeitstag.tsx**: Trash2-Button, `first_workday_appointments` DELETE
 
-**5. `ErsterArbeitstag.tsx` — blockedSlotsData Query (Zeile 109-120)**
-- Zusaetzlich `trial_day_blocked_slots` laden und mit `first_workday_blocked_slots` zusammenfuehren
+### 3. Caller-Typ "Probetag" auch Zugriff auf 1. Arbeitstag
 
-**6. `Probetag.tsx` — blockedSlotsData Query (Zeile 112-124)**
-- Zusaetzlich `first_workday_blocked_slots` laden und mit `trial_day_blocked_slots` zusammenfuehren
+**`create-caller-account/index.ts` (Zeile 91-95):**
+- Bei `callerType === "probetag"` zwei `admin_permissions` Eintraege erstellen: `/admin/probetag` UND `/admin/erster-arbeitstag`
 
-### Kein DB-Aenderung noetig
-Die bestehenden Tabellen bleiben unveraendert. Nur die Frontend-Logik wird angepasst, damit beide Buchungsseiten die Termine der jeweils anderen Tabelle als belegt betrachten.
+**`AdminCaller.tsx` (Zeile 56):**
+- callerType-Erkennung anpassen: pruefen ob User `/admin/probetag` ODER `/admin/erster-arbeitstag` hat → dann "probetag"
+- `typeLabel` (Zeile 146): "Probetage" → "Probetage & 1. Arbeitstag"
+
+### 4. "Probetag erfolgreich" Email: Button zur /auth Seite
+
+**`AdminProbetag.tsx` (Zeile 95-108):**
+- `buildBrandingUrl` verwenden um korrekte Domain/Subdomain zu ermitteln
+- `button_text: "Jetzt anmelden"` und `button_url` mit `/auth` URL an sendEmail uebergeben
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `Probetag.tsx` | Auch first_workday_appointments + blocked_slots laden |
-| `ErsterArbeitstag.tsx` | Auch trial_day_appointments + blocked_slots laden, schedule_type "trial" nutzen |
-| `AdminZeitplan.tsx` | 1. Arbeitstag-Tab entfernen, Probetag-Tab umbenennen |
+| `supabase/functions/delete-employee/index.ts` | Neue Edge Function |
+| `supabase/config.toml` | Neuer Eintrag |
+| `AdminMitarbeiter.tsx` | Loeschen-Button + Dialog |
+| `AdminBewerbungsgespraeche.tsx` | Termin-Loeschen |
+| `AdminProbetag.tsx` | Termin-Loeschen + Email-Button |
+| `AdminErsterArbeitstag.tsx` | Termin-Loeschen |
+| `create-caller-account/index.ts` | Zwei Permissions bei Probetag |
+| `AdminCaller.tsx` | Badge-Label anpassen |
 
