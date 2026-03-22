@@ -12,7 +12,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, ChevronLeft, ChevronRight, Copy, ClipboardList, Search, Lock, Unlock, Eye } from "lucide-react";
+import { Users, ChevronLeft, ChevronRight, Copy, ClipboardList, Search, Lock, Unlock, Eye, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
