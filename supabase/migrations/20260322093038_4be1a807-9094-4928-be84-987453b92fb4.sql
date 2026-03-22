@@ -1,0 +1,1 @@
+UPDATE public.sms_templates SET message = 'Hallo {name}, Ihre Bewerbung über Instagram/Facebook als {jobtitel} wurde angenommen! Bitte buchen Sie Ihren Termin über den Link in der Email, die Sie erhalten haben.' WHERE event_type = 'bewerbung_angenommen_extern';

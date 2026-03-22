@@ -25,6 +25,7 @@ import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const PLACEHOLDER_INFO: Record<string, string[]> = {
   bewerbung_angenommen: ["{name}", "{link}"],
+  bewerbung_angenommen_extern: ["{name}", "{jobtitel}"],
   indeed_bewerbung_angenommen: ["{name}", "{unternehmen}", "{link}"],
   vertrag_genehmigt: ["{name}"],
   auftrag_zugewiesen: ["{name}", "{auftrag}"],
