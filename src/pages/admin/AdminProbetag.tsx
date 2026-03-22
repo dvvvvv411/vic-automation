@@ -10,7 +10,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Copy } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Copy, Trash2 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
@@ -26,6 +30,7 @@ export default function AdminProbetag() {
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
@@ -89,8 +94,8 @@ export default function AdminProbetag() {
       const app = item.applications;
       const fullName = `${app.first_name} ${app.last_name}`.trim();
       const brandingId = app.branding_id;
-
-      let companyName = app.brandings?.company_name || "Unternehmen";
+      const companyName = app.brandings?.company_name || "Unternehmen";
+      const authUrl = await buildBrandingUrl(brandingId, "/auth");
 
       await sendEmail({
         to: app.email,
@@ -103,6 +108,8 @@ export default function AdminProbetag() {
           "Als nächsten Schritt bitten wir Sie, Ihre persönlichen Daten zu vervollständigen und den Arbeitsvertrag auszufüllen.",
           "Wir freuen uns auf die Zusammenarbeit!",
         ],
+        button_text: "Jetzt anmelden",
+        button_url: authUrl,
         event_type: "probetag_erfolgreich",
         branding_id: brandingId,
       });
@@ -219,6 +226,9 @@ export default function AdminProbetag() {
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => handleStatusUpdate(item, "fehlgeschlagen")} title="Als fehlgeschlagen markieren">
                               <XCircle className="h-4 w-4" />
                             </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => setDeleteTarget({ id: item.id, name: `${item.applications?.first_name} ${item.applications?.last_name}` })} title="Termin löschen">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -243,6 +253,31 @@ export default function AdminProbetag() {
           );
         })()}
       </motion.div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Termin löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Der Probetag-Termin von {deleteTarget?.name} wird unwiderruflich gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={async () => {
+                const { error } = await supabase.from("trial_day_appointments" as any).delete().eq("id", deleteTarget!.id);
+                if (error) { toast.error("Fehler beim Löschen."); }
+                else { toast.success("Termin gelöscht."); queryClient.invalidateQueries({ queryKey: ["trial-day-appointments-admin"] }); }
+                setDeleteTarget(null);
+              }}
+            >
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

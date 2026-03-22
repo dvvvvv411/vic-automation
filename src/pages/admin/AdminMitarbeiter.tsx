@@ -12,7 +12,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, ChevronLeft, ChevronRight, Copy, ClipboardList, Search, Lock, Unlock, Eye } from "lucide-react";
+import { Users, ChevronLeft, ChevronRight, Copy, ClipboardList, Search, Lock, Unlock, Eye, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -38,6 +38,8 @@ export default function AdminMitarbeiter() {
   const [search, setSearch] = useState("");
   const [assignContract, setAssignContract] = useState<{ id: string; label: string } | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string; isSuspended: boolean } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { activeBrandingId, ready, brandings } = useBrandingFilter();
@@ -92,6 +94,27 @@ export default function AdminMitarbeiter() {
       queryClient.invalidateQueries({ queryKey: ["mitarbeiter"] });
     }
     setSuspendTarget(null);
+  };
+
+  const handleDeleteEmployee = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-employee", {
+        body: { contractId: deleteTarget.id },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || "Fehler beim Löschen.");
+      } else {
+        toast.success("Mitarbeiter und Benutzerkonto gelöscht.");
+        queryClient.invalidateQueries({ queryKey: ["mitarbeiter"] });
+      }
+    } catch {
+      toast.error("Fehler beim Löschen.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
   };
 
   const sortedAndFiltered = useMemo(() => {
@@ -285,6 +308,22 @@ export default function AdminMitarbeiter() {
                               </TooltipTrigger>
                               <TooltipContent>{item.is_suspended ? "Entsperren" : "Sperren"}</TooltipContent>
                             </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive hover:bg-red-50"
+                                  onClick={() => setDeleteTarget({
+                                    id: item.id,
+                                    name: `${item.first_name ?? ""} ${item.last_name ?? ""}`.trim(),
+                                  })}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Löschen</TooltipContent>
+                            </Tooltip>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -345,6 +384,27 @@ export default function AdminMitarbeiter() {
                 : "bg-destructive hover:bg-destructive/90 shadow-sm hover:shadow-md transition-all"}
             >
               {suspendTarget?.isSuspended ? "Entsperren" : "Sperren"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mitarbeiter endgültig löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.name} wird unwiderruflich gelöscht – inklusive Vertragsdaten, Aufträge und Benutzerkonto. Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteEmployee}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90 shadow-sm hover:shadow-md transition-all"
+            >
+              {isDeleting ? "Lösche..." : "Endgültig löschen"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -47,66 +47,55 @@ Deno.serve(async (req) => {
       .single();
 
     if (!roleCheck) {
-      return new Response(JSON.stringify({ error: "Nur Admins können Caller-Konten erstellen" }), {
+      return new Response(JSON.stringify({ error: "Nur Admins können Mitarbeiter löschen" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { email, password, callerType, brandingIds } = await req.json();
-    if (!email || !password || !callerType || !brandingIds?.length) {
-      return new Response(JSON.stringify({ error: "E-Mail, Passwort, Typ und mindestens ein Branding sind erforderlich" }), {
+    const { contractId } = await req.json();
+    if (!contractId) {
+      return new Response(JSON.stringify({ error: "contractId ist erforderlich" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (!["bewerbungsgespraeche", "probetag"].includes(callerType)) {
-      return new Response(JSON.stringify({ error: "Ungültiger Caller-Typ" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Get user_id from contract
+    const { data: contract } = await adminClient
+      .from("employment_contracts")
+      .select("user_id")
+      .eq("id", contractId)
+      .single();
 
-    // Create auth user
-    const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
+    const userId = contract?.user_id;
 
-    if (createError) {
-      return new Response(JSON.stringify({ error: `Fehler: ${createError.message}` }), {
+    // Delete employment contract (CASCADE handles related data)
+    const { error: deleteError } = await adminClient
+      .from("employment_contracts")
+      .delete()
+      .eq("id", contractId);
+
+    if (deleteError) {
+      console.error("Delete contract error:", deleteError);
+      return new Response(JSON.stringify({ error: `Fehler: ${deleteError.message}` }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = newUser.user.id;
-
-    // Delete auto-created 'user' role, insert 'caller'
-    await adminClient.from("user_roles").delete().eq("user_id", userId);
-    await adminClient.from("user_roles").insert({ user_id: userId, role: "caller" });
-
-    // Insert admin_permissions for allowed path(s)
-    if (callerType === "probetag") {
-      await adminClient.from("admin_permissions").insert([
-        { user_id: userId, allowed_path: "/admin/probetag" },
-        { user_id: userId, allowed_path: "/admin/erster-arbeitstag" },
-      ]);
-    } else {
-      await adminClient.from("admin_permissions").insert({ user_id: userId, allowed_path: "/admin/bewerbungsgespraeche" });
+    // If user_id exists, delete auth user (this also cascades user_roles, profiles)
+    if (userId) {
+      await adminClient.from("user_roles").delete().eq("user_id", userId);
+      await adminClient.from("profiles").delete().eq("id", userId);
+      const { error: authError } = await adminClient.auth.admin.deleteUser(userId);
+      if (authError) {
+        console.error("Delete auth user error:", authError);
+      }
     }
 
-    // Insert branding assignments
-    const brandingInserts = brandingIds.map((brandingId: string) => ({
-      user_id: userId,
-      branding_id: brandingId,
-    }));
-    await adminClient.from("kunde_brandings").insert(brandingInserts);
-
     return new Response(
-      JSON.stringify({ success: true, user_id: userId }),
+      JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

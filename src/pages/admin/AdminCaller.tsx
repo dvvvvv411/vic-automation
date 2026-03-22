@@ -49,11 +49,12 @@ export default function AdminCaller() {
 
       return userIds.map((uid) => {
         const profile = profiles?.find((p) => p.id === uid);
-        const perm = (permissions as any[])?.find((p: any) => p.user_id === uid);
+        const userPerms = (permissions as any[])?.filter((p: any) => p.user_id === uid) || [];
+        const hasProbetag = userPerms.some((p: any) => p.allowed_path === "/admin/probetag" || p.allowed_path === "/admin/erster-arbeitstag");
         return {
           id: uid,
           name: profile?.display_name || profile?.full_name || profile?.email || uid,
-          callerType: perm?.allowed_path === "/admin/probetag" ? "probetag" : "bewerbungsgespraeche",
+          callerType: hasProbetag ? "probetag" : "bewerbungsgespraeche",
         };
       });
     },
@@ -143,7 +144,7 @@ export default function AdminCaller() {
     return (name[0] || "?").toUpperCase();
   };
 
-  const typeLabel = (t: string) => t === "probetag" ? "Probetage" : "Bewerbungsgespräche";
+  const typeLabel = (t: string) => t === "probetag" ? "Probetage & 1. Arbeitstag" : "Bewerbungsgespräche";
 
   return (
     <>
