@@ -76,6 +76,9 @@ const initialForm: BrandingForm = {
   hourly_rate_minijob: "",
   hourly_rate_teilzeit: "",
   hourly_rate_vollzeit: "",
+  estimated_salary_minijob: "",
+  estimated_salary_teilzeit: "",
+  estimated_salary_vollzeit: "",
   email_logo_enabled: false,
   email_logo_url: "",
 };
