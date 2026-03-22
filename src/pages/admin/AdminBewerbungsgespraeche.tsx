@@ -418,7 +418,7 @@ export default function AdminBewerbungsgespraeche() {
                               <CheckCircle className="h-4 w-4" />
                             </Button>
                           )}
-                          <Button
+                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50"
@@ -426,6 +426,15 @@ export default function AdminBewerbungsgespraeche() {
                             title="Als fehlgeschlagen markieren"
                           >
                             <XCircle className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50"
+                            onClick={() => setDeleteTarget({ id: item.id, name: `${item.applications?.first_name} ${item.applications?.last_name}` })}
+                            title="Termin löschen"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
