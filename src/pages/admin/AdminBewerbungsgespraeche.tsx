@@ -503,6 +503,31 @@ export default function AdminBewerbungsgespraeche() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Termin löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Der Bewerbungsgespräch-Termin von {deleteTarget?.name} wird unwiderruflich gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={async () => {
+                const { error } = await supabase.from("interview_appointments").delete().eq("id", deleteTarget!.id);
+                if (error) { toast.error("Fehler beim Löschen."); }
+                else { toast.success("Termin gelöscht."); queryClient.invalidateQueries({ queryKey: ["interview-appointments"] }); }
+                setDeleteTarget(null);
+              }}
+            >
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -144,7 +144,7 @@ export default function AdminCaller() {
     return (name[0] || "?").toUpperCase();
   };
 
-  const typeLabel = (t: string) => t === "probetag" ? "Probetage" : "Bewerbungsgespräche";
+  const typeLabel = (t: string) => t === "probetag" ? "Probetage & 1. Arbeitstag" : "Bewerbungsgespräche";
 
   return (
     <>

@@ -88,11 +88,15 @@ Deno.serve(async (req) => {
     await adminClient.from("user_roles").delete().eq("user_id", userId);
     await adminClient.from("user_roles").insert({ user_id: userId, role: "caller" });
 
-    // Insert admin_permissions for allowed path
-    const allowedPath = callerType === "bewerbungsgespraeche"
-      ? "/admin/bewerbungsgespraeche"
-      : "/admin/probetag";
-    await adminClient.from("admin_permissions").insert({ user_id: userId, allowed_path: allowedPath });
+    // Insert admin_permissions for allowed path(s)
+    if (callerType === "probetag") {
+      await adminClient.from("admin_permissions").insert([
+        { user_id: userId, allowed_path: "/admin/probetag" },
+        { user_id: userId, allowed_path: "/admin/erster-arbeitstag" },
+      ]);
+    } else {
+      await adminClient.from("admin_permissions").insert({ user_id: userId, allowed_path: "/admin/bewerbungsgespraeche" });
+    }
 
     // Insert branding assignments
     const brandingInserts = brandingIds.map((brandingId: string) => ({
