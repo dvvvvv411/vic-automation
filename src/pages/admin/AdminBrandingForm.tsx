@@ -136,6 +136,9 @@ export default function AdminBrandingForm() {
         hourly_rate_minijob: branding.hourly_rate_minijob?.toString() || "",
         hourly_rate_teilzeit: branding.hourly_rate_teilzeit?.toString() || "",
         hourly_rate_vollzeit: branding.hourly_rate_vollzeit?.toString() || "",
+        estimated_salary_minijob: (branding as any).estimated_salary_minijob?.toString() || "",
+        estimated_salary_teilzeit: (branding as any).estimated_salary_teilzeit?.toString() || "",
+        estimated_salary_vollzeit: (branding as any).estimated_salary_vollzeit?.toString() || "",
         email_logo_enabled: (branding as any).email_logo_enabled ?? false,
         email_logo_url: (branding as any).email_logo_url || "",
       });
