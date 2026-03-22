@@ -205,11 +205,7 @@ export default function AdminZeitplan() {
           </TabsTrigger>
           <TabsTrigger value="trials" className="gap-1.5">
             <ClipboardList className="h-4 w-4" />
-            Probetage
-          </TabsTrigger>
-          <TabsTrigger value="first_workday" className="gap-1.5">
-            <ClipboardList className="h-4 w-4" />
-            1. Arbeitstag
+            Probetag & 1. Arbeitstag
           </TabsTrigger>
         </TabsList>
 
@@ -301,23 +297,12 @@ export default function AdminZeitplan() {
           )}
         </TabsContent>
 
-        {/* Tab 2: Probetage */}
+        {/* Tab 2: Probetag & 1. Arbeitstag (shared schedule) */}
         <TabsContent value="trials" className="space-y-6">
           {activeBrandingId && (
             <TrialDayBlocker
               brandingId={activeBrandingId}
               onSaveSettings={(params) => saveSettingsMutation.mutate({ ...params, schedule_type: "trial" })}
-              isSavingSettings={saveSettingsMutation.isPending}
-            />
-          )}
-        </TabsContent>
-
-        {/* Tab 3: 1. Arbeitstag */}
-        <TabsContent value="first_workday" className="space-y-6">
-          {activeBrandingId && (
-            <FirstWorkdayBlocker
-              brandingId={activeBrandingId}
-              onSaveSettings={(params) => saveSettingsMutation.mutate({ ...params, schedule_type: "first_workday" })}
               isSavingSettings={saveSettingsMutation.isPending}
             />
           )}
