@@ -1661,6 +1661,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: string[]
       }
+      decrement_spoof_credits: {
+        Args: { _branding_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
