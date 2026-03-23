@@ -84,6 +84,16 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     }
   }, [brandings, activeBrandingId, isLoading]);
 
+  // Update favicon when active branding changes
+  useEffect(() => {
+    if (!activeBrandingId || !brandings.length) return;
+    const active = brandings.find((b) => b.id === activeBrandingId);
+    const faviconEl = document.getElementById("app-favicon") as HTMLLinkElement | null;
+    if (faviconEl) {
+      faviconEl.href = active?.favicon_url || "/favicon.png";
+    }
+  }, [activeBrandingId, brandings]);
+
   const setActiveBrandingId = useCallback(
     (id: string) => {
       setActiveBrandingIdState(id);
