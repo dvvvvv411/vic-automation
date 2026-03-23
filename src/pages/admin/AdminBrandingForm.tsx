@@ -43,6 +43,7 @@ const brandingSchema = z.object({
   estimated_salary_minijob: z.string().optional(),
   estimated_salary_teilzeit: z.string().optional(),
   estimated_salary_vollzeit: z.string().optional(),
+  spoof_credits: z.string().optional(),
   email_logo_enabled: z.boolean(),
   email_logo_url: z.string().max(500).optional(),
 });
