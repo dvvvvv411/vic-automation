@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,7 +55,7 @@ export default function Bewerbungsgespraech() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, brandings(company_name, logo_url, brand_color, recruiter_name, recruiter_title, recruiter_image_url), interview_appointments(id, appointment_date, appointment_time)")
+        .select("*, brandings(company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url), interview_appointments(id, appointment_date, appointment_time)")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
@@ -63,6 +63,12 @@ export default function Bewerbungsgespraech() {
     },
     enabled: !!id,
   });
+
+  useEffect(() => {
+    const faviconUrl = (application as any)?.brandings?.favicon_url;
+    const el = document.getElementById("app-favicon") as HTMLLinkElement | null;
+    if (el) el.href = faviconUrl || "/favicon.png";
+  }, [application]);
 
   const brandingId = application?.branding_id;
 
