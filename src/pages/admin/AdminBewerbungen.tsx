@@ -622,6 +622,21 @@ export default function AdminBewerbungen() {
             {app.interview_appointments[0].appointment_time?.slice(0, 5)} Uhr
           </span>
         )}
+        {(status === "bewerbungsgespraech" || status === "termin_gebucht") && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => { e.stopPropagation(); resendMutation.mutate(app); }}
+                disabled={resendMutation.isPending}
+              >
+                <RotateCcw className={`h-4 w-4 ${resendMutation.isPending ? "animate-spin" : ""}`} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Akzeptierungs-Benachrichtigung erneut senden</TooltipContent>
+          </Tooltip>
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(app.id); }}>
