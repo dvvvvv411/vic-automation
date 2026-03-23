@@ -106,6 +106,8 @@ export default function AdminBrandingForm() {
   const [form, setForm] = useState<BrandingForm>(initialForm);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
+  const [pmImageFile, setPmImageFile] = useState<File | null>(null);
+  const [recruiterImageFile, setRecruiterImageFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { data: branding, isLoading: loadingBranding } = useQuery({
