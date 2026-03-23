@@ -120,8 +120,7 @@ export default function BrandingNotes({ brandingId, pageContext }: BrandingNotes
                   {note.author_email} · {format(new Date(note.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
                 </p>
               </div>
-              {currentEmail === note.author_email && (
-                <Button
+              <Button
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
@@ -129,7 +128,6 @@ export default function BrandingNotes({ brandingId, pageContext }: BrandingNotes
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
-              )}
             </div>
           ))}
         </div>
