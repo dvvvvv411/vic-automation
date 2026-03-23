@@ -46,6 +46,12 @@ const brandingSchema = z.object({
   spoof_credits: z.string().optional(),
   email_logo_enabled: z.boolean(),
   email_logo_url: z.string().max(500).optional(),
+  project_manager_name: z.string().max(200).optional(),
+  project_manager_title: z.string().max(200).optional(),
+  project_manager_image_url: z.string().max(500).optional(),
+  recruiter_name: z.string().max(200).optional(),
+  recruiter_title: z.string().max(200).optional(),
+  recruiter_image_url: z.string().max(500).optional(),
 });
 
 type BrandingForm = z.infer<typeof brandingSchema>;
