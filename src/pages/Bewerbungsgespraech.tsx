@@ -449,7 +449,7 @@ export default function Bewerbungsgespraech() {
             title={(application.brandings as any).recruiter_title}
             imageUrl={(application.brandings as any).recruiter_image_url}
             brandColor={brandColor}
-            label="Ihre Recruiterin"
+            label="Ihr Ansprechpartner"
           />
         )}
 
