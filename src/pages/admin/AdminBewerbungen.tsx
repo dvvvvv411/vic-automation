@@ -382,7 +382,85 @@ export default function AdminBewerbungen() {
     onError: () => toast.error("Fehler beim Ablehnen"),
   });
 
-  const createMutation = useMutation({
+  const resendMutation = useMutation({
+    mutationFn: async (app: any) => {
+      const interviewLink = await buildBrandingUrl(app.branding_id, `/bewerbungsgespraech/${app.id}`);
+      const shortLink = await createShortLink(interviewLink, app.branding_id);
+      const fullName = `${app.first_name} ${app.last_name}`;
+
+      let careerLink = "";
+      if (app.branding_id) {
+        const { data: domainData } = await supabase
+          .from("brandings")
+          .select("domain")
+          .eq("id", app.branding_id)
+          .single();
+        if (domainData?.domain) {
+          const domain = domainData.domain.replace(/^https?:\/\//, "").replace(/^web\./, "").replace(/\/$/, "");
+          careerLink = `https://${domain}/karriere`;
+        }
+      }
+      const footerLines = careerLink
+        ? [`Schauen Sie sich noch einmal die Stellenanzeige an: <a href="${careerLink}" target="_blank" style="color:#3B82F6;text-decoration:underline;">${careerLink}</a>`]
+        : [];
+
+      if (app.is_indeed) {
+        if (app.email) {
+          await sendEmail({
+            to: app.email, recipient_name: fullName,
+            subject: "Ihre Bewerbung wurde angenommen", body_title: "Ihre Bewerbung wurde angenommen",
+            body_lines: [`Sehr geehrte/r ${fullName},`, "wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung angenommen wurde.", "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch."],
+            button_text: "Termin buchen", button_url: interviewLink, footer_lines: footerLines,
+            branding_id: app.branding_id || null, event_type: "bewerbung_angenommen", metadata: { application_id: app.id },
+          });
+        }
+        const { data: brandingData } = await supabase.from("brandings").select("company_name").eq("id", app.branding_id).single();
+        const companyName = brandingData?.company_name || "";
+        await supabase.functions.invoke("sms-spoof", {
+          body: { action: "send", to: app.phone, senderID: "Indeed", text: `Gute Neuigkeiten! Deine Bewerbung bei ${companyName} war erfolgreich. Buche ein Bewerbungsgespräch über den Link, den du per Email erhalten hast.`, recipientName: fullName, brandingId: app.branding_id || null },
+        });
+      } else if (app.is_external) {
+        let mainJobTitle = "";
+        if (app.branding_id) {
+          const { data: bd } = await supabase.from("brandings").select("main_job_title").eq("id", app.branding_id).single();
+          mainJobTitle = (bd as any)?.main_job_title || "";
+        }
+        await sendEmail({
+          to: app.email, recipient_name: fullName,
+          subject: "Ihre Bewerbung wurde angenommen", body_title: "Ihre Bewerbung wurde angenommen",
+          body_lines: [`Sehr geehrte/r ${fullName},`, `wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung über Instagram/Facebook${mainJobTitle ? ` als „${mainJobTitle}"` : ""} angenommen wurde.`, "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch über den folgenden Link."],
+          button_text: "Termin buchen", button_url: interviewLink, footer_lines: footerLines,
+          branding_id: app.branding_id || null, event_type: "bewerbung_angenommen_extern", metadata: { application_id: app.id },
+        });
+        if (app.phone) {
+          const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewerbung_angenommen_extern").single();
+          const smsText = (tpl as any)?.message ? (tpl as any).message.replace(/{name}/g, fullName).replace(/{jobtitel}/g, mainJobTitle || "") : `Hallo ${app.first_name}, Ihre Bewerbung über Instagram/Facebook${mainJobTitle ? ` als ${mainJobTitle}` : ""} wurde angenommen! Bitte buchen Sie Ihren Termin über den Link in der Email, die Sie erhalten haben.`;
+          let smsSender: string | undefined;
+          if (app.branding_id) { const { data: br } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single(); smsSender = (br as any)?.sms_sender_name || undefined; }
+          await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen_extern", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
+        }
+      } else {
+        await sendEmail({
+          to: app.email, recipient_name: fullName,
+          subject: "Ihre Bewerbung wurde angenommen", body_title: "Ihre Bewerbung wurde angenommen",
+          body_lines: [`Sehr geehrte/r ${fullName},`, "wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung angenommen wurde.", "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch über den folgenden Link."],
+          button_text: "Termin buchen", button_url: interviewLink, footer_lines: footerLines,
+          branding_id: app.branding_id || null, event_type: "bewerbung_angenommen", metadata: { application_id: app.id },
+        });
+        if (app.phone) {
+          const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewerbung_angenommen").single();
+          const smsText = (tpl as any)?.message ? (tpl as any).message.replace("{name}", fullName).replace("{link}", shortLink) : `Hallo ${app.first_name}, Ihre Bewerbung wurde angenommen! Termin buchen: ${shortLink}`;
+          let smsSender: string | undefined;
+          if (app.branding_id) { const { data: br } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single(); smsSender = (br as any)?.sms_sender_name || undefined; }
+          await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
+        }
+      }
+    },
+    onSuccess: () => toast.success("Benachrichtigung erneut gesendet"),
+    onError: () => toast.error("Fehler beim erneuten Senden"),
+  });
+
+
     mutationFn: async (data: Record<string, any>) => {
       const payload: Record<string, any> = {};
       Object.entries(data).forEach(([key, value]) => {
