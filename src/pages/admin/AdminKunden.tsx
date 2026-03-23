@@ -35,14 +35,14 @@ export default function AdminKunden() {
       const userIds = roles.map((r) => r.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name, display_name")
+        .select("id, full_name, display_name, email")
         .in("id", userIds);
 
       return userIds.map((uid) => {
         const profile = profiles?.find((p) => p.id === uid);
         return {
           id: uid,
-          name: profile?.display_name || profile?.full_name || uid,
+          name: profile?.email || profile?.display_name || profile?.full_name || uid,
         };
       });
     },
