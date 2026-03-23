@@ -100,6 +100,41 @@ export type Database = {
           },
         ]
       }
+      branding_notes: {
+        Row: {
+          author_email: string
+          branding_id: string
+          content: string
+          created_at: string
+          id: string
+          page_context: string
+        }
+        Insert: {
+          author_email: string
+          branding_id: string
+          content: string
+          created_at?: string
+          id?: string
+          page_context: string
+        }
+        Update: {
+          author_email?: string
+          branding_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          page_context?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branding_notes_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branding_schedule_settings: {
         Row: {
           available_days: number[]
