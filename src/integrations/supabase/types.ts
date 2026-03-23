@@ -204,6 +204,7 @@ export type Database = {
           estimated_salary_minijob: number | null
           estimated_salary_teilzeit: number | null
           estimated_salary_vollzeit: number | null
+          favicon_url: string | null
           hourly_rate_enabled: boolean
           hourly_rate_minijob: number | null
           hourly_rate_teilzeit: number | null
@@ -251,6 +252,7 @@ export type Database = {
           estimated_salary_minijob?: number | null
           estimated_salary_teilzeit?: number | null
           estimated_salary_vollzeit?: number | null
+          favicon_url?: string | null
           hourly_rate_enabled?: boolean
           hourly_rate_minijob?: number | null
           hourly_rate_teilzeit?: number | null
@@ -298,6 +300,7 @@ export type Database = {
           estimated_salary_minijob?: number | null
           estimated_salary_teilzeit?: number | null
           estimated_salary_vollzeit?: number | null
+          favicon_url?: string | null
           hourly_rate_enabled?: boolean
           hourly_rate_minijob?: number | null
           hourly_rate_teilzeit?: number | null
