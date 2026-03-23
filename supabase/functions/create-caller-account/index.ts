@@ -95,7 +95,10 @@ Deno.serve(async (req) => {
         { user_id: userId, allowed_path: "/admin/erster-arbeitstag" },
       ]);
     } else {
-      await adminClient.from("admin_permissions").insert({ user_id: userId, allowed_path: "/admin/bewerbungsgespraeche" });
+      await adminClient.from("admin_permissions").insert([
+        { user_id: userId, allowed_path: "/admin/bewerbungsgespraeche" },
+        { user_id: userId, allowed_path: "/admin/bewerbungen" },
+      ]);
     }
 
     // Insert branding assignments
