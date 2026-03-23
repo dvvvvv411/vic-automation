@@ -1,38 +1,60 @@
 
 
-## Fix: Alle Nutzer koennen alle Notizen loeschen
+## Plan: 3 Aenderungen
 
-### Problem
-Die aktuelle RLS DELETE-Policy erlaubt nur das Loeschen eigener Notizen (per `author_email`-Vergleich). Der User moechte, dass alle berechtigten Nutzer (Admin, Kunde, Caller) alle Notizen loeschen koennen.
+### 1. Gebuchter Termin anzeigen + Umbuchen ermoeglichen
 
-### Aenderung
+In allen 3 Buchungsseiten (`Bewerbungsgespraech.tsx`, `Probetag.tsx`, `ErsterArbeitstag.tsx`):
 
-**1. DB-Migration: DELETE-Policy ersetzen**
+Aktuell: Wenn `existingAppointment` vorhanden, wird NUR die Bestaetigungsseite angezeigt — kein Zugang zum Kalender.
 
-Alte Policy droppen und neue erstellen, die dieselbe Logik wie die SELECT-Policy nutzt:
+Neu: Statt der reinen Bestaetigungsseite wird der gebuchte Termin als Card oben angezeigt, darunter ein "Termin umbuchen" Button. Wenn geklickt, erscheint der Kalender darunter. Bei Umbuchung wird der alte Termin geloescht und ein neuer erstellt.
 
-```sql
-DROP POLICY "Users can delete own branding_notes" ON public.branding_notes;
+Konkret in jeder Datei:
+- Neuen State `isRebooking` hinzufuegen
+- Die `existingAppointment`-Ansicht aendern: Card mit Termindaten + "Termin umbuchen" Button
+- Wenn `isRebooking === true`: Buchungskalender darunter anzeigen
+- Bei `bookMutation`: wenn existingAppointment vorhanden, zuerst den alten Termin loeschen (DELETE), dann neuen INSERT
 
-CREATE POLICY "Users can delete branding_notes" ON public.branding_notes
-  FOR DELETE TO authenticated
-  USING (
-    has_role(auth.uid(), 'admin'::app_role)
-    OR (is_kunde(auth.uid()) AND (NOT user_has_any_branding(auth.uid()) OR branding_id IN (SELECT user_branding_ids(auth.uid()))))
-    OR (is_caller(auth.uid()) AND branding_id IN (SELECT user_branding_ids(auth.uid())))
-  );
+### 2. 12-Stunden-Mindestvorlauf
+
+In allen 3 Buchungsseiten:
+
+Aktuell: `availableTimeSlots` filtert nur Slots die HEUTE in der Vergangenheit liegen.
+
+Neu:
+- Slots muessen mindestens 12 Stunden in der Zukunft liegen
+- Fuer `isToday`: Slots filtern wo `slotTime > now + 12h` (bei heute wahrscheinlich alle weg)
+- Fuer morgen: ebenfalls pruefen ob der Slot > 12h in der Zukunft ist
+- Fuer uebermorgen+: alle Slots verfuegbar
+- Kalender: Tage deaktivieren wo ALLE Slots < 12h Vorlauf haben (heute wird meistens deaktiviert)
+
+Logik-Aenderung im `availableTimeSlots` useMemo:
+```
+const cutoff = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+// Fuer jedes selectedDate: Slot-DateTime berechnen und gegen cutoff pruefen
 ```
 
-Keine Code-Aenderungen noetig — die Frontend-Komponente `BrandingNotes.tsx` zeigt dann den Loeschen-Button fuer alle Notizen (nicht nur eigene).
+### 3. Blockierte Zeitfenster Bug fixen
 
-**2. `BrandingNotes.tsx` — Loeschen-Button fuer alle anzeigen**
+**Problem**: Die Tabelle `schedule_blocked_slots` hat wahrscheinlich keine SELECT-Policy fuer `anon`-User. Die oeffentliche Buchungsseite `/bewerbungsgespraech/:id` wird ohne Login aufgerufen (anon), kann daher die blockierten Slots nicht lesen.
 
-Aktuell wird der Button nur angezeigt wenn `currentEmail === note.author_email`. Diese Bedingung entfernen, damit jeder den Button sieht.
+**Fix**: DB-Migration mit neuer RLS-Policy:
+```sql
+CREATE POLICY "Anon can read schedule_blocked_slots"
+  ON public.schedule_blocked_slots
+  FOR SELECT TO anon
+  USING (true);
+```
+
+Gleiche Pruefung fuer `trial_day_blocked_slots` und `first_workday_blocked_slots` — laut Schema haben diese bereits `Anon can read` Policies (bei first_workday_blocked_slots sehe ich eine). Sicherheitshalber auch fuer `trial_day_blocked_slots` pruefen und ggf. hinzufuegen.
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| Migration | DELETE-Policy ersetzen |
-| `BrandingNotes.tsx` | Loeschen-Button-Bedingung entfernen |
+| `Bewerbungsgespraech.tsx` | Umbuchen-Feature + 12h-Vorlauf |
+| `Probetag.tsx` | Umbuchen-Feature + 12h-Vorlauf |
+| `ErsterArbeitstag.tsx` | Umbuchen-Feature + 12h-Vorlauf |
+| DB-Migration | Anon-SELECT-Policy fuer schedule_blocked_slots |
 
