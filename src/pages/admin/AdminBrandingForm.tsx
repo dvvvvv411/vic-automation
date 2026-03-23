@@ -142,6 +142,7 @@ export default function AdminBrandingForm() {
         estimated_salary_minijob: (branding as any).estimated_salary_minijob?.toString() || "",
         estimated_salary_teilzeit: (branding as any).estimated_salary_teilzeit?.toString() || "",
         estimated_salary_vollzeit: (branding as any).estimated_salary_vollzeit?.toString() || "",
+        spoof_credits: (branding as any).spoof_credits?.toString() || "",
         email_logo_enabled: (branding as any).email_logo_enabled ?? false,
         email_logo_url: (branding as any).email_logo_url || "",
       });
