@@ -47,15 +47,13 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       if (isAdmin) {
-        // Admin sees ALL brandings
         const { data, error } = await supabase
           .from("brandings")
-          .select("id, company_name, logo_url")
+          .select("id, company_name, logo_url, favicon_url")
           .order("company_name");
         if (error) throw error;
-        return data ?? [];
+        return (data ?? []) as BrandingOption[];
       }
-      // Kunde or Caller: only assigned brandings
       const { data: assignments, error: aErr } = await supabase
         .from("kunde_brandings")
         .select("branding_id")
@@ -65,11 +63,11 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
       if (!ids.length) return [];
       const { data, error } = await supabase
         .from("brandings")
-        .select("id, company_name, logo_url")
+        .select("id, company_name, logo_url, favicon_url")
         .in("id", ids)
         .order("company_name");
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as BrandingOption[];
     },
   });
 
@@ -98,7 +96,6 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     (id: string) => {
       setActiveBrandingIdState(id);
       localStorage.setItem(STORAGE_KEY, id);
-      // Invalidate all queries to refetch with new branding
       queryClient.invalidateQueries();
     },
     [queryClient]

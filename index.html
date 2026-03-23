@@ -3,10 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
     <title>Mitarbeiter Dashboard</title>
     <meta name="description" content="Das zentrale Dashboard für Mitarbeiter – Aufträge, Bewertungen und mehr auf einen Blick." />
-    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="icon" id="app-favicon" href="/favicon.png" type="image/png" />
+    <script>
+      (function(){
+        try {
+          var h = window.location.hostname;
+          if (!h || h === 'localhost') return;
+          var SB_URL = "https://luorlnagxpsibarcygjm.supabase.co";
+          var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1b3JsbmFneHBzaWJhcmN5Z2ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDI3MTAsImV4cCI6MjA4NjM3ODcxMH0.B0MYZqUChRbyW3ekOR8YI4j7q153ME77qI_LjUUJTqs";
+          var domain = h.replace(/^web\./, '');
+          fetch(SB_URL + "/rest/v1/brandings?domain=eq." + encodeURIComponent(domain) + "&select=favicon_url", {
+            headers: { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY }
+          }).then(function(r){ return r.json(); }).then(function(d){
+            if (d && d[0] && d[0].favicon_url) {
+              document.getElementById('app-favicon').href = d[0].favicon_url;
+            }
+          }).catch(function(){});
+        } catch(e){}
+      })();
+    </script>
 
     <meta property="og:title" content="Mitarbeiter Dashboard" />
     <meta property="og:description" content="Das zentrale Dashboard für Mitarbeiter – Aufträge, Bewertungen und mehr auf einen Blick." />
