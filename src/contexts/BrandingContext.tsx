@@ -8,6 +8,7 @@ interface BrandingOption {
   id: string;
   company_name: string;
   logo_url: string | null;
+  favicon_url: string | null;
 }
 
 interface BrandingContextType {
