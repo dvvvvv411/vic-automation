@@ -290,6 +290,8 @@ export default function AdminBewerbungsgespraeche() {
         </p>
       </motion.div>
 
+      {activeBrandingId && <BrandingNotes brandingId={activeBrandingId} pageContext="bewerbungsgespraeche" />}
+
       <div className="flex gap-2 mb-4">
         <Button
           variant={viewMode === "past" ? "default" : "outline"}
