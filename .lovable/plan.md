@@ -1,60 +1,39 @@
 
 
-## Plan: 3 Aenderungen
+## Plan: Favicon pro Branding
 
-### 1. Gebuchter Termin anzeigen + Umbuchen ermoeglichen
+### 1. DB-Migration: `favicon_url` Spalte
 
-In allen 3 Buchungsseiten (`Bewerbungsgespraech.tsx`, `Probetag.tsx`, `ErsterArbeitstag.tsx`):
+Neue Spalte `favicon_url text` in `brandings` Tabelle.
 
-Aktuell: Wenn `existingAppointment` vorhanden, wird NUR die Bestaetigungsseite angezeigt — kein Zugang zum Kalender.
+### 2. `AdminBrandingForm.tsx`: Favicon-Upload
 
-Neu: Statt der reinen Bestaetigungsseite wird der gebuchte Termin als Card oben angezeigt, darunter ein "Termin umbuchen" Button. Wenn geklickt, erscheint der Kalender darunter. Bei Umbuchung wird der alte Termin geloescht und ein neuer erstellt.
+- Neuer State `faviconFile` analog zu `logoFile`
+- Neues Upload-Feld im Stammdaten-Bereich (nach Logo, vor E-Mail Logo)
+- Label "Favicon", accept `image/png,image/x-icon,image/svg+xml`
+- Vorschau des aktuellen Favicons wenn vorhanden
+- Upload nach `branding-logos` Bucket, URL als `favicon_url` speichern
 
-Konkret in jeder Datei:
-- Neuen State `isRebooking` hinzufuegen
-- Die `existingAppointment`-Ansicht aendern: Card mit Termindaten + "Termin umbuchen" Button
-- Wenn `isRebooking === true`: Buchungskalender darunter anzeigen
-- Bei `bookMutation`: wenn existingAppointment vorhanden, zuerst den alten Termin loeschen (DELETE), dann neuen INSERT
+### 3. Favicon sofort laden: Inline-Script in `index.html`
 
-### 2. 12-Stunden-Mindestvorlauf
+Ein kleines Inline-Script VOR dem React-Bundle, das:
+- Den aktuellen Hostname nimmt
+- Per `fetch` die Supabase REST API aufruft: `GET /rest/v1/brandings?domain=eq.{hostname}&select=favicon_url`
+- Falls `favicon_url` vorhanden: das `<link rel="icon">` Element im DOM aktualisiert
+- Falls nicht: Standard-Favicon `/favicon.png` bleibt
 
-In allen 3 Buchungsseiten:
+Das laeuft synchron vor React und setzt das Favicon ohne sichtbare Verzoegerung.
 
-Aktuell: `availableTimeSlots` filtert nur Slots die HEUTE in der Vergangenheit liegen.
+### 4. React-seitig: Favicon bei Branding-Wechsel aktualisieren
 
-Neu:
-- Slots muessen mindestens 12 Stunden in der Zukunft liegen
-- Fuer `isToday`: Slots filtern wo `slotTime > now + 12h` (bei heute wahrscheinlich alle weg)
-- Fuer morgen: ebenfalls pruefen ob der Slot > 12h in der Zukunft ist
-- Fuer uebermorgen+: alle Slots verfuegbar
-- Kalender: Tage deaktivieren wo ALLE Slots < 12h Vorlauf haben (heute wird meistens deaktiviert)
-
-Logik-Aenderung im `availableTimeSlots` useMemo:
-```
-const cutoff = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-// Fuer jedes selectedDate: Slot-DateTime berechnen und gegen cutoff pruefen
-```
-
-### 3. Blockierte Zeitfenster Bug fixen
-
-**Problem**: Die Tabelle `schedule_blocked_slots` hat wahrscheinlich keine SELECT-Policy fuer `anon`-User. Die oeffentliche Buchungsseite `/bewerbungsgespraech/:id` wird ohne Login aufgerufen (anon), kann daher die blockierten Slots nicht lesen.
-
-**Fix**: DB-Migration mit neuer RLS-Policy:
-```sql
-CREATE POLICY "Anon can read schedule_blocked_slots"
-  ON public.schedule_blocked_slots
-  FOR SELECT TO anon
-  USING (true);
-```
-
-Gleiche Pruefung fuer `trial_day_blocked_slots` und `first_workday_blocked_slots` — laut Schema haben diese bereits `Anon can read` Policies (bei first_workday_blocked_slots sehe ich eine). Sicherheitshalber auch fuer `trial_day_blocked_slots` pruefen und ggf. hinzufuegen.
+In `BrandingContext.tsx` oder `AdminLayout.tsx`: Wenn das aktive Branding ein `favicon_url` hat, wird `document.querySelector('link[rel="icon"]').href` aktualisiert. So wechselt auch im Admin-Bereich das Favicon mit dem Branding-Switcher.
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `Bewerbungsgespraech.tsx` | Umbuchen-Feature + 12h-Vorlauf |
-| `Probetag.tsx` | Umbuchen-Feature + 12h-Vorlauf |
-| `ErsterArbeitstag.tsx` | Umbuchen-Feature + 12h-Vorlauf |
-| DB-Migration | Anon-SELECT-Policy fuer schedule_blocked_slots |
+| DB-Migration | `favicon_url` Spalte |
+| `index.html` | Inline-Script fuer sofortiges Favicon |
+| `AdminBrandingForm.tsx` | Favicon-Upload-Feld |
+| `BrandingContext.tsx` | Favicon bei Branding-Wechsel setzen |
 
