@@ -54,7 +54,7 @@ export default function ErsterArbeitstag() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, brandings(company_name, logo_url, brand_color)")
+        .select("*, brandings(company_name, logo_url, brand_color, project_manager_name, project_manager_title, project_manager_image_url)")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
