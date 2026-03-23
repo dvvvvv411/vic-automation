@@ -80,6 +80,7 @@ const initialForm: BrandingForm = {
   estimated_salary_minijob: "",
   estimated_salary_teilzeit: "",
   estimated_salary_vollzeit: "",
+  spoof_credits: "",
   email_logo_enabled: false,
   email_logo_url: "",
 };
