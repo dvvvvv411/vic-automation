@@ -245,7 +245,33 @@ export default function AdminBrandingForm() {
       favicon_url = fPublicUrl.publicUrl;
     }
 
-    saveMutation.mutate({ ...result.data, ...(logo_url ? { logo_url } : {}), ...(favicon_url ? { favicon_url } : {}) });
+    let pm_image_url: string | undefined;
+    if (pmImageFile) {
+      const pmExt = pmImageFile.name.split(".").pop();
+      const pmPath = `pm-${crypto.randomUUID()}.${pmExt}`;
+      const { error: pmUploadError } = await supabase.storage.from("branding-logos").upload(pmPath, pmImageFile);
+      if (pmUploadError) { toast.error("Projektleiter-Bild Upload fehlgeschlagen"); return; }
+      const { data: pmPublicUrl } = supabase.storage.from("branding-logos").getPublicUrl(pmPath);
+      pm_image_url = pmPublicUrl.publicUrl;
+    }
+
+    let recruiter_image_url: string | undefined;
+    if (recruiterImageFile) {
+      const rExt = recruiterImageFile.name.split(".").pop();
+      const rPath = `recruiter-${crypto.randomUUID()}.${rExt}`;
+      const { error: rUploadError } = await supabase.storage.from("branding-logos").upload(rPath, recruiterImageFile);
+      if (rUploadError) { toast.error("Recruiter-Bild Upload fehlgeschlagen"); return; }
+      const { data: rPublicUrl } = supabase.storage.from("branding-logos").getPublicUrl(rPath);
+      recruiter_image_url = rPublicUrl.publicUrl;
+    }
+
+    saveMutation.mutate({
+      ...result.data,
+      ...(logo_url ? { logo_url } : {}),
+      ...(favicon_url ? { favicon_url } : {}),
+      ...(pm_image_url ? { project_manager_image_url: pm_image_url } : {}),
+      ...(recruiter_image_url ? { recruiter_image_url } : {}),
+    });
   };
 
   const updateField = (key: keyof BrandingForm, value: string) => {
