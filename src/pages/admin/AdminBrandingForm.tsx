@@ -291,6 +291,22 @@ export default function AdminBrandingForm() {
             )}
           </div>
 
+          <div className="space-y-2">
+            <Label>Favicon</Label>
+            <Input
+              type="file"
+              accept="image/png,image/x-icon,image/svg+xml"
+              onChange={(e) => setFaviconFile(e.target.files?.[0] || null)}
+            />
+            <p className="text-xs text-muted-foreground">PNG, ICO oder SVG. Wird als Browser-Tab-Icon angezeigt.</p>
+            {isEditMode && (branding as any)?.favicon_url && !faviconFile && (
+              <div className="flex items-center gap-2 mt-1">
+                <img src={(branding as any).favicon_url} alt="Aktuelles Favicon" className="h-6 w-6 rounded object-contain" />
+                <span className="text-xs text-muted-foreground">Aktuelles Favicon</span>
+              </div>
+            )}
+          </div>
+
           {/* E-Mail Logo Toggle */}
           <div className="space-y-3 pt-2 border-t border-border">
             <div className="flex items-center justify-between">
