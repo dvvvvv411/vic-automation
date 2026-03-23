@@ -215,6 +215,12 @@ export type Database = {
           managing_director: string | null
           payment_model: string
           phone: string | null
+          project_manager_image_url: string | null
+          project_manager_name: string | null
+          project_manager_title: string | null
+          recruiter_image_url: string | null
+          recruiter_name: string | null
+          recruiter_title: string | null
           register_court: string | null
           resend_api_key: string | null
           resend_from_email: string | null
@@ -264,6 +270,12 @@ export type Database = {
           managing_director?: string | null
           payment_model?: string
           phone?: string | null
+          project_manager_image_url?: string | null
+          project_manager_name?: string | null
+          project_manager_title?: string | null
+          recruiter_image_url?: string | null
+          recruiter_name?: string | null
+          recruiter_title?: string | null
           register_court?: string | null
           resend_api_key?: string | null
           resend_from_email?: string | null
@@ -313,6 +325,12 @@ export type Database = {
           managing_director?: string | null
           payment_model?: string
           phone?: string | null
+          project_manager_image_url?: string | null
+          project_manager_name?: string | null
+          project_manager_title?: string | null
+          recruiter_image_url?: string | null
+          recruiter_name?: string | null
+          recruiter_title?: string | null
           register_court?: string | null
           resend_api_key?: string | null
           resend_from_email?: string | null

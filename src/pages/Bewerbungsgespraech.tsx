@@ -21,6 +21,7 @@ import { format, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ContactCard } from "@/components/ContactCard";
 
 function generateTimeSlots(start: string, end: string, interval: number) {
   const [sh, sm] = start.split(":").map(Number);
@@ -54,7 +55,7 @@ export default function Bewerbungsgespraech() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, brandings(company_name, logo_url, brand_color), interview_appointments(id, appointment_date, appointment_time)")
+        .select("*, brandings(company_name, logo_url, brand_color, recruiter_name, recruiter_title, recruiter_image_url), interview_appointments(id, appointment_date, appointment_time)")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
@@ -439,6 +440,16 @@ export default function Bewerbungsgespraech() {
             src={logoUrl}
             alt={companyName || "Logo"}
             className="h-12 mx-auto object-contain mb-8 drop-shadow-sm"
+          />
+        )}
+
+        {application?.brandings?.recruiter_name && (
+          <ContactCard
+            name={(application.brandings as any).recruiter_name}
+            title={(application.brandings as any).recruiter_title}
+            imageUrl={(application.brandings as any).recruiter_image_url}
+            brandColor={brandColor}
+            label="Ihre Recruiterin"
           />
         )}
 

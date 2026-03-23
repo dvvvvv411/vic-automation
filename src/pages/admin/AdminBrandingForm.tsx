@@ -46,6 +46,12 @@ const brandingSchema = z.object({
   spoof_credits: z.string().optional(),
   email_logo_enabled: z.boolean(),
   email_logo_url: z.string().max(500).optional(),
+  project_manager_name: z.string().max(200).optional(),
+  project_manager_title: z.string().max(200).optional(),
+  project_manager_image_url: z.string().max(500).optional(),
+  recruiter_name: z.string().max(200).optional(),
+  recruiter_title: z.string().max(200).optional(),
+  recruiter_image_url: z.string().max(500).optional(),
 });
 
 type BrandingForm = z.infer<typeof brandingSchema>;
@@ -83,6 +89,12 @@ const initialForm: BrandingForm = {
   spoof_credits: "",
   email_logo_enabled: false,
   email_logo_url: "",
+  project_manager_name: "",
+  project_manager_title: "",
+  project_manager_image_url: "",
+  recruiter_name: "",
+  recruiter_title: "",
+  recruiter_image_url: "",
 };
 
 export default function AdminBrandingForm() {
@@ -94,6 +106,8 @@ export default function AdminBrandingForm() {
   const [form, setForm] = useState<BrandingForm>(initialForm);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
+  const [pmImageFile, setPmImageFile] = useState<File | null>(null);
+  const [recruiterImageFile, setRecruiterImageFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { data: branding, isLoading: loadingBranding } = useQuery({
@@ -145,6 +159,12 @@ export default function AdminBrandingForm() {
         spoof_credits: (branding as any).spoof_credits?.toString() || "",
         email_logo_enabled: (branding as any).email_logo_enabled ?? false,
         email_logo_url: (branding as any).email_logo_url || "",
+        project_manager_name: (branding as any).project_manager_name || "",
+        project_manager_title: (branding as any).project_manager_title || "",
+        project_manager_image_url: (branding as any).project_manager_image_url || "",
+        recruiter_name: (branding as any).recruiter_name || "",
+        recruiter_title: (branding as any).recruiter_title || "",
+        recruiter_image_url: (branding as any).recruiter_image_url || "",
       });
     }
   }, [branding]);
@@ -225,7 +245,33 @@ export default function AdminBrandingForm() {
       favicon_url = fPublicUrl.publicUrl;
     }
 
-    saveMutation.mutate({ ...result.data, ...(logo_url ? { logo_url } : {}), ...(favicon_url ? { favicon_url } : {}) });
+    let pm_image_url: string | undefined;
+    if (pmImageFile) {
+      const pmExt = pmImageFile.name.split(".").pop();
+      const pmPath = `pm-${crypto.randomUUID()}.${pmExt}`;
+      const { error: pmUploadError } = await supabase.storage.from("branding-logos").upload(pmPath, pmImageFile);
+      if (pmUploadError) { toast.error("Projektleiter-Bild Upload fehlgeschlagen"); return; }
+      const { data: pmPublicUrl } = supabase.storage.from("branding-logos").getPublicUrl(pmPath);
+      pm_image_url = pmPublicUrl.publicUrl;
+    }
+
+    let recruiter_image_url: string | undefined;
+    if (recruiterImageFile) {
+      const rExt = recruiterImageFile.name.split(".").pop();
+      const rPath = `recruiter-${crypto.randomUUID()}.${rExt}`;
+      const { error: rUploadError } = await supabase.storage.from("branding-logos").upload(rPath, recruiterImageFile);
+      if (rUploadError) { toast.error("Recruiter-Bild Upload fehlgeschlagen"); return; }
+      const { data: rPublicUrl } = supabase.storage.from("branding-logos").getPublicUrl(rPath);
+      recruiter_image_url = rPublicUrl.publicUrl;
+    }
+
+    saveMutation.mutate({
+      ...result.data,
+      ...(logo_url ? { logo_url } : {}),
+      ...(favicon_url ? { favicon_url } : {}),
+      ...(pm_image_url ? { project_manager_image_url: pm_image_url } : {}),
+      ...(recruiter_image_url ? { recruiter_image_url } : {}),
+    });
   };
 
   const updateField = (key: keyof BrandingForm, value: string) => {
@@ -507,6 +553,64 @@ export default function AdminBrandingForm() {
             />
             <p className="text-xs text-muted-foreground">Wird in SMS-Erinnerungen als Rückrufnummer verwendet.</p>
             {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Projektleiter */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Projektleiter</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Bild</Label>
+            <Input type="file" accept="image/*" onChange={(e) => setPmImageFile(e.target.files?.[0] || null)} />
+            {(form.project_manager_image_url || pmImageFile) && !pmImageFile && (
+              <div className="flex items-center gap-2 mt-1">
+                <img src={form.project_manager_image_url!} alt="Projektleiter" className="h-10 w-10 rounded-full object-cover" />
+                <span className="text-xs text-muted-foreground">Aktuelles Bild</span>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input value={form.project_manager_name} onChange={(e) => updateField("project_manager_name", e.target.value)} placeholder="Max Mustermann" />
+            </div>
+            <div className="space-y-2">
+              <Label>Jobtitel</Label>
+              <Input value={form.project_manager_title} onChange={(e) => updateField("project_manager_title", e.target.value)} placeholder="Projektleiter" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recruiter */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Recruiter</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Bild</Label>
+            <Input type="file" accept="image/*" onChange={(e) => setRecruiterImageFile(e.target.files?.[0] || null)} />
+            {(form.recruiter_image_url || recruiterImageFile) && !recruiterImageFile && (
+              <div className="flex items-center gap-2 mt-1">
+                <img src={form.recruiter_image_url!} alt="Recruiter" className="h-10 w-10 rounded-full object-cover" />
+                <span className="text-xs text-muted-foreground">Aktuelles Bild</span>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input value={form.recruiter_name} onChange={(e) => updateField("recruiter_name", e.target.value)} placeholder="Lisa Muster" />
+            </div>
+            <div className="space-y-2">
+              <Label>Jobtitel</Label>
+              <Input value={form.recruiter_title} onChange={(e) => updateField("recruiter_title", e.target.value)} placeholder="Recruiterin" />
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -21,6 +21,7 @@ import { format, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ContactCard } from "@/components/ContactCard";
 
 function generateTimeSlots(start: string, end: string, interval: number) {
   const [sh, sm] = start.split(":").map(Number);
@@ -54,7 +55,7 @@ export default function ErsterArbeitstag() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, brandings(company_name, logo_url, brand_color)")
+        .select("*, brandings(company_name, logo_url, brand_color, project_manager_name, project_manager_title, project_manager_image_url)")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
@@ -390,6 +391,16 @@ export default function ErsterArbeitstag() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="max-w-2xl w-full mt-8 md:mt-16">
         {logoUrl && (
           <motion.img initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} src={logoUrl} alt={companyName || "Logo"} className="h-12 mx-auto object-contain mb-8 drop-shadow-sm" />
+        )}
+
+        {application?.brandings?.project_manager_name && (
+          <ContactCard
+            name={(application.brandings as any).project_manager_name}
+            title={(application.brandings as any).project_manager_title}
+            imageUrl={(application.brandings as any).project_manager_image_url}
+            brandColor={brandColor}
+            label="Ihr Ansprechpartner"
+          />
         )}
 
         {isRebooking && existingAppointment && (
