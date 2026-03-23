@@ -1,57 +1,70 @@
 
 
-## Plan: 4 Aenderungen
+## Notizfeld fuer Bewerbungsgespraeche & Probetag
 
-### 1. Mitarbeiter loeschen (Edge Function + AdminMitarbeiter.tsx)
+### Ziel
+Ein gemeinsames Notizfeld pro Branding auf den Seiten `/admin/bewerbungsgespraeche` und `/admin/probetag`, sichtbar fuer alle Nutzer (Admin, Kunde, Caller) die dem Branding zugewiesen sind. Notizen werden mit Timestamp und Email des Verfassers gespeichert.
 
-Da der User auch aus Supabase Auth geloescht werden soll, brauchen wir eine Edge Function mit `service_role_key` — das geht nicht vom Client.
+### Aenderungen
 
-**Neue Edge Function `delete-employee/index.ts`:**
-- Verifiziert dass der Aufrufer Admin ist (gleiche Logik wie create-caller-account)
-- Empfaengt `contractId` im Body
-- Laedt `user_id` aus `employment_contracts` fuer die gegebene contractId
-- Loescht den `employment_contracts` Eintrag (CASCADE loescht zugehoerige Daten)
-- Falls `user_id` vorhanden: loescht den Auth-User via `adminClient.auth.admin.deleteUser(userId)`
-- Loescht auch `user_roles` und `profiles` fuer den User
+**1. DB-Migration: Neue Tabelle `branding_notes`**
 
-**`supabase/config.toml`:** Eintrag `[functions.delete-employee]` mit `verify_jwt = false`
+```sql
+CREATE TABLE public.branding_notes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  branding_id uuid NOT NULL,
+  page_context text NOT NULL,  -- 'bewerbungsgespraeche' oder 'probetag'
+  content text NOT NULL,
+  author_email text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
-**`AdminMitarbeiter.tsx`:**
-- Neuer Trash2-Button neben Sperren-Button
-- AlertDialog Bestaetigung ("Mitarbeiter und Benutzerkonto endgueltig loeschen?")
-- Ruft `supabase.functions.invoke("delete-employee", { body: { contractId } })` auf
-- Query invalidieren nach Loeschung
+ALTER TABLE public.branding_notes ENABLE ROW LEVEL SECURITY;
 
-### 2. Termine loeschen (3 Dateien)
-- **AdminBewerbungsgespraeche.tsx**: Trash2-Button in Aktionen-Spalte, `interview_appointments` DELETE mit AlertDialog
-- **AdminProbetag.tsx**: Trash2-Button, `trial_day_appointments` DELETE
-- **AdminErsterArbeitstag.tsx**: Trash2-Button, `first_workday_appointments` DELETE
+-- Lesen: Admin, Kunde mit Branding-Zugang, Caller mit Branding-Zugang
+CREATE POLICY "Users can read branding_notes" ON public.branding_notes
+  FOR SELECT TO authenticated
+  USING (
+    has_role(auth.uid(), 'admin') OR
+    (is_kunde(auth.uid()) AND (NOT user_has_any_branding(auth.uid()) OR branding_id IN (SELECT user_branding_ids(auth.uid())))) OR
+    (is_caller(auth.uid()) AND branding_id IN (SELECT user_branding_ids(auth.uid())))
+  );
 
-### 3. Caller-Typ "Probetag" auch Zugriff auf 1. Arbeitstag
+-- Schreiben: gleiche Logik
+CREATE POLICY "Users can insert branding_notes" ON public.branding_notes
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    has_role(auth.uid(), 'admin') OR is_kunde(auth.uid()) OR is_caller(auth.uid())
+  );
 
-**`create-caller-account/index.ts` (Zeile 91-95):**
-- Bei `callerType === "probetag"` zwei `admin_permissions` Eintraege erstellen: `/admin/probetag` UND `/admin/erster-arbeitstag`
+-- Loeschen: nur eigene Notizen
+CREATE POLICY "Users can delete own branding_notes" ON public.branding_notes
+  FOR DELETE TO authenticated
+  USING (
+    author_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+  );
+```
 
-**`AdminCaller.tsx` (Zeile 56):**
-- callerType-Erkennung anpassen: pruefen ob User `/admin/probetag` ODER `/admin/erster-arbeitstag` hat → dann "probetag"
-- `typeLabel` (Zeile 146): "Probetage" → "Probetage & 1. Arbeitstag"
+**2. Neue Komponente `src/components/admin/BrandingNotes.tsx`**
+- Props: `brandingId: string`, `pageContext: "bewerbungsgespraeche" | "probetag"`
+- Query: Laedt Notizen aus `branding_notes` gefiltert nach `branding_id` und `page_context`, sortiert nach `created_at DESC`
+- Input: Textarea + "Hinzufuegen" Button
+- Beim Speichern: Email des aktuellen Users aus `auth.getUser()` holen, INSERT in `branding_notes`
+- Anzeige: Jede Notiz mit Zeitstempel und Email, optional Loeschen-Button fuer eigene Notizen
+- Platzierung: Unter dem Untertitel "Termine von heute und morgen", vor den View-Toggle-Buttons
 
-### 4. "Probetag erfolgreich" Email: Button zur /auth Seite
+**3. `AdminBewerbungsgespraeche.tsx` (Zeile 291)**
+- Nach dem `</motion.div>` Block die `<BrandingNotes>` Komponente einfuegen mit `pageContext="bewerbungsgespraeche"`
 
-**`AdminProbetag.tsx` (Zeile 95-108):**
-- `buildBrandingUrl` verwenden um korrekte Domain/Subdomain zu ermitteln
-- `button_text: "Jetzt anmelden"` und `button_url` mit `/auth` URL an sendEmail uebergeben
+**4. `AdminProbetag.tsx` (Zeile 150)**
+- Nach dem `</motion.div>` Block die `<BrandingNotes>` Komponente einfuegen mit `pageContext="probetag"`
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `supabase/functions/delete-employee/index.ts` | Neue Edge Function |
-| `supabase/config.toml` | Neuer Eintrag |
-| `AdminMitarbeiter.tsx` | Loeschen-Button + Dialog |
-| `AdminBewerbungsgespraeche.tsx` | Termin-Loeschen |
-| `AdminProbetag.tsx` | Termin-Loeschen + Email-Button |
-| `AdminErsterArbeitstag.tsx` | Termin-Loeschen |
-| `create-caller-account/index.ts` | Zwei Permissions bei Probetag |
-| `AdminCaller.tsx` | Badge-Label anpassen |
+| Migration | Neue Tabelle `branding_notes` mit RLS |
+| `src/components/admin/BrandingNotes.tsx` | Neue Komponente |
+| `AdminBewerbungsgespraeche.tsx` | BrandingNotes einbinden |
+| `AdminProbetag.tsx` | BrandingNotes einbinden |
 
