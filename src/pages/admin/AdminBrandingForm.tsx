@@ -157,6 +157,12 @@ export default function AdminBrandingForm() {
         spoof_credits: (branding as any).spoof_credits?.toString() || "",
         email_logo_enabled: (branding as any).email_logo_enabled ?? false,
         email_logo_url: (branding as any).email_logo_url || "",
+        project_manager_name: (branding as any).project_manager_name || "",
+        project_manager_title: (branding as any).project_manager_title || "",
+        project_manager_image_url: (branding as any).project_manager_image_url || "",
+        recruiter_name: (branding as any).recruiter_name || "",
+        recruiter_title: (branding as any).recruiter_title || "",
+        recruiter_image_url: (branding as any).recruiter_image_url || "",
       });
     }
   }, [branding]);
