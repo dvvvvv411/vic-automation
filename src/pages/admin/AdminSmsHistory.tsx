@@ -7,11 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquareText, Send, BarChart3, Building2 } from "lucide-react";
+import { MessageSquareText, Send, BarChart3, Building2, CreditCard } from "lucide-react";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
 const MONTHS_BACK = 12;
+const PAGE_SIZE = 10;
 
 function getMonthOptions() {
   const options = [];
@@ -28,6 +30,8 @@ function getMonthOptions() {
 export default function AdminSmsHistory() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
   const { activeBrandingId, ready } = useBrandingFilter();
+  const [smsLimit, setSmsLimit] = useState(PAGE_SIZE);
+  const [spoofLimit, setSpoofLimit] = useState(PAGE_SIZE);
 
   const monthStart = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
@@ -38,7 +42,6 @@ export default function AdminSmsHistory() {
   const fromISO = monthStart.toISOString();
   const toISO = monthEnd.toISOString();
 
-  // Fetch profiles for mapping user IDs to names/emails
   const { data: profiles } = useQuery({
     queryKey: ["sms-history-profiles", activeBrandingId],
     enabled: ready,
@@ -48,17 +51,15 @@ export default function AdminSmsHistory() {
     },
   });
 
-  // Fetch brandings for mapping branding IDs to company names
   const { data: brandings } = useQuery({
     queryKey: ["sms-history-brandings", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      const { data } = await supabase.from("brandings").select("id, company_name");
+      const { data } = await supabase.from("brandings").select("id, company_name, spoof_credits");
       return data ?? [];
     },
   });
 
-  // Fetch sms_logs (seven.io)
   const { data: smsLogs, isLoading: smsLoading } = useQuery({
     queryKey: ["sms-history-logs", selectedMonth, activeBrandingId],
     enabled: ready && !!activeBrandingId,
@@ -75,7 +76,6 @@ export default function AdminSmsHistory() {
     },
   });
 
-  // Fetch sms_spoof_logs
   const { data: spoofLogs, isLoading: spoofLoading } = useQuery({
     queryKey: ["sms-history-spoof", selectedMonth, activeBrandingId],
     enabled: ready && !!activeBrandingId,
@@ -117,12 +117,17 @@ export default function AdminSmsHistory() {
     return brandingMap.get(brandingId) || brandingId.slice(0, 8) + "…";
   };
 
-  // Stats
+  // Get spoof credits for active branding
+  const activeBrandingCredits = useMemo(() => {
+    if (!activeBrandingId || !brandings) return undefined;
+    const b = brandings.find((b: any) => b.id === activeBrandingId);
+    return b ? (b as any).spoof_credits : undefined;
+  }, [brandings, activeBrandingId]);
+
   const smsCount = smsLogs?.length ?? 0;
   const spoofCount = spoofLogs?.length ?? 0;
   const totalCount = smsCount + spoofCount;
 
-  // Per-branding breakdown for seven.io
   const perBranding = useMemo(() => {
     const map = new Map<string, number>();
     smsLogs?.forEach((l: any) => {
@@ -134,7 +139,6 @@ export default function AdminSmsHistory() {
       .sort((a, b) => b.count - a.count);
   }, [smsLogs]);
 
-  // Per-user breakdown for spoof
   const perSpoofBranding = useMemo(() => {
     const map = new Map<string, number>();
     spoofLogs?.forEach((l: any) => {
@@ -147,6 +151,9 @@ export default function AdminSmsHistory() {
   }, [spoofLogs]);
 
   const monthOptions = useMemo(getMonthOptions, []);
+
+  const visibleSmsLogs = smsLogs?.slice(0, smsLimit) ?? [];
+  const visibleSpoofLogs = spoofLogs?.slice(0, spoofLimit) ?? [];
 
   return (
     <div className="space-y-6">
@@ -165,7 +172,7 @@ export default function AdminSmsHistory() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Gesamt SMS</CardTitle>
@@ -193,11 +200,21 @@ export default function AdminSmsHistory() {
             <div className="text-2xl font-bold">{spoofCount}</div>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Spoof Credits</CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${activeBrandingCredits !== null && activeBrandingCredits !== undefined && activeBrandingCredits < 0 ? "text-destructive" : ""}`}>
+              {activeBrandingCredits === null || activeBrandingCredits === undefined ? "Unbegrenzt" : activeBrandingCredits}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Breakdowns */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Per-Branding for seven.io */}
         {perBranding.length > 0 && (
           <Card>
             <CardHeader>
@@ -228,7 +245,6 @@ export default function AdminSmsHistory() {
           </Card>
         )}
 
-        {/* Per-User for Spoof */}
         {perSpoofBranding.length > 0 && (
           <Card>
             <CardHeader>
@@ -286,7 +302,7 @@ export default function AdminSmsHistory() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {smsLogs.map((log: any) => (
+                    {visibleSmsLogs.map((log: any) => (
                       <TableRow key={log.id}>
                         <TableCell className="whitespace-nowrap text-xs">
                           {format(new Date(log.created_at), "dd.MM.yy HH:mm")}
@@ -312,6 +328,13 @@ export default function AdminSmsHistory() {
                     ))}
                   </TableBody>
                 </Table>
+                {smsCount > smsLimit && (
+                  <div className="flex justify-center py-4">
+                    <Button variant="outline" size="sm" onClick={() => setSmsLimit((l) => l + PAGE_SIZE)}>
+                      Mehr anzeigen ({smsCount - smsLimit} weitere)
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -336,7 +359,7 @@ export default function AdminSmsHistory() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {spoofLogs.map((log: any) => (
+                    {visibleSpoofLogs.map((log: any) => (
                       <TableRow key={log.id}>
                         <TableCell className="whitespace-nowrap text-xs">
                           {format(new Date(log.created_at), "dd.MM.yy HH:mm")}
@@ -352,6 +375,13 @@ export default function AdminSmsHistory() {
                     ))}
                   </TableBody>
                 </Table>
+                {spoofCount > spoofLimit && (
+                  <div className="flex justify-center py-4">
+                    <Button variant="outline" size="sm" onClick={() => setSpoofLimit((l) => l + PAGE_SIZE)}>
+                      Mehr anzeigen ({spoofCount - spoofLimit} weitere)
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ) : (
