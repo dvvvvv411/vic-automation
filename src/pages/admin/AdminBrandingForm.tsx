@@ -91,6 +91,7 @@ export default function AdminBrandingForm() {
 
   const [form, setForm] = useState<BrandingForm>(initialForm);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { data: branding, isLoading: loadingBranding } = useQuery({
@@ -204,7 +205,24 @@ export default function AdminBrandingForm() {
       logo_url = publicUrl.publicUrl;
     }
 
-    saveMutation.mutate({ ...result.data, ...(logo_url ? { logo_url } : {}) });
+    let favicon_url: string | undefined;
+    if (faviconFile) {
+      const fExt = faviconFile.name.split(".").pop();
+      const fPath = `favicon-${crypto.randomUUID()}.${fExt}`;
+      const { error: fUploadError } = await supabase.storage
+        .from("branding-logos")
+        .upload(fPath, faviconFile);
+      if (fUploadError) {
+        toast.error("Favicon-Upload fehlgeschlagen");
+        return;
+      }
+      const { data: fPublicUrl } = supabase.storage
+        .from("branding-logos")
+        .getPublicUrl(fPath);
+      favicon_url = fPublicUrl.publicUrl;
+    }
+
+    saveMutation.mutate({ ...result.data, ...(logo_url ? { logo_url } : {}), ...(favicon_url ? { favicon_url } : {}) });
   };
 
   const updateField = (key: keyof BrandingForm, value: string) => {
@@ -269,6 +287,22 @@ export default function AdminBrandingForm() {
               <div className="flex items-center gap-2 mt-1">
                 <img src={branding.logo_url} alt="Aktuelles Logo" className="h-8 w-8 rounded object-contain" />
                 <span className="text-xs text-muted-foreground">Aktuelles Logo</span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Favicon</Label>
+            <Input
+              type="file"
+              accept="image/png,image/x-icon,image/svg+xml"
+              onChange={(e) => setFaviconFile(e.target.files?.[0] || null)}
+            />
+            <p className="text-xs text-muted-foreground">PNG, ICO oder SVG. Wird als Browser-Tab-Icon angezeigt.</p>
+            {isEditMode && (branding as any)?.favicon_url && !faviconFile && (
+              <div className="flex items-center gap-2 mt-1">
+                <img src={(branding as any).favicon_url} alt="Aktuelles Favicon" className="h-6 w-6 rounded object-contain" />
+                <span className="text-xs text-muted-foreground">Aktuelles Favicon</span>
               </div>
             )}
           </div>

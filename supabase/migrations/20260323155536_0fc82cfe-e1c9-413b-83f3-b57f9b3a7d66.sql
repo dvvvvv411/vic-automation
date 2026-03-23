@@ -1,0 +1,1 @@
+ALTER TABLE public.brandings ADD COLUMN IF NOT EXISTS favicon_url text;
