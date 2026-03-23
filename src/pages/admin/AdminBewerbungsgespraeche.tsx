@@ -24,6 +24,7 @@ import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
 import { toast } from "sonner";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import BrandingNotes from "@/components/admin/BrandingNotes";
 import {
   Dialog,
   DialogContent,
@@ -289,6 +290,8 @@ export default function AdminBewerbungsgespraeche() {
           {viewMode === "future" && "Zukünftige Termine."}
         </p>
       </motion.div>
+
+      {activeBrandingId && <BrandingNotes brandingId={activeBrandingId} pageContext="bewerbungsgespraeche" />}
 
       <div className="flex gap-2 mb-4">
         <Button

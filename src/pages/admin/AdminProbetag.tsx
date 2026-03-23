@@ -20,6 +20,7 @@ import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
 import { toast } from "sonner";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import BrandingNotes from "@/components/admin/BrandingNotes";
 
 const PAGE_SIZE = 20;
 type ViewMode = "default" | "past" | "future";
@@ -148,6 +149,8 @@ export default function AdminProbetag() {
           {viewMode === "future" && "Zukünftige Termine."}
         </p>
       </motion.div>
+
+      {activeBrandingId && <BrandingNotes brandingId={activeBrandingId} pageContext="probetag" />}
 
       <div className="flex gap-2 mb-4">
         <Button variant={viewMode === "past" ? "default" : "outline"} size="sm" onClick={() => toggleView("past")}>
