@@ -378,6 +378,17 @@ export default function AdminBrandingForm() {
           </div>
 
           <div className="space-y-2">
+            <Label>Spoof Credits</Label>
+            <Input
+              type="number"
+              value={form.spoof_credits}
+              onChange={(e) => updateField("spoof_credits", e.target.value)}
+              placeholder="Leer = Unbegrenzt"
+            />
+            <p className="text-xs text-muted-foreground">Anzahl verbleibender Spoof-SMS Credits. Leer lassen für unbegrenzt.</p>
+          </div>
+
+          <div className="space-y-2">
             <Label>Brandingfarbe</Label>
             <div className="flex items-center gap-3">
               <input
