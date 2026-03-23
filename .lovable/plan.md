@@ -1,29 +1,19 @@
 
 
-## Problem: Favicon laedt nicht auf dashboard.efficient-flow.solutions
+## Plan: Email statt UUID bei Kunden anzeigen
 
-### Ursache
+### Aenderung
 
-Das Inline-Script in `index.html` entfernt nur den `web.`-Prefix vom Hostname. Wenn die Seite ueber `dashboard.efficient-flow.solutions` aufgerufen wird, bleibt der Hostname `dashboard.efficient-flow.solutions` — und die Supabase-Query `domain=eq.dashboard.efficient-flow.solutions` findet kein Branding (gespeichert als `efficient-flow.solutions`).
+**`AdminKunden.tsx`** — In der Query (Zeile 37-46):
 
-In `Auth.tsx` wird das korrekt geloest: bei 3+ Domain-Teilen wird der erste Teil entfernt (`dashboard.efficient-flow.solutions` → `efficient-flow.solutions`).
+- `profiles` Select erweitern: `"id, full_name, display_name, email"`
+- Fallback-Kette aendern: `profile?.email || profile?.display_name || profile?.full_name || uid`
 
-### Fix
-
-**`index.html`** — Domain-Logik anpassen:
-
-Statt `h.replace(/^web\./, '')` die gleiche Logik wie Auth.tsx verwenden:
-
-```javascript
-var parts = h.split(".");
-var domain = parts.length > 2 ? parts.slice(-2).join(".") : h;
-```
-
-Das deckt `web.`, `dashboard.`, und alle anderen Subdomains ab.
+So wird die Account-Email als Name angezeigt wenn kein Display-Name gesetzt ist, statt der UUID.
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `index.html` | Domain-Aufloesung: erstes Subdomain generisch entfernen statt nur `web.` |
+| `AdminKunden.tsx` | Email aus profiles laden und als primaeren Anzeigenamen verwenden |
 
