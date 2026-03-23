@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { AlertCircle, Briefcase, Check, CheckCircle2, Pencil, Phone, User, CalendarDays, Clock } from "lucide-react";
+import { AlertCircle, Briefcase, Check, CheckCircle2, Pencil, Phone, User, CalendarDays, Clock, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isBefore, startOfDay, isToday } from "date-fns";
@@ -47,6 +47,7 @@ export default function Probetag() {
   const [bookedTime, setBookedTime] = useState<string>("");
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [editedPhone, setEditedPhone] = useState("");
+  const [isRebooking, setIsRebooking] = useState(false);
 
   const { data: application, isLoading, error } = useQuery({
     queryKey: ["application-probetag", id],
@@ -60,7 +61,7 @@ export default function Probetag() {
       if (data) {
         const { data: trialAppt } = await supabase
           .from("trial_day_appointments" as any)
-          .select("appointment_date, appointment_time")
+          .select("id, appointment_date, appointment_time")
           .eq("application_id", id!)
           .maybeSingle();
         (data as any).trial_day_appointments = trialAppt;
@@ -72,7 +73,6 @@ export default function Probetag() {
 
   const brandingId = application?.branding_id;
 
-  // Load branding-specific trial settings
   const { data: scheduleSettings } = useQuery({
     queryKey: ["branding-schedule-settings-public", brandingId, "trial"],
     enabled: !!brandingId,
@@ -88,7 +88,6 @@ export default function Probetag() {
     },
   });
 
-  // Load booked slots from BOTH trial_day AND first_workday (shared schedule)
   const { data: bookedSlots } = useQuery({
     queryKey: ["trial-day-booked-slots", brandingId],
     enabled: !!brandingId,
@@ -110,7 +109,6 @@ export default function Probetag() {
     },
   });
 
-  // Load blocked slots from BOTH trial_day AND first_workday
   const { data: blockedSlotsData } = useQuery({
     queryKey: ["trial-day-blocked-slots-public", brandingId],
     enabled: !!brandingId,
@@ -135,7 +133,7 @@ export default function Probetag() {
 
   const TIME_SLOTS = useMemo(() => {
     if (!selectedDate) return generateTimeSlots(scheduleStart, scheduleEnd, scheduleInterval);
-    const dayOfWeek = selectedDate.getDay(); // 0=Sun, 6=Sat
+    const dayOfWeek = selectedDate.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const effectiveStart = isWeekend && weekendStart ? weekendStart : scheduleStart;
     const effectiveEnd = isWeekend && weekendEnd ? weekendEnd : scheduleEnd;
@@ -158,12 +156,13 @@ export default function Probetag() {
 
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate) return TIME_SLOTS;
-    if (!isToday(selectedDate)) return TIME_SLOTS;
     const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const cutoff = new Date(now.getTime() + 12 * 60 * 60 * 1000);
     return TIME_SLOTS.filter((time) => {
       const [h, m] = time.split(":").map(Number);
-      return h * 60 + m > currentMinutes;
+      const slotDate = new Date(selectedDate);
+      slotDate.setHours(h, m, 0, 0);
+      return slotDate > cutoff;
     });
   }, [selectedDate, TIME_SLOTS]);
 
@@ -183,6 +182,16 @@ export default function Probetag() {
     mutationFn: async () => {
       const dateStr = format(selectedDate!, "yyyy-MM-dd");
       const timeStr = selectedTime! + ":00";
+
+      // If rebooking, delete old appointment first
+      if (existingAppointment?.id) {
+        const { error: delError } = await supabase
+          .from("trial_day_appointments" as any)
+          .delete()
+          .eq("id", existingAppointment.id);
+        if (delError) throw delError;
+      }
+
       const { data: appData } = await supabase
         .from("applications")
         .select("created_by")
@@ -195,9 +204,9 @@ export default function Probetag() {
 
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
-      await sendTelegram("probetag_gebucht", `🏢 Probetag gebucht\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`, application.branding_id);
+      const telegramPrefix = isRebooking ? "🏢 Probetag umgebucht" : "🏢 Probetag gebucht";
+      await sendTelegram("probetag_gebucht", `${telegramPrefix}\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`, application.branding_id);
 
-      // Email confirmation
       if (application?.email) {
         await sendEmail({
           to: application.email,
@@ -206,7 +215,7 @@ export default function Probetag() {
           body_title: "Terminbestätigung – Probetag",
           body_lines: [
             `Hallo ${application.first_name},`,
-            `Ihr Probetag wurde erfolgreich gebucht.`,
+            `Ihr Probetag wurde erfolgreich ${isRebooking ? "umgebucht" : "gebucht"}.`,
             `Datum: ${formattedDateLong}`,
             `Uhrzeit: ${selectedTime} Uhr`,
             `Wir freuen uns auf Sie!`,
@@ -216,7 +225,6 @@ export default function Probetag() {
         });
       }
 
-      // SMS confirmation via template lookup
       if (application?.phone) {
         const { data: tpl } = await supabase
           .from("sms_templates" as any)
@@ -250,22 +258,17 @@ export default function Probetag() {
       setBookedTime(selectedTime!);
       setBooked(true);
       setConfirmOpen(false);
+      setIsRebooking(false);
       queryClient.invalidateQueries({ queryKey: ["application-probetag", id] });
       queryClient.invalidateQueries({ queryKey: ["trial-day-booked-slots"] });
     },
     onError: () => setConfirmOpen(false),
   });
 
-  // --- Error state ---
   if (!isLoading && (error || !application)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4 }}
-          className="max-w-md w-full"
-        >
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} className="max-w-md w-full">
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden">
             <div className="h-1.5" style={{ background: `linear-gradient(135deg, #EF4444, #F97316)` }} />
             <div className="p-8 text-center">
@@ -273,9 +276,7 @@ export default function Probetag() {
                 <AlertCircle className="h-7 w-7 text-red-500" />
               </div>
               <h2 className="text-lg font-semibold mb-2">Ungültiger Link</h2>
-              <p className="text-sm text-muted-foreground">
-                Dieser Link ist ungültig oder nicht mehr aktiv.
-              </p>
+              <p className="text-sm text-muted-foreground">Dieser Link ist ungültig oder nicht mehr aktiv.</p>
             </div>
           </div>
         </motion.div>
@@ -283,7 +284,6 @@ export default function Probetag() {
     );
   }
 
-  // --- Loading ---
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-start justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8">
@@ -309,8 +309,7 @@ export default function Probetag() {
     );
   }
 
-  // --- Confirmation / Already booked ---
-  if (existingAppointment || booked) {
+  if ((existingAppointment && !isRebooking) || booked) {
     const appDate = booked
       ? bookedDate
       : format(new Date(existingAppointment.appointment_date), "dd. MMMM yyyy", { locale: de });
@@ -320,51 +319,25 @@ export default function Probetag() {
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="max-w-lg w-full"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="max-w-lg w-full">
           {logoUrl && (
-            <motion.img
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              src={logoUrl}
-              alt={companyName || "Logo"}
-              className="h-12 mx-auto object-contain mb-8 drop-shadow-sm"
-            />
+            <motion.img initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} src={logoUrl} alt={companyName || "Logo"} className="h-12 mx-auto object-contain mb-8 drop-shadow-sm" />
           )}
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden">
             <div className="h-1.5" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
             <div className="p-8 space-y-6">
               <div className="text-center space-y-4">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.3 }}
-                  className="h-16 w-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg"
-                  style={{ backgroundColor: `${brandColor}15` }}
-                >
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.3 }} className="h-16 w-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg" style={{ backgroundColor: `${brandColor}15` }}>
                   <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5, type: "spring" }}>
                     <CheckCircle2 className="h-9 w-9" style={{ color: brandColor }} />
                   </motion.div>
                 </motion.div>
                 <div>
                   <h2 className="text-xl font-semibold">Probetag bestätigt</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {applicantName}, Ihr Probetag wurde erfolgreich gebucht.
-                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">{applicantName}, Ihr Probetag wurde erfolgreich gebucht.</p>
                 </div>
               </div>
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.6 }}
-                className="rounded-xl bg-slate-50/80 p-4 space-y-2 border-l-4"
-                style={{ borderLeftColor: brandColor }}
-              >
+              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }} className="rounded-xl bg-slate-50/80 p-4 space-y-2 border-l-4" style={{ borderLeftColor: brandColor }}>
                 <div className="flex items-center gap-2.5">
                   <CalendarDays className="h-4 w-4 text-muted-foreground" />
                   <p className="font-medium text-sm">{appDate}</p>
@@ -374,22 +347,30 @@ export default function Probetag() {
                   <p className="font-medium text-sm">{appTime} Uhr</p>
                 </div>
               </motion.div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
-                className="flex items-start gap-3 bg-slate-50/80 rounded-xl p-4"
-              >
-                <div
-                  className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${brandColor}15` }}
-                >
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="flex items-start gap-3 bg-slate-50/80 rounded-xl p-4">
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${brandColor}15` }}>
                   <Phone className="h-4 w-4" style={{ color: brandColor }} />
                 </div>
                 <p className="text-sm text-muted-foreground pt-1">
                   Bitte seien Sie unter <span className="font-semibold text-foreground">{applicantPhone}</span> erreichbar. Wir melden uns bei Ihnen.
                 </p>
               </motion.div>
+              {!booked && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-xl gap-2"
+                    onClick={() => {
+                      setIsRebooking(true);
+                      setSelectedDate(undefined);
+                      setSelectedTime(null);
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Termin umbuchen
+                  </Button>
+                </motion.div>
+              )}
             </div>
           </div>
           {companyName && (
@@ -404,24 +385,33 @@ export default function Probetag() {
     );
   }
 
-  // --- Booking page ---
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8 flex items-start justify-center">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-2xl w-full mt-8 md:mt-16"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="max-w-2xl w-full mt-8 md:mt-16">
         {logoUrl && (
-          <motion.img
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            src={logoUrl}
-            alt={companyName || "Logo"}
-            className="h-12 mx-auto object-contain mb-8 drop-shadow-sm"
-          />
+          <motion.img initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} src={logoUrl} alt={companyName || "Logo"} className="h-12 mx-auto object-contain mb-8 drop-shadow-sm" />
+        )}
+
+        {isRebooking && existingAppointment && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden mb-6">
+            <div className="h-1.5" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
+            <div className="p-6">
+              <p className="text-sm font-medium mb-3">Aktueller Termin:</p>
+              <div className="rounded-xl bg-slate-50/80 p-4 space-y-2 border-l-4" style={{ borderLeftColor: brandColor }}>
+                <div className="flex items-center gap-2.5">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <p className="font-medium text-sm">{format(new Date(existingAppointment.appointment_date), "dd. MMMM yyyy", { locale: de })}</p>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <p className="font-medium text-sm">{existingAppointment.appointment_time?.slice(0, 5)} Uhr</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" className="mt-3 text-muted-foreground" onClick={() => setIsRebooking(false)}>
+                Abbrechen
+              </Button>
+            </div>
+          </div>
         )}
 
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden">
@@ -429,60 +419,39 @@ export default function Probetag() {
 
           <div className="p-6 pb-0 space-y-4">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Probetag buchen</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {isRebooking ? "Probetag umbuchen" : "Probetag buchen"}
+              </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Wählen Sie einen passenden Termin für Ihren Probetag
-                {companyName ? ` bei ${companyName}` : ""}.
+                {isRebooking
+                  ? "Wählen Sie einen neuen Termin für Ihren Probetag."
+                  : `Wählen Sie einen passenden Termin für Ihren Probetag${companyName ? ` bei ${companyName}` : ""}.`}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 border font-medium text-foreground"
-                style={{ backgroundColor: `${brandColor}08`, borderColor: `${brandColor}25` }}
-              >
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 border font-medium text-foreground" style={{ backgroundColor: `${brandColor}08`, borderColor: `${brandColor}25` }}>
                 <User className="h-3.5 w-3.5" style={{ color: brandColor }} />
                 {applicantName}
               </span>
               {applicantPhone && (
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 border"
-                  style={{ backgroundColor: `${brandColor}08`, borderColor: `${brandColor}25` }}
-                >
+                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 border" style={{ backgroundColor: `${brandColor}08`, borderColor: `${brandColor}25` }}>
                   <Phone className="h-3.5 w-3.5" style={{ color: brandColor }} />
                   {isEditingPhone ? (
                     <>
-                      <Input
-                        type="tel"
-                        value={editedPhone}
-                        onChange={(e) => setEditedPhone(e.target.value)}
-                        className="h-7 w-40 text-sm"
-                        autoFocus
-                      />
-                      <button
-                        onClick={async () => {
-                          if (!editedPhone.trim()) return;
-                          await supabase.rpc("update_application_phone", {
-                            _application_id: id!,
-                            _phone: editedPhone.trim(),
-                          });
-                          queryClient.invalidateQueries({ queryKey: ["application-probetag", id] });
-                          setIsEditingPhone(false);
-                        }}
-                        className="hover:text-foreground transition-colors"
-                      >
+                      <Input type="tel" value={editedPhone} onChange={(e) => setEditedPhone(e.target.value)} className="h-7 w-40 text-sm" autoFocus />
+                      <button onClick={async () => {
+                        if (!editedPhone.trim()) return;
+                        await supabase.rpc("update_application_phone", { _application_id: id!, _phone: editedPhone.trim() });
+                        queryClient.invalidateQueries({ queryKey: ["application-probetag", id] });
+                        setIsEditingPhone(false);
+                      }} className="hover:text-foreground transition-colors">
                         <Check className="h-3.5 w-3.5" />
                       </button>
                     </>
                   ) : (
                     <>
                       <span className="text-muted-foreground">{applicantPhone}</span>
-                      <button
-                        onClick={() => {
-                          setEditedPhone(applicantPhone || "");
-                          setIsEditingPhone(true);
-                        }}
-                        className="hover:text-foreground transition-colors text-muted-foreground"
-                      >
+                      <button onClick={() => { setEditedPhone(applicantPhone || ""); setIsEditingPhone(true); }} className="hover:text-foreground transition-colors text-muted-foreground">
                         <Pencil className="h-3 w-3" />
                       </button>
                     </>
@@ -490,10 +459,7 @@ export default function Probetag() {
                 </span>
               )}
               {employmentType && (
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 border text-muted-foreground"
-                  style={{ backgroundColor: `${brandColor}08`, borderColor: `${brandColor}25` }}
-                >
+                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 border text-muted-foreground" style={{ backgroundColor: `${brandColor}08`, borderColor: `${brandColor}25` }}>
                   <Briefcase className="h-3.5 w-3.5" style={{ color: brandColor }} />
                   {employmentLabels[employmentType] || employmentType}
                 </span>
@@ -512,10 +478,7 @@ export default function Probetag() {
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={(d) => {
-                  setSelectedDate(d);
-                  setSelectedTime(null);
-                }}
+                onSelect={(d) => { setSelectedDate(d); setSelectedTime(null); }}
                 disabled={(date) => {
                   const dow = date.getDay();
                   const isoDay = dow === 0 ? 7 : dow;
@@ -541,10 +504,7 @@ export default function Probetag() {
                   <p className="text-sm text-muted-foreground">Bitte wählen Sie zuerst ein Datum.</p>
                 </div>
               ) : (
-                <div
-                  className="brand-scrollbar grid grid-cols-2 gap-1.5 max-h-[340px] overflow-y-auto pr-1"
-                  style={{ scrollbarWidth: 'thin', scrollbarColor: `${brandColor}66 transparent` }}
-                >
+                <div className="brand-scrollbar grid grid-cols-2 gap-1.5 max-h-[340px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: `${brandColor}66 transparent` }}>
                   <style>{`
                     .brand-scrollbar::-webkit-scrollbar { width: 5px; }
                     .brand-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -585,23 +545,14 @@ export default function Probetag() {
 
           <AnimatePresence>
             {selectedDate && selectedTime && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.3 }}
-                className="p-6 pt-0"
-              >
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.3 }} className="p-6 pt-0">
                 <div className="border-t border-slate-200/60 pt-5">
                   <Button
                     className="w-full text-white rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all duration-200 h-12 text-sm font-semibold"
-                    style={{
-                      background: `linear-gradient(135deg, ${brandColor}, ${brandColor}DD)`,
-                      boxShadow: `0 8px 24px -6px ${brandColor}40`,
-                    }}
+                    style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}DD)`, boxShadow: `0 8px 24px -6px ${brandColor}40` }}
                     onClick={() => setConfirmOpen(true)}
                   >
-                    Probetag buchen: {format(selectedDate, "dd.MM.yyyy")} um {selectedTime} Uhr
+                    {isRebooking ? "Probetag umbuchen" : "Probetag buchen"}: {format(selectedDate, "dd.MM.yyyy")} um {selectedTime} Uhr
                   </Button>
                 </div>
               </motion.div>
@@ -621,10 +572,14 @@ export default function Probetag() {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-md border-0 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Probetag bestätigen</DialogTitle>
+            <DialogTitle>{isRebooking ? "Probetag umbuchen" : "Probetag bestätigen"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">Möchten Sie folgenden Probetag verbindlich buchen?</p>
+            <p className="text-sm text-muted-foreground">
+              {isRebooking
+                ? "Möchten Sie Ihren Probetag auf folgenden Zeitpunkt umbuchen?"
+                : "Möchten Sie folgenden Probetag verbindlich buchen?"}
+            </p>
             <div className="rounded-xl bg-slate-50/80 p-4 space-y-2 border-l-4" style={{ borderLeftColor: brandColor }}>
               <div className="flex items-center gap-2.5">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
