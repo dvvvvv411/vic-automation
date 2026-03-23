@@ -116,6 +116,11 @@ Deno.serve(async (req) => {
             created_by: callerUserId,
             branding_id: brandingId || null,
           });
+
+          // Decrement spoof_credits atomically (only if spoof_credits IS NOT NULL)
+          if (brandingId) {
+            await sb.rpc("decrement_spoof_credits", { _branding_id: brandingId });
+          }
         } catch (logErr) {
           console.error("Failed to log SMS:", logErr);
         }

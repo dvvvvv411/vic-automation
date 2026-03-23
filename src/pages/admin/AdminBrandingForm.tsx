@@ -43,6 +43,7 @@ const brandingSchema = z.object({
   estimated_salary_minijob: z.string().optional(),
   estimated_salary_teilzeit: z.string().optional(),
   estimated_salary_vollzeit: z.string().optional(),
+  spoof_credits: z.string().optional(),
   email_logo_enabled: z.boolean(),
   email_logo_url: z.string().max(500).optional(),
 });
@@ -79,6 +80,7 @@ const initialForm: BrandingForm = {
   estimated_salary_minijob: "",
   estimated_salary_teilzeit: "",
   estimated_salary_vollzeit: "",
+  spoof_credits: "",
   email_logo_enabled: false,
   email_logo_url: "",
 };
@@ -140,6 +142,7 @@ export default function AdminBrandingForm() {
         estimated_salary_minijob: (branding as any).estimated_salary_minijob?.toString() || "",
         estimated_salary_teilzeit: (branding as any).estimated_salary_teilzeit?.toString() || "",
         estimated_salary_vollzeit: (branding as any).estimated_salary_vollzeit?.toString() || "",
+        spoof_credits: (branding as any).spoof_credits?.toString() || "",
         email_logo_enabled: (branding as any).email_logo_enabled ?? false,
         email_logo_url: (branding as any).email_logo_url || "",
       });
@@ -149,7 +152,7 @@ export default function AdminBrandingForm() {
   const saveMutation = useMutation({
     mutationFn: async (data: BrandingForm & { logo_url?: string }) => {
       const cleaned: Record<string, any> = {};
-      const numericFields = ["salary_minijob", "salary_teilzeit", "salary_vollzeit", "hourly_rate_minijob", "hourly_rate_teilzeit", "hourly_rate_vollzeit", "estimated_salary_minijob", "estimated_salary_teilzeit", "estimated_salary_vollzeit"];
+      const numericFields = ["salary_minijob", "salary_teilzeit", "salary_vollzeit", "hourly_rate_minijob", "hourly_rate_teilzeit", "hourly_rate_vollzeit", "estimated_salary_minijob", "estimated_salary_teilzeit", "estimated_salary_vollzeit", "spoof_credits"];
       Object.entries(data).forEach(([key, value]) => {
         if (numericFields.includes(key)) {
           cleaned[key] = value ? parseFloat(value as string) : null;
@@ -372,6 +375,17 @@ export default function AdminBrandingForm() {
               <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="info@example.com" />
               {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Spoof Credits</Label>
+            <Input
+              type="number"
+              value={form.spoof_credits}
+              onChange={(e) => updateField("spoof_credits", e.target.value)}
+              placeholder="Leer = Unbegrenzt"
+            />
+            <p className="text-xs text-muted-foreground">Anzahl verbleibender Spoof-SMS Credits. Leer lassen für unbegrenzt.</p>
           </div>
 
           <div className="space-y-2">
