@@ -557,6 +557,64 @@ export default function AdminBrandingForm() {
         </CardContent>
       </Card>
 
+      {/* Projektleiter */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Projektleiter</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Bild</Label>
+            <Input type="file" accept="image/*" onChange={(e) => setPmImageFile(e.target.files?.[0] || null)} />
+            {(form.project_manager_image_url || pmImageFile) && !pmImageFile && (
+              <div className="flex items-center gap-2 mt-1">
+                <img src={form.project_manager_image_url!} alt="Projektleiter" className="h-10 w-10 rounded-full object-cover" />
+                <span className="text-xs text-muted-foreground">Aktuelles Bild</span>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input value={form.project_manager_name} onChange={(e) => updateField("project_manager_name", e.target.value)} placeholder="Max Mustermann" />
+            </div>
+            <div className="space-y-2">
+              <Label>Jobtitel</Label>
+              <Input value={form.project_manager_title} onChange={(e) => updateField("project_manager_title", e.target.value)} placeholder="Projektleiter" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recruiter */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Recruiter</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Bild</Label>
+            <Input type="file" accept="image/*" onChange={(e) => setRecruiterImageFile(e.target.files?.[0] || null)} />
+            {(form.recruiter_image_url || recruiterImageFile) && !recruiterImageFile && (
+              <div className="flex items-center gap-2 mt-1">
+                <img src={form.recruiter_image_url!} alt="Recruiter" className="h-10 w-10 rounded-full object-cover" />
+                <span className="text-xs text-muted-foreground">Aktuelles Bild</span>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input value={form.recruiter_name} onChange={(e) => updateField("recruiter_name", e.target.value)} placeholder="Lisa Muster" />
+            </div>
+            <div className="space-y-2">
+              <Label>Jobtitel</Label>
+              <Input value={form.recruiter_title} onChange={(e) => updateField("recruiter_title", e.target.value)} placeholder="Recruiterin" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Vergütungsmodell */}
       <Card>
         <CardHeader>

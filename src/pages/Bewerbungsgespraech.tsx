@@ -442,6 +442,16 @@ export default function Bewerbungsgespraech() {
           />
         )}
 
+        {application?.brandings?.recruiter_name && (
+          <ContactCard
+            name={(application.brandings as any).recruiter_name}
+            title={(application.brandings as any).recruiter_title}
+            imageUrl={(application.brandings as any).recruiter_image_url}
+            brandColor={brandColor}
+            label="Ihre Recruiterin"
+          />
+        )}
+
         {/* Show existing appointment card when rebooking */}
         {isRebooking && existingAppointment && (
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden mb-6">

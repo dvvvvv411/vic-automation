@@ -392,6 +392,16 @@ export default function Probetag() {
           <motion.img initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} src={logoUrl} alt={companyName || "Logo"} className="h-12 mx-auto object-contain mb-8 drop-shadow-sm" />
         )}
 
+        {application?.brandings?.project_manager_name && (
+          <ContactCard
+            name={(application.brandings as any).project_manager_name}
+            title={(application.brandings as any).project_manager_title}
+            imageUrl={(application.brandings as any).project_manager_image_url}
+            brandColor={brandColor}
+            label="Ihr Ansprechpartner"
+          />
+        )}
+
         {isRebooking && existingAppointment && (
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden mb-6">
             <div className="h-1.5" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
