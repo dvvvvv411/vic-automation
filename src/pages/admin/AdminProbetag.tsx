@@ -149,6 +149,8 @@ export default function AdminProbetag() {
         </p>
       </motion.div>
 
+      {activeBrandingId && <BrandingNotes brandingId={activeBrandingId} pageContext="probetag" />}
+
       <div className="flex gap-2 mb-4">
         <Button variant={viewMode === "past" ? "default" : "outline"} size="sm" onClick={() => toggleView("past")}>
           <History className="h-4 w-4 mr-1" /> Vergangene Termine
