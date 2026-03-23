@@ -36,7 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, FileText, Trash2, Check, X, Copy, CalendarCheck, ExternalLink, Upload, CheckCheck, Loader2 } from "lucide-react";
+import { Plus, FileText, Trash2, Check, X, Copy, CalendarCheck, ExternalLink, Upload, CheckCheck, Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
