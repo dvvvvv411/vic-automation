@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { AlertCircle, Briefcase, Check, CheckCircle2, Pencil, Phone, User, CalendarDays, Clock } from "lucide-react";
+import { AlertCircle, Briefcase, Check, CheckCircle2, Pencil, Phone, User, CalendarDays, Clock, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isBefore, startOfDay, isToday } from "date-fns";
@@ -47,6 +47,7 @@ export default function ErsterArbeitstag() {
   const [bookedTime, setBookedTime] = useState<string>("");
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [editedPhone, setEditedPhone] = useState("");
+  const [isRebooking, setIsRebooking] = useState(false);
 
   const { data: application, isLoading, error } = useQuery({
     queryKey: ["application-erster-arbeitstag", id],
@@ -60,7 +61,7 @@ export default function ErsterArbeitstag() {
       if (data) {
         const { data: fwAppt } = await supabase
           .from("first_workday_appointments" as any)
-          .select("appointment_date, appointment_time")
+          .select("id, appointment_date, appointment_time")
           .eq("application_id", id!)
           .maybeSingle();
         (data as any).first_workday_appointments = fwAppt;
@@ -72,7 +73,6 @@ export default function ErsterArbeitstag() {
 
   const brandingId = application?.branding_id;
 
-  // Use "trial" schedule_type so both share the same time settings
   const { data: scheduleSettings } = useQuery({
     queryKey: ["branding-schedule-settings-public", brandingId, "trial"],
     enabled: !!brandingId,
@@ -88,7 +88,6 @@ export default function ErsterArbeitstag() {
     },
   });
 
-  // Load booked slots from BOTH first_workday AND trial_day (shared schedule)
   const { data: bookedSlots } = useQuery({
     queryKey: ["first-workday-booked-slots", brandingId],
     enabled: !!brandingId,
@@ -110,7 +109,6 @@ export default function ErsterArbeitstag() {
     },
   });
 
-  // Load blocked slots from BOTH first_workday AND trial_day
   const { data: blockedSlotsData } = useQuery({
     queryKey: ["first-workday-blocked-slots-public", brandingId],
     enabled: !!brandingId,
@@ -158,12 +156,13 @@ export default function ErsterArbeitstag() {
 
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate) return TIME_SLOTS;
-    if (!isToday(selectedDate)) return TIME_SLOTS;
     const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const cutoff = new Date(now.getTime() + 12 * 60 * 60 * 1000);
     return TIME_SLOTS.filter((time) => {
       const [h, m] = time.split(":").map(Number);
-      return h * 60 + m > currentMinutes;
+      const slotDate = new Date(selectedDate);
+      slotDate.setHours(h, m, 0, 0);
+      return slotDate > cutoff;
     });
   }, [selectedDate, TIME_SLOTS]);
 
@@ -183,6 +182,16 @@ export default function ErsterArbeitstag() {
     mutationFn: async () => {
       const dateStr = format(selectedDate!, "yyyy-MM-dd");
       const timeStr = selectedTime! + ":00";
+
+      // If rebooking, delete old appointment first
+      if (existingAppointment?.id) {
+        const { error: delError } = await supabase
+          .from("first_workday_appointments" as any)
+          .delete()
+          .eq("id", existingAppointment.id);
+        if (delError) throw delError;
+      }
+
       const { data: appData } = await supabase
         .from("applications")
         .select("created_by")
@@ -195,7 +204,8 @@ export default function ErsterArbeitstag() {
 
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
-      await sendTelegram("erster_arbeitstag_gebucht", `🏢 1. Arbeitstag gebucht\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`, application.branding_id);
+      const telegramPrefix = isRebooking ? "🏢 1. Arbeitstag umgebucht" : "🏢 1. Arbeitstag gebucht";
+      await sendTelegram("erster_arbeitstag_gebucht", `${telegramPrefix}\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`, application.branding_id);
 
       if (application?.email) {
         await sendEmail({
@@ -205,7 +215,7 @@ export default function ErsterArbeitstag() {
           body_title: "Terminbestätigung – 1. Arbeitstag",
           body_lines: [
             `Hallo ${application.first_name},`,
-            `Ihr 1. Arbeitstag wurde erfolgreich gebucht.`,
+            `Ihr 1. Arbeitstag wurde erfolgreich ${isRebooking ? "umgebucht" : "gebucht"}.`,
             `Datum: ${formattedDateLong}`,
             `Uhrzeit: ${selectedTime} Uhr`,
             `Wir freuen uns auf Sie!`,
@@ -248,6 +258,7 @@ export default function ErsterArbeitstag() {
       setBookedTime(selectedTime!);
       setBooked(true);
       setConfirmOpen(false);
+      setIsRebooking(false);
       queryClient.invalidateQueries({ queryKey: ["application-erster-arbeitstag", id] });
       queryClient.invalidateQueries({ queryKey: ["first-workday-booked-slots"] });
     },
@@ -298,7 +309,7 @@ export default function ErsterArbeitstag() {
     );
   }
 
-  if (existingAppointment || booked) {
+  if ((existingAppointment && !isRebooking) || booked) {
     const appDate = booked
       ? bookedDate
       : format(new Date(existingAppointment.appointment_date), "dd. MMMM yyyy", { locale: de });
@@ -344,6 +355,22 @@ export default function ErsterArbeitstag() {
                   Bitte seien Sie unter <span className="font-semibold text-foreground">{applicantPhone}</span> erreichbar. Wir melden uns bei Ihnen.
                 </p>
               </motion.div>
+              {!booked && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-xl gap-2"
+                    onClick={() => {
+                      setIsRebooking(true);
+                      setSelectedDate(undefined);
+                      setSelectedTime(null);
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Termin umbuchen
+                  </Button>
+                </motion.div>
+              )}
             </div>
           </div>
           {companyName && (
@@ -365,15 +392,40 @@ export default function ErsterArbeitstag() {
           <motion.img initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} src={logoUrl} alt={companyName || "Logo"} className="h-12 mx-auto object-contain mb-8 drop-shadow-sm" />
         )}
 
+        {isRebooking && existingAppointment && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden mb-6">
+            <div className="h-1.5" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
+            <div className="p-6">
+              <p className="text-sm font-medium mb-3">Aktueller Termin:</p>
+              <div className="rounded-xl bg-slate-50/80 p-4 space-y-2 border-l-4" style={{ borderLeftColor: brandColor }}>
+                <div className="flex items-center gap-2.5">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <p className="font-medium text-sm">{format(new Date(existingAppointment.appointment_date), "dd. MMMM yyyy", { locale: de })}</p>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <p className="font-medium text-sm">{existingAppointment.appointment_time?.slice(0, 5)} Uhr</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" className="mt-3 text-muted-foreground" onClick={() => setIsRebooking(false)}>
+                Abbrechen
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden">
           <div className="h-1.5" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
 
           <div className="p-6 pb-0 space-y-4">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">1. Arbeitstag buchen</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {isRebooking ? "1. Arbeitstag umbuchen" : "1. Arbeitstag buchen"}
+              </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Wählen Sie einen passenden Termin für Ihren 1. Arbeitstag
-                {companyName ? ` bei ${companyName}` : ""}.
+                {isRebooking
+                  ? "Wählen Sie einen neuen Termin für Ihren 1. Arbeitstag."
+                  : `Wählen Sie einen passenden Termin für Ihren 1. Arbeitstag${companyName ? ` bei ${companyName}` : ""}.`}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -500,7 +552,7 @@ export default function ErsterArbeitstag() {
                     style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}DD)`, boxShadow: `0 8px 24px -6px ${brandColor}40` }}
                     onClick={() => setConfirmOpen(true)}
                   >
-                    1. Arbeitstag buchen: {format(selectedDate, "dd.MM.yyyy")} um {selectedTime} Uhr
+                    {isRebooking ? "1. Arbeitstag umbuchen" : "1. Arbeitstag buchen"}: {format(selectedDate, "dd.MM.yyyy")} um {selectedTime} Uhr
                   </Button>
                 </div>
               </motion.div>
@@ -520,10 +572,14 @@ export default function ErsterArbeitstag() {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-md border-0 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>1. Arbeitstag bestätigen</DialogTitle>
+            <DialogTitle>{isRebooking ? "1. Arbeitstag umbuchen" : "1. Arbeitstag bestätigen"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">Möchten Sie folgenden 1. Arbeitstag verbindlich buchen?</p>
+            <p className="text-sm text-muted-foreground">
+              {isRebooking
+                ? "Möchten Sie Ihren 1. Arbeitstag auf folgenden Zeitpunkt umbuchen?"
+                : "Möchten Sie folgenden 1. Arbeitstag verbindlich buchen?"}
+            </p>
             <div className="rounded-xl bg-slate-50/80 p-4 space-y-2 border-l-4" style={{ borderLeftColor: brandColor }}>
               <div className="flex items-center gap-2.5">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />

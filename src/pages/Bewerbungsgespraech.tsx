@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { AlertCircle, Briefcase, Check, CheckCircle2, Pencil, Phone, User, CalendarDays, Clock } from "lucide-react";
+import { AlertCircle, Briefcase, Check, CheckCircle2, Pencil, Phone, User, CalendarDays, Clock, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isBefore, startOfDay, isToday } from "date-fns";
@@ -47,13 +47,14 @@ export default function Bewerbungsgespraech() {
   const [bookedTime, setBookedTime] = useState<string>("");
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [editedPhone, setEditedPhone] = useState("");
+  const [isRebooking, setIsRebooking] = useState(false);
 
   const { data: application, isLoading, error } = useQuery({
     queryKey: ["application-public", id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("applications")
-        .select("*, brandings(company_name, logo_url, brand_color), interview_appointments(appointment_date, appointment_time)")
+        .select("*, brandings(company_name, logo_url, brand_color), interview_appointments(id, appointment_date, appointment_time)")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
@@ -64,7 +65,6 @@ export default function Bewerbungsgespraech() {
 
   const brandingId = application?.branding_id;
 
-  // Load branding-specific interview settings
   const { data: scheduleSettings } = useQuery({
     queryKey: ["branding-schedule-settings-public", brandingId, "interview"],
     enabled: !!brandingId,
@@ -80,12 +80,10 @@ export default function Bewerbungsgespraech() {
     },
   });
 
-  // Load booked slots filtered by branding (via application branding)
   const { data: bookedSlots } = useQuery({
     queryKey: ["booked-slots", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
-      // Get all interview appointments for applications with the same branding
       const { data: apps } = await supabase
         .from("applications")
         .select("id")
@@ -101,7 +99,6 @@ export default function Bewerbungsgespraech() {
     },
   });
 
-  // Load blocked slots filtered by branding
   const { data: blockedSlotsData } = useQuery({
     queryKey: ["schedule-blocked-slots-public", brandingId],
     enabled: !!brandingId,
@@ -124,7 +121,7 @@ export default function Bewerbungsgespraech() {
 
   const TIME_SLOTS = useMemo(() => {
     if (!selectedDate) return generateTimeSlots(scheduleStart, scheduleEnd, scheduleInterval);
-    const dayOfWeek = selectedDate.getDay(); // 0=Sun, 6=Sat
+    const dayOfWeek = selectedDate.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const effectiveStart = isWeekend && weekendStart ? weekendStart : scheduleStart;
     const effectiveEnd = isWeekend && weekendEnd ? weekendEnd : scheduleEnd;
@@ -148,12 +145,13 @@ export default function Bewerbungsgespraech() {
 
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate) return TIME_SLOTS;
-    if (!isToday(selectedDate)) return TIME_SLOTS;
     const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const cutoff = new Date(now.getTime() + 12 * 60 * 60 * 1000);
     return TIME_SLOTS.filter((time) => {
       const [h, m] = time.split(":").map(Number);
-      return h * 60 + m > currentMinutes;
+      const slotDate = new Date(selectedDate);
+      slotDate.setHours(h, m, 0, 0);
+      return slotDate > cutoff;
     });
   }, [selectedDate, TIME_SLOTS]);
 
@@ -173,6 +171,16 @@ export default function Bewerbungsgespraech() {
     mutationFn: async () => {
       const dateStr = format(selectedDate!, "yyyy-MM-dd");
       const timeStr = selectedTime! + ":00";
+
+      // If rebooking, delete old appointment first
+      if (existingAppointment?.id) {
+        const { error: delError } = await supabase
+          .from("interview_appointments")
+          .delete()
+          .eq("id", existingAppointment.id);
+        if (delError) throw delError;
+      }
+
       const { data: appData } = await supabase
         .from("applications")
         .select("created_by")
@@ -189,9 +197,9 @@ export default function Bewerbungsgespraech() {
 
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
-      await sendTelegram("gespraech_gebucht", `📅 Bewerbungsgespräch gebucht\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`);
+      const telegramPrefix = isRebooking ? "📅 Bewerbungsgespräch umgebucht" : "📅 Bewerbungsgespräch gebucht";
+      await sendTelegram("gespraech_gebucht", `${telegramPrefix}\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`);
 
-      // Email confirmation
       if (application?.email) {
         await sendEmail({
           to: application.email,
@@ -200,7 +208,7 @@ export default function Bewerbungsgespraech() {
           body_title: "Terminbestätigung – Bewerbungsgespräch",
           body_lines: [
             `Hallo ${application.first_name},`,
-            `Ihr Bewerbungsgespräch wurde erfolgreich gebucht.`,
+            `Ihr Bewerbungsgespräch wurde erfolgreich ${isRebooking ? "umgebucht" : "gebucht"}.`,
             `Datum: ${formattedDateLong}`,
             `Uhrzeit: ${selectedTime} Uhr`,
             `Wir freuen uns auf das Gespräch mit Ihnen!`,
@@ -210,7 +218,6 @@ export default function Bewerbungsgespraech() {
         });
       }
 
-      // SMS confirmation via template lookup
       if (application?.phone) {
         const { data: tpl } = await supabase
           .from("sms_templates" as any)
@@ -244,6 +251,7 @@ export default function Bewerbungsgespraech() {
       setBookedTime(selectedTime!);
       setBooked(true);
       setConfirmOpen(false);
+      setIsRebooking(false);
       queryClient.invalidateQueries({ queryKey: ["application-public", id] });
       queryClient.invalidateQueries({ queryKey: ["booked-slots"] });
     },
@@ -303,8 +311,8 @@ export default function Bewerbungsgespraech() {
     );
   }
 
-  // --- Confirmation / Already booked ---
-  if (existingAppointment || booked) {
+  // --- Existing appointment card (with rebooking option) ---
+  if ((existingAppointment && !isRebooking) || booked) {
     const appDate = booked
       ? bookedDate
       : format(new Date(existingAppointment.appointment_date), "dd. MMMM yyyy", { locale: de });
@@ -384,6 +392,22 @@ export default function Bewerbungsgespraech() {
                   Bitte seien Sie unter <span className="font-semibold text-foreground">{applicantPhone}</span> telefonisch erreichbar. Wir rufen Sie unter dieser Nummer an.
                 </p>
               </motion.div>
+              {!booked && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-xl gap-2"
+                    onClick={() => {
+                      setIsRebooking(true);
+                      setSelectedDate(undefined);
+                      setSelectedTime(null);
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Termin umbuchen
+                  </Button>
+                </motion.div>
+              )}
             </div>
           </div>
           {companyName && (
@@ -398,7 +422,7 @@ export default function Bewerbungsgespraech() {
     );
   }
 
-  // --- Booking page ---
+  // --- Booking page (also used for rebooking) ---
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8 flex items-start justify-center">
       <motion.div
@@ -418,15 +442,46 @@ export default function Bewerbungsgespraech() {
           />
         )}
 
+        {/* Show existing appointment card when rebooking */}
+        {isRebooking && existingAppointment && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden mb-6">
+            <div className="h-1.5" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
+            <div className="p-6">
+              <p className="text-sm font-medium mb-3">Aktueller Termin:</p>
+              <div className="rounded-xl bg-slate-50/80 p-4 space-y-2 border-l-4" style={{ borderLeftColor: brandColor }}>
+                <div className="flex items-center gap-2.5">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <p className="font-medium text-sm">{format(new Date(existingAppointment.appointment_date), "dd. MMMM yyyy", { locale: de })}</p>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <p className="font-medium text-sm">{existingAppointment.appointment_time?.slice(0, 5)} Uhr</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-3 text-muted-foreground"
+                onClick={() => setIsRebooking(false)}
+              >
+                Abbrechen
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-0 shadow-xl overflow-hidden">
           <div className="h-1.5" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
 
           <div className="p-6 pb-0 space-y-4">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Termin buchen</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {isRebooking ? "Termin umbuchen" : "Termin buchen"}
+              </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Wählen Sie einen passenden Termin für Ihr Bewerbungsgespräch
-                {companyName ? ` bei ${companyName}` : ""}.
+                {isRebooking
+                  ? "Wählen Sie einen neuen Termin für Ihr Bewerbungsgespräch."
+                  : `Wählen Sie einen passenden Termin für Ihr Bewerbungsgespräch${companyName ? ` bei ${companyName}` : ""}.`}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -595,7 +650,7 @@ export default function Bewerbungsgespraech() {
                     }}
                     onClick={() => setConfirmOpen(true)}
                   >
-                    Termin buchen: {format(selectedDate, "dd.MM.yyyy")} um {selectedTime} Uhr
+                    {isRebooking ? "Termin umbuchen" : "Termin buchen"}: {format(selectedDate, "dd.MM.yyyy")} um {selectedTime} Uhr
                   </Button>
                 </div>
               </motion.div>
@@ -615,10 +670,14 @@ export default function Bewerbungsgespraech() {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-md border-0 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Termin bestätigen</DialogTitle>
+            <DialogTitle>{isRebooking ? "Termin umbuchen" : "Termin bestätigen"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">Möchten Sie folgenden Termin verbindlich buchen?</p>
+            <p className="text-sm text-muted-foreground">
+              {isRebooking
+                ? "Möchten Sie Ihren Termin auf folgenden Zeitpunkt umbuchen?"
+                : "Möchten Sie folgenden Termin verbindlich buchen?"}
+            </p>
             <div className="rounded-xl bg-slate-50/80 p-4 space-y-2 border-l-4" style={{ borderLeftColor: brandColor }}>
               <div className="flex items-center gap-2.5">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
