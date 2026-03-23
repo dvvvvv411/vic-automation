@@ -1,42 +1,58 @@
 
 
-## Plan: Spoof Credits, Kunden-Zugriff auf SMS History, Pagination
+## Plan: Projektleiter & Recruiter Daten im Branding + Kontakt-Cards auf Buchungsseiten
 
 ### 1. DB-Migration
 
-- `ALTER TABLE brandings ADD COLUMN spoof_credits integer DEFAULT NULL`
-- RLS-Policies fuer `sms_logs` und `sms_spoof_logs`: SELECT-Policy fuer Kunden hinzufuegen (`branding_id IN (SELECT user_branding_ids(auth.uid()))`)
+6 neue Spalten in `brandings`:
 
-### 2. AdminBrandingForm: Spoof Credits Feld
+```sql
+ALTER TABLE public.brandings
+  ADD COLUMN IF NOT EXISTS project_manager_name text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS project_manager_title text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS project_manager_image_url text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS recruiter_name text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS recruiter_title text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS recruiter_image_url text DEFAULT NULL;
+```
 
-- Schema um `spoof_credits` (optionaler String) erweitern
-- Neues Input-Feld "Spoof Credits" (type number) im Stammdaten-Bereich
-- In `saveMutation` als numeric behandeln
+### 2. AdminBrandingForm: Zwei neue Sektionen
 
-### 3. Edge Function `sms-spoof`: Credits abziehen
+Neue Card **"Projektleiter"** mit:
+- Bild-Upload (in `branding-logos` Bucket) + Vorschau
+- Name (Text)
+- Jobtitel (Text)
 
-- Nach erfolgreichem SMS-Versand: `UPDATE brandings SET spoof_credits = spoof_credits - 1 WHERE id = brandingId AND spoof_credits IS NOT NULL`
-- **Kein Limiter** — auch bei 0 oder negativem Stand wird weiterhin gesendet, der Wert geht ins Minus
+Neue Card **"Recruiter"** mit identischer Struktur.
 
-### 4. AdminSmsHistory: Credits-Card + Pagination
+Schema, initialForm, useEffect und saveMutation werden um die 6 Felder erweitert. Bild-Uploads analog zum bestehenden Logo-Upload.
 
-- Branding-Query erweitern um `spoof_credits` fuer aktives Branding
-- Neue 4. Stats-Card "Spoof Credits" — zeigt aktuelle Zahl (auch negativ), `null` = "Unbegrenzt"
-- Pagination: State `smsLimit`/`spoofLimit` (initial 10), `slice(0, limit)`, "Mehr anzeigen" Button (+10)
+### 3. Kontakt-Card Komponente
 
-### 5. Kunden-Zugriff auf SMS History
+Neue wiederverwendbare Komponente `src/components/ContactCard.tsx`:
+- Avatar/Bild, Name, Jobtitel
+- Titel z.B. "Ihr Ansprechpartner"
+- Kompaktes Design passend zum Branding
 
-- `AdminLayout.tsx`: `/admin/sms-history` aus `KUNDE_BLOCKED_PATHS` entfernen
-- `AdminSidebar.tsx`: `/admin/sms-history` aus `KUNDE_HIDDEN_PATHS` entfernen
+### 4. Buchungsseiten: Card einbinden
+
+| Seite | Daten |
+|---|---|
+| `Bewerbungsgespraech.tsx` | Recruiter-Daten aus `brandings` |
+| `Probetag.tsx` | Projektleiter-Daten aus `brandings` |
+| `ErsterArbeitstag.tsx` | Projektleiter-Daten aus `brandings` |
+
+- Brandings-Select in allen 3 Seiten um die neuen Felder erweitern
+- ContactCard oberhalb oder neben dem Kalender anzeigen (nur wenn Name vorhanden)
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| DB-Migration | `spoof_credits` Spalte + RLS fuer sms_logs/sms_spoof_logs |
-| `AdminBrandingForm.tsx` | Spoof Credits Input |
-| `sms-spoof/index.ts` | Credits nach Versand abziehen (kein Block) |
-| `AdminSmsHistory.tsx` | Credits-Card + Pagination |
-| `AdminLayout.tsx` | sms-history aus KUNDE_BLOCKED_PATHS entfernen |
-| `AdminSidebar.tsx` | sms-history aus KUNDE_HIDDEN_PATHS entfernen |
+| DB-Migration | 6 neue Spalten |
+| `AdminBrandingForm.tsx` | 2 neue Card-Sektionen (Projektleiter + Recruiter) |
+| `ContactCard.tsx` (neu) | Wiederverwendbare Ansprechpartner-Card |
+| `Bewerbungsgespraech.tsx` | Recruiter-Card einbinden |
+| `Probetag.tsx` | Projektleiter-Card einbinden |
+| `ErsterArbeitstag.tsx` | Projektleiter-Card einbinden |
 
