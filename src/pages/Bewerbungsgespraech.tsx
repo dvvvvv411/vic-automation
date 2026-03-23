@@ -64,6 +64,12 @@ export default function Bewerbungsgespraech() {
     enabled: !!id,
   });
 
+  useEffect(() => {
+    const faviconUrl = (application as any)?.brandings?.favicon_url;
+    const el = document.getElementById("app-favicon") as HTMLLinkElement | null;
+    if (el) el.href = faviconUrl || "/favicon.png";
+  }, [application]);
+
   const brandingId = application?.branding_id;
 
   const { data: scheduleSettings } = useQuery({
