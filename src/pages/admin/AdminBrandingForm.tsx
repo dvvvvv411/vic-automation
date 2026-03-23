@@ -89,6 +89,12 @@ const initialForm: BrandingForm = {
   spoof_credits: "",
   email_logo_enabled: false,
   email_logo_url: "",
+  project_manager_name: "",
+  project_manager_title: "",
+  project_manager_image_url: "",
+  recruiter_name: "",
+  recruiter_title: "",
+  recruiter_image_url: "",
 };
 
 export default function AdminBrandingForm() {
