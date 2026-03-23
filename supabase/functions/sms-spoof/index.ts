@@ -117,15 +117,9 @@ Deno.serve(async (req) => {
             branding_id: brandingId || null,
           });
 
-          // Decrement spoof_credits if branding has credits set (not null)
+          // Decrement spoof_credits atomically (only if spoof_credits IS NOT NULL)
           if (brandingId) {
-            await sb.rpc("exec_sql", {} as any).then(() => {});
-            // Use direct update — decrement only when spoof_credits IS NOT NULL
-            await sb
-              .from("brandings")
-              .update({ spoof_credits: sb.rpc as any })
-              .eq("id", brandingId);
-            // Actually use raw SQL via service client for atomic decrement
+            await sb.rpc("decrement_spoof_credits", { _branding_id: brandingId });
           }
         } catch (logErr) {
           console.error("Failed to log SMS:", logErr);
