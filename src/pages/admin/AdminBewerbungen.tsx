@@ -460,7 +460,7 @@ export default function AdminBewerbungen() {
     onError: () => toast.error("Fehler beim erneuten Senden"),
   });
 
-
+  const createMutation = useMutation({
     mutationFn: async (data: Record<string, any>) => {
       const payload: Record<string, any> = {};
       Object.entries(data).forEach(([key, value]) => {
