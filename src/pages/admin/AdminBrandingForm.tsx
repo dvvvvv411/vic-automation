@@ -205,7 +205,24 @@ export default function AdminBrandingForm() {
       logo_url = publicUrl.publicUrl;
     }
 
-    saveMutation.mutate({ ...result.data, ...(logo_url ? { logo_url } : {}) });
+    let favicon_url: string | undefined;
+    if (faviconFile) {
+      const fExt = faviconFile.name.split(".").pop();
+      const fPath = `favicon-${crypto.randomUUID()}.${fExt}`;
+      const { error: fUploadError } = await supabase.storage
+        .from("branding-logos")
+        .upload(fPath, faviconFile);
+      if (fUploadError) {
+        toast.error("Favicon-Upload fehlgeschlagen");
+        return;
+      }
+      const { data: fPublicUrl } = supabase.storage
+        .from("branding-logos")
+        .getPublicUrl(fPath);
+      favicon_url = fPublicUrl.publicUrl;
+    }
+
+    saveMutation.mutate({ ...result.data, ...(logo_url ? { logo_url } : {}), ...(favicon_url ? { favicon_url } : {}) });
   };
 
   const updateField = (key: keyof BrandingForm, value: string) => {
