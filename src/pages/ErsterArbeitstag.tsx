@@ -21,6 +21,7 @@ import { format, isBefore, startOfDay, isToday } from "date-fns";
 import { de } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ContactCard } from "@/components/ContactCard";
 
 function generateTimeSlots(start: string, end: string, interval: number) {
   const [sh, sm] = start.split(":").map(Number);
