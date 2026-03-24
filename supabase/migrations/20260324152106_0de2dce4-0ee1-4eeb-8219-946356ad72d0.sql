@@ -1,0 +1,2 @@
+ALTER TABLE public.interview_appointments ADD COLUMN IF NOT EXISTS reminder_count integer NOT NULL DEFAULT 0;
+ALTER TABLE public.applications ADD COLUMN IF NOT EXISTS notification_count integer NOT NULL DEFAULT 0;
