@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
@@ -20,6 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
 import { toast } from "sonner";
@@ -44,6 +45,8 @@ export default function AdminBewerbungsgespraeche() {
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [reminderPreview, setReminderPreview] = useState<{ item: any; message: string; name: string; phone: string; brandingId?: string; senderName?: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [failTarget, setFailTarget] = useState<any | null>(null);
+  const [failReason, setFailReason] = useState("");
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
@@ -433,7 +436,7 @@ export default function AdminBewerbungsgespraeche() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50"
-                            onClick={() => handleStatusUpdate(item, "fehlgeschlagen")}
+                            onClick={() => { setFailTarget(item); setFailReason(""); }}
                             title="Als fehlgeschlagen markieren"
                           >
                             <XCircle className="h-4 w-4" />
@@ -510,6 +513,55 @@ export default function AdminBewerbungsgespraeche() {
             <Button variant="ghost" onClick={() => setReminderPreview(null)}>Abbrechen</Button>
             <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleConfirmReminder} disabled={sendingReminder === reminderPreview?.item?.id}>
               Senden
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!failTarget} onOpenChange={(open) => { if (!open) setFailTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Grund für Fehlschlagen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Bitte geben Sie den Grund ein, warum das Gespräch von{" "}
+              <span className="font-medium text-foreground">{failTarget?.applications?.first_name} {failTarget?.applications?.last_name}</span>{" "}
+              fehlgeschlagen ist.
+            </p>
+            <Textarea
+              placeholder="Grund eingeben..."
+              value={failReason}
+              onChange={(e) => setFailReason(e.target.value)}
+              className="min-h-[80px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setFailTarget(null)}>Abbrechen</Button>
+            <Button
+              variant="destructive"
+              disabled={!failReason.trim()}
+              onClick={async () => {
+                const item = failTarget;
+                const app = item.applications;
+                const reason = failReason.trim();
+                await handleStatusUpdate(item, "fehlgeschlagen");
+                if (app?.branding_id) {
+                  const { data: userData } = await supabase.auth.getUser();
+                  const authorEmail = userData.user?.email ?? "unbekannt";
+                  await supabase.from("branding_notes").insert({
+                    branding_id: app.branding_id,
+                    page_context: "bewerbungsgespraeche",
+                    content: `${app.first_name} ${app.last_name} — Fehlgeschlagen: ${reason}`,
+                    author_email: authorEmail,
+                  });
+                  queryClient.invalidateQueries({ queryKey: ["branding-notes"] });
+                }
+                setFailTarget(null);
+                setFailReason("");
+              }}
+            >
+              Bestätigen
             </Button>
           </DialogFooter>
         </DialogContent>
