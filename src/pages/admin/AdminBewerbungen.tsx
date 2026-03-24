@@ -457,9 +457,13 @@ export default function AdminBewerbungen() {
       }
     },
     onSuccess: async (_data, app) => {
+      const currentTimestamps = Array.isArray((app as any).notification_timestamps) ? (app as any).notification_timestamps : [];
       await supabase
         .from("applications")
-        .update({ notification_count: (app.notification_count || 0) + 1 } as any)
+        .update({
+          notification_count: ((app as any).notification_count || 0) + 1,
+          notification_timestamps: [...currentTimestamps, new Date().toISOString()],
+        } as any)
         .eq("id", app.id);
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       toast.success("Benachrichtigung erneut gesendet");
