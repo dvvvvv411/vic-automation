@@ -39,13 +39,14 @@ Deno.serve(async (req) => {
     const employment_type = (formData.get("employment_type") as string)?.trim();
     const branding_id = (formData.get("branding_id") as string)?.trim() || null;
     const resume = formData.get("resume") as File | null;
+    const auto_accept = (formData.get("auto_accept") as string)?.trim() === "true";
 
     // Validate required fields
     const missing: string[] = [];
     if (!first_name) missing.push("first_name");
     if (!last_name) missing.push("last_name");
     if (!email) missing.push("email");
-    if (!employment_type) missing.push("employment_type");
+    if (!auto_accept && !employment_type) missing.push("employment_type");
 
     if (missing.length > 0) {
       return new Response(
@@ -54,9 +55,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate employment_type
+    // Validate employment_type (skip if auto_accept and not provided)
     const validTypes = ["minijob", "teilzeit", "vollzeit"];
-    if (!validTypes.includes(employment_type!)) {
+    if (employment_type && !validTypes.includes(employment_type)) {
       return new Response(
         JSON.stringify({ error: "Invalid employment_type. Must be: minijob, teilzeit, or vollzeit" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -154,10 +155,11 @@ Deno.serve(async (req) => {
         street,
         zip_code,
         city,
-        employment_type: employment_type!,
+        employment_type: employment_type || null,
         branding_id: branding_id || null,
         resume_url,
         created_by: owner_id,
+        status: auto_accept ? "akzeptiert" : "neu",
       })
       .select("id")
       .single();
