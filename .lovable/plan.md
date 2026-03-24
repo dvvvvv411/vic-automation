@@ -1,60 +1,29 @@
 
 
-## Plan: Klickbare Badges mit Timestamp-Historie
+## Plan: Auto-Accept Status und Link-Kopieren fixen
 
-### Konzept
+### Problem
 
-Die roten Badges werden klickbar. Bei Klick oeffnet sich ein Popover/Dialog mit allen Zeitpunkten, wann die Erinnerung/Benachrichtigung gesendet wurde. Dafuer brauchen wir eine neue DB-Spalte (JSONB-Array) statt nur eines Zaehlers.
+1. Die Edge Function `submit-application` setzt bei `auto_accept=true` den Status auf `"akzeptiert"` — aber im Admin-Panel gibt es keinen Status `"akzeptiert"`, der korrekte Status ist `"bewerbungsgespraech"`
+2. Der "Link kopieren"-Button wird nur bei Status `"bewerbungsgespraech"` angezeigt
 
-### 1. DB-Migration
+### Aenderungen
 
-Zwei neue JSONB-Spalten fuer die Timestamps (zusaetzlich zu den bestehenden Count-Spalten):
+**1. Edge Function `submit-application/index.ts`**
 
-```sql
-ALTER TABLE public.interview_appointments
-  ADD COLUMN IF NOT EXISTS reminder_timestamps jsonb NOT NULL DEFAULT '[]'::jsonb;
+Status bei `auto_accept` von `"akzeptiert"` auf `"bewerbungsgespraech"` aendern:
 
-ALTER TABLE public.applications
-  ADD COLUMN IF NOT EXISTS notification_timestamps jsonb NOT NULL DEFAULT '[]'::jsonb;
+```typescript
+status: auto_accept ? "bewerbungsgespraech" : "neu",
 ```
 
-### 2. AdminBewerbungsgespraeche.tsx
-
-- **Beim Senden**: Neben `reminder_count` Increment auch den aktuellen Timestamp ins `reminder_timestamps` Array pushen:
-  ```typescript
-  reminder_timestamps: [...(item.reminder_timestamps || []), new Date().toISOString()]
-  ```
-- **Badge**: `pointer-events-none` entfernen, Badge wird klickbar
-- **Popover**: Bei Klick auf Badge oeffnet sich ein kleines Popover (oder Dialog) mit einer Liste der Timestamps, formatiert als `dd.MM.yyyy HH:mm`
-
-### 3. AdminBewerbungen.tsx
-
-- **Beim Resend**: Gleiche Logik — Timestamp ins `notification_timestamps` Array pushen
-- **Badge klickbar** mit Popover/Liste der Timestamps
-
-### Badge-Popover Beispiel
-
-```tsx
-<Popover>
-  <PopoverTrigger asChild>
-    <span className="absolute -top-1 -right-1 bg-destructive ... cursor-pointer">
-      {count}
-    </span>
-  </PopoverTrigger>
-  <PopoverContent className="w-56 p-3">
-    <p className="text-sm font-semibold mb-2">Gesendet am:</p>
-    <ul className="space-y-1 text-xs text-muted-foreground">
-      {timestamps.map(ts => <li>{format(new Date(ts), "dd.MM.yyyy HH:mm")}</li>)}
-    </ul>
-  </PopoverContent>
-</Popover>
-```
+Das ist der korrekte Status, da der Bewerber direkt zur Terminbuchung weitergeleitet wird — genau wie bei manueller Akzeptierung in `/admin/bewerbungen`.
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| DB-Migration | 2 neue JSONB-Spalten |
-| `AdminBewerbungsgespraeche.tsx` | Timestamp speichern + klickbares Badge mit Popover |
-| `AdminBewerbungen.tsx` | Timestamp speichern + klickbares Badge mit Popover |
+| `supabase/functions/submit-application/index.ts` | Status `"akzeptiert"` → `"bewerbungsgespraech"` |
+
+Der "Link kopieren"-Button funktioniert bereits fuer Status `"bewerbungsgespraech"` (Zeile 698-706), daher ist keine Frontend-Aenderung noetig.
 
