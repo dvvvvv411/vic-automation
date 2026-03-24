@@ -40,6 +40,8 @@ import { Plus, FileText, Trash2, Check, X, Copy, CalendarCheck, ExternalLink, Up
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 import { z } from "zod";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
@@ -457,9 +459,13 @@ export default function AdminBewerbungen() {
       }
     },
     onSuccess: async (_data, app) => {
+      const currentTimestamps = Array.isArray((app as any).notification_timestamps) ? (app as any).notification_timestamps : [];
       await supabase
         .from("applications")
-        .update({ notification_count: (app.notification_count || 0) + 1 } as any)
+        .update({
+          notification_count: ((app as any).notification_count || 0) + 1,
+          notification_timestamps: [...currentTimestamps, new Date().toISOString()],
+        } as any)
         .eq("id", app.id);
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       toast.success("Benachrichtigung erneut gesendet");
@@ -720,9 +726,24 @@ export default function AdminBewerbungen() {
                   <RotateCcw className={`h-4 w-4 ${resendMutation.isPending ? "animate-spin" : ""}`} />
                 </Button>
                 {(app as any).notification_count > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center pointer-events-none">
-                    {(app as any).notification_count}
-                  </span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center cursor-pointer z-10">
+                        {(app as any).notification_count}
+                      </span>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-3" onClick={(e) => e.stopPropagation()}>
+                      <p className="text-sm font-semibold mb-2">Benachrichtigungen gesendet:</p>
+                      <ul className="space-y-1 text-xs text-muted-foreground">
+                        {(Array.isArray((app as any).notification_timestamps) ? (app as any).notification_timestamps : []).map((ts: string, i: number) => (
+                          <li key={i}>{format(new Date(ts), "dd.MM.yyyy HH:mm")} Uhr</li>
+                        ))}
+                        {(!Array.isArray((app as any).notification_timestamps) || (app as any).notification_timestamps.length === 0) && (
+                          <li className="italic">Keine Zeitstempel verfügbar</li>
+                        )}
+                      </ul>
+                    </PopoverContent>
+                  </Popover>
                 )}
               </div>
             </TooltipTrigger>
