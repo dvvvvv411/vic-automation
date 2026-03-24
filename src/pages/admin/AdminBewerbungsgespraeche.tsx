@@ -417,16 +417,23 @@ export default function AdminBewerbungsgespraeche() {
                             </Button>
                           )}
                           {item.applications?.phone && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                              onClick={() => handlePrepareReminder(item)}
-                              disabled={sendingReminder === item.id}
-                              title="Erinnerungs-SMS & E-Mail senden"
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                            </Button>
+                            <div className="relative">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                onClick={() => handlePrepareReminder(item)}
+                                disabled={sendingReminder === item.id}
+                                title="Erinnerungs-SMS & E-Mail senden"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
+                              {(item as any).reminder_count > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center pointer-events-none">
+                                  {(item as any).reminder_count}
+                                </span>
+                              )}
+                            </div>
                           )}
                           {item.status !== "erfolgreich" && (
                             <Button

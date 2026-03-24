@@ -710,14 +710,21 @@ export default function AdminBewerbungen() {
         {(status === "bewerbungsgespraech" || status === "termin_gebucht") && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => { e.stopPropagation(); resendMutation.mutate(app); }}
-                disabled={resendMutation.isPending}
-              >
-                <RotateCcw className={`h-4 w-4 ${resendMutation.isPending ? "animate-spin" : ""}`} />
-              </Button>
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => { e.stopPropagation(); resendMutation.mutate(app); }}
+                  disabled={resendMutation.isPending}
+                >
+                  <RotateCcw className={`h-4 w-4 ${resendMutation.isPending ? "animate-spin" : ""}`} />
+                </Button>
+                {(app as any).notification_count > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center pointer-events-none">
+                    {(app as any).notification_count}
+                  </span>
+                )}
+              </div>
             </TooltipTrigger>
             <TooltipContent>Akzeptierungs-Benachrichtigung erneut senden</TooltipContent>
           </Tooltip>

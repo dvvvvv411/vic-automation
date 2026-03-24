@@ -48,6 +48,7 @@ export type Database = {
           is_external: boolean
           is_indeed: boolean
           last_name: string
+          notification_count: number
           phone: string | null
           resume_url: string | null
           status: string
@@ -66,6 +67,7 @@ export type Database = {
           is_external?: boolean
           is_indeed?: boolean
           last_name: string
+          notification_count?: number
           phone?: string | null
           resume_url?: string | null
           status?: string
@@ -84,6 +86,7 @@ export type Database = {
           is_external?: boolean
           is_indeed?: boolean
           last_name?: string
+          notification_count?: number
           phone?: string | null
           resume_url?: string | null
           status?: string
@@ -847,6 +850,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          reminder_count: number
           reminder_sent: boolean
           status: string
         }
@@ -857,6 +861,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_count?: number
           reminder_sent?: boolean
           status?: string
         }
@@ -867,6 +872,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_count?: number
           reminder_sent?: boolean
           status?: string
         }
