@@ -435,7 +435,7 @@ export default function AdminBewerbungsgespraeche() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50"
-                            onClick={() => handleStatusUpdate(item, "fehlgeschlagen")}
+                            onClick={() => { setFailTarget(item); setFailReason(""); }}
                             title="Als fehlgeschlagen markieren"
                           >
                             <XCircle className="h-4 w-4" />
