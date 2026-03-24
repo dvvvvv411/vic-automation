@@ -27,6 +27,11 @@ import { toast } from "sonner";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import BrandingNotes from "@/components/admin/BrandingNotes";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
