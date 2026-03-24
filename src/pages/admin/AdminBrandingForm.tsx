@@ -104,6 +104,7 @@ export default function AdminBrandingForm() {
   const isEditMode = !!id;
 
   const [form, setForm] = useState<BrandingForm>(initialForm);
+  const [showResendKey, setShowResendKey] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [pmImageFile, setPmImageFile] = useState<File | null>(null);
