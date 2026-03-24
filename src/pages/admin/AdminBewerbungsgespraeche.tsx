@@ -225,11 +225,18 @@ export default function AdminBewerbungsgespraeche() {
         metadata: { appointment_id: item.id, application_id: item.application_id },
       });
 
+      // Increment reminder_count
+      await supabase
+        .from("interview_appointments")
+        .update({ reminder_count: (item.reminder_count || 0) + 1 } as any)
+        .eq("id", item.id);
+
       if (smsOk) {
         toast.success("Erinnerung (SMS + E-Mail) gesendet!");
       } else {
         toast.warning("E-Mail gesendet, SMS fehlgeschlagen");
       }
+      queryClient.invalidateQueries({ queryKey: ["admin-bewerbungsgespraeche"] });
     } catch (err) {
       console.error("Reminder error:", err);
       toast.error("Fehler beim Senden der Erinnerung");
