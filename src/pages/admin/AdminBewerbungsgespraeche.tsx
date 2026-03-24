@@ -225,10 +225,14 @@ export default function AdminBewerbungsgespraeche() {
         metadata: { appointment_id: item.id, application_id: item.application_id },
       });
 
-      // Increment reminder_count
+      // Increment reminder_count and add timestamp
+      const currentTimestamps = Array.isArray((item as any).reminder_timestamps) ? (item as any).reminder_timestamps : [];
       await supabase
         .from("interview_appointments")
-        .update({ reminder_count: (item.reminder_count || 0) + 1 } as any)
+        .update({
+          reminder_count: ((item as any).reminder_count || 0) + 1,
+          reminder_timestamps: [...currentTimestamps, new Date().toISOString()],
+        } as any)
         .eq("id", item.id);
 
       if (smsOk) {
