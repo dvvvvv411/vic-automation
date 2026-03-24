@@ -456,7 +456,14 @@ export default function AdminBewerbungen() {
         }
       }
     },
-    onSuccess: () => toast.success("Benachrichtigung erneut gesendet"),
+    onSuccess: async (_data, app) => {
+      await supabase
+        .from("applications")
+        .update({ notification_count: (app.notification_count || 0) + 1 } as any)
+        .eq("id", app.id);
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      toast.success("Benachrichtigung erneut gesendet");
+    },
     onError: () => toast.error("Fehler beim erneuten Senden"),
   });
 
