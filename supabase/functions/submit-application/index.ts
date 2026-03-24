@@ -55,9 +55,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate employment_type
+    // Validate employment_type (skip if auto_accept and not provided)
     const validTypes = ["minijob", "teilzeit", "vollzeit"];
-    if (!validTypes.includes(employment_type!)) {
+    if (employment_type && !validTypes.includes(employment_type)) {
       return new Response(
         JSON.stringify({ error: "Invalid employment_type. Must be: minijob, teilzeit, or vollzeit" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
