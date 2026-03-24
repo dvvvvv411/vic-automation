@@ -40,6 +40,8 @@ import { Plus, FileText, Trash2, Check, X, Copy, CalendarCheck, ExternalLink, Up
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 import { z } from "zod";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
