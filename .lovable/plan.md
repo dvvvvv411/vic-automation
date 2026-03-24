@@ -1,30 +1,57 @@
 
 
-## Plan: Erinnerungs-SMS Text anpassen
+## Plan: Oeffentliche Bewerbungsgespraech-Buchungsseite (Domain-basiert, beliebige Subdomain)
 
-### Aenderung
+### Konzept
 
-**`AdminBewerbungsgespraeche.tsx`** Zeile 181-183:
+Route: `/bewerbungsgespraech/buchen` — ein fester Link. Die `branding_id` wird anhand der Domain ermittelt, wobei beliebige Subdomains (nicht nur `web.`) abgeschnitten werden — identisch zur Auth-Seite-Logik:
 
-Den Fallback-Text und die Template-Platzhalter-Logik aendern:
-
-**Vorher:**
-```
-"Hallo {name}, Sie hatten einen Termin bei uns, waren aber leider nicht erreichbar. Bitte rufen Sie uns an: {telefon}."
-```
-
-**Nachher:**
-```
-"Hallo {name}, Sie hatten einen Termin für ein Bewerbungsgespräch bei uns, waren aber leider telefonisch nicht erreichbar. Bitte buchen Sie einen neuen Termin über den Link, den Sie per E-Mail erhalten haben."
+```typescript
+let hostname = window.location.hostname;
+const parts = hostname.split(".");
+if (parts.length > 2) {
+  hostname = parts.slice(-2).join(".");
+}
+// → Supabase-Query: brandings.domain = hostname
 ```
 
-Der `{telefon}`-Platzhalter wird nicht mehr benoetigt, da der neue Text keinen Telefonverweis enthaelt.
+### Ablauf
 
-Zusaetzlich sollte das SMS-Template `gespraech_erinnerung` in der Datenbank aktualisiert werden (falls vorhanden), damit auch bei Nutzung des Templates der neue Text kommt. Das kann ueber `/admin/sms-vorlagen` manuell gemacht werden, oder ich aktualisiere den Fallback-Text im Code.
+```text
+Link: https://dashboard.kundenname.de/bewerbungsgespraech/buchen
+  → Domain-Erkennung (dashboard.kundenname.de → kundenname.de)
+  → Branding laden (Logo, Farbe, Recruiter-Card)
+  → User gibt ein: Vorname, Nachname, E-Mail, Telefon
+  → Edge Function erstellt Application (Status: akzeptiert)
+  → Redirect auf /bewerbungsgespraech/{applicationId}
+  → Normaler Buchungsflow
+```
+
+### Aenderungen
+
+**1. Edge Function `submit-application` erweitern**
+- Neuer optionaler Parameter `auto_accept` (boolean)
+- Wenn `true`: Status = `akzeptiert`, `employment_type` nicht required
+
+**2. Neue Seite `src/pages/BewerbungsgespraechPublic.tsx`**
+- Route: `/bewerbungsgespraech/buchen`
+- Domain-Erkennung: gleiche Logik wie `Auth.tsx` — `hostname.split(".").slice(-2).join(".")` bei mehr als 2 Teilen, dann Query auf `brandings.domain`
+- Fallback auf `frik-maxeiner.de` Branding (wie Auth-Seite)
+- Branding-Farbe, Logo, Favicon, Recruiter-Card laden
+- Formular: Vorname, Nachname, E-Mail, Telefon
+- Submit ruft `submit-application` Edge Function mit `auto_accept=true` und `branding_id`
+- Nach Erfolg: Redirect auf `/bewerbungsgespraech/{applicationId}`
+- Glassmorphism-Stil passend zu den bestehenden Buchungsseiten
+
+**3. Route in `App.tsx`**
+- `<Route path="/bewerbungsgespraech/buchen" element={<BewerbungsgespraechPublic />} />`
+- Muss VOR der bestehenden `/bewerbungsgespraech/:id` Route stehen
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `AdminBewerbungsgespraeche.tsx` | Fallback-SMS-Text aktualisieren |
+| `supabase/functions/submit-application/index.ts` | `auto_accept` Parameter, `employment_type` optional |
+| `src/pages/BewerbungsgespraechPublic.tsx` (neu) | Formular mit Domain-basiertem Branding |
+| `src/App.tsx` | Neue Route |
 
