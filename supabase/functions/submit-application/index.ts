@@ -155,10 +155,11 @@ Deno.serve(async (req) => {
         street,
         zip_code,
         city,
-        employment_type: employment_type!,
+        employment_type: employment_type || null,
         branding_id: branding_id || null,
         resume_url,
         created_by: owner_id,
+        status: auto_accept ? "akzeptiert" : "neu",
       })
       .select("id")
       .single();
