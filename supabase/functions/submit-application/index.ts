@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
         branding_id: branding_id || null,
         resume_url,
         created_by: owner_id,
-        status: auto_accept ? "akzeptiert" : "neu",
+        status: auto_accept ? "bewerbungsgespraech" : "neu",
       })
       .select("id")
       .single();
