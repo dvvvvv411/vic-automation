@@ -49,6 +49,7 @@ export type Database = {
           is_indeed: boolean
           last_name: string
           notification_count: number
+          notification_timestamps: Json
           phone: string | null
           resume_url: string | null
           status: string
@@ -68,6 +69,7 @@ export type Database = {
           is_indeed?: boolean
           last_name: string
           notification_count?: number
+          notification_timestamps?: Json
           phone?: string | null
           resume_url?: string | null
           status?: string
@@ -87,6 +89,7 @@ export type Database = {
           is_indeed?: boolean
           last_name?: string
           notification_count?: number
+          notification_timestamps?: Json
           phone?: string | null
           resume_url?: string | null
           status?: string
@@ -852,6 +855,7 @@ export type Database = {
           id: string
           reminder_count: number
           reminder_sent: boolean
+          reminder_timestamps: Json
           status: string
         }
         Insert: {
@@ -863,6 +867,7 @@ export type Database = {
           id?: string
           reminder_count?: number
           reminder_sent?: boolean
+          reminder_timestamps?: Json
           status?: string
         }
         Update: {
@@ -874,6 +879,7 @@ export type Database = {
           id?: string
           reminder_count?: number
           reminder_sent?: boolean
+          reminder_timestamps?: Json
           status?: string
         }
         Relationships: [
