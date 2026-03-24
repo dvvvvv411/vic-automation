@@ -1,57 +1,53 @@
 
 
-## Plan: Oeffentliche Bewerbungsgespraech-Buchungsseite (Domain-basiert, beliebige Subdomain)
+## Plan: Erinnerungs-Zaehler mit rotem Badge auf Buttons
 
 ### Konzept
 
-Route: `/bewerbungsgespraech/buchen` — ein fester Link. Die `branding_id` wird anhand der Domain ermittelt, wobei beliebige Subdomains (nicht nur `web.`) abgeschnitten werden — identisch zur Auth-Seite-Logik:
+Zwei neue DB-Spalten tracken wie oft erinnert/benachrichtigt wurde. Die Buttons zeigen einen roten Kreis mit der Anzahl an (nur wenn > 0).
 
-```typescript
-let hostname = window.location.hostname;
-const parts = hostname.split(".");
-if (parts.length > 2) {
-  hostname = parts.slice(-2).join(".");
-}
-// → Supabase-Query: brandings.domain = hostname
+### 1. DB-Migration
+
+```sql
+ALTER TABLE public.interview_appointments
+  ADD COLUMN IF NOT EXISTS reminder_count integer NOT NULL DEFAULT 0;
+
+ALTER TABLE public.applications
+  ADD COLUMN IF NOT EXISTS notification_count integer NOT NULL DEFAULT 0;
 ```
 
-### Ablauf
+### 2. AdminBewerbungsgespraeche.tsx
 
-```text
-Link: https://dashboard.kundenname.de/bewerbungsgespraech/buchen
-  → Domain-Erkennung (dashboard.kundenname.de → kundenname.de)
-  → Branding laden (Logo, Farbe, Recruiter-Card)
-  → User gibt ein: Vorname, Nachname, E-Mail, Telefon
-  → Edge Function erstellt Application (Status: akzeptiert)
-  → Redirect auf /bewerbungsgespraech/{applicationId}
-  → Normaler Buchungsflow
+- **Select erweitern**: `reminder_count` wird bereits automatisch mit `*` geladen
+- **Nach erfolgreichem Senden** (`handleConfirmReminder`): Supabase-Update `reminder_count = (aktueller Wert + 1)` auf `interview_appointments` + Query invalidieren
+- **Button-Rendering** (Zeile ~413-422): Wrapper `relative` um den Button, darin ein `span` mit rotem Kreis + Zahl wenn `item.reminder_count > 0`
+
+### 3. AdminBewerbungen.tsx
+
+- **Select**: `notification_count` wird mit `*` geladen
+- **Nach erfolgreichem resendMutation**: Supabase-Update `notification_count = notification_count + 1` auf `applications` + Query invalidieren
+- **Button-Rendering** (Zeile ~706-712): Gleicher roter Badge auf dem RotateCcw-Button wenn `app.notification_count > 0`
+
+### Badge-Stil (beide Stellen identisch)
+
+```tsx
+<div className="relative">
+  <Button ...>
+    <MessageSquare className="h-4 w-4" />
+  </Button>
+  {item.reminder_count > 0 && (
+    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+      {item.reminder_count}
+    </span>
+  )}
+</div>
 ```
-
-### Aenderungen
-
-**1. Edge Function `submit-application` erweitern**
-- Neuer optionaler Parameter `auto_accept` (boolean)
-- Wenn `true`: Status = `akzeptiert`, `employment_type` nicht required
-
-**2. Neue Seite `src/pages/BewerbungsgespraechPublic.tsx`**
-- Route: `/bewerbungsgespraech/buchen`
-- Domain-Erkennung: gleiche Logik wie `Auth.tsx` — `hostname.split(".").slice(-2).join(".")` bei mehr als 2 Teilen, dann Query auf `brandings.domain`
-- Fallback auf `frik-maxeiner.de` Branding (wie Auth-Seite)
-- Branding-Farbe, Logo, Favicon, Recruiter-Card laden
-- Formular: Vorname, Nachname, E-Mail, Telefon
-- Submit ruft `submit-application` Edge Function mit `auto_accept=true` und `branding_id`
-- Nach Erfolg: Redirect auf `/bewerbungsgespraech/{applicationId}`
-- Glassmorphism-Stil passend zu den bestehenden Buchungsseiten
-
-**3. Route in `App.tsx`**
-- `<Route path="/bewerbungsgespraech/buchen" element={<BewerbungsgespraechPublic />} />`
-- Muss VOR der bestehenden `/bewerbungsgespraech/:id` Route stehen
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `supabase/functions/submit-application/index.ts` | `auto_accept` Parameter, `employment_type` optional |
-| `src/pages/BewerbungsgespraechPublic.tsx` (neu) | Formular mit Domain-basiertem Branding |
-| `src/App.tsx` | Neue Route |
+| DB-Migration | 2 neue Spalten |
+| `AdminBewerbungsgespraeche.tsx` | Increment nach Senden + roter Badge |
+| `AdminBewerbungen.tsx` | Increment nach Resend + roter Badge |
 
