@@ -518,6 +518,55 @@ export default function AdminBewerbungsgespraeche() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!failTarget} onOpenChange={(open) => { if (!open) setFailTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Grund für Fehlschlagen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Bitte geben Sie den Grund ein, warum das Gespräch von{" "}
+              <span className="font-medium text-foreground">{failTarget?.applications?.first_name} {failTarget?.applications?.last_name}</span>{" "}
+              fehlgeschlagen ist.
+            </p>
+            <Textarea
+              placeholder="Grund eingeben..."
+              value={failReason}
+              onChange={(e) => setFailReason(e.target.value)}
+              className="min-h-[80px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setFailTarget(null)}>Abbrechen</Button>
+            <Button
+              variant="destructive"
+              disabled={!failReason.trim()}
+              onClick={async () => {
+                const item = failTarget;
+                const app = item.applications;
+                const reason = failReason.trim();
+                await handleStatusUpdate(item, "fehlgeschlagen");
+                if (app?.branding_id) {
+                  const { data: userData } = await supabase.auth.getUser();
+                  const authorEmail = userData.user?.email ?? "unbekannt";
+                  await supabase.from("branding_notes").insert({
+                    branding_id: app.branding_id,
+                    page_context: "bewerbungsgespraeche",
+                    content: `${app.first_name} ${app.last_name} — Fehlgeschlagen: ${reason}`,
+                    author_email: authorEmail,
+                  });
+                  queryClient.invalidateQueries({ queryKey: ["branding-notes"] });
+                }
+                setFailTarget(null);
+                setFailReason("");
+              }}
+            >
+              Bestätigen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
