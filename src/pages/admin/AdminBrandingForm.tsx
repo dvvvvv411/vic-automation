@@ -522,7 +522,12 @@ export default function AdminBrandingForm() {
           </div>
           <div className="space-y-2">
             <Label>Resend API Key</Label>
-            <Input type="password" value={form.resend_api_key} onChange={(e) => updateField("resend_api_key", e.target.value)} placeholder="re_..." />
+            <div className="flex gap-2">
+              <Input type={showResendKey ? "text" : "password"} value={form.resend_api_key} onChange={(e) => updateField("resend_api_key", e.target.value)} placeholder="re_..." className="flex-1" />
+              <Button type="button" variant="ghost" size="icon" onClick={() => setShowResendKey(!showResendKey)}>
+                {showResendKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
