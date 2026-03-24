@@ -40,6 +40,7 @@ import AdminErsterArbeitstag from "./pages/admin/AdminErsterArbeitstag";
 import AdminVertragsvorlagen from "./pages/admin/AdminVertragsvorlagen";
 import AdminVertragsvorlageForm from "./pages/admin/AdminVertragsvorlageForm";
 import Bewerbungsgespraech from "./pages/Bewerbungsgespraech";
+import BewerbungsgespraechPublic from "./pages/BewerbungsgespraechPublic";
 import Probetag from "./pages/Probetag";
 import ErsterArbeitstag from "./pages/ErsterArbeitstag";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
