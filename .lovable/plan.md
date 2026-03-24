@@ -1,23 +1,30 @@
 
 
-## Plan: Fehlgeschlagen-Popup mit Grund und automatischer Notiz
+## Plan: Erinnerungs-SMS Text anpassen
 
 ### Aenderung
 
-**`AdminBewerbungsgespraeche.tsx`**:
+**`AdminBewerbungsgespraeche.tsx`** Zeile 181-183:
 
-1. Neuen State `failTarget` fuer das Popup (speichert item + Grund-Text)
-2. Beim Klick auf XCircle-Button: statt direkt `handleStatusUpdate` aufzurufen, `failTarget` setzen → Dialog oeffnet sich
-3. Neuer Dialog mit Textarea fuer den Grund
-4. Bei Bestaetigung:
-   - `handleStatusUpdate(item, "fehlgeschlagen")` ausfuehren
-   - Notiz in `branding_notes` einfuegen mit Content: `"{Vorname} {Nachname} — Fehlgeschlagen: {Grund}"`, `page_context: "bewerbungsgespraeche"`, `branding_id` aus der Application
-   - `branding-notes` Query invalidieren
-   - Dialog schliessen
+Den Fallback-Text und die Template-Platzhalter-Logik aendern:
+
+**Vorher:**
+```
+"Hallo {name}, Sie hatten einen Termin bei uns, waren aber leider nicht erreichbar. Bitte rufen Sie uns an: {telefon}."
+```
+
+**Nachher:**
+```
+"Hallo {name}, Sie hatten einen Termin für ein Bewerbungsgespräch bei uns, waren aber leider telefonisch nicht erreichbar. Bitte buchen Sie einen neuen Termin über den Link, den Sie per E-Mail erhalten haben."
+```
+
+Der `{telefon}`-Platzhalter wird nicht mehr benoetigt, da der neue Text keinen Telefonverweis enthaelt.
+
+Zusaetzlich sollte das SMS-Template `gespraech_erinnerung` in der Datenbank aktualisiert werden (falls vorhanden), damit auch bei Nutzung des Templates der neue Text kommt. Das kann ueber `/admin/sms-vorlagen` manuell gemacht werden, oder ich aktualisiere den Fallback-Text im Code.
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `AdminBewerbungsgespraeche.tsx` | State + Dialog + Notiz-Insert bei Fehlgeschlagen |
+| `AdminBewerbungsgespraeche.tsx` | Fallback-SMS-Text aktualisieren |
 
