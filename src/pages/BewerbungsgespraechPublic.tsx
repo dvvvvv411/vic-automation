@@ -120,12 +120,12 @@ export default function BewerbungsgespraechPublic() {
     );
   }
 
-  const hsl = brandColor !== "#3B82F6" ? hexToHSL(brandColor) : null;
+  const hslStr = brandColor !== "#3B82F6" ? hexToHSL(brandColor) : null;
 
   return (
     <div
       className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4 md:p-8 flex items-start justify-center"
-      style={hsl ? { "--primary": `${hsl.h} ${hsl.s}% ${hsl.l}%` } as React.CSSProperties : undefined}
+      style={hslStr ? { "--primary": hslStr } as React.CSSProperties : undefined}
     >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
