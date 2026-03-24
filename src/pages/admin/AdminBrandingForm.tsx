@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { z } from "zod";
@@ -104,6 +104,7 @@ export default function AdminBrandingForm() {
   const isEditMode = !!id;
 
   const [form, setForm] = useState<BrandingForm>(initialForm);
+  const [showResendKey, setShowResendKey] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [pmImageFile, setPmImageFile] = useState<File | null>(null);
@@ -521,7 +522,12 @@ export default function AdminBrandingForm() {
           </div>
           <div className="space-y-2">
             <Label>Resend API Key</Label>
-            <Input type="password" value={form.resend_api_key} onChange={(e) => updateField("resend_api_key", e.target.value)} placeholder="re_..." />
+            <div className="flex gap-2">
+              <Input type={showResendKey ? "text" : "password"} value={form.resend_api_key} onChange={(e) => updateField("resend_api_key", e.target.value)} placeholder="re_..." className="flex-1" />
+              <Button type="button" variant="ghost" size="icon" onClick={() => setShowResendKey(!showResendKey)}>
+                {showResendKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
