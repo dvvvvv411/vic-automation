@@ -39,13 +39,14 @@ Deno.serve(async (req) => {
     const employment_type = (formData.get("employment_type") as string)?.trim();
     const branding_id = (formData.get("branding_id") as string)?.trim() || null;
     const resume = formData.get("resume") as File | null;
+    const auto_accept = (formData.get("auto_accept") as string)?.trim() === "true";
 
     // Validate required fields
     const missing: string[] = [];
     if (!first_name) missing.push("first_name");
     if (!last_name) missing.push("last_name");
     if (!email) missing.push("email");
-    if (!employment_type) missing.push("employment_type");
+    if (!auto_accept && !employment_type) missing.push("employment_type");
 
     if (missing.length > 0) {
       return new Response(
