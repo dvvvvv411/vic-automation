@@ -1,5 +1,6 @@
-import { LayoutDashboard, ClipboardList, Star, LogOut, User, FileText } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Star, LogOut, User, FileText, AlertTriangle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
@@ -22,6 +23,7 @@ interface MitarbeiterSidebarProps {
   } | null;
   brandingLoading: boolean;
   showContractLink: boolean;
+  contractSubmittedAt: string | null;
 }
 
 const navItems = [
@@ -32,7 +34,7 @@ const navItems = [
   { title: "Meine Daten", url: "/mitarbeiter/meine-daten", icon: User },
 ];
 
-export function MitarbeiterSidebar({ branding, brandingLoading, showContractLink }: MitarbeiterSidebarProps) {
+export function MitarbeiterSidebar({ branding, brandingLoading, showContractLink, contractSubmittedAt }: MitarbeiterSidebarProps) {
   const { user, signOut } = useAuth();
   const { isMobile, setOpenMobile } = useSidebar();
 
@@ -91,6 +93,21 @@ export function MitarbeiterSidebar({ branding, brandingLoading, showContractLink
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {/* Contract reminder */}
+      {!contractSubmittedAt && (
+        <Link
+          to="/mitarbeiter/arbeitsvertrag"
+          onClick={handleNavClick}
+          className="mx-3 mb-2 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 hover:bg-amber-100 transition-colors"
+        >
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-amber-900">Vertragsdaten ausfüllen</p>
+            <p className="text-[10px] text-amber-700">Bitte vervollständigen</p>
+          </div>
+        </Link>
+      )}
 
       {/* Footer */}
       <SidebarFooter className="border-t border-border/30 p-4">

@@ -163,7 +163,7 @@ export default function MitarbeiterLayout() {
         className="min-h-screen flex w-full bg-muted/30"
         style={cssVars as React.CSSProperties}
       >
-        <MitarbeiterSidebar branding={branding} brandingLoading={false} showContractLink={showContractLink} />
+        <MitarbeiterSidebar branding={branding} brandingLoading={false} showContractLink={showContractLink} contractSubmittedAt={contract?.submitted_at ?? null} />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="border-b border-border/20 bg-background sticky top-0 z-50 h-16 flex items-center justify-between px-5 shadow-sm relative">
             <SidebarTrigger />
