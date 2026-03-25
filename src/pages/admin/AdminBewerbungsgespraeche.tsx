@@ -380,6 +380,7 @@ export default function AdminBewerbungsgespraeche() {
                     <TableHead>Branding</TableHead>
                     <TableHead>Anstellungsart</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Probetag</TableHead>
                     <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -416,17 +417,49 @@ export default function AdminBewerbungsgespraeche() {
                       </TableCell>
                       <TableCell>{statusBadge(item.status)}</TableCell>
                       <TableCell>
+                        {item._trialDay ? (
+                          <div className="text-xs space-y-0.5">
+                            <div className="font-medium">{new Date(item._trialDay.appointment_date).toLocaleDateString("de-DE")} {item._trialDay.appointment_time?.slice(0, 5)}</div>
+                            <div>{item._trialDay.status === "erfolgreich" ? <Badge className="bg-green-600 text-white border-green-600 text-[10px] px-1.5 py-0">Erfolgreich</Badge> : item._trialDay.status === "fehlgeschlagen" ? <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Fehlgeschl.</Badge> : <Badge variant="outline" className="text-[10px] px-1.5 py-0">Gebucht</Badge>}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">–</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                       <div className="flex gap-1">
-                          {item.applications?.first_name === "Marie" && item.applications?.last_name === "Rodov" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={() => handleResendProbetagEmail(item)}
-                              title="Probetag-E-Mail erneut senden"
-                            >
-                              <Mail className="h-4 w-4" />
-                            </Button>
+                          {item.status === "erfolgreich" && (
+                            <div className="relative">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                onClick={() => handleResendProbetagEmail(item)}
+                                title="Probetag-Einladung erneut senden"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                              {(item as any).probetag_invite_count > 0 && (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center cursor-pointer z-10">
+                                      {(item as any).probetag_invite_count}
+                                    </span>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-56 p-3" onClick={(e) => e.stopPropagation()}>
+                                    <p className="text-sm font-semibold mb-2">Probetag-Einladungen gesendet:</p>
+                                    <ul className="space-y-1 text-xs text-muted-foreground">
+                                      {(Array.isArray((item as any).probetag_invite_timestamps) ? (item as any).probetag_invite_timestamps : []).map((ts: string, i: number) => (
+                                        <li key={i}>{format(new Date(ts), "dd.MM.yyyy HH:mm")} Uhr</li>
+                                      ))}
+                                      {(!Array.isArray((item as any).probetag_invite_timestamps) || (item as any).probetag_invite_timestamps.length === 0) && (
+                                        <li className="italic">Keine Zeitstempel verfügbar</li>
+                                      )}
+                                    </ul>
+                                  </PopoverContent>
+                                </Popover>
+                              )}
+                            </div>
                           )}
                           {item.applications?.phone && (
                             <div className="relative">
