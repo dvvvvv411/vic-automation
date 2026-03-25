@@ -1,24 +1,46 @@
 
 
-## Plan: Arbeitsvertrag-Hinweis groesser und in Brandingfarbe
+## Plan: Vergangene Termine werden nicht angezeigt (Pagination-Bug)
 
-### Aenderung
+### Problem
 
-**`src/components/mitarbeiter/MitarbeiterSidebar.tsx`** (Zeilen 98-109)
+Die Query fuer "Vergangene Termine" holt per Server-Pagination 20 Eintraege (sortiert nach Datum DESC). Alle 20 sind von heute. Danach filtert der Client diese Eintraege nach `cutoffTime` — wenn keiner davon alt genug ist, erscheint "Keine Termine", obwohl es auf Seite 2+ aeltere Termine gibt (24.03, 23.03, 21.03).
 
-Das bestehende amber-farbige Element wird groesser, auffaelliger und nutzt die Branding-Primaerfarbe statt Amber:
+**Ursache**: Client-seitiges Zeitfiltern NACH Server-seitiger Pagination.
 
-- Padding von `p-3` auf `p-4`
-- Hintergrund: `bg-primary/10` mit `border-primary/30` (nutzt die CSS-Variable `--primary` die bereits aus dem Branding gesetzt wird)
-- Icon groesser: `h-6 w-6` statt `h-5 w-5`, Farbe `text-primary`
-- Titel groesser: `text-sm font-semibold` statt `text-xs font-medium`, Farbe `text-primary`
-- Untertitel: `text-xs` statt `text-[10px]`, Farbe `text-primary/70`
-- Hover: `hover:bg-primary/20`
-- Margin: `mx-3 mb-3` fuer etwas mehr Abstand
+### Loesung
+
+Die Zeitfilterung fuer heute muss auf den Server verlagert werden, damit die Pagination korrekt funktioniert.
+
+### Aenderung in `AdminBewerbungsgespraeche.tsx`
+
+**Past-View Query** (Zeile 72-77): Statt `.lte("appointment_date", today)` mit nachtraeglichem Client-Filter, einen `.or()` Filter verwenden:
+
+```typescript
+if (viewMode === "past") {
+  query = query
+    .or(`appointment_date.lt.${today},and(appointment_date.eq.${today},appointment_time.lt.${cutoffTime})`)
+    .order("appointment_date", { ascending: false })
+    .order("appointment_time", { ascending: false });
+}
+```
+
+**Default-View Query** (Zeile 84-91): Analog den Client-Filter ersetzen:
+
+```typescript
+} else {
+  query = query
+    .or(`and(appointment_date.eq.${today},appointment_time.gte.${cutoffTime}),appointment_date.eq.${tomorrow}`)
+    .order("appointment_date", { ascending: true })
+    .order("appointment_time", { ascending: true });
+}
+```
+
+**Client-Filter entfernen** (Zeile 98-114): Den gesamten `if (viewMode === "default") ... else if (viewMode === "past")` Block entfernen, da die Filterung jetzt serverseitig passiert.
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `MitarbeiterSidebar.tsx` | Styling des Contract-Reminder Elements anpassen |
+| `AdminBewerbungsgespraeche.tsx` | `.or()` Filter serverseitig statt Client-Filter nach Pagination |
 
