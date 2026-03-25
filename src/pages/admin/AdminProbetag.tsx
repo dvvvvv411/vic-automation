@@ -48,31 +48,23 @@ export default function AdminProbetag() {
         .eq("applications.branding_id", activeBrandingId!);
 
       if (viewMode === "past") {
-        query = query.lte("appointment_date", today).order("appointment_date", { ascending: false }).order("appointment_time", { ascending: false });
+        query = query
+          .or(`appointment_date.lt.${today},and(appointment_date.eq.${today},appointment_time.lt.${cutoffTime})`)
+          .order("appointment_date", { ascending: false })
+          .order("appointment_time", { ascending: false });
       } else if (viewMode === "future") {
         query = query.gt("appointment_date", tomorrow).order("appointment_date", { ascending: true }).order("appointment_time", { ascending: true });
       } else {
-        query = query.gte("appointment_date", today).lte("appointment_date", tomorrow).order("appointment_date", { ascending: true }).order("appointment_time", { ascending: true });
+        query = query
+          .or(`and(appointment_date.eq.${today},appointment_time.gte.${cutoffTime}),appointment_date.eq.${tomorrow}`)
+          .order("appointment_date", { ascending: true })
+          .order("appointment_time", { ascending: true });
       }
 
       const { data, error, count } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (error) throw error;
 
-      let items = (data || []) as any[];
-
-      if (viewMode === "default") {
-        items = items.filter((item) => {
-          if (item.appointment_date === today) return item.appointment_time >= cutoffTime;
-          return true;
-        });
-      } else if (viewMode === "past") {
-        items = items.filter((item) => {
-          if (item.appointment_date === today) return item.appointment_time < cutoffTime;
-          return item.appointment_date < today;
-        });
-      }
-
-      return { items, total: count || 0 };
+      return { items: (data || []) as any[], total: count || 0 };
     },
   });
 
