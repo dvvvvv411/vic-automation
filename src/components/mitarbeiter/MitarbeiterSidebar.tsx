@@ -23,6 +23,7 @@ interface MitarbeiterSidebarProps {
   } | null;
   brandingLoading: boolean;
   showContractLink: boolean;
+  contractSubmittedAt: string | null;
 }
 
 const navItems = [
