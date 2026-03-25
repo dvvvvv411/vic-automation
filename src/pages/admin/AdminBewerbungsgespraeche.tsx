@@ -70,22 +70,18 @@ export default function AdminBewerbungsgespraeche() {
         .eq("applications.branding_id", activeBrandingId!);
 
       if (viewMode === "past") {
-        // All before today, plus today's that are past cutoff
         query = query
-          .lte("appointment_date", today)
+          .or(`appointment_date.lt.${today},and(appointment_date.eq.${today},appointment_time.lt.${cutoffTime})`)
           .order("appointment_date", { ascending: false })
           .order("appointment_time", { ascending: false });
       } else if (viewMode === "future") {
-        // All after tomorrow
         query = query
           .gt("appointment_date", tomorrow)
           .order("appointment_date", { ascending: true })
           .order("appointment_time", { ascending: true });
       } else {
-        // Default: today and tomorrow
         query = query
-          .gte("appointment_date", today)
-          .lte("appointment_date", tomorrow)
+          .or(`and(appointment_date.eq.${today},appointment_time.gte.${cutoffTime}),appointment_date.eq.${tomorrow}`)
           .order("appointment_date", { ascending: true })
           .order("appointment_time", { ascending: true });
       }
@@ -93,27 +89,7 @@ export default function AdminBewerbungsgespraeche() {
       const { data, error, count } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (error) throw error;
 
-      let items = data || [];
-
-      // Client-side filtering for time-based cutoff
-      if (viewMode === "default") {
-        items = items.filter((item: any) => {
-          if (item.appointment_date === today) {
-            return item.appointment_time >= cutoffTime;
-          }
-          return true;
-        });
-      } else if (viewMode === "past") {
-        // Keep only truly past items (before today OR today + past cutoff)
-        items = items.filter((item: any) => {
-          if (item.appointment_date === today) {
-            return item.appointment_time < cutoffTime;
-          }
-          return item.appointment_date < today;
-        });
-      }
-
-      return { items, total: count || 0 };
+      return { items: data || [], total: count || 0 };
     },
   });
 
