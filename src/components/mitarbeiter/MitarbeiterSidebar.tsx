@@ -94,6 +94,21 @@ export function MitarbeiterSidebar({ branding, brandingLoading, showContractLink
         </SidebarGroup>
       </SidebarContent>
 
+      {/* Contract reminder */}
+      {!contractSubmittedAt && (
+        <Link
+          to="/mitarbeiter/arbeitsvertrag"
+          onClick={handleNavClick}
+          className="mx-3 mb-2 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 hover:bg-amber-100 transition-colors"
+        >
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-amber-900">Vertragsdaten ausfüllen</p>
+            <p className="text-[10px] text-amber-700">Bitte vervollständigen</p>
+          </div>
+        </Link>
+      )}
+
       {/* Footer */}
       <SidebarFooter className="border-t border-border/30 p-4">
         <div className="flex flex-col gap-2.5">
