@@ -134,9 +134,12 @@ export default function AdminArbeitsvertraege() {
         return;
       }
 
-      // Send vertrag_genehmigt email
+      // Send vertrag_genehmigt email with first workday link
       if (selectedContract?.email) {
         const brandingId = selectedContract?.branding_id || selectedContract?.applications?.brandings?.id;
+        const applicationId = selectedContract?.applications?.id || selectedContract?.application_id;
+        const firstWorkdayLink = applicationId ? await buildBrandingUrl(brandingId, `/erster-arbeitstag/${applicationId}`) : undefined;
+
         await sendEmail({
           to: selectedContract.email,
           recipient_name: `${selectedContract.first_name || ""} ${selectedContract.last_name || ""}`.trim(),
@@ -148,8 +151,12 @@ export default function AdminArbeitsvertraege() {
             selectedContract.desired_start_date
               ? `Ab Ihrem Startdatum (${new Date(selectedContract.desired_start_date).toLocaleDateString("de-DE")}) werden Ihnen Aufträge zugewiesen.`
               : "Sie werden in Kürze Ihre ersten Aufträge erhalten.",
+            "Bitte vereinbaren Sie mit uns einen Termin für Ihren ersten Arbeitstag.",
+            "Michael Fischer wird Sie anschließend telefonisch kontaktieren, um mit Ihnen die ersten Aufträge durchzugehen.",
             "Wir freuen uns auf die Zusammenarbeit!",
           ],
+          button_text: firstWorkdayLink ? "Termin für 1. Arbeitstag buchen" : undefined,
+          button_url: firstWorkdayLink || undefined,
           branding_id: brandingId || null,
           event_type: "vertrag_genehmigt",
           metadata: { contract_id: contractId },
@@ -501,6 +508,22 @@ export default function AdminArbeitsvertraege() {
             >
               <Copy className="h-4 w-4 mr-1" /> Daten kopieren
             </Button>
+            {selectedContract?.status === "genehmigt" && (
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  const appId = selectedContract?.applications?.id || selectedContract?.application_id;
+                  const brandingId = selectedContract?.branding_id || selectedContract?.applications?.brandings?.id;
+                  if (appId) {
+                    const url = await buildBrandingUrl(brandingId, `/erster-arbeitstag/${appId}`);
+                    navigator.clipboard.writeText(url);
+                    toast.success("1. Arbeitstag Link kopiert!");
+                  }
+                }}
+              >
+                <CalendarIcon className="h-4 w-4 mr-1" /> 1. Arbeitstag Link kopieren
+              </Button>
+            )}
             <Button variant="ghost" onClick={() => setDialogOpen(false)}>Schließen</Button>
             {selectedContract?.status === "eingereicht" && (
               <Button className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all" onClick={() => openStartDateDialog(selectedContract)}>

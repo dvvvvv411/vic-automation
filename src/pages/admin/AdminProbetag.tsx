@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { sendEmail } from "@/lib/sendEmail";
-import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +8,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Copy, Trash2 } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -81,39 +79,8 @@ export default function AdminProbetag() {
     }
     toast.success(`Status auf "${newStatus}" gesetzt.`);
     queryClient.invalidateQueries({ queryKey: ["trial-day-appointments-admin"] });
-
-    // Send probetag_erfolgreich email when marking as successful
-    if (newStatus === "erfolgreich" && item.applications?.email) {
-      const app = item.applications;
-      const fullName = `${app.first_name} ${app.last_name}`.trim();
-      const brandingId = app.branding_id;
-      const companyName = app.brandings?.company_name || "Unternehmen";
-      const authUrl = await buildBrandingUrl(brandingId, "/auth");
-
-      await sendEmail({
-        to: app.email,
-        recipient_name: fullName,
-        subject: `Ihr Probetag war erfolgreich – ${companyName}`,
-        body_title: "Ihr Probetag war erfolgreich!",
-        body_lines: [
-          `Sehr geehrte/r ${fullName},`,
-          `wir freuen uns, Ihnen mitteilen zu können, dass Ihr Probetag bei ${companyName} erfolgreich war. Wir haben Ihre Ergebnisse geprüft und sind sehr zufrieden.`,
-          "Als nächsten Schritt bitten wir Sie, Ihre persönlichen Daten zu vervollständigen und den Arbeitsvertrag auszufüllen.",
-          "Wir freuen uns auf die Zusammenarbeit!",
-        ],
-        button_text: "Jetzt anmelden",
-        button_url: authUrl,
-        event_type: "probetag_erfolgreich",
-        branding_id: brandingId,
-      });
-    }
   };
 
-  const handleCopyFirstWorkdayLink = async (applicationId: string, brandingId: string | null) => {
-    const url = await buildBrandingUrl(brandingId, `/erster-arbeitstag/${applicationId}`);
-    navigator.clipboard.writeText(url);
-    toast.success("Link für 1. Arbeitstag kopiert!");
-  };
 
   const toggleView = (mode: ViewMode) => {
     setViewMode((prev) => (prev === mode ? "default" : mode));
@@ -211,11 +178,6 @@ export default function AdminProbetag() {
                             {item.status !== "erfolgreich" && (
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(item, "erfolgreich")} title="Als erfolgreich markieren">
                                 <CheckCircle className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {item.status === "erfolgreich" && (
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleCopyFirstWorkdayLink(item.application_id, item.applications?.branding_id)} title="Link für 1. Arbeitstag kopieren">
-                                <Copy className="h-4 w-4" />
                               </Button>
                             )}
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => handleStatusUpdate(item, "fehlgeschlagen")} title="Als fehlgeschlagen markieren">
