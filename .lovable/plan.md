@@ -1,46 +1,76 @@
 
 
-## Plan: Vergangene Termine werden nicht angezeigt (Pagination-Bug)
+## Plan: Workflow-Aenderungen fuer Probetag, Arbeitsvertrag & Bewerbungsgespraeche
 
-### Problem
+### Uebersicht
 
-Die Query fuer "Vergangene Termine" holt per Server-Pagination 20 Eintraege (sortiert nach Datum DESC). Alle 20 sind von heute. Danach filtert der Client diese Eintraege nach `cutoffTime` — wenn keiner davon alt genug ist, erscheint "Keine Termine", obwohl es auf Seite 2+ aeltere Termine gibt (24.03, 23.03, 21.03).
+Drei zusammenhaengende Aenderungen:
 
-**Ursache**: Client-seitiges Zeitfiltern NACH Server-seitiger Pagination.
+1. **Probetag "erfolgreich"**: Nur Status aendern, keinen 1. Arbeitstag-Link mehr erstellen, keine E-Mail mit Login-Link mehr senden. Der Copy-Button fuer 1. Arbeitstag wird entfernt.
 
-### Loesung
+2. **Arbeitsvertrag genehmigen**: Nach Genehmigung wird der 1. Arbeitstag-Buchungslink generiert. Die "Willkommen im Team"-E-Mail erhaelt zusaetzlichen Text + Button. Im Detail-Popup wird der Link zum Kopieren angezeigt (bei genehmigten Vertraegen).
 
-Die Zeitfilterung fuer heute muss auf den Server verlagert werden, damit die Pagination korrekt funktioniert.
+3. **Bewerbungsgespraeche-Tabelle**: Neue Spalte "Probetag" die anzeigt ob/wann ein Probetag-Termin gebucht wurde. Plus ein Button zum erneuten Senden der Probetag-Einladung (selbe Logik wie "erfolgreich markieren"), mit rotem Badge-Zaehler und Timestamp-Popover.
 
-### Aenderung in `AdminBewerbungsgespraeche.tsx`
+---
 
-**Past-View Query** (Zeile 72-77): Statt `.lte("appointment_date", today)` mit nachtraeglichem Client-Filter, einen `.or()` Filter verwenden:
+### Aenderungen
 
-```typescript
-if (viewMode === "past") {
-  query = query
-    .or(`appointment_date.lt.${today},and(appointment_date.eq.${today},appointment_time.lt.${cutoffTime})`)
-    .order("appointment_date", { ascending: false })
-    .order("appointment_time", { ascending: false });
-}
+#### 1. `AdminProbetag.tsx`
+
+- `handleStatusUpdate`: Den gesamten E-Mail-Block bei `erfolgreich` entfernen (Zeilen 86-109). Nur noch Status-Update.
+- `handleCopyFirstWorkdayLink` Funktion entfernen
+- Copy-Button bei `status === "erfolgreich"` entfernen (Zeilen 216-219)
+
+#### 2. `AdminArbeitsvertraege.tsx`
+
+**handleApprove** (Zeile 117-201):
+- Nach dem Genehmigen den 1. Arbeitstag-Link generieren: `buildBrandingUrl(brandingId, /erster-arbeitstag/{applicationId})`
+- In der "Willkommen im Team"-E-Mail (Zeile 145-156) den Text ergaenzen:
+  ```
+  "Bitte vereinbaren Sie mit uns einen Termin für Ihren ersten Arbeitstag.",
+  "Michael Fischer wird Sie anschließend telefonisch kontaktieren, um mit Ihnen die ersten Aufträge durchzugehen."
+  ```
+- Button: `button_text: "Termin für 1. Arbeitstag buchen"`, `button_url: firstWorkdayLink`
+
+**Detail-Popup** (Zeile 488-510, DialogFooter):
+- Bei `status === "genehmigt"`: Einen "1. Arbeitstag Link kopieren"-Button hinzufuegen, der `buildBrandingUrl(brandingId, /erster-arbeitstag/{applicationId})` kopiert
+
+#### 3. `AdminBewerbungsgespraeche.tsx`
+
+**Query erweitern**:
+- Zusaetzlich `trial_day_appointments` Daten pro `application_id` laden (separate Query oder Join)
+- Da kein direkter Join moeglich ist (verschiedene Tabellen), wird eine separate Query fuer alle `application_ids` der aktuellen Seite gemacht
+
+**Neue Spalte "Probetag"** in der Tabelle:
+- Zeigt Datum+Uhrzeit des Probetag-Termins an, oder "–" wenn keiner gebucht
+- Badge mit Status (Neu/Erfolgreich/Fehlgeschlagen)
+
+**Neuer Button "Probetag-Einladung erneut senden"**:
+- Nur sichtbar wenn Status `erfolgreich`
+- Loest exakt dieselbe Logik aus wie `handleStatusUpdate(item, "erfolgreich")` — sendet die Probetag-Buchungs-E-Mail
+- Braucht Zaehler: Neues Feld `notification_count` und `notification_timestamps` auf `interview_appointments` (existieren dort bereits als `reminder_count` / `reminder_timestamps`) — wir nutzen separate Felder fuer die Probetag-Einladung
+
+**Zaehler-Implementierung**:
+- Neues DB-Feld: `probetag_invite_count` (integer, default 0) und `probetag_invite_timestamps` (jsonb, default '[]') auf `interview_appointments`
+- Roter Kreis-Badge mit Anzahl, Klick oeffnet Popover mit Timestamps (identisches Pattern wie `reminder_count`/`reminder_timestamps`)
+
+---
+
+### Neue Migration
+
+```sql
+ALTER TABLE interview_appointments
+ADD COLUMN probetag_invite_count integer NOT NULL DEFAULT 0,
+ADD COLUMN probetag_invite_timestamps jsonb NOT NULL DEFAULT '[]'::jsonb;
 ```
-
-**Default-View Query** (Zeile 84-91): Analog den Client-Filter ersetzen:
-
-```typescript
-} else {
-  query = query
-    .or(`and(appointment_date.eq.${today},appointment_time.gte.${cutoffTime}),appointment_date.eq.${tomorrow}`)
-    .order("appointment_date", { ascending: true })
-    .order("appointment_time", { ascending: true });
-}
-```
-
-**Client-Filter entfernen** (Zeile 98-114): Den gesamten `if (viewMode === "default") ... else if (viewMode === "past")` Block entfernen, da die Filterung jetzt serverseitig passiert.
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `AdminBewerbungsgespraeche.tsx` | `.or()` Filter serverseitig statt Client-Filter nach Pagination |
+| `AdminProbetag.tsx` | E-Mail-Versand + Copy-Button bei "erfolgreich" entfernen |
+| `AdminArbeitsvertraege.tsx` | 1. Arbeitstag-Link bei Genehmigung generieren, E-Mail-Text + Button ergaenzen, Link im Detail-Popup |
+| `AdminBewerbungsgespraeche.tsx` | Probetag-Spalte, Resend-Button mit Zaehler + Popover, separate Query fuer trial_day_appointments |
+| DB-Migration | `probetag_invite_count` + `probetag_invite_timestamps` auf `interview_appointments` |
 
