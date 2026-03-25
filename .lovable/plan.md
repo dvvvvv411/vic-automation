@@ -1,18 +1,25 @@
 
 
-## Plan: Resend API Key sichtbar machen (Toggle)
+## Plan: Arbeitsvertrag-Hinweis in der Mitarbeiter-Sidebar
 
-### Aenderung
+### Konzept
 
-**`src/pages/admin/AdminBrandingForm.tsx`**
+Ein dauerhaft sichtbares Element unten in der Sidebar (ueber dem Footer/Logout), das den Nutzer auf den fehlenden Arbeitsvertrag hinweist — egal auf welchem Reiter er sich befindet. Verschwindet sobald der Vertrag eingereicht wurde.
 
-- Neuen State `showResendKey` (boolean, default `false`) hinzufuegen
-- Das Input-Feld fuer `resend_api_key` (Zeile 524) erhaelt `type={showResendKey ? "text" : "password"}`
-- Daneben ein kleiner Toggle-Button mit Eye/EyeOff Icon zum Umschalten
+### Aenderungen
+
+**`src/components/mitarbeiter/MitarbeiterLayout.tsx`**
+- `contract` Objekt um `submitted_at` erweitern und an `MitarbeiterSidebar` als neue Prop `contractSubmittedAt` weitergeben
+
+**`src/components/mitarbeiter/MitarbeiterSidebar.tsx`**
+- Neue Prop `contractSubmittedAt: string | null`
+- Zwischen Navigation und Footer: Wenn `contractSubmittedAt` null ist, ein kompaktes amber-farbiges Element anzeigen mit FileText-Icon, kurzem Text ("Vertragsdaten ausfuellen") und Link zu `/mitarbeiter/arbeitsvertrag`
+- Stil: Kleine Card mit `bg-amber-50 border border-amber-200 rounded-xl` im unteren Bereich der Sidebar (vor dem Footer), mit `mt-auto` um es nach unten zu druecken
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `src/pages/admin/AdminBrandingForm.tsx` | State + Eye-Toggle am Resend API Key Input |
+| `MitarbeiterLayout.tsx` | `contractSubmittedAt` Prop an Sidebar weitergeben |
+| `MitarbeiterSidebar.tsx` | Neue Prop + Hinweis-Element ueber dem Footer |
 
