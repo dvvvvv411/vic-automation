@@ -34,7 +34,7 @@ const navItems = [
   { title: "Meine Daten", url: "/mitarbeiter/meine-daten", icon: User },
 ];
 
-export function MitarbeiterSidebar({ branding, brandingLoading, showContractLink }: MitarbeiterSidebarProps) {
+export function MitarbeiterSidebar({ branding, brandingLoading, showContractLink, contractSubmittedAt }: MitarbeiterSidebarProps) {
   const { user, signOut } = useAuth();
   const { isMobile, setOpenMobile } = useSidebar();
 
