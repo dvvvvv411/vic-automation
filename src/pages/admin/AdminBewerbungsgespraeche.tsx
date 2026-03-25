@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, MessageSquare, Search, Mail, Trash2 } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, MessageSquare, Search, Mail, Trash2, RefreshCw } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -89,7 +89,22 @@ export default function AdminBewerbungsgespraeche() {
       const { data, error, count } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (error) throw error;
 
-      return { items: data || [], total: count || 0 };
+      // Fetch trial day appointments for all application_ids on this page
+      const appIds = (data || []).map((d: any) => d.application_id).filter(Boolean);
+      let trialDayMap: Record<string, any> = {};
+      if (appIds.length > 0) {
+        const { data: trialDays } = await supabase
+          .from("trial_day_appointments" as any)
+          .select("application_id, appointment_date, appointment_time, status")
+          .in("application_id", appIds);
+        if (trialDays) {
+          (trialDays as any[]).forEach((td) => {
+            trialDayMap[td.application_id] = td;
+          });
+        }
+      }
+
+      return { items: (data || []).map((item: any) => ({ ...item, _trialDay: trialDayMap[item.application_id] || null })), total: count || 0 };
     },
   });
 
@@ -260,7 +275,19 @@ export default function AdminBewerbungsgespraeche() {
         event_type: "gespraech_erfolgreich",
         metadata: { appointment_id: item.id, application_id: item.application_id },
       });
-      toast.success("Probetag-E-Mail erneut gesendet!");
+
+      // Increment probetag_invite_count and add timestamp
+      const currentTimestamps = Array.isArray((item as any).probetag_invite_timestamps) ? (item as any).probetag_invite_timestamps : [];
+      await supabase
+        .from("interview_appointments")
+        .update({
+          probetag_invite_count: ((item as any).probetag_invite_count || 0) + 1,
+          probetag_invite_timestamps: [...currentTimestamps, new Date().toISOString()],
+        } as any)
+        .eq("id", item.id);
+
+      toast.success("Probetag-Einladung erneut gesendet!");
+      queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
     } catch (err) {
       console.error("Resend probetag email error:", err);
       toast.error("Fehler beim Senden der E-Mail");
