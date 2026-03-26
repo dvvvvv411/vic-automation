@@ -1,37 +1,43 @@
 
 
-## Plan: Kunden-Rolle darf Mitarbeiter loeschen
-
-### Problem
-
-Die Edge Function `delete-employee` prueft nur auf `role = 'admin'` (Zeile 46). Kunden erhalten daher den Fehler "Nur Admins koennen Mitarbeiter loeschen".
+## Plan: Probetag-Link kopieren Button bei Bewerbungsgespraeche
 
 ### Aenderung
 
-**`supabase/functions/delete-employee/index.ts`** (Zeilen 43-54)
+**`src/pages/admin/AdminBewerbungsgespraeche.tsx`**
 
-Die Rollenprüfung wird erweitert: Statt nur `admin` wird auch `kunde` akzeptiert.
+1. `Copy` Icon importieren (aus `lucide-react`)
+2. In der Aktionen-Spalte einen neuen Button hinzufuegen (neben dem RefreshCw-Button), der nur bei `status === "erfolgreich"` erscheint
+3. Bei Klick wird `buildBrandingUrl(app.brandings?.id, `/probetag/${item.application_id}`)` aufgerufen und das Ergebnis in die Zwischenablage kopiert mit `navigator.clipboard.writeText()` + Toast-Bestaetigung
 
-```typescript
-const { data: roleCheck } = await adminClient
-  .from("user_roles")
-  .select("role")
-  .eq("user_id", callerId)
-  .in("role", ["admin", "kunde"])
-  .limit(1)
-  .maybeSingle();
+### Technische Details
 
-if (!roleCheck) {
-  return new Response(JSON.stringify({ error: "Keine Berechtigung zum Löschen" }), {
-    status: 403,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
+- Import `Copy` aus `lucide-react` (Zeile 17)
+- Neuer Button direkt nach dem RefreshCw-Block (nach Zeile 463), innerhalb des `item.status === "erfolgreich"` Bereichs:
+
+```tsx
+<Button
+  variant="ghost"
+  size="icon"
+  className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+  onClick={async () => {
+    const link = await buildBrandingUrl(item.applications?.brandings?.id, `/probetag/${item.application_id}`);
+    if (link) {
+      navigator.clipboard.writeText(link);
+      toast.success("Probetag-Link kopiert!");
+    } else {
+      toast.error("Link konnte nicht erstellt werden");
+    }
+  }}
+  title="Probetag-Link kopieren"
+>
+  <Copy className="h-4 w-4" />
+</Button>
 ```
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `supabase/functions/delete-employee/index.ts` | Rollenprüfung um `kunde` erweitern |
+| `AdminBewerbungsgespraeche.tsx` | Copy-Icon Import + neuer Button in Aktionen-Spalte |
 
