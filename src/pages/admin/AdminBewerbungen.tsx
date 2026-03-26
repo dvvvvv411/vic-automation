@@ -776,6 +776,10 @@ export default function AdminBewerbungen() {
           <h2 className="text-3xl font-bold tracking-tight text-foreground">Bewerbungen</h2>
           <p className="text-muted-foreground mt-1">Alle eingegangenen Bewerbungen im Überblick.</p>
         </div>
+        <Button onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Bewerbung hinzufügen
+        </Button>
       </motion.div>
 
       {/* Funnel Stats */}
