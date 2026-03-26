@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, MessageSquare, Search, Mail, Trash2, RefreshCw } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, MessageSquare, Search, Mail, Trash2, RefreshCw, Copy } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -460,6 +460,26 @@ export default function AdminBewerbungsgespraeche() {
                                 </Popover>
                               )}
                             </div>
+                          )}
+                          {item.status === "erfolgreich" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const link = await buildBrandingUrl(item.applications?.brandings?.id, `/probetag/${item.application_id}`);
+                                if (link) {
+                                  navigator.clipboard.writeText(link);
+                                  toast.success("Probetag-Link kopiert!");
+                                } else {
+                                  toast.error("Link konnte nicht erstellt werden");
+                                }
+                              }}
+                              title="Probetag-Link kopieren"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
                           )}
                           {item.applications?.phone && (
                             <div className="relative">
