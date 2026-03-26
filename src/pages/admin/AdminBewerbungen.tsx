@@ -818,12 +818,6 @@ export default function AdminBewerbungen() {
       })()}
 
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Bewerbung hinzufügen
-            </Button>
-          </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Neue Bewerbung hinzufügen</DialogTitle>
