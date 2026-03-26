@@ -787,7 +787,7 @@ export default function AdminBewerbungen() {
         const selfApps = applications.filter(a => !a.is_external && !a.is_indeed);
         const externalApps = applications.filter(a => a.is_external);
         const indeedApps = applications.filter(a => a.is_indeed);
-        const withBooking = (list: typeof applications) => list.filter(a => a.interview_appointments && a.interview_appointments.length > 0).length;
+        const withBooking = (list: typeof applications) => list.filter(a => a.interview_appointments && (Array.isArray(a.interview_appointments) ? a.interview_appointments.length > 0 : true)).length;
         const pct = (booked: number, total: number) => total > 0 ? Math.round((booked / total) * 100) : 0;
 
         const stats = [
