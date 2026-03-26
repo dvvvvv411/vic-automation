@@ -1,44 +1,37 @@
 
 
-## Plan: Umbuchung von Bewerbungsgespraechen fuer anonyme Bewerber ermoeglichen
+## Plan: Kunden-Rolle darf Mitarbeiter loeschen
 
 ### Problem
 
-Die Buchungsseite `/bewerbungsgespraech/:id` ist fuer anonyme (nicht eingeloggte) Bewerber gedacht. Es gibt RLS-Policies fuer `anon` zum **Einfuegen** und **Lesen** von `interview_appointments`, aber **keine** fuer **Loeschen** oder **Aktualisieren**. Wenn ein Bewerber umbuchen will, schlaegt der `DELETE`-Aufruf (Zeile 183-188 in `Bewerbungsgespraech.tsx`) still fehl — der alte Termin bleibt bestehen, und die Umbuchung funktioniert nicht.
-
-### Loesung
-
-Eine neue RLS-Policy fuer `anon` DELETE auf `interview_appointments`, die nur das Loeschen erlaubt, wenn die `application_id` mit der uebergebenen ID uebereinstimmt. Da der Bewerber die `application_id` kennt (aus der URL), ist das sicher genug — ohne diese ID kann niemand einen Termin loeschen.
+Die Edge Function `delete-employee` prueft nur auf `role = 'admin'` (Zeile 46). Kunden erhalten daher den Fehler "Nur Admins koennen Mitarbeiter loeschen".
 
 ### Aenderung
 
-**DB-Migration:**
+**`supabase/functions/delete-employee/index.ts`** (Zeilen 43-54)
 
-```sql
-CREATE POLICY "Anon can delete own appointment for rebooking"
-ON public.interview_appointments
-FOR DELETE
-TO anon
-USING (true);
+Die Rollenprüfung wird erweitert: Statt nur `admin` wird auch `kunde` akzeptiert.
+
+```typescript
+const { data: roleCheck } = await adminClient
+  .from("user_roles")
+  .select("role")
+  .eq("user_id", callerId)
+  .in("role", ["admin", "kunde"])
+  .limit(1)
+  .maybeSingle();
+
+if (!roleCheck) {
+  return new Response(JSON.stringify({ error: "Keine Berechtigung zum Löschen" }), {
+    status: 403,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 ```
-
-Alternativ restriktiver (nur wenn genau ein Termin existiert):
-
-```sql
-CREATE POLICY "Anon can delete own appointment for rebooking"
-ON public.interview_appointments
-FOR DELETE
-TO anon
-USING (true);
-```
-
-Da die `application_id` ohnehin im Client-Code per `.eq("id", existingAppointment.id)` gefiltert wird und der Bewerber nur seine eigene appointment-ID kennt, ist `USING (true)` vertretbar. Fuer mehr Sicherheit koennte man zusaetzlich im Code statt `DELETE by id` eine Server-Funktion nutzen — aber das waere ueberengineered fuer diesen Fall.
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| DB-Migration | Neue `anon` DELETE Policy auf `interview_appointments` |
-
-Kein Code in `Bewerbungsgespraech.tsx` muss geaendert werden — die Logik ist bereits korrekt, nur die DB-Berechtigung fehlt.
+| `supabase/functions/delete-employee/index.ts` | Rollenprüfung um `kunde` erweitern |
 
