@@ -36,7 +36,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, FileText, Trash2, Check, X, Copy, CalendarCheck, ExternalLink, Upload, CheckCheck, Loader2, RotateCcw } from "lucide-react";
+import { Plus, FileText, Trash2, Check, X, Copy, CalendarCheck, ExternalLink, Upload, CheckCheck, Loader2, RotateCcw, Users, Globe, Briefcase } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -775,13 +776,48 @@ export default function AdminBewerbungen() {
           <h2 className="text-3xl font-bold tracking-tight text-foreground">Bewerbungen</h2>
           <p className="text-muted-foreground mt-1">Alle eingegangenen Bewerbungen im Überblick.</p>
         </div>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Bewerbung hinzufügen
-            </Button>
-          </DialogTrigger>
+        <Button onClick={() => setOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Bewerbung hinzufügen
+        </Button>
+      </motion.div>
+
+      {/* Funnel Stats */}
+      {applications && applications.length > 0 && (() => {
+        const selfApps = applications.filter(a => !a.is_external && !a.is_indeed);
+        const externalApps = applications.filter(a => a.is_external);
+        const indeedApps = applications.filter(a => a.is_indeed);
+        const withBooking = (list: typeof applications) => list.filter(a => a.interview_appointments && (Array.isArray(a.interview_appointments) ? a.interview_appointments.length > 0 : true)).length;
+        const pct = (booked: number, total: number) => total > 0 ? Math.round((booked / total) * 100) : 0;
+
+        const stats = [
+          { label: "Selbst registriert", icon: Users, total: selfApps.length, booked: withBooking(selfApps), color: "border-t-blue-500" },
+          { label: "Extern hinzugefügt", icon: Globe, total: externalApps.length, booked: withBooking(externalApps), color: "border-t-orange-500" },
+          { label: "Indeed Bewerber", icon: Briefcase, total: indeedApps.length, booked: withBooking(indeedApps), color: "border-t-green-500" },
+        ];
+
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {stats.map(s => (
+              <Card key={s.label} className={`border-t-4 ${s.color}`}>
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+                    <s.icon className="h-4 w-4" />
+                    {s.label}
+                  </div>
+                  <div className="text-3xl font-bold text-foreground">{s.total}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm text-muted-foreground">{s.booked} mit Termin</span>
+                    <Badge variant="secondary" className="text-xs">{pct(s.booked, s.total)}%</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        );
+      })()}
+
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Neue Bewerbung hinzufügen</DialogTitle>
@@ -917,7 +953,6 @@ export default function AdminBewerbungen() {
             </div>
           </DialogContent>
         </Dialog>
-      </motion.div>
 
       <Dialog open={!!detailApp} onOpenChange={(v) => { if (!v) setDetailApp(null); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
