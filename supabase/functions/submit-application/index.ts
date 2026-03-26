@@ -175,24 +175,72 @@ Deno.serve(async (req) => {
     // Send confirmation email
     try {
       const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
-      await fetch(sendEmailUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
-        body: JSON.stringify({
-          to: email,
-          recipient_name: `${first_name} ${last_name}`,
-          subject: "Ihre Bewerbung ist eingegangen",
-          body_title: "Vielen Dank für Ihre Bewerbung",
-          body_lines: [
-            `Sehr geehrte/r ${first_name} ${last_name},`,
-            "wir haben Ihre Bewerbung erhalten und werden diese sorgfältig prüfen.",
-            "Wir melden uns zeitnah bei Ihnen mit weiteren Informationen zum Bewerbungsprozess.",
-          ],
-          branding_id: branding_id || null,
-          event_type: "bewerbung_eingegangen",
-          metadata: { application_id: application.id },
-        }),
-      });
+      const fullName = `${first_name} ${last_name}`;
+
+      if (auto_accept) {
+        // "Bewerbung angenommen" email with booking button (same as AdminBewerbungen)
+        let bookingUrl = "";
+        let karriereLink = "";
+        if (branding_id) {
+          const { data: brandingDomain } = await supabase
+            .from("brandings")
+            .select("domain, subdomain_prefix")
+            .eq("id", branding_id)
+            .maybeSingle();
+          if (brandingDomain?.domain) {
+            const domain = brandingDomain.domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+            const prefix = brandingDomain.subdomain_prefix || "web";
+            bookingUrl = `https://${prefix}.${domain}/bewerbungsgespraech/${application.id}`;
+            karriereLink = `https://${domain}/karriere`;
+          }
+        }
+
+        const footerLines = karriereLink
+          ? [`Besuchen Sie auch unsere Karriereseite: ${karriereLink}`]
+          : [];
+
+        await fetch(sendEmailUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+          body: JSON.stringify({
+            to: email,
+            recipient_name: fullName,
+            subject: "Ihre Bewerbung wurde angenommen",
+            body_title: "Ihre Bewerbung wurde angenommen",
+            body_lines: [
+              `Sehr geehrte/r ${fullName},`,
+              "wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung angenommen wurde.",
+              "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch über den folgenden Link.",
+            ],
+            button_text: "Termin buchen",
+            button_url: bookingUrl,
+            footer_lines: footerLines,
+            branding_id: branding_id || null,
+            event_type: "bewerbung_angenommen",
+            metadata: { application_id: application.id },
+          }),
+        });
+      } else {
+        // Standard "Bewerbung eingegangen" email
+        await fetch(sendEmailUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+          body: JSON.stringify({
+            to: email,
+            recipient_name: fullName,
+            subject: "Ihre Bewerbung ist eingegangen",
+            body_title: "Vielen Dank für Ihre Bewerbung",
+            body_lines: [
+              `Sehr geehrte/r ${fullName},`,
+              "wir haben Ihre Bewerbung erhalten und werden diese sorgfältig prüfen.",
+              "Wir melden uns zeitnah bei Ihnen mit weiteren Informationen zum Bewerbungsprozess.",
+            ],
+            branding_id: branding_id || null,
+            event_type: "bewerbung_eingegangen",
+            metadata: { application_id: application.id },
+          }),
+        });
+      }
     } catch (emailErr) {
       console.error("send-email call failed:", emailErr);
     }
