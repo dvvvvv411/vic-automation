@@ -953,7 +953,6 @@ export default function AdminBewerbungen() {
             </div>
           </DialogContent>
         </Dialog>
-      </motion.div>
 
       <Dialog open={!!detailApp} onOpenChange={(v) => { if (!v) setDetailApp(null); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
