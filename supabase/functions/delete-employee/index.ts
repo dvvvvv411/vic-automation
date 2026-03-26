@@ -43,11 +43,12 @@ Deno.serve(async (req) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", callerId)
-      .eq("role", "admin")
-      .single();
+      .in("role", ["admin", "kunde"])
+      .limit(1)
+      .maybeSingle();
 
     if (!roleCheck) {
-      return new Response(JSON.stringify({ error: "Nur Admins können Mitarbeiter löschen" }), {
+      return new Response(JSON.stringify({ error: "Keine Berechtigung zum Löschen" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
