@@ -1,45 +1,41 @@
 
 
-## Plan: Funnel-Statistik-Cards bei /admin/bewerbungen
+## Plan: Bei auto_accept "Bewerbung angenommen" statt "Bewerbung eingegangen" senden
 
-### Uebersicht
+### Problem
 
-Drei Statistik-Cards oberhalb der Tabelle, berechnet aus den bereits geladenen `applications`-Daten (kein zusaetzlicher Query noetig):
-
-1. **Selbst registriert** — `!is_external && !is_indeed` — davon mit gebuchtem Termin (`interview_appointments.length > 0`)
-2. **Extern hinzugefuegt** — `is_external === true` — davon mit gebuchtem Termin
-3. **Indeed Bewerber** — `is_indeed === true` — davon mit gebuchtem Termin
+Die `submit-application` Edge Function sendet bei `auto_accept=true` aktuell die "Bewerbung eingegangen" E-Mail (`event_type: "bewerbung_eingegangen"`). Stattdessen soll sie die "Bewerbung angenommen" E-Mail senden — mit denselben Parametern wie in `AdminBewerbungen.tsx` (Zeilen 242-258).
 
 ### Aenderung
 
-**`src/pages/admin/AdminBewerbungen.tsx`**
+**`supabase/functions/submit-application/index.ts`** (Zeilen 175-198)
 
-Nach dem `motion.div` Header-Bereich und vor der Tabelle werden drei Cards eingefuegt:
+Der E-Mail-Block wird per `if (auto_accept)` aufgeteilt:
 
-```tsx
-const selfCount = applications?.filter(a => !a.is_external && !a.is_indeed) ?? [];
-const externalCount = applications?.filter(a => a.is_external) ?? [];
-const indeedCount = applications?.filter(a => a.is_indeed) ?? [];
+**Bei `auto_accept === true`:**
+- Branding-Domain laden (`domain`, `subdomain_prefix`) um Buchungs-URL zu bauen
+- Karriere-Link bauen (`https://{domain}/karriere`)
+- E-Mail mit denselben Parametern wie Admin-Panel senden:
+  - `event_type`: `"bewerbung_angenommen"`
+  - `subject`: `"Ihre Bewerbung wurde angenommen"`
+  - `body_title`: `"Ihre Bewerbung wurde angenommen"`
+  - `body_lines`: Glueckwunsch-Text + Aufforderung Termin zu buchen
+  - `button_text`: `"Termin buchen"`
+  - `button_url`: `https://{prefix}.{domain}/bewerbungsgespraech/{application_id}`
+  - `footer_lines`: Karriere-Link (wie im Admin-Panel)
 
-const withBooking = (list) => list.filter(a => a.interview_appointments?.length > 0).length;
-```
-
-Drei nebeneinander liegende Cards (grid 3 cols), jede zeigt:
-- Titel (z.B. "Selbst registriert")
-- Gesamtzahl gross
-- Darunter: "{n} mit Termin" + Prozent-Badge
-- Farbiger Top-Border (blau/orange/gruen)
+**Bei `auto_accept === false`:** Alles bleibt wie bisher ("Bewerbung eingegangen", kein Button).
 
 ### Technische Details
 
-- Kein neuer Query — alles aus dem bestehenden `applications` Array berechnet
-- Import `Card, CardContent, CardHeader, CardTitle` (ggf. bereits importiert pruefen)
-- Cards werden zwischen Header und Tabelle/Filter-Bereich platziert
-- Prozent wird als `Math.round((withBooking / total) * 100)` berechnet, mit Fallback auf 0
+- Domain-Query: `brandings` Tabelle nach `domain` und `subdomain_prefix` (Fallback `"web"`)
+- Karriere-Link ohne Subdomain-Prefix: `https://{domain}/karriere`
+- Buchungs-Link mit Prefix: `https://{prefix}.{domain}/bewerbungsgespraech/{id}`
+- Telegram-Nachricht bleibt unveraendert
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `AdminBewerbungen.tsx` | Card-Imports + 3 Statistik-Cards oberhalb der Tabelle |
+| `supabase/functions/submit-application/index.ts` | E-Mail-Block: bei `auto_accept` → `bewerbung_angenommen` mit Button statt `bewerbung_eingegangen` |
 
