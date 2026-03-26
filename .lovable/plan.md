@@ -1,64 +1,45 @@
 
 
-## Plan: Erinnerungs-Button bei Probetag + neue SMS/Email Vorlagen
+## Plan: Funnel-Statistik-Cards bei /admin/bewerbungen
 
 ### Uebersicht
 
-Erinnerungs-SMS & E-Mail Button bei `/admin/probetag` (wie bei Bewerbungsgespraeche), mit rotem Zaehler-Badge, Timestamp-Popover, neuem SMS-Template und neuer Email-Vorschau.
+Drei Statistik-Cards oberhalb der Tabelle, berechnet aus den bereits geladenen `applications`-Daten (kein zusaetzlicher Query noetig):
 
-### 1. DB-Migration
+1. **Selbst registriert** — `!is_external && !is_indeed` — davon mit gebuchtem Termin (`interview_appointments.length > 0`)
+2. **Extern hinzugefuegt** — `is_external === true` — davon mit gebuchtem Termin
+3. **Indeed Bewerber** — `is_indeed === true` — davon mit gebuchtem Termin
 
-Neue Spalten auf `trial_day_appointments`:
-- `reminder_count` (integer, default 0)
-- `reminder_timestamps` (jsonb, default '[]')
+### Aenderung
 
-Neues SMS-Template in `sms_templates`:
-```sql
-INSERT INTO sms_templates (event_type, label, message)
-VALUES ('probetag_erinnerung', 'Probetag Erinnerung', 'Hallo {name}, Sie hatten einen Probetag-Termin bei uns. Falls Sie den Termin nicht wahrnehmen konnten, buchen Sie bitte einen neuen Termin über den Link in Ihrer E-Mail.');
+**`src/pages/admin/AdminBewerbungen.tsx`**
+
+Nach dem `motion.div` Header-Bereich und vor der Tabelle werden drei Cards eingefuegt:
+
+```tsx
+const selfCount = applications?.filter(a => !a.is_external && !a.is_indeed) ?? [];
+const externalCount = applications?.filter(a => a.is_external) ?? [];
+const indeedCount = applications?.filter(a => a.is_indeed) ?? [];
+
+const withBooking = (list) => list.filter(a => a.interview_appointments?.length > 0).length;
 ```
 
-### 2. AdminProbetag.tsx
+Drei nebeneinander liegende Cards (grid 3 cols), jede zeigt:
+- Titel (z.B. "Selbst registriert")
+- Gesamtzahl gross
+- Darunter: "{n} mit Termin" + Prozent-Badge
+- Farbiger Top-Border (blau/orange/gruen)
 
-- Imports hinzufuegen: `sendEmail`, `sendSms`, `buildBrandingUrl`, `MessageSquare`, `RefreshCw`, `Popover*`, `Dialog*`, `Textarea`, `format`
-- State: `sendingReminder`, `reminderPreview`
-- `handlePrepareReminder`: Laedt SMS-Template `probetag_erinnerung`, zeigt Vorschau-Dialog
-- `handleConfirmReminder`: Sendet SMS + E-Mail (mit "Termin umbuchen" Button der auf `/probetag/{application_id}` linkt), inkrementiert `reminder_count` + `reminder_timestamps`
-- In der Aktionen-Spalte: MessageSquare-Button mit rotem Badge + Popover (exakt wie bei Bewerbungsgespraeche)
-- Vorschau-Dialog und Confirm-Dialog am Ende der Komponente
+### Technische Details
 
-### 3. AdminSmsTemplates.tsx
-
-Neuer Eintrag in `PLACEHOLDER_INFO`:
-```
-probetag_erinnerung: ["{name}"],
-```
-
-### 4. AdminEmails.tsx
-
-Neues Template in der `templates`-Liste:
-```typescript
-{
-  eventType: "probetag_erinnerung",
-  label: "Probetag Erinnerung",
-  subject: (c) => `Erinnerung an Ihren Probetag – ${c}`,
-  bodyTitle: "Erinnerung an Ihren Probetag",
-  bodyLines: (c) => [
-    "Sehr geehrte/r Max Mustermann,",
-    `Sie hatten einen Probetag-Termin bei ${c}. Leider konnten wir Sie nicht erreichen bzw. der Termin wurde nicht wahrgenommen.`,
-    "Falls Sie den Termin nicht wahrnehmen konnten, haben Sie die Möglichkeit, einen neuen Termin zu buchen.",
-  ],
-  buttonText: "Neuen Probetag buchen",
-  buttonUrl: "https://example.com/probetag/abc123",
-}
-```
+- Kein neuer Query — alles aus dem bestehenden `applications` Array berechnet
+- Import `Card, CardContent, CardHeader, CardTitle` (ggf. bereits importiert pruefen)
+- Cards werden zwischen Header und Tabelle/Filter-Bereich platziert
+- Prozent wird als `Math.round((withBooking / total) * 100)` berechnet, mit Fallback auf 0
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| DB-Migration | `reminder_count` + `reminder_timestamps` auf `trial_day_appointments`, neues SMS-Template |
-| `AdminProbetag.tsx` | Erinnerungs-Button mit Badge, Popover, Vorschau-Dialog, SMS+Email senden |
-| `AdminSmsTemplates.tsx` | `probetag_erinnerung` in PLACEHOLDER_INFO |
-| `AdminEmails.tsx` | Neue Vorschau-Vorlage "Probetag Erinnerung" |
+| `AdminBewerbungen.tsx` | Card-Imports + 3 Statistik-Cards oberhalb der Tabelle |
 
