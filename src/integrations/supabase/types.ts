@@ -1594,7 +1594,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          reminder_count: number
           reminder_sent: boolean
+          reminder_timestamps: Json
           status: string
         }
         Insert: {
@@ -1604,7 +1606,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_count?: number
           reminder_sent?: boolean
+          reminder_timestamps?: Json
           status?: string
         }
         Update: {
@@ -1614,7 +1618,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_count?: number
           reminder_sent?: boolean
+          reminder_timestamps?: Json
           status?: string
         }
         Relationships: [
