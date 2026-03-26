@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendEmail } from "@/lib/sendEmail";
+import { sendSms } from "@/lib/sendSms";
+import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,11 +11,17 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2 } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2, MessageSquare } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { format, addDays, subHours } from "date-fns";
@@ -27,6 +36,8 @@ export default function AdminProbetag() {
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("default");
   const [search, setSearch] = useState("");
+  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [reminderPreview, setReminderPreview] = useState<{ item: any; message: string; name: string; phone: string; brandingId?: string; senderName?: string } | null>(null);
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -81,6 +92,102 @@ export default function AdminProbetag() {
     queryClient.invalidateQueries({ queryKey: ["trial-day-appointments-admin"] });
   };
 
+  const handlePrepareReminder = async (item: any) => {
+    const app = item.applications;
+    if (!app?.phone) {
+      toast.error("Keine Telefonnummer vorhanden");
+      return;
+    }
+    setSendingReminder(item.id);
+    try {
+      const brandingId = app.brandings?.id;
+      let senderName: string | undefined;
+      if (brandingId) {
+        const { data: branding } = await supabase
+          .from("brandings")
+          .select("sms_sender_name" as any)
+          .eq("id", brandingId)
+          .maybeSingle();
+        senderName = (branding as any)?.sms_sender_name || undefined;
+      }
+
+      const { data: template } = await supabase
+        .from("sms_templates" as any)
+        .select("message")
+        .eq("event_type", "probetag_erinnerung")
+        .maybeSingle();
+
+      const name = `${app.first_name} ${app.last_name}`;
+      const smsText = ((template as any)?.message || "Hallo {name}, Sie hatten einen Probetag-Termin bei uns. Falls Sie den Termin nicht wahrnehmen konnten, buchen Sie bitte einen neuen Termin über den Link in Ihrer E-Mail.")
+        .replace(/\{name\}/g, name);
+
+      setReminderPreview({ item, message: smsText, name, phone: app.phone, brandingId, senderName });
+    } catch (err) {
+      console.error("Reminder prepare error:", err);
+      toast.error("Fehler beim Laden der Vorlage");
+    } finally {
+      setSendingReminder(null);
+    }
+  };
+
+  const handleConfirmReminder = async () => {
+    if (!reminderPreview) return;
+    const { item, message, name, brandingId, senderName } = reminderPreview;
+    const app = item.applications;
+    setSendingReminder(item.id);
+    try {
+      const smsOk = await sendSms({
+        to: app.phone,
+        text: message,
+        event_type: "probetag_erinnerung",
+        recipient_name: name,
+        from: senderName,
+        branding_id: brandingId || null,
+      });
+
+      const rebookingUrl = await buildBrandingUrl(brandingId || null, `/probetag/${item.application_id}`);
+
+      await sendEmail({
+        to: app.email,
+        recipient_name: name,
+        subject: "Erinnerung an Ihren Probetag",
+        body_title: "Erinnerung an Ihren Probetag",
+        body_lines: [
+          `Sehr geehrte/r ${name},`,
+          message,
+          "Falls Sie den Termin nicht wahrnehmen konnten, haben Sie die Möglichkeit, einen neuen Termin zu buchen.",
+        ],
+        button_text: "Neuen Probetag buchen",
+        button_url: rebookingUrl,
+        branding_id: brandingId || null,
+        event_type: "probetag_erinnerung",
+        metadata: { appointment_id: item.id, application_id: item.application_id },
+      });
+
+      // Increment reminder_count and add timestamp
+      const currentTimestamps = Array.isArray(item.reminder_timestamps) ? item.reminder_timestamps : [];
+      await supabase
+        .from("trial_day_appointments" as any)
+        .update({
+          reminder_count: (item.reminder_count || 0) + 1,
+          reminder_timestamps: [...currentTimestamps, new Date().toISOString()],
+        } as any)
+        .eq("id", item.id);
+
+      if (smsOk) {
+        toast.success("Erinnerung (SMS + E-Mail) gesendet!");
+      } else {
+        toast.warning("E-Mail gesendet, SMS fehlgeschlagen");
+      }
+      queryClient.invalidateQueries({ queryKey: ["trial-day-appointments-admin"] });
+    } catch (err) {
+      console.error("Reminder error:", err);
+      toast.error("Fehler beim Senden der Erinnerung");
+    } finally {
+      setSendingReminder(null);
+      setReminderPreview(null);
+    }
+  };
 
   const toggleView = (mode: ViewMode) => {
     setViewMode((prev) => (prev === mode ? "default" : mode));
@@ -175,6 +282,40 @@ export default function AdminProbetag() {
                         <TableCell>{statusBadge(item.status)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
+                            {item.applications?.phone && (
+                              <div className="relative">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                  onClick={() => handlePrepareReminder(item)}
+                                  disabled={sendingReminder === item.id}
+                                  title="Erinnerungs-SMS & E-Mail senden"
+                                >
+                                  <MessageSquare className="h-4 w-4" />
+                                </Button>
+                                {item.reminder_count > 0 && (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center cursor-pointer z-10">
+                                        {item.reminder_count}
+                                      </span>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56 p-3" onClick={(e) => e.stopPropagation()}>
+                                      <p className="text-sm font-semibold mb-2">Erinnerungen gesendet:</p>
+                                      <ul className="space-y-1 text-xs text-muted-foreground">
+                                        {(Array.isArray(item.reminder_timestamps) ? item.reminder_timestamps : []).map((ts: string, i: number) => (
+                                          <li key={i}>{format(new Date(ts), "dd.MM.yyyy HH:mm")} Uhr</li>
+                                        ))}
+                                        {(!Array.isArray(item.reminder_timestamps) || item.reminder_timestamps.length === 0) && (
+                                          <li className="italic">Keine Zeitstempel verfügbar</li>
+                                        )}
+                                      </ul>
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
+                              </div>
+                            )}
                             {item.status !== "erfolgreich" && (
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(item, "erfolgreich")} title="Als erfolgreich markieren">
                                 <CheckCircle className="h-4 w-4" />
@@ -211,6 +352,36 @@ export default function AdminProbetag() {
         })()}
       </motion.div>
 
+      {/* Reminder Preview Dialog */}
+      <Dialog open={!!reminderPreview} onOpenChange={(open) => !open && setReminderPreview(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Erinnerung senden</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm">
+              <span className="text-muted-foreground">Empfänger:</span>{" "}
+              <span className="font-medium">{reminderPreview?.name}</span>
+            </div>
+            <div className="text-sm">
+              <span className="text-muted-foreground">Telefon:</span>{" "}
+              <span className="font-medium">{reminderPreview?.phone}</span>
+            </div>
+            <div className="rounded-md border border-border bg-muted/50 p-3 text-sm whitespace-pre-wrap">
+              {reminderPreview?.message}
+            </div>
+            <p className="text-xs text-muted-foreground">SMS + E-Mail werden gesendet.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setReminderPreview(null)}>Abbrechen</Button>
+            <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleConfirmReminder} disabled={sendingReminder === reminderPreview?.item?.id}>
+              Senden
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>

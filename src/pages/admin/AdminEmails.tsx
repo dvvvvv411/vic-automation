@@ -297,6 +297,19 @@ const templates: TemplateDefinition[] = [
     ],
   },
   {
+    eventType: "probetag_erinnerung",
+    label: "Probetag Erinnerung",
+    subject: (c) => `Erinnerung an Ihren Probetag – ${c}`,
+    bodyTitle: "Erinnerung an Ihren Probetag",
+    bodyLines: (c) => [
+      "Sehr geehrte/r Max Mustermann,",
+      `Sie hatten einen Probetag-Termin bei ${c}. Leider konnten wir Sie nicht erreichen bzw. der Termin wurde nicht wahrgenommen.`,
+      "Falls Sie den Termin nicht wahrnehmen konnten, haben Sie die Möglichkeit, einen neuen Termin zu buchen.",
+    ],
+    buttonText: "Neuen Probetag buchen",
+    buttonUrl: "https://example.com/probetag/abc123",
+  },
+  {
     eventType: "bewertung_abgelehnt",
     label: "Bewertung abgelehnt",
     subject: () => "Ihre Bewertung wurde abgelehnt",
