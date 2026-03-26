@@ -212,8 +212,12 @@ const templates: TemplateDefinition[] = [
       `herzlichen Glückwunsch! Ihr Arbeitsvertrag bei ${c} wurde genehmigt – Sie sind nun vollwertiger Mitarbeiter.`,
       "Ihr Startdatum: 01.04.2026",
       "Ab diesem Datum werden Ihnen Aufträge zugewiesen.",
+      "Bitte vereinbaren Sie mit uns einen Termin für Ihren ersten Arbeitstag.",
+      "Michael Fischer wird Sie anschließend telefonisch kontaktieren, um mit Ihnen die ersten Aufträge durchzugehen.",
       "Wir freuen uns auf die Zusammenarbeit!",
     ],
+    buttonText: "Termin für 1. Arbeitstag buchen",
+    buttonUrl: "https://web.example.com/erster-arbeitstag/abc123",
   },
   {
     eventType: "gespraech_bestaetigung",
