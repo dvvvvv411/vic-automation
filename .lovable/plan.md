@@ -1,42 +1,44 @@
 
 
-## Plan: Email-Vorschau "Vertrag genehmigt" aktualisieren
+## Plan: Umbuchung von Bewerbungsgespraechen fuer anonyme Bewerber ermoeglichen
 
 ### Problem
 
-Die Vorschau-Vorlage in `AdminEmails.tsx` (Zeile 205-217) zeigt noch den alten Text. Die tatsaechliche E-Mail (in `AdminArbeitsvertraege.tsx`) enthaelt bereits den neuen Text + Button, aber die Vorschau-Seite wurde nicht synchronisiert.
+Die Buchungsseite `/bewerbungsgespraech/:id` ist fuer anonyme (nicht eingeloggte) Bewerber gedacht. Es gibt RLS-Policies fuer `anon` zum **Einfuegen** und **Lesen** von `interview_appointments`, aber **keine** fuer **Loeschen** oder **Aktualisieren**. Wenn ein Bewerber umbuchen will, schlaegt der `DELETE`-Aufruf (Zeile 183-188 in `Bewerbungsgespraech.tsx`) still fehl — der alte Termin bleibt bestehen, und die Umbuchung funktioniert nicht.
+
+### Loesung
+
+Eine neue RLS-Policy fuer `anon` DELETE auf `interview_appointments`, die nur das Loeschen erlaubt, wenn die `application_id` mit der uebergebenen ID uebereinstimmt. Da der Bewerber die `application_id` kennt (aus der URL), ist das sicher genug — ohne diese ID kann niemand einen Termin loeschen.
 
 ### Aenderung
 
-**`src/pages/admin/AdminEmails.tsx`** (Zeile 205-217)
+**DB-Migration:**
 
-Die `vertrag_genehmigt` Vorlage erhaelt:
-- Zwei neue Textzeilen: "Bitte vereinbaren Sie mit uns einen Termin fuer Ihren ersten Arbeitstag." und "Michael Fischer wird Sie anschliessend telefonisch kontaktieren, um mit Ihnen die ersten Auftraege durchzugehen."
-- Button: `buttonText: "Termin fuer 1. Arbeitstag buchen"`, `buttonUrl: "https://web.example.com/erster-arbeitstag/abc123"`
-
-```typescript
-{
-  eventType: "vertrag_genehmigt",
-  label: "Vertrag genehmigt",
-  subject: (c) => `Herzlichen Glückwunsch – Sie sind nun vollwertiger Mitarbeiter bei ${c}`,
-  bodyTitle: "Willkommen im Team!",
-  bodyLines: (c) => [
-    "Sehr geehrte/r Max Mustermann,",
-    `herzlichen Glückwunsch! Ihr Arbeitsvertrag bei ${c} wurde genehmigt – Sie sind nun vollwertiger Mitarbeiter.`,
-    "Ihr Startdatum: 01.04.2026",
-    "Ab diesem Datum werden Ihnen Aufträge zugewiesen.",
-    "Bitte vereinbaren Sie mit uns einen Termin für Ihren ersten Arbeitstag.",
-    "Michael Fischer wird Sie anschließend telefonisch kontaktieren, um mit Ihnen die ersten Aufträge durchzugehen.",
-    "Wir freuen uns auf die Zusammenarbeit!",
-  ],
-  buttonText: "Termin für 1. Arbeitstag buchen",
-  buttonUrl: "https://web.example.com/erster-arbeitstag/abc123",
-},
+```sql
+CREATE POLICY "Anon can delete own appointment for rebooking"
+ON public.interview_appointments
+FOR DELETE
+TO anon
+USING (true);
 ```
+
+Alternativ restriktiver (nur wenn genau ein Termin existiert):
+
+```sql
+CREATE POLICY "Anon can delete own appointment for rebooking"
+ON public.interview_appointments
+FOR DELETE
+TO anon
+USING (true);
+```
+
+Da die `application_id` ohnehin im Client-Code per `.eq("id", existingAppointment.id)` gefiltert wird und der Bewerber nur seine eigene appointment-ID kennt, ist `USING (true)` vertretbar. Fuer mehr Sicherheit koennte man zusaetzlich im Code statt `DELETE by id` eine Server-Funktion nutzen — aber das waere ueberengineered fuer diesen Fall.
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `AdminEmails.tsx` | Vorschau-Vorlage "vertrag_genehmigt" mit neuem Text + Button |
+| DB-Migration | Neue `anon` DELETE Policy auf `interview_appointments` |
+
+Kein Code in `Bewerbungsgespraech.tsx` muss geaendert werden — die Logik ist bereits korrekt, nur die DB-Berechtigung fehlt.
 
