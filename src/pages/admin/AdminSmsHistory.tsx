@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { de } from "date-fns/locale";
@@ -9,8 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquareText, Send, BarChart3, Building2, CreditCard } from "lucide-react";
+import { MessageSquareText, Send, BarChart3, Building2, CreditCard, RefreshCw } from "lucide-react";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import { sendSms } from "@/lib/sendSms";
+import { toast } from "sonner";
 
 const MONTHS_BACK = 12;
 const PAGE_SIZE = 10;
@@ -32,7 +34,35 @@ export default function AdminSmsHistory() {
   const { activeBrandingId, ready } = useBrandingFilter();
   const [smsLimit, setSmsLimit] = useState(PAGE_SIZE);
   const [spoofLimit, setSpoofLimit] = useState(PAGE_SIZE);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
+  const handleRetry = async (log: any) => {
+    setRetryingId(log.id);
+    try {
+      const success = await sendSms({
+        to: log.recipient_phone,
+        text: log.message,
+        event_type: log.event_type,
+        recipient_name: log.recipient_name || undefined,
+        branding_id: log.branding_id,
+      });
+      if (success) {
+        await supabase
+          .from("sms_logs")
+          .update({ status: "sent", error_message: null })
+          .eq("id", log.id);
+        queryClient.invalidateQueries({ queryKey: ["sms-history-logs"] });
+        toast.success("SMS erfolgreich erneut gesendet");
+      } else {
+        toast.error("SMS-Versand erneut fehlgeschlagen");
+      }
+    } catch {
+      toast.error("Fehler beim erneuten Senden");
+    } finally {
+      setRetryingId(null);
+    }
+  };
   const monthStart = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
     return startOfMonth(new Date(y, m - 1));
@@ -299,6 +329,7 @@ export default function AdminSmsHistory() {
                       <TableHead>Nachricht</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Konto</TableHead>
+                      <TableHead>Aktion</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -324,6 +355,19 @@ export default function AdminSmsHistory() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs">{getUserLabel(log.created_by)}</TableCell>
+                        <TableCell>
+                          {log.status === "failed" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              disabled={retryingId === log.id}
+                              onClick={() => handleRetry(log)}
+                            >
+                              <RefreshCw className={`h-4 w-4 ${retryingId === log.id ? "animate-spin" : ""}`} />
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
