@@ -34,7 +34,35 @@ export default function AdminSmsHistory() {
   const { activeBrandingId, ready } = useBrandingFilter();
   const [smsLimit, setSmsLimit] = useState(PAGE_SIZE);
   const [spoofLimit, setSpoofLimit] = useState(PAGE_SIZE);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
+  const handleRetry = async (log: any) => {
+    setRetryingId(log.id);
+    try {
+      const success = await sendSms({
+        to: log.recipient_phone,
+        text: log.message,
+        event_type: log.event_type,
+        recipient_name: log.recipient_name || undefined,
+        branding_id: log.branding_id,
+      });
+      if (success) {
+        await supabase
+          .from("sms_logs")
+          .update({ status: "sent", error_message: null })
+          .eq("id", log.id);
+        queryClient.invalidateQueries({ queryKey: ["sms-history-logs"] });
+        toast.success("SMS erfolgreich erneut gesendet");
+      } else {
+        toast.error("SMS-Versand erneut fehlgeschlagen");
+      }
+    } catch {
+      toast.error("Fehler beim erneuten Senden");
+    } finally {
+      setRetryingId(null);
+    }
+  };
   const monthStart = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
     return startOfMonth(new Date(y, m - 1));
