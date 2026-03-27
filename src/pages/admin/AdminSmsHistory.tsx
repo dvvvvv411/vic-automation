@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { de } from "date-fns/locale";
@@ -9,8 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquareText, Send, BarChart3, Building2, CreditCard } from "lucide-react";
+import { MessageSquareText, Send, BarChart3, Building2, CreditCard, RefreshCw } from "lucide-react";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import { sendSms } from "@/lib/sendSms";
+import { toast } from "sonner";
 
 const MONTHS_BACK = 12;
 const PAGE_SIZE = 10;
