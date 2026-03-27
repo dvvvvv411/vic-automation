@@ -329,6 +329,7 @@ export default function AdminSmsHistory() {
                       <TableHead>Nachricht</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Konto</TableHead>
+                      <TableHead>Aktion</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -354,6 +355,19 @@ export default function AdminSmsHistory() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs">{getUserLabel(log.created_by)}</TableCell>
+                        <TableCell>
+                          {log.status === "failed" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              disabled={retryingId === log.id}
+                              onClick={() => handleRetry(log)}
+                            >
+                              <RefreshCw className={`h-4 w-4 ${retryingId === log.id ? "animate-spin" : ""}`} />
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
