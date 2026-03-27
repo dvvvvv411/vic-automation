@@ -1,41 +1,46 @@
 
 
-## Plan: Bei auto_accept "Bewerbung angenommen" statt "Bewerbung eingegangen" senden
+## Plan: Retry-Button fuer fehlgeschlagene SMS in SMS-History
 
-### Problem
+### Uebersicht
 
-Die `submit-application` Edge Function sendet bei `auto_accept=true` aktuell die "Bewerbung eingegangen" E-Mail (`event_type: "bewerbung_eingegangen"`). Stattdessen soll sie die "Bewerbung angenommen" E-Mail senden — mit denselben Parametern wie in `AdminBewerbungen.tsx` (Zeilen 242-258).
+In der seven.io SMS-Tabelle bei `/admin/sms-history` wird bei `status === "failed"` ein Retry-Button angezeigt. Bei Klick wird die SMS erneut ueber `send-sms` gesendet. Bei Erfolg wird der `sms_logs`-Eintrag auf `status = "sent"` aktualisiert.
 
-### Aenderung
+### Aenderungen
 
-**`supabase/functions/submit-application/index.ts`** (Zeilen 175-198)
+**1. DB-Migration: UPDATE Policy auf `sms_logs` fuer admin und kunde**
 
-Der E-Mail-Block wird per `if (auto_accept)` aufgeteilt:
+```sql
+CREATE POLICY "Admin and kunde can update sms_logs"
+ON public.sms_logs
+FOR UPDATE
+TO authenticated
+USING (
+  public.has_role(auth.uid(), 'admin')
+  OR public.is_kunde(auth.uid())
+)
+WITH CHECK (
+  public.has_role(auth.uid(), 'admin')
+  OR public.is_kunde(auth.uid())
+);
+```
 
-**Bei `auto_accept === true`:**
-- Branding-Domain laden (`domain`, `subdomain_prefix`) um Buchungs-URL zu bauen
-- Karriere-Link bauen (`https://{domain}/karriere`)
-- E-Mail mit denselben Parametern wie Admin-Panel senden:
-  - `event_type`: `"bewerbung_angenommen"`
-  - `subject`: `"Ihre Bewerbung wurde angenommen"`
-  - `body_title`: `"Ihre Bewerbung wurde angenommen"`
-  - `body_lines`: Glueckwunsch-Text + Aufforderung Termin zu buchen
-  - `button_text`: `"Termin buchen"`
-  - `button_url`: `https://{prefix}.{domain}/bewerbungsgespraech/{application_id}`
-  - `footer_lines`: Karriere-Link (wie im Admin-Panel)
+**2. `AdminSmsHistory.tsx`**
 
-**Bei `auto_accept === false`:** Alles bleibt wie bisher ("Bewerbung eingegangen", kein Button).
-
-### Technische Details
-
-- Domain-Query: `brandings` Tabelle nach `domain` und `subdomain_prefix` (Fallback `"web"`)
-- Karriere-Link ohne Subdomain-Prefix: `https://{domain}/karriere`
-- Buchungs-Link mit Prefix: `https://{prefix}.{domain}/bewerbungsgespraech/{id}`
-- Telegram-Nachricht bleibt unveraendert
+- Import `RefreshCw` Icon und `sendSms` aus `@/lib/sendSms`
+- Import `toast` und `useQueryClient`
+- Neue Spalte "Aktion" in der seven.io Tabelle
+- Bei `log.status === "failed"`: Button mit RefreshCw-Icon
+- onClick-Handler:
+  1. `sendSms({ to: log.recipient_phone, text: log.message, event_type: log.event_type, recipient_name: log.recipient_name, from: sender, branding_id: log.branding_id })`
+  2. Bei Erfolg: `supabase.from("sms_logs").update({ status: "sent", error_message: null }).eq("id", log.id)`
+  3. Query-Cache invalidieren
+  4. Toast-Nachricht
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `supabase/functions/submit-application/index.ts` | E-Mail-Block: bei `auto_accept` → `bewerbung_angenommen` mit Button statt `bewerbung_eingegangen` |
+| DB-Migration | UPDATE Policy auf `sms_logs` fuer admin + kunde |
+| `AdminSmsHistory.tsx` | Retry-Button bei failed SMS, Status-Update bei Erfolg |
 
