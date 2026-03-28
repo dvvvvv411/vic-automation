@@ -114,8 +114,45 @@ export default function AdminArbeitsvertraege() {
     setStartDateDialogOpen(true);
   };
 
+  // Ensure a valid application_id exists for the contract; create one if missing
+  const ensureApplicationId = async (contract: any): Promise<string | null> => {
+    // Already has one
+    const existing = contract.application_id || contract.applications?.id;
+    if (existing) return existing;
+
+    // Create a new applications row from contract data
+    const brandingId = contract.branding_id || contract.applications?.brandings?.id;
+    const { data: newApp, error } = await supabase
+      .from("applications")
+      .insert({
+        first_name: contract.first_name || "Unbekannt",
+        last_name: contract.last_name || "Unbekannt",
+        email: contract.email || null,
+        phone: contract.phone || null,
+        branding_id: brandingId || null,
+        status: "angenommen",
+        is_external: false,
+      })
+      .select("id")
+      .single();
+
+    if (error || !newApp) {
+      console.error("Failed to create application for contract", error);
+      return null;
+    }
+
+    // Backfill application_id on the contract
+    await supabase
+      .from("employment_contracts")
+      .update({ application_id: newApp.id })
+      .eq("id", contract.id);
+
+    return newApp.id;
+  };
+
   const handleApprove = async (contractId: string) => {
     try {
+      // 1. Save start date if set
       if (confirmedStartDate) {
         const formatted = format(confirmedStartDate, "yyyy-MM-dd");
         const { error: updateError } = await supabase
@@ -128,17 +165,30 @@ export default function AdminArbeitsvertraege() {
         }
       }
 
+      // 2. Guarantee application_id exists → build first workday link
+      const applicationId = await ensureApplicationId(selectedContract);
+      if (!applicationId) {
+        toast.error("Konnte keine Bewerber-ID erzeugen. Genehmigung abgebrochen.");
+        return;
+      }
+
+      const brandingId = selectedContract?.branding_id || selectedContract?.applications?.brandings?.id;
+      const firstWorkdayLink = await buildBrandingUrl(brandingId, `/erster-arbeitstag/${applicationId}`);
+
+      // 3. Approve the contract
       const { error } = await supabase.rpc("approve_employment_contract", { _contract_id: contractId });
       if (error) {
         toast.error("Fehler beim Genehmigen.");
         return;
       }
 
-      // Send vertrag_genehmigt email with first workday link
+      // 4. Send vertrag_genehmigt email WITH guaranteed button
       if (selectedContract?.email) {
-        const brandingId = selectedContract?.branding_id || selectedContract?.applications?.brandings?.id;
-        const applicationId = selectedContract?.applications?.id || selectedContract?.application_id;
-        const firstWorkdayLink = applicationId ? await buildBrandingUrl(brandingId, `/erster-arbeitstag/${applicationId}`) : undefined;
+        const startDateDisplay = confirmedStartDate
+          ? confirmedStartDate.toLocaleDateString("de-DE")
+          : selectedContract.desired_start_date
+            ? new Date(selectedContract.desired_start_date).toLocaleDateString("de-DE")
+            : null;
 
         await sendEmail({
           to: selectedContract.email,
@@ -148,26 +198,25 @@ export default function AdminArbeitsvertraege() {
           body_lines: [
             `Sehr geehrte/r ${selectedContract.first_name || ""} ${selectedContract.last_name || ""},`,
             "herzlichen Glückwunsch! Ihr Arbeitsvertrag wurde genehmigt – Sie sind nun vollwertiger Mitarbeiter.",
-            selectedContract.desired_start_date
-              ? `Ab Ihrem Startdatum (${new Date(selectedContract.desired_start_date).toLocaleDateString("de-DE")}) werden Ihnen Aufträge zugewiesen.`
+            startDateDisplay
+              ? `Ab Ihrem Startdatum (${startDateDisplay}) werden Ihnen Aufträge zugewiesen.`
               : "Sie werden in Kürze Ihre ersten Aufträge erhalten.",
             "Bitte vereinbaren Sie mit uns einen Termin für Ihren ersten Arbeitstag.",
             "Michael Fischer wird Sie anschließend telefonisch kontaktieren, um mit Ihnen die ersten Aufträge durchzugehen.",
             "Wir freuen uns auf die Zusammenarbeit!",
           ],
-          button_text: firstWorkdayLink ? "Termin für 1. Arbeitstag buchen" : undefined,
-          button_url: firstWorkdayLink || undefined,
+          button_text: "Termin für 1. Arbeitstag buchen",
+          button_url: firstWorkdayLink,
           branding_id: brandingId || null,
           event_type: "vertrag_genehmigt",
           metadata: { contract_id: contractId },
         });
       }
 
-      // Send vertrag_genehmigt SMS via template lookup
+      // 5. Send SMS
       const phone = selectedContract?.phone || selectedContract?.applications?.phone;
       if (phone) {
         const contractName = `${selectedContract.first_name || ""} ${selectedContract.last_name || ""}`.trim();
-        const brandingId = selectedContract?.branding_id || selectedContract?.applications?.brandings?.id;
         const { data: tpl } = await supabase
           .from("sms_templates" as any)
           .select("message")
@@ -177,7 +226,6 @@ export default function AdminArbeitsvertraege() {
           ? ((tpl as any).message as string).replace("{name}", contractName)
           : `Hallo ${contractName}, herzlichen Glückwunsch! Ihr Arbeitsvertrag wurde genehmigt. Wir freuen uns auf die Zusammenarbeit!`;
 
-        // Get branding SMS sender name
         let senderName: string | undefined;
         if (brandingId) {
           const { data: branding } = await supabase
