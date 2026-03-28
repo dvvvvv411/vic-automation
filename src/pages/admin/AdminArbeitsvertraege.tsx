@@ -560,12 +560,14 @@ export default function AdminArbeitsvertraege() {
               <Button
                 variant="ghost"
                 onClick={async () => {
-                  const appId = selectedContract?.applications?.id || selectedContract?.application_id;
+                  const appId = await ensureApplicationId(selectedContract);
                   const brandingId = selectedContract?.branding_id || selectedContract?.applications?.brandings?.id;
                   if (appId) {
                     const url = await buildBrandingUrl(brandingId, `/erster-arbeitstag/${appId}`);
                     navigator.clipboard.writeText(url);
                     toast.success("1. Arbeitstag Link kopiert!");
+                  } else {
+                    toast.error("Konnte keine Bewerber-ID erzeugen.");
                   }
                 }}
               >
