@@ -1,46 +1,28 @@
 
 
-## Plan: Retry-Button fuer fehlgeschlagene SMS in SMS-History
+## Plan: Copy-Button fuer 1. Arbeitstag Link bei erfolgreichem Probetag
 
 ### Uebersicht
 
-In der seven.io SMS-Tabelle bei `/admin/sms-history` wird bei `status === "failed"` ein Retry-Button angezeigt. Bei Klick wird die SMS erneut ueber `send-sms` gesendet. Bei Erfolg wird der `sms_logs`-Eintrag auf `status = "sent"` aktualisiert.
+Bei `/admin/probetag` wird in der Aktionen-Spalte ein Copy-Button angezeigt, wenn der Status `erfolgreich` ist. Der Button generiert den 1. Arbeitstag Buchungslink via `buildBrandingUrl` und kopiert ihn in die Zwischenablage.
 
-### Aenderungen
+### Aenderung
 
-**1. DB-Migration: UPDATE Policy auf `sms_logs` fuer admin und kunde**
+**`AdminProbetag.tsx`**
 
-```sql
-CREATE POLICY "Admin and kunde can update sms_logs"
-ON public.sms_logs
-FOR UPDATE
-TO authenticated
-USING (
-  public.has_role(auth.uid(), 'admin')
-  OR public.is_kunde(auth.uid())
-)
-WITH CHECK (
-  public.has_role(auth.uid(), 'admin')
-  OR public.is_kunde(auth.uid())
-);
-```
-
-**2. `AdminSmsHistory.tsx`**
-
-- Import `RefreshCw` Icon und `sendSms` aus `@/lib/sendSms`
-- Import `toast` und `useQueryClient`
-- Neue Spalte "Aktion" in der seven.io Tabelle
-- Bei `log.status === "failed"`: Button mit RefreshCw-Icon
+- Import `Copy` (oder `Link`) Icon aus `lucide-react`
+- In der Aktionen-Spalte (Zeile ~319-329): wenn `item.status === "erfolgreich"`, neuen Button anzeigen
 - onClick-Handler:
-  1. `sendSms({ to: log.recipient_phone, text: log.message, event_type: log.event_type, recipient_name: log.recipient_name, from: sender, branding_id: log.branding_id })`
-  2. Bei Erfolg: `supabase.from("sms_logs").update({ status: "sent", error_message: null }).eq("id", log.id)`
-  3. Query-Cache invalidieren
-  4. Toast-Nachricht
+  1. `application_id` aus `item.application_id` nehmen
+  2. `brandingId` aus `item.applications?.brandings?.id`
+  3. `buildBrandingUrl(brandingId, /erster-arbeitstag/${application_id})` aufrufen
+  4. In Zwischenablage kopieren + Toast "1. Arbeitstag Link kopiert!"
+
+Genau dasselbe Pattern wie in `AdminArbeitsvertraege.tsx` (Zeile 516-520).
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| DB-Migration | UPDATE Policy auf `sms_logs` fuer admin + kunde |
-| `AdminSmsHistory.tsx` | Retry-Button bei failed SMS, Status-Update bei Erfolg |
+| `AdminProbetag.tsx` | Copy-Button bei `status === "erfolgreich"` in Aktionen-Spalte |
 
