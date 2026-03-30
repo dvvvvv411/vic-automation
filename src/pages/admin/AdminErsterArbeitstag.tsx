@@ -249,6 +249,53 @@ export default function AdminErsterArbeitstag() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!failTarget} onOpenChange={(v) => { if (!v) setFailTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Grund für Fehlschlag</DialogTitle>
+            <DialogDescription>
+              Bitte gib einen Grund an, warum der 1. Arbeitstag von {failTarget?.employment_contracts?.first_name} {failTarget?.employment_contracts?.last_name} fehlgeschlagen ist.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder="Grund eingeben..."
+            value={failReason}
+            onChange={(e) => setFailReason(e.target.value)}
+            className="min-h-[80px]"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFailTarget(null)}>Abbrechen</Button>
+            <Button
+              variant="destructive"
+              disabled={!failReason.trim() || failSubmitting}
+              onClick={async () => {
+                if (!failTarget || !failReason.trim()) return;
+                setFailSubmitting(true);
+                const ec = failTarget.employment_contracts;
+                const name = `${ec?.first_name ?? ""} ${ec?.last_name ?? ""}`.trim();
+
+                await handleStatusUpdate(failTarget, "fehlgeschlagen");
+
+                const { data: userData } = await supabase.auth.getUser();
+                const email = userData.user?.email ?? "System";
+                await supabase.from("branding_notes" as any).insert({
+                  branding_id: activeBrandingId,
+                  page_context: "erster-arbeitstag",
+                  content: `${name} — Fehlgeschlagen: ${failReason.trim()}`,
+                  author_email: email,
+                } as any);
+                queryClient.invalidateQueries({ queryKey: ["branding-notes", activeBrandingId, "erster-arbeitstag"] });
+
+                setFailTarget(null);
+                setFailSubmitting(false);
+              }}
+            >
+              Bestätigen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
