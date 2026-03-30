@@ -33,7 +33,7 @@ interface ResolvedItem {
   lastName: string;
   displayEmail: string;
   displayPhone: string;
-  employmentType: string;
+  employmentType: string;  // mutable for email-based fallback
   brandingName: string;
 }
 
