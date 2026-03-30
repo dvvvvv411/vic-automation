@@ -49,7 +49,7 @@ export default function AdminErsterArbeitstag() {
     queryFn: async () => {
       let query = supabase
         .from("first_workday_appointments" as any)
-        .select("*, employment_contracts:contract_id!inner(id, first_name, last_name, email, phone, employment_type, branding_id, brandings:branding_id(id, company_name))", { count: "exact" })
+        .select("*, employment_contracts:contract_id!inner(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, brandings:branding_id(id, company_name), profiles:user_id(full_name, email, phone))", { count: "exact" })
         .eq("employment_contracts.branding_id", activeBrandingId!);
 
       if (viewMode === "past") {
