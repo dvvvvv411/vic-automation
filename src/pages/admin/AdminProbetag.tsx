@@ -5,13 +5,14 @@ import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
 
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2, MessageSquare, Copy } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2, MessageSquare } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -315,31 +316,6 @@ export default function AdminProbetag() {
                                   </Popover>
                                 )}
                               </div>
-                            )}
-                            {item.status === "erfolgreich" && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                                onClick={async () => {
-                                  // Find contract by application_id to get contract_id
-                                  const { data: ec } = await supabase
-                                    .from("employment_contracts")
-                                    .select("id")
-                                    .eq("application_id", item.application_id)
-                                    .maybeSingle();
-                                  if (ec) {
-                                    const url = await buildBrandingUrl(item.applications?.brandings?.id, `/erster-arbeitstag/${ec.id}`);
-                                    navigator.clipboard.writeText(url);
-                                    toast.success("1. Arbeitstag Link kopiert!");
-                                  } else {
-                                    toast.error("Kein Arbeitsvertrag gefunden.");
-                                  }
-                                }}
-                                title="1. Arbeitstag Link kopieren"
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
                             )}
                             {item.status !== "erfolgreich" && (
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(item, "erfolgreich")} title="Als erfolgreich markieren">
