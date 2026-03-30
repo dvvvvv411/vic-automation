@@ -35,6 +35,7 @@ interface ContractData {
   signed_contract_pdf_url: string | null;
   is_suspended: boolean;
   submitted_at: string | null;
+  desired_start_date: string | null;
 }
 
 export default function MitarbeiterLayout() {
