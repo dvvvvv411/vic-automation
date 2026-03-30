@@ -35,6 +35,7 @@ interface ContractData {
   signed_contract_pdf_url: string | null;
   is_suspended: boolean;
   submitted_at: string | null;
+  desired_start_date: string | null;
 }
 
 export default function MitarbeiterLayout() {
@@ -66,7 +67,7 @@ export default function MitarbeiterLayout() {
           .maybeSingle(),
         supabase
           .from("employment_contracts")
-          .select("id, first_name, application_id, status, contract_pdf_url, signed_contract_pdf_url, is_suspended, submitted_at")
+          .select("id, first_name, application_id, status, contract_pdf_url, signed_contract_pdf_url, is_suspended, submitted_at, desired_start_date")
           .eq("user_id", user.id)
           .maybeSingle(),
       ]);

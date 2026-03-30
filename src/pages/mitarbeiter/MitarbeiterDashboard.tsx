@@ -147,6 +147,7 @@ const MitarbeiterDashboard = () => {
   const [contractSubmittedAt, setContractSubmittedAt] = useState<string | null>(null);
   const [contractStatus, setContractStatus] = useState<string | null>(null);
   const [contractDismissed, setContractDismissed] = useState(false);
+  const [desiredStartDate, setDesiredStartDate] = useState<string | null>(null);
 
   const isFixedSalary = branding?.payment_model === "fixed_salary";
   const isHourlyRate = isFixedSalary && branding?.hourly_rate_enabled === true;
@@ -187,7 +188,7 @@ const MitarbeiterDashboard = () => {
       // Fetch contract details (balance, profile)
       const { data: contractDetails } = await supabase
         .from("employment_contracts")
-        .select("balance, first_name, last_name, email, iban, employment_type, submitted_at, status, contract_dismissed")
+        .select("balance, first_name, last_name, email, iban, employment_type, submitted_at, status, contract_dismissed, desired_start_date")
         .eq("id", contract.id)
         .maybeSingle();
 
@@ -197,6 +198,7 @@ const MitarbeiterDashboard = () => {
         setContractSubmittedAt(contractDetails.submitted_at || null);
         setContractStatus(contractDetails.status || null);
         setContractDismissed((contractDetails as any).contract_dismissed || false);
+        setDesiredStartDate((contractDetails as any).desired_start_date || null);
       }
 
       // Fetch assignments
@@ -586,7 +588,7 @@ const MitarbeiterDashboard = () => {
       {/* Summary Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <DashboardReviewsSummary recentReviews={recentReviews} />
-        <DashboardPayoutSummary balance={isHourlyRate && employmentType?.toLowerCase() === 'minijob' && Number(branding?.estimated_salary_minijob) > 0 ? Number(branding?.estimated_salary_minijob) : isHourlyRate ? hourlyEarnings : isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary && !isHourlyRate} />
+        <DashboardPayoutSummary balance={isHourlyRate && employmentType?.toLowerCase() === 'minijob' && Number(branding?.estimated_salary_minijob) > 0 ? Number(branding?.estimated_salary_minijob) : isHourlyRate ? hourlyEarnings : isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary && !isHourlyRate} startDate={desiredStartDate} />
       </div>
     </div>
   );
