@@ -119,6 +119,20 @@ export default function MitarbeiterArbeitsvertrag() {
   const [savedProofOfAddressUrl, setSavedProofOfAddressUrl] = useState<string | null>(null);
   const [signatureLoaded, setSignatureLoaded] = useState(false);
 
+  // Force Reisepass for non-German nationalities
+  const isGerman = !form.nationality || form.nationality === "Deutsch";
+  useEffect(() => {
+    if (!isGerman) {
+      setIdType("reisepass");
+      // Clear back side since Reisepass has no back
+      setIdBackFile(null);
+      setIdBackPreview(null);
+    }
+  }, [isGerman]);
+
+  // Meldenachweis is required when Reisepass is selected OR when DB flag is set
+  const needsProofOfAddress = requiresProofOfAddress || idType === "reisepass";
+
   const STEPS = [
     "Vorlage wählen",
     "Persönliche Informationen",
@@ -353,7 +367,7 @@ export default function MitarbeiterArbeitsvertrag() {
       const hasFront = !!idFrontFile || !!savedIdFrontUrl;
       const hasBack = !!idBackFile || !!savedIdBackUrl;
       const idValid = idType === "reisepass" ? hasFront : (hasFront && hasBack);
-      const proofValid = requiresProofOfAddress ? (!!proofOfAddressFile || !!savedProofOfAddressUrl) : true;
+      const proofValid = needsProofOfAddress ? (!!proofOfAddressFile || !!savedProofOfAddressUrl) : true;
       return idValid && proofValid;
     }
     return true;
@@ -848,15 +862,18 @@ export default function MitarbeiterArbeitsvertrag() {
                   setIdType(v as "personalausweis" | "reisepass");
                   if (v === "reisepass") { removeDoc("back"); }
                 }} className="flex gap-4">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="personalausweis" id="personalausweis" />
-                    <Label htmlFor="personalausweis" className="cursor-pointer">Personalausweis</Label>
+                  <div className={cn("flex items-center space-x-2", !isGerman && "opacity-50")}>
+                    <RadioGroupItem value="personalausweis" id="personalausweis" disabled={!isGerman} />
+                    <Label htmlFor="personalausweis" className={cn("cursor-pointer", !isGerman && "cursor-not-allowed")}>Personalausweis</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="reisepass" id="reisepass" />
                     <Label htmlFor="reisepass" className="cursor-pointer">Reisepass</Label>
                   </div>
                 </RadioGroup>
+                {!isGerman && (
+                  <p className="text-xs text-muted-foreground">Bei nicht-deutscher Staatsangehörigkeit ist nur ein Reisepass möglich.</p>
+                )}
               </div>
 
               {/* ID Upload */}
@@ -886,7 +903,7 @@ export default function MitarbeiterArbeitsvertrag() {
               </div>
 
               {/* Meldenachweis */}
-              {requiresProofOfAddress && (
+              {needsProofOfAddress && (
                 <div className="space-y-3 border-t border-border pt-4">
                   <Label>Meldenachweis <span className="text-destructive">*</span></Label>
                   <p className="text-xs text-muted-foreground">z.B. Stromrechnung, Meldebestätigung (Bild oder PDF)</p>
