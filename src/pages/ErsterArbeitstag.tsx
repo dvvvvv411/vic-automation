@@ -87,7 +87,7 @@ export default function ErsterArbeitstag() {
     queryKey: ["branding-schedule-settings-public", brandingId, "trial"],
     enabled: !!brandingId,
     queryFn: async () => {
-      const { data, error } = await (supabase
+      const { data, error } = await (publicSupabase
         .from("branding_schedule_settings")
         .select("*")
         .eq("branding_id", brandingId!) as any)
