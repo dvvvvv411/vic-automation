@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { sendTelegram } from "@/lib/sendTelegram";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
@@ -54,7 +54,7 @@ export default function ErsterArbeitstag() {
   const { data: contract, isLoading, error } = useQuery({
     queryKey: ["contract-erster-arbeitstag", id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await publicSupabase
         .from("employment_contracts")
         .select("*, brandings:branding_id(company_name, logo_url, brand_color, favicon_url, project_manager_name, project_manager_title, project_manager_image_url, sms_sender_name)")
         .eq("id", id!)
@@ -62,7 +62,7 @@ export default function ErsterArbeitstag() {
       if (error) throw error;
       if (data) {
         // Load existing first workday appointment by contract_id
-        const { data: fwAppt } = await supabase
+        const { data: fwAppt } = await publicSupabase
           .from("first_workday_appointments" as any)
           .select("id, appointment_date, appointment_time")
           .eq("contract_id", id!)
@@ -86,7 +86,7 @@ export default function ErsterArbeitstag() {
     queryKey: ["branding-schedule-settings-public", brandingId, "trial"],
     enabled: !!brandingId,
     queryFn: async () => {
-      const { data, error } = await (supabase
+      const { data, error } = await (publicSupabase
         .from("branding_schedule_settings")
         .select("*")
         .eq("branding_id", brandingId!) as any)
@@ -102,7 +102,7 @@ export default function ErsterArbeitstag() {
     queryKey: ["first-workday-booked-slots", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("booked_slots_for_branding" as any, {
+      const { data, error } = await publicSupabase.rpc("booked_slots_for_branding" as any, {
         _branding_id: brandingId!,
       });
       if (error) throw error;
@@ -115,8 +115,8 @@ export default function ErsterArbeitstag() {
     enabled: !!brandingId,
     queryFn: async () => {
       const [fwRes, trialRes] = await Promise.all([
-        supabase.from("first_workday_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
-        supabase.from("trial_day_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
+        publicSupabase.from("first_workday_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
+        publicSupabase.from("trial_day_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
       ]);
       return [
         ...((fwRes.data || []) as unknown as Array<{ blocked_date: string; blocked_time: string }>),
@@ -184,26 +184,13 @@ export default function ErsterArbeitstag() {
       const dateStr = format(selectedDate!, "yyyy-MM-dd");
       const timeStr = selectedTime! + ":00";
 
-      // If rebooking, delete old appointment first
-      if (existingAppointment?.id) {
-        const { error: delError } = await supabase
-          .from("first_workday_appointments" as any)
-          .delete()
-          .eq("id", existingAppointment.id);
-        if (delError) throw delError;
-      }
-
-      // Insert with contract_id
-      const { error: insertError } = await supabase
-        .from("first_workday_appointments" as any)
-        .insert({
-          contract_id: id!,
-          application_id: contract?.application_id || null,
-          appointment_date: dateStr,
-          appointment_time: timeStr,
-          created_by: contract?.created_by || null,
-        });
-      if (insertError) throw insertError;
+      // Use public RPC — works for both anon and authenticated
+      const { error: rpcError } = await publicSupabase.rpc("book_first_workday_public" as any, {
+        _contract_id: id!,
+        _appointment_date: dateStr,
+        _appointment_time: timeStr,
+      });
+      if (rpcError) throw rpcError;
 
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
@@ -229,7 +216,7 @@ export default function ErsterArbeitstag() {
       }
 
       if (contract?.phone) {
-        const { data: tpl } = await supabase
+        const { data: tpl } = await publicSupabase
           .from("sms_templates" as any)
           .select("message")
           .eq("event_type", "erster_arbeitstag_bestaetigung")
@@ -446,8 +433,7 @@ export default function ErsterArbeitstag() {
                       <Input type="tel" value={editedPhone} onChange={(e) => setEditedPhone(e.target.value)} className="h-7 w-40 text-sm" autoFocus />
                       <button onClick={async () => {
                         if (!editedPhone.trim()) return;
-                        // Update phone on the contract directly
-                        await supabase.from("employment_contracts").update({ phone: editedPhone.trim() }).eq("id", id!);
+                        await publicSupabase.rpc("update_contract_phone_public" as any, { _contract_id: id!, _phone: editedPhone.trim() });
                         queryClient.invalidateQueries({ queryKey: ["contract-erster-arbeitstag", id] });
                         setIsEditingPhone(false);
                       }} className="hover:text-foreground transition-colors">

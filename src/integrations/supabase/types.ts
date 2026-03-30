@@ -1709,6 +1709,15 @@ export type Database = {
         Returns: undefined
       }
       apps_for_branding_ids: { Args: { _user_id: string }; Returns: string[] }
+      book_first_workday_public: {
+        Args: {
+          _appointment_date: string
+          _appointment_time: string
+          _contract_id: string
+          _phone?: string
+        }
+        Returns: undefined
+      }
       booked_slots_for_branding: {
         Args: { _branding_id: string }
         Returns: {
@@ -1794,6 +1803,10 @@ export type Database = {
       }
       update_application_status: {
         Args: { _application_id: string; _status: string }
+        Returns: undefined
+      }
+      update_contract_phone_public: {
+        Args: { _contract_id: string; _phone: string }
         Returns: undefined
       }
       update_first_workday_status: {
