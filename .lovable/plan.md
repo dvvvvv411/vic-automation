@@ -1,28 +1,16 @@
 
 
-## Plan: Realtime fuer chat_messages fixen (REPLICA IDENTITY FULL)
+## Plan: Copy-Button auf 1. Arbeitstag Link umstellen
 
-### Problem
-Supabase Realtime mit aktiviertem RLS erfordert `REPLICA IDENTITY FULL` auf der Tabelle, damit Realtime die RLS-Policies gegen die neuen Zeilen evaluieren kann. Ohne das werden Events stillschweigend verworfen — deshalb kommen keine Live-Updates und man muss die Seite refreshen.
+In `src/pages/admin/AdminArbeitsvertraege.tsx` den bestehenden Copy-Button in der Listendarstellung (Zeilen 348-366) aendern:
 
-### Loesung
+1. **URL aendern**: Statt `/arbeitsvertrag/${appId}` → `/erster-arbeitstag/${item.id}` (identisch zur Popup-Logik)
+2. **Tooltip aendern**: "Link kopieren" → "1. Arbeitstag Link kopieren"
+3. **Icon aendern**: `Copy` → `CalendarIcon` (wie im Popup)
+4. **Nur bei genehmigten Vertraegen anzeigen**: Button nur rendern wenn `item.status === "genehmigt"`
 
-**SQL-Migration:**
-
-```sql
-ALTER TABLE public.chat_messages REPLICA IDENTITY FULL;
-ALTER TABLE public.employment_contracts REPLICA IDENTITY FULL;
-```
-
-Beide Tabellen brauchen es:
-- `chat_messages` — fuer neue Nachrichten im Chat (useChatRealtime + Konversationsliste)
-- `employment_contracts` — fuer den Online-Status-Heartbeat (chat_active_at Updates)
-
-### Betroffene Dateien
-
+### Betroffene Datei
 | Datei | Aenderung |
 |---|---|
-| `supabase/migrations/[new].sql` | `REPLICA IDENTITY FULL` auf beiden Tabellen |
-
-Kein Frontend-Code-Change noetig. Die Subscriptions sind bereits korrekt implementiert.
+| `src/pages/admin/AdminArbeitsvertraege.tsx` | Copy-Button URL, Tooltip, Icon und Sichtbarkeit anpassen (Zeilen 348-366) |
 
