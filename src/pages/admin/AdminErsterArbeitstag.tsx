@@ -208,9 +208,15 @@ export default function AdminErsterArbeitstag() {
   };
 
   // Resolve all items
-  const resolvedItems = (data?.items ?? []).map((item: any) =>
-    resolveItemData(item, profilesMap, applicationsMap, templatesMap)
-  );
+  const resolvedItems = (data?.items ?? []).map((item: any) => {
+    const r = resolveItemData(item, profilesMap, applicationsMap, templatesMap);
+    // Second pass: email-based fallback for employment_type
+    if (r.employmentType === "–" && r.displayEmail && r.displayEmail !== "–") {
+      const alt = emailTypeMap.get(r.displayEmail);
+      if (alt) r.employmentType = alt;
+    }
+    return r;
+  });
 
   const filteredItems = resolvedItems.filter((r) => {
     if (!search.trim()) return true;
