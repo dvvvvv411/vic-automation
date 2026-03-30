@@ -103,7 +103,7 @@ export default function ErsterArbeitstag() {
     queryKey: ["first-workday-booked-slots", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("booked_slots_for_branding" as any, {
+      const { data, error } = await publicSupabase.rpc("booked_slots_for_branding" as any, {
         _branding_id: brandingId!,
       });
       if (error) throw error;
