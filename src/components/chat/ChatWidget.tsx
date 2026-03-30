@@ -49,6 +49,13 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
 
   const { isTyping, sendTyping } = useChatTyping({ contractId, role: "user" });
 
+  // Request notification permission on mount
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
   // DB-based heartbeat: update chat_active_at every 30s when chat is open
   useEffect(() => {
     if (!open || !contractId) {
