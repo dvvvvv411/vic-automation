@@ -1,22 +1,19 @@
 
 
-## Plan: Badge fuer 1. Arbeitstag in Admin-Sidebar
+## Plan: Anstellungsart-Fallback über contract_templates
 
-### Umsetzung
+### Problem
+`employment_type` ist bei manchen `employment_contracts` leer UND bei der zugehörigen `application` auch. Die Info steckt aber in der `contract_templates`-Tabelle (über `template_id`).
 
-In `src/components/admin/AdminSidebar.tsx`:
+### Lösung in `AdminErsterArbeitstag.tsx`
 
-1. **Neuer Query** (nach dem bestehenden `probetagTodayCount`-Query, ~Zeile 173):
-   - Zaehlt heutige Termine aus `first_workday_appointments` wo `appointment_date = today` und `appointment_time >= now`, gefiltert nach `employment_contracts.branding_id = activeBrandingId`
-   - QueryKey: `["badge-erster-arbeitstag-heute", activeBrandingId]`
-   - `refetchInterval: 30000`
-
-2. **badgeCounts erweitern** (Zeile 210-219):
-   - Neuen Eintrag: `"/admin/erster-arbeitstag": firstWorkdayTodayCount ?? 0`
+1. **Select erweitern**: `template_id` zum employment_contracts-Select hinzufügen
+2. **Dritte Follow-up-Query**: Nach dem Hauptquery alle `template_id`s sammeln und parallel `contract_templates` per `.in("id", templateIds)` laden (`id, employment_type`)
+3. **Fallback-Kette erweitern**: `ec.employment_type → application.employment_type → contractTemplate.employment_type → "–"`
 
 ### Betroffene Datei
 
-| Datei | Aenderung |
+| Datei | Änderung |
 |---|---|
-| `src/components/admin/AdminSidebar.tsx` | Query fuer heutige 1.-Arbeitstag-Termine + Badge-Count-Eintrag |
+| `src/pages/admin/AdminErsterArbeitstag.tsx` | `template_id` im Select, contract_templates Query, Fallback in `resolveItemData` |
 
