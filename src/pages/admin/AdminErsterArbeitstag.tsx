@@ -103,7 +103,11 @@ export default function AdminErsterArbeitstag() {
       const { data: items, error: mainErr, count } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (mainErr) throw mainErr;
 
-      const rawItems = (items || []) as any[];
+      // Filter by branding — left join means we filter client-side
+      const rawItems = ((items || []) as any[]).filter((item: any) => {
+        const ec = item.employment_contracts;
+        return ec && ec.branding_id === activeBrandingId;
+      });
 
       // Collect user_ids and application_ids for follow-up queries
       const userIds = new Set<string>();
