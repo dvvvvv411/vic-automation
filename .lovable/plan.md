@@ -1,55 +1,34 @@
 
 
-## Plan: Erster Arbeitstag von `application_id` auf `contract_id` umstellen
+## Plan: Zugewiesene Mitarbeiter/Auftraege bei Telefonnummern anzeigen
 
-### Problem
-Das gesamte 1.-Arbeitstag-System basiert auf `applications.id`. Das zwingt den Genehmigungsflow, eine Bewerbung zu erzeugen falls keine existiert (`ensureApplicationId`), was zu doppelten Bewerbungseintraegen fuehrt.
+### Idee
 
-### Loesung
-`first_workday_appointments` bekommt eine `contract_id`-Spalte. Die Route aendert sich von `/erster-arbeitstag/:applicationId` auf `/erster-arbeitstag/:contractId`. Alles laeuft ueber den Arbeitsvertrag.
+Die Verbindung zwischen Telefonnummern und Mitarbeitern/Auftraegen existiert bereits ueber die `ident_sessions`-Tabelle: `ident_sessions.phone_api_url` entspricht `phone_numbers.api_url`. Jede `ident_session` hat `contract_id` (→ Mitarbeiter) und `order_id` (→ Auftrag).
 
-### Aenderungen
+### Aenderung in `AdminTelefonnummern.tsx`
 
-**1. DB-Migration**
-- `first_workday_appointments.contract_id UUID` hinzufuegen (nullable fuer Altdaten)
-- Backfill: `UPDATE first_workday_appointments SET contract_id = ec.id FROM employment_contracts ec WHERE ec.application_id = first_workday_appointments.application_id`
-- RLS-Policies anpassen: bestehende Policies beibehalten (die laufen ueber `application_id`), zusaetzlich `contract_id`-basierte Policies fuer INSERT/SELECT
+**1. Neue Query in `PhoneRow`**: Ident-Sessions laden, die dieselbe `api_url` referenzieren:
+```
+ident_sessions WHERE phone_api_url = entry.api_url
+  → JOIN employment_contracts (contract_id) für Mitarbeitername
+  → JOIN orders (order_id) für Auftragsname
+```
 
-**2. `src/pages/ErsterArbeitstag.tsx`**
-- Statt `applications` laden: `employment_contracts` per `id` laden (mit `brandings`-Join ueber `branding_id`)
-- Name, Telefon, E-Mail, Branding etc. direkt aus dem Vertrag lesen
-- Booking-Mutation: `contract_id` statt `application_id` in `first_workday_appointments` einfuegen
-- Bestehende Termine per `contract_id` statt `application_id` laden
-- Gebuchte Slots: ueber `branding_id` direkt aus `first_workday_appointments` laden (nicht mehr ueber `applications`)
+**2. Neue Spalte "Zugewiesen an"** in der Tabelle zwischen "Service" und "Start":
+- Zeigt Mitarbeitername + Auftragsname als Badges/Tags
+- Falls keine Zuweisung: graues "—" oder "Nicht zugewiesen"
+- Beispiel: `Kevin Gehrmann · Bankdrop #123`
 
-**3. `src/pages/admin/AdminArbeitsvertraege.tsx`**
-- `ensureApplicationId` komplett entfernen
-- `handleApprove`: Link direkt aus `contract.id` bauen: `/erster-arbeitstag/${contractId}`
-- Copy-Link-Button: `/erster-arbeitstag/${selectedContract.id}`
+### Technische Details
 
-**4. `src/pages/admin/AdminErsterArbeitstag.tsx`**
-- Query umstellen: `first_workday_appointments` mit Join auf `employment_contracts` statt `applications!inner`
-- Name, Telefon, E-Mail, Branding, Anstellungsart aus `employment_contracts` lesen
+- Query: `supabase.from("ident_sessions").select("id, contract_id, order_id, employment_contracts:contract_id(first_name, last_name), orders:order_id(title)").eq("phone_api_url", entry.api_url)`
+- Ergebnis wird als kompakte Badges unter der neuen Spalte gerendert
+- Mehrere Zuweisungen moeglich (eine Nummer kann in mehreren Sessions verwendet werden)
 
-**5. `src/pages/admin/AdminProbetag.tsx`**
-- Copy-Link-Button: statt `application_id` die verknuepfte `contract_id` aus `employment_contracts` holen und `/erster-arbeitstag/${contractId}` bauen
-
-**6. `src/App.tsx`**
-- Route bleibt `/erster-arbeitstag/:id`, nur die Semantik aendert sich (ist jetzt `contractId`)
-
-### Ergebnis
-- Keine `ensureApplicationId` mehr
-- Keine Phantom-Bewerbungen
-- Vertragsgenhmigung braucht keine `application_id`
-- 1. Arbeitstag laeuft komplett ueber `employment_contracts`
-
-### Betroffene Dateien
+### Betroffene Datei
 
 | Datei | Aenderung |
 |---|---|
-| DB-Migration | `contract_id` Spalte + Backfill + RLS |
-| `src/pages/ErsterArbeitstag.tsx` | Komplett auf Vertragsdaten umstellen |
-| `src/pages/admin/AdminArbeitsvertraege.tsx` | `ensureApplicationId` entfernen, Link aus `contract.id` |
-| `src/pages/admin/AdminErsterArbeitstag.tsx` | Join auf `employment_contracts` statt `applications` |
-| `src/pages/admin/AdminProbetag.tsx` | Copy-Link auf `contract_id` umstellen |
+| `src/pages/admin/AdminTelefonnummern.tsx` | Neue Query fuer ident_sessions pro PhoneRow, neue Tabellenspalte "Zugewiesen an" |
 
