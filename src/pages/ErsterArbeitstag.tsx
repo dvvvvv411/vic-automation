@@ -116,8 +116,8 @@ export default function ErsterArbeitstag() {
     enabled: !!brandingId,
     queryFn: async () => {
       const [fwRes, trialRes] = await Promise.all([
-        supabase.from("first_workday_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
-        supabase.from("trial_day_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
+        publicSupabase.from("first_workday_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
+        publicSupabase.from("trial_day_blocked_slots" as any).select("blocked_date, blocked_time").eq("branding_id", brandingId!),
       ]);
       return [
         ...((fwRes.data || []) as unknown as Array<{ blocked_date: string; blocked_time: string }>),
