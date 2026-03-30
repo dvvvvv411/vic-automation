@@ -145,6 +145,47 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
         />
       )}
 
+      {/* KI Polish preview */}
+      {polishedText && (
+        <div className="mb-2 px-1">
+          <div className="px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">KI-Vorschlag</span>
+            </div>
+            <p className="text-sm text-blue-900 dark:text-blue-100 leading-relaxed mb-2">
+              {polishedText}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  handleChange(polishedText);
+                  setPolishedText(null);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
+              >
+                <Check className="h-3.5 w-3.5" />
+                Übernehmen
+              </button>
+              <button
+                onClick={() => handleAiPolish()}
+                disabled={polishing}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-900/70 transition-colors"
+                title="Neu formulieren"
+              >
+                {polishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              </button>
+              <button
+                onClick={() => setPolishedText(null)}
+                className="ml-auto text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* File preview */}
       {selectedFile && (
         <div className="flex items-center gap-2 mb-2 px-1">
@@ -187,6 +228,24 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
         />
 
         <EmojiPicker onSelect={handleEmojiSelect} />
+
+        {/* KI Polish button */}
+        {showTemplates && input.trim() && (
+          <button
+            onClick={handleAiPolish}
+            disabled={polishing}
+            className={cn(
+              "shrink-0 h-10 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs font-medium transition-colors",
+              polishing
+                ? "bg-blue-100 dark:bg-blue-900/50 text-blue-400 cursor-not-allowed"
+                : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70"
+            )}
+            title="KI-Textoptimierung"
+          >
+            {polishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            KI
+          </button>
+        )}
 
         <textarea
           ref={textareaRef}
