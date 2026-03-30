@@ -130,11 +130,8 @@ export default function ErsterArbeitstag() {
         allSlots.push(...((fwByApp.data || []) as any[]), ...((trialByApp.data || []) as any[]));
       }
 
-      const results = await Promise.all(queries);
-      const allSlots: Array<{ appointment_date: string; appointment_time: string }> = [];
-      for (const res of results) {
-        if (res.data) allSlots.push(...(res.data as any[]));
-      }
+
+
       // Deduplicate
       const seen = new Set<string>();
       return allSlots.filter((s) => {
