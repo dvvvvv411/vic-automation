@@ -905,6 +905,27 @@ export default function AdminMitarbeiterDetail() {
                   data={contract}
                   onSave={saveFields}
                 />
+                {(() => {
+                  const startDateStr = contract?.desired_start_date;
+                  if (!startDateStr) return null;
+                  const today = new Date();
+                  const start = new Date(startDateStr + "T00:00:00");
+                  let next = new Date(start);
+                  while (next <= today) {
+                    next = new Date(next.getTime() + 30 * 24 * 60 * 60 * 1000);
+                  }
+                  return (
+                    <div className="flex justify-between items-center py-2.5 px-4 bg-muted/30 rounded-lg border border-border/40">
+                      <span className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-green-500" />
+                        Nächste Auszahlung
+                      </span>
+                      <span className="text-sm font-medium text-foreground">
+                        {format(next, "dd. MMMM yyyy", { locale: de })}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Right 1/3 */}
