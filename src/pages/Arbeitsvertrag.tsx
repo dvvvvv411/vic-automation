@@ -228,7 +228,7 @@ export default function Arbeitsvertrag() {
         _contract_id: contract!.id,
         _first_name: form.first_name,
         _last_name: form.last_name,
-        _email: form.email,
+        _email: form.email.trim().toLowerCase(),
         _phone: form.phone,
         _birth_date: (() => { const p = form.birth_date.match(/^(\d{2})\.(\d{2})\.(\d{4})$/); return p ? `${p[3]}-${p[2]}-${p[1]}` : ""; })(),
         _birth_place: form.birth_place,

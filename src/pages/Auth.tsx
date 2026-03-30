@@ -135,7 +135,7 @@ const Auth = () => {
         branding_id: brandingId,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
-        email: regEmail.trim(),
+        email: regEmail.trim().toLowerCase(),
         phone: phone.trim() || null,
         status: "offen",
       });
