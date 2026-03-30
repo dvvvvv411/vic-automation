@@ -91,7 +91,7 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
   if (isLoading) {
     return (
       <TableRow>
-        <TableCell colSpan={8} className="text-center text-muted-foreground">
+        <TableCell colSpan={10} className="text-center text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin inline mr-2" />Laden…
         </TableCell>
       </TableRow>
@@ -101,7 +101,7 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
   if (isError || !data) {
     return (
       <TableRow>
-        <TableCell colSpan={7} className="text-destructive">Fehler beim Laden</TableCell>
+        <TableCell colSpan={9} className="text-destructive">Fehler beim Laden</TableCell>
         <TableCell>
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -143,6 +143,24 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
             <TableCell>{data.country}</TableCell>
             <TableCell>{data.rentalType}</TableCell>
             <TableCell>{data.service}</TableCell>
+            <TableCell>
+              {assignments.length === 0 ? (
+                <span className="text-muted-foreground">—</span>
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {assignments.map((a) => {
+                    const name = [a.employment_contracts?.first_name, a.employment_contracts?.last_name].filter(Boolean).join(" ");
+                    const order = a.orders?.title;
+                    const label = [name, order].filter(Boolean).join(" · ") || "–";
+                    return (
+                      <Badge key={a.id} variant="secondary" className="text-xs whitespace-nowrap">
+                        {label}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+            </TableCell>
             <TableCell>{format(new Date(data.startDate), "dd.MM.yyyy HH:mm")}</TableCell>
             <TableCell>{format(new Date(data.endDate), "dd.MM.yyyy HH:mm")}</TableCell>
             <TableCell>{stateBadge(data.state)}</TableCell>
@@ -169,7 +187,7 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
         </CollapsibleTrigger>
         <CollapsibleContent asChild>
           <tr>
-            <td colSpan={9} className="bg-muted/30 px-8 py-4">
+            <td colSpan={10} className="bg-muted/30 px-8 py-4">
               {sortedSms.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Keine SMS empfangen.</p>
               ) : (
@@ -284,6 +302,7 @@ export default function AdminTelefonnummern() {
                 <TableHead>Land</TableHead>
                 <TableHead>Typ</TableHead>
                 <TableHead>Service</TableHead>
+                <TableHead>Zugewiesen an</TableHead>
                 <TableHead>Start</TableHead>
                 <TableHead>Ende</TableHead>
                 <TableHead>Status</TableHead>
