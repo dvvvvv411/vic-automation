@@ -117,20 +117,17 @@ export default function ErsterArbeitstag() {
         .eq("branding_id", brandingId!);
       const appIds = (apps || []).map((a) => a.id);
 
-      const queries: Promise<any>[] = [
-        supabase.from("first_workday_appointments" as any).select("appointment_date, appointment_time").in("contract_id", contractIds),
+      const fwByContract = await supabase.from("first_workday_appointments" as any).select("appointment_date, appointment_time").in("contract_id", contractIds);
+      const allSlots: Array<{ appointment_date: string; appointment_time: string }> = [
+        ...((fwByContract.data || []) as any[]),
       ];
-      // Also fetch legacy application-based appointments
+
       if (appIds.length > 0) {
-        queries.push(
+        const [fwByApp, trialByApp] = await Promise.all([
           supabase.from("first_workday_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
-        );
-      }
-      // Trial day appointments (still application-based)
-      if (appIds.length > 0) {
-        queries.push(
           supabase.from("trial_day_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
-        );
+        ]);
+        allSlots.push(...((fwByApp.data || []) as any[]), ...((trialByApp.data || []) as any[]));
       }
 
       const results = await Promise.all(queries);
