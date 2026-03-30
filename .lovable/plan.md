@@ -1,106 +1,126 @@
 
-## Plan: `/erster-arbeitstag/:id` komplett login-unabhängig machen
+## Klartext
 
-### Was wirklich kaputt ist
-Die Route ist im Router bereits öffentlich. Das Problem ist nicht `ProtectedRoute`, sondern der normale Supabase-Client in `src/integrations/supabase/client.ts`:
+Ja — **sehr wahrscheinlich hängt es genau mit der späteren Workflow-Umstellung zusammen**.
 
-- `persistSession: true`
-- `storage: localStorage`
+Ich habe Kevins Daten geprüft und der Fall ist eindeutig:
 
-Dadurch übernimmt die Seite auf dem Handy eine vorhandene Login-Session. Dann laufen die Requests als `authenticated` statt `anon`. Genau deshalb ist das Verhalten auf Handy und PC unterschiedlich.
+```text
+Aktiver Vertrag:
+contract_id = 25ccd550-627d-480c-967b-734aad8daad2
+contract.application_id = 5de180fc-87e-4b14-b2f0-dff56ed6d1f6
 
-Die letzte RLS-Änderung hat nur den `SELECT` auf `employment_contracts` erweitert. Sie entfernt aber nicht die Login-Abhängigkeit der Seite. Aktuell sind weiter auth-abhängig:
-- Vertragsdaten laden
-- vorhandenen ersten-Arbeitstag-Termin laden
-- Mobilnummer ändern
-- Termin umbuchen (`DELETE`)
-- Termin buchen (`INSERT`)
+Vorhandener Termin:
+appointment_id = acd0c831-6400-4bfa-882d-fbc1bac2a22e
+appointment_date = 2026-04-01
+appointment_time = 09:30
+first_workday_appointments.contract_id = NULL
+first_workday_appointments.application_id = acf1ab73-8bc1-4eb6-8c9d-852e5b7c178e
+```
 
-### Umsetzung
+Und die Bestätigungsmail wurde **1 Sekunde später** gesendet. Das heißt:
+- Kevin hat **wirklich gebucht**
+- der Termin ist **nicht weg**
+- er ist nur **falsch / legacy verknüpft**
+- deshalb taucht er in `/admin/erster-arbeitstag` nicht auf
 
-#### 1. Öffentlichen, sessionlosen Supabase-Client anlegen
-Neue Datei, z. B. `src/integrations/supabase/publicClient.ts`:
+## Warum er im Admin nicht erscheint
 
-- gleiche Supabase-URL + Publishable Key
-- keine Session-Übernahme
-- kein `localStorage`
-- `persistSession: false`
-- `autoRefreshToken: false`
-- isolierter/no-op storage
+`/admin/erster-arbeitstag` lädt aktuell mit:
 
-Ergebnis: Diese Seite nutzt immer den öffentlichen anon-Kontext, auch wenn im Browser irgendein User eingeloggt ist.
+```text
+first_workday_appointments
+  -> employment_contracts:contract_id!inner(...)
+```
 
-#### 2. `ErsterArbeitstag.tsx` komplett auf den Public-Client umstellen
-Alle Lesezugriffe dieser Seite laufen künftig über den neuen Public-Client:
+Also nur Termine, die eine **gültige contract_id** haben.
 
-- `employment_contracts` + Branding laden
-- bestehenden `first_workday_appointments` laden
-- `branding_schedule_settings`
-- geblockte Slots
-- `booked_slots_for_branding`
+Kevins Termin ist aber noch im **alten application-basierten Format** gespeichert:
+- `contract_id = NULL`
+- `application_id = alte/falsche Application-ID`
 
-Damit sieht die Seite auf Handy und PC immer dasselbe.
+Darum ist er im Admin unsichtbar.
 
-#### 3. Schreiben nicht mehr direkt über auth-abhängige Tabellenzugriffe
-Ich ersetze die direkten Mutations durch öffentliche, link-basierte DB-Funktionen.
+## Was das wahrscheinlich verursacht hat
 
-Neue SQL-Migration:
+Sehr wahrscheinlich wurde der 1.-Arbeitstag-Flow **nachträglich von application-basiert auf contract-basiert umgebaut**. Kevins Buchung stammt offenbar noch aus dem alten/halben Übergangszustand.
 
-- `book_first_workday_public(_contract_id uuid, _appointment_date date, _appointment_time time, _phone text default null)`
-  - `SECURITY DEFINER`
-  - prüft, dass der Vertrag existiert
-  - löscht vorhandenen Termin für den Vertrag
-  - legt den neuen Termin an
-  - aktualisiert optional die Telefonnummer
+Das erklärt perfekt:
+- Mail ging raus
+- Termin existiert in der DB
+- Admin sieht ihn nicht
+- heutiger Code sucht an anderer Stelle
 
-- `update_contract_phone_public(_contract_id uuid, _phone text)`
-  - `SECURITY DEFINER`
-  - aktualisiert nur die Telefonnummer für diesen Vertrag
+## Was ich umsetzen würde
 
-- `GRANT EXECUTE` an `anon` und `authenticated`
+### 1. Kevin **nicht neu einfügen**, sondern korrekt reparieren
+Ich würde **keinen neuen Termin anlegen**, weil sonst ein Duplikat entstehen kann.
 
-Warum so:
-- der Link funktioniert wirklich unabhängig vom Login
-- Umbuchen klappt auch ohne Auth
-- ich muss keine noch breiteren anon-DELETE/UPDATE-Policies öffnen
+Stattdessen die vorhandene Zeile korrigieren:
 
-#### 4. Frontend-Mutations austauschen
-In `src/pages/ErsterArbeitstag.tsx`:
+```sql
+UPDATE public.first_workday_appointments
+SET
+  contract_id = '25ccd550-627d-480c-967b-734aad8daad2',
+  application_id = '5de180fc-87e6-4b14-b2f0-dff56ed6d1f6'
+WHERE id = 'acd0c831-6400-4bfa-882d-fbc1bac2a22e';
+```
 
-- Telefon-Stift speichert per `rpc("update_contract_phone_public", ...)`
-- Buchen/Umbuchen nutzt nur noch `rpc("book_first_workday_public", ...)`
-- kein direktes `.delete()` / `.insert()` / `.update()` mehr für diese Seite
+Damit wäre Kevins Termin sofort in `/admin/erster-arbeitstag` sichtbar.
 
-#### 5. Fehlerbild verbessern
-Zusätzlich ändere ich das Fehlverhalten:
+### 2. Admin-Seite robust machen
+`src/pages/admin/AdminErsterArbeitstag.tsx` muss nicht nur `contract_id!inner(...)` lesen, sondern auch **Legacy-Termine** abfangen.
 
-- klare Fehlermeldung/Toast bei Query- oder RPC-Fehlern
-- `Ungültiger Link` nur dann, wenn die Vertrags-ID wirklich nicht existiert
-- kein stilles Hängen an auth-abhängigen Requests mehr
+Geplanter Umbau:
+- Termine zuerst aus `first_workday_appointments` laden
+- Verträge danach per
+  - `contract_id`
+  - oder Fallback über `application_id`
+  auflösen
+- dann dieselbe Datenauflösung wie bisher verwenden
 
-### Betroffene Dateien
-- Neu: `src/integrations/supabase/publicClient.ts`
-- Edit: `src/pages/ErsterArbeitstag.tsx`
-- Neu: SQL-Migration in `supabase/migrations/...`
+Dann sieht der Admin:
+- neue contract-basierte Termine
+- alte application-basierte Termine
+- gemischte Übergangsfälle
 
-### Wichtiger Punkt
-Ich entferne keine React-Route-Protection, weil auf dieser Route schon keine existiert. Ich entferne die Login-Abhängigkeit der Supabase-Zugriffe. Das ist der eigentliche Bug.
+### 3. Datenbestand bereinigen
+Zusätzliche SQL-Migration / Datenreparatur für alte Datensätze:
 
-### Ergebnis nach Umsetzung
-Jeder, der den `/erster-arbeitstag/:contractId`-Link hat, kann die Seite nutzen – egal ob im selben Browser ein User eingeloggt ist oder nicht:
+- alle `first_workday_appointments` mit `contract_id IS NULL`
+- passenden Vertrag über `application_id` suchen
+- `contract_id` nachziehen
+- falls mehrere Verträge existieren:
+  - bevorzugt `genehmigt`
+  - sonst neuesten Vertrag
 
-- Seite öffnen
-- Daten sehen
-- Mobilnummer bearbeiten
-- Termin buchen
-- Termin umbuchen
+Damit verschwinden solche Fälle nicht nur bei Kevin, sondern systemweit.
 
-### QA nach Umsetzung
-Ich prüfe gezielt:
+### 4. Buchungsflow hart absichern
+`book_first_workday_public(...)` sollte künftig:
+- die erzeugte Appointment-ID zurückgeben
+- nach dem Insert eindeutig den finalen Datensatz liefern
+- immer mit korrekter `contract_id` arbeiten
 
-1. Link ausgeloggt
-2. Link eingeloggt mit richtigem User
-3. Link eingeloggt mit falschem/anderem User
-4. Mobile Viewport
-5. Telefonnummer ändern
-6. Erstbuchung + Umbuchung Ende-zu-Ende
+Frontend in `src/pages/ErsterArbeitstag.tsx`:
+- nach RPC nicht blind Erfolg anzeigen
+- erst Datensatz verifizieren
+- **danach** Mail/SMS/Telegram senden
+
+So vermeiden wir Inkonsistenzen.
+
+## Betroffene Dateien
+
+- `src/pages/admin/AdminErsterArbeitstag.tsx`
+- SQL-Migration in `supabase/migrations/...`
+- optional `src/pages/ErsterArbeitstag.tsx` zur zusätzlichen Verifikation
+
+## Wichtigster Punkt
+
+Der Termin von Kevin fehlt **nicht**.
+Er ist **vorhanden, aber an der falschen Stelle verknüpft**.
+
+Also:
+- Ja, die spätere Workflow-Änderung ist sehr wahrscheinlich der Grund.
+- Nein, man sollte **nicht blind neu einfügen**.
+- Richtig ist: **bestehenden Termin auf den richtigen Vertrag umhängen** und den Admin-Screen legacy-sicher machen.
