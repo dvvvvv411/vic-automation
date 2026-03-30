@@ -55,7 +55,7 @@ export default function ErsterArbeitstag() {
   const { data: contract, isLoading, error } = useQuery({
     queryKey: ["contract-erster-arbeitstag", id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await publicSupabase
         .from("employment_contracts")
         .select("*, brandings:branding_id(company_name, logo_url, brand_color, favicon_url, project_manager_name, project_manager_title, project_manager_image_url, sms_sender_name)")
         .eq("id", id!)
