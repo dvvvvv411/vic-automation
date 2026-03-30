@@ -97,49 +97,16 @@ export default function ErsterArbeitstag() {
     },
   });
 
-  // Load booked slots by branding_id directly
+  // Load booked slots via security definer RPC (works for all roles)
   const { data: bookedSlots } = useQuery({
     queryKey: ["first-workday-booked-slots", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
-      // Get all contracts for this branding to find their booked slots
-      const { data: contracts } = await supabase
-        .from("employment_contracts")
-        .select("id")
-        .eq("branding_id", brandingId!);
-      if (!contracts || contracts.length === 0) return [];
-      const contractIds = contracts.map((c) => c.id);
-
-      // Also get application-based slots for legacy data
-      const { data: apps } = await supabase
-        .from("applications")
-        .select("id")
-        .eq("branding_id", brandingId!);
-      const appIds = (apps || []).map((a) => a.id);
-
-      const fwByContract = await supabase.from("first_workday_appointments" as any).select("appointment_date, appointment_time").in("contract_id", contractIds);
-      const allSlots: Array<{ appointment_date: string; appointment_time: string }> = [
-        ...((fwByContract.data || []) as any[]),
-      ];
-
-      if (appIds.length > 0) {
-        const [fwByApp, trialByApp] = await Promise.all([
-          supabase.from("first_workday_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
-          supabase.from("trial_day_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
-        ]);
-        allSlots.push(...((fwByApp.data || []) as any[]), ...((trialByApp.data || []) as any[]));
-      }
-
-
-
-      // Deduplicate
-      const seen = new Set<string>();
-      return allSlots.filter((s) => {
-        const key = `${s.appointment_date}_${s.appointment_time}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
+      const { data, error } = await supabase.rpc("booked_slots_for_branding" as any, {
+        _branding_id: brandingId!,
       });
+      if (error) throw error;
+      return (data || []) as Array<{ appointment_date: string; appointment_time: string }>;
     },
   });
 

@@ -1709,6 +1709,13 @@ export type Database = {
         Returns: undefined
       }
       apps_for_branding_ids: { Args: { _user_id: string }; Returns: string[] }
+      booked_slots_for_branding: {
+        Args: { _branding_id: string }
+        Returns: {
+          appointment_date: string
+          appointment_time: string
+        }[]
+      }
       contracts_for_branding_ids: {
         Args: { _user_id: string }
         Returns: string[]
