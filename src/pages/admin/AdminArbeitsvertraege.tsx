@@ -345,25 +345,26 @@ export default function AdminArbeitsvertraege() {
 
                       {/* Actions */}
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={async () => {
-                              const brandingId = item.applications?.brandings?.id || item.branding_id;
-                                const appId = item.applications?.id || item.application_id;
-                                const url = await buildBrandingUrl(brandingId, `/arbeitsvertrag/${appId}`);
-                                navigator.clipboard.writeText(url);
-                                toast.success("Link kopiert!");
-                              }}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Link kopieren</TooltipContent>
-                        </Tooltip>
+                        {item.status === "genehmigt" && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={async () => {
+                                  const brandingId = item.applications?.brandings?.id || item.branding_id;
+                                  const url = await buildBrandingUrl(brandingId, `/erster-arbeitstag/${item.id}`);
+                                  navigator.clipboard.writeText(url);
+                                  toast.success("1. Arbeitstag Link kopiert!");
+                                }}
+                              >
+                                <CalendarIcon className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>1. Arbeitstag Link kopieren</TooltipContent>
+                          </Tooltip>
+                        )}
 
                         {hasData ? (
                           <Tooltip>
