@@ -1716,7 +1716,7 @@ export type Database = {
           _contract_id: string
           _phone?: string
         }
-        Returns: undefined
+        Returns: string
       }
       booked_slots_for_branding: {
         Args: { _branding_id: string }
