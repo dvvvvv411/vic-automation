@@ -63,7 +63,7 @@ export default function ErsterArbeitstag() {
       if (error) throw error;
       if (data) {
         // Load existing first workday appointment by contract_id
-        const { data: fwAppt } = await supabase
+        const { data: fwAppt } = await publicSupabase
           .from("first_workday_appointments" as any)
           .select("id, appointment_date, appointment_time")
           .eq("contract_id", id!)
