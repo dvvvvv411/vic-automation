@@ -8,7 +8,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2 } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -27,6 +27,38 @@ import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 const PAGE_SIZE = 20;
 type ViewMode = "default" | "past" | "future";
 
+interface ResolvedItem {
+  item: any;
+  firstName: string;
+  lastName: string;
+  displayEmail: string;
+  displayPhone: string;
+  employmentType: string;
+  brandingName: string;
+}
+
+function resolveItemData(
+  item: any,
+  profilesMap: Map<string, any>,
+  applicationsMap: Map<string, any>
+): ResolvedItem {
+  const ec = item.employment_contracts;
+  const profile = ec?.user_id ? profilesMap.get(ec.user_id) : null;
+  const app = ec?.application_id ? applicationsMap.get(ec.application_id) : null;
+  const appFromItem = item.application_id ? applicationsMap.get(item.application_id) : null;
+  const resolvedApp = app || appFromItem;
+
+  const profileNameParts = profile?.full_name?.split(" ") || [];
+  const firstName = ec?.first_name || profileNameParts[0] || resolvedApp?.first_name || "";
+  const lastName = ec?.last_name || profileNameParts.slice(1).join(" ") || resolvedApp?.last_name || "";
+  const displayEmail = ec?.email || profile?.email || resolvedApp?.email || "–";
+  const displayPhone = ec?.phone || profile?.phone || resolvedApp?.phone || "";
+  const employmentType = ec?.employment_type || resolvedApp?.employment_type || "–";
+  const brandingName = ec?.brandings?.company_name || "–";
+
+  return { item, firstName, lastName, displayEmail, displayPhone, employmentType, brandingName };
+}
+
 export default function AdminErsterArbeitstag() {
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>("default");
@@ -34,7 +66,7 @@ export default function AdminErsterArbeitstag() {
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-  const [failTarget, setFailTarget] = useState<any>(null);
+  const [failTarget, setFailTarget] = useState<ResolvedItem | null>(null);
   const [failReason, setFailReason] = useState("");
   const [failSubmitting, setFailSubmitting] = useState(false);
 
@@ -43,13 +75,14 @@ export default function AdminErsterArbeitstag() {
   const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
   const cutoffTime = format(subHours(now, 3), "HH:mm:ss");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["first-workday-appointments-admin", page, viewMode, activeBrandingId],
     enabled: ready,
     queryFn: async () => {
+      // Main query without profiles embed
       let query = supabase
         .from("first_workday_appointments" as any)
-        .select("*, employment_contracts:contract_id!inner(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, brandings:branding_id(id, company_name), profiles:user_id(full_name, email, phone))", { count: "exact" })
+        .select("*, employment_contracts:contract_id!inner(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, application_id, brandings:branding_id(id, company_name))", { count: "exact" })
         .eq("employment_contracts.branding_id", activeBrandingId!);
 
       if (viewMode === "past") {
@@ -66,14 +99,45 @@ export default function AdminErsterArbeitstag() {
           .order("appointment_time", { ascending: true });
       }
 
-      const { data, error, count } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-      if (error) throw error;
+      const { data: items, error: mainErr, count } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      if (mainErr) throw mainErr;
 
-      return { items: (data || []) as any[], total: count || 0 };
+      const rawItems = (items || []) as any[];
+
+      // Collect user_ids and application_ids for follow-up queries
+      const userIds = new Set<string>();
+      const applicationIds = new Set<string>();
+
+      for (const item of rawItems) {
+        const ec = item.employment_contracts;
+        if (ec?.user_id) userIds.add(ec.user_id);
+        if (ec?.application_id) applicationIds.add(ec.application_id);
+        if (item.application_id) applicationIds.add(item.application_id);
+      }
+
+      // Parallel follow-up queries
+      const [profilesRes, applicationsRes] = await Promise.all([
+        userIds.size > 0
+          ? supabase.from("profiles").select("id, full_name, email, phone").in("id", Array.from(userIds))
+          : { data: [] },
+        applicationIds.size > 0
+          ? supabase.from("applications").select("id, first_name, last_name, email, phone, employment_type").in("id", Array.from(applicationIds))
+          : { data: [] },
+      ]);
+
+      const profilesMap = new Map<string, any>();
+      for (const p of (profilesRes.data || [])) profilesMap.set(p.id, p);
+
+      const applicationsMap = new Map<string, any>();
+      for (const a of (applicationsRes.data || [])) applicationsMap.set(a.id, a);
+
+      return { items: rawItems, total: count || 0, profilesMap, applicationsMap };
     },
   });
 
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
+  const profilesMap = data?.profilesMap ?? new Map();
+  const applicationsMap = data?.applicationsMap ?? new Map();
 
   const handleStatusUpdate = async (item: any, newStatus: string) => {
     const { error } = await supabase.rpc("update_first_workday_status" as any, {
@@ -104,6 +168,17 @@ export default function AdminErsterArbeitstag() {
     }
   };
 
+  // Resolve all items
+  const resolvedItems = (data?.items ?? []).map((item: any) =>
+    resolveItemData(item, profilesMap, applicationsMap)
+  );
+
+  const filteredItems = resolvedItems.filter((r) => {
+    if (!search.trim()) return true;
+    const name = `${r.firstName} ${r.lastName}`.toLowerCase();
+    return name.includes(search.toLowerCase().trim());
+  });
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-8">
@@ -132,107 +207,91 @@ export default function AdminErsterArbeitstag() {
       </div>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-        {isLoading ? (
+        {isError ? (
+          <div className="text-center py-12 border border-destructive/30 rounded-lg bg-destructive/5">
+            <AlertTriangle className="h-10 w-10 text-destructive mx-auto mb-3" />
+            <p className="text-destructive font-medium">Fehler beim Laden der Termine</p>
+            <p className="text-muted-foreground text-sm mt-1">{(error as any)?.message || "Unbekannter Fehler"}</p>
+          </div>
+        ) : isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Laden...</div>
-        ) : (() => {
-          const filteredItems = (data?.items ?? []).filter((item: any) => {
-            if (!search.trim()) return true;
-            const ec = item.employment_contracts;
-            const profile = ec?.profiles;
-            const profileNameParts = profile?.full_name?.split(" ") || [];
-            const fn = ec?.first_name || profileNameParts[0] || "";
-            const ln = ec?.last_name || profileNameParts.slice(1).join(" ") || "";
-            const name = `${fn} ${ln}`.toLowerCase();
-            return name.includes(search.toLowerCase().trim());
-          });
-          return !filteredItems.length ? (
-            <div className="text-center py-16 border border-dashed border-border rounded-lg">
-              <Calendar className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">Keine 1. Arbeitstag-Termine in dieser Ansicht.</p>
-            </div>
-          ) : (
-            <>
-              <div className="premium-card overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Datum</TableHead>
-                      <TableHead>Uhrzeit</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Telefon</TableHead>
-                      <TableHead>E-Mail</TableHead>
-                      <TableHead>Branding</TableHead>
-                      <TableHead>Anstellungsart</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Aktionen</TableHead>
+        ) : !filteredItems.length ? (
+          <div className="text-center py-16 border border-dashed border-border rounded-lg">
+            <Calendar className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">Keine 1. Arbeitstag-Termine in dieser Ansicht.</p>
+          </div>
+        ) : (
+          <>
+            <div className="premium-card overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Datum</TableHead>
+                    <TableHead>Uhrzeit</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Telefon</TableHead>
+                    <TableHead>E-Mail</TableHead>
+                    <TableHead>Branding</TableHead>
+                    <TableHead>Anstellungsart</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Aktionen</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredItems.map((r) => (
+                    <TableRow key={r.item.id}>
+                      <TableCell className="font-medium">
+                        {new Date(r.item.appointment_date).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}
+                      </TableCell>
+                      <TableCell><Badge variant="outline">{r.item.appointment_time?.slice(0, 5)} Uhr</Badge></TableCell>
+                      <TableCell className="font-medium">{r.firstName} {r.lastName}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {r.displayPhone ? (
+                          <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(r.displayPhone); toast.success("Telefonnummer kopiert!"); }}>{r.displayPhone}</span>
+                        ) : "–"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{r.displayEmail}</TableCell>
+                      <TableCell className="text-muted-foreground">{r.brandingName}</TableCell>
+                      <TableCell className="text-muted-foreground">{r.employmentType}</TableCell>
+                      <TableCell>{statusBadge(r.item.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {r.item.status !== "erfolgreich" && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(r.item, "erfolgreich")} title="Als erfolgreich markieren">
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                            setFailTarget(r);
+                            setFailReason("");
+                          }} title="Als fehlgeschlagen markieren">
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => setDeleteTarget({ id: r.item.id, name: `${r.firstName} ${r.lastName}` })} title="Termin löschen">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredItems.map((item: any) => {
-                      const ec = item.employment_contracts;
-                      const profile = ec?.profiles;
-                      const profileNameParts = profile?.full_name?.split(" ") || [];
-                      const firstName = ec?.first_name || profileNameParts[0] || "";
-                      const lastName = ec?.last_name || profileNameParts.slice(1).join(" ") || "";
-                      const displayEmail = ec?.email || profile?.email || "–";
-                      const displayPhone = ec?.phone || profile?.phone || "";
-                      return (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">
-                          {new Date(item.appointment_date).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}
-                        </TableCell>
-                        <TableCell><Badge variant="outline">{item.appointment_time?.slice(0, 5)} Uhr</Badge></TableCell>
-                        <TableCell className="font-medium">{firstName} {lastName}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {displayPhone ? (
-                            <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(displayPhone); toast.success("Telefonnummer kopiert!"); }}>{displayPhone}</span>
-                          ) : "–"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{displayEmail}</TableCell>
-                        <TableCell className="text-muted-foreground">{ec?.brandings?.company_name || "–"}</TableCell>
-                        <TableCell className="text-muted-foreground">{ec?.employment_type || "–"}</TableCell>
-                        <TableCell>{statusBadge(item.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            {item.status !== "erfolgreich" && (
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(item, "erfolgreich")} title="Als erfolgreich markieren">
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
-                              const ec = item.employment_contracts;
-                              setFailTarget(item);
-                              setFailReason("");
-                            }} title="Als fehlgeschlagen markieren">
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => setDeleteTarget({ id: item.id, name: `${ec?.first_name} ${ec?.last_name}` })} title="Termin löschen">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">Seite {page + 1} von {totalPages} ({data!.total} Termine)</p>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-                      <ChevronLeft className="h-4 w-4 mr-1" /> Zurück
-                    </Button>
-                    <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
-                      Weiter <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-sm text-muted-foreground">Seite {page + 1} von {totalPages} ({data!.total} Termine)</p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                    <ChevronLeft className="h-4 w-4 mr-1" /> Zurück
+                  </Button>
+                  <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>
+                    Weiter <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
                 </div>
-              )}
-            </>
-          );
-        })()}
+              </div>
+            )}
+          </>
+        )}
       </motion.div>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
@@ -265,7 +324,7 @@ export default function AdminErsterArbeitstag() {
           <DialogHeader>
             <DialogTitle>Grund für Fehlschlag</DialogTitle>
             <DialogDescription>
-              Bitte gib einen Grund an, warum der 1. Arbeitstag von {failTarget?.employment_contracts?.first_name} {failTarget?.employment_contracts?.last_name} fehlgeschlagen ist.
+              Bitte gib einen Grund an, warum der 1. Arbeitstag von {failTarget?.firstName} {failTarget?.lastName} fehlgeschlagen ist.
             </DialogDescription>
           </DialogHeader>
           <Textarea
@@ -282,10 +341,9 @@ export default function AdminErsterArbeitstag() {
               onClick={async () => {
                 if (!failTarget || !failReason.trim()) return;
                 setFailSubmitting(true);
-                const ec = failTarget.employment_contracts;
-                const name = `${ec?.first_name ?? ""} ${ec?.last_name ?? ""}`.trim();
+                const name = `${failTarget.firstName} ${failTarget.lastName}`.trim();
 
-                await handleStatusUpdate(failTarget, "fehlgeschlagen");
+                await handleStatusUpdate(failTarget.item, "fehlgeschlagen");
 
                 const { data: userData } = await supabase.auth.getUser();
                 const email = userData.user?.email ?? "System";
