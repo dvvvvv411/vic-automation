@@ -284,7 +284,7 @@ export default function AdminArbeitsvertraege() {
                 paginatedItems.map((item: any, i: number) => {
                   const firstName = item.applications?.first_name || item.first_name || "";
                   const lastName = item.applications?.last_name || item.last_name || "";
-                  const email = item.applications?.email || item.email || "";
+                  const email = (item.applications?.email || item.email || "").trim().toLowerCase();
                   const phone = item.applications?.phone || item.phone || "";
                   const branding = item.applications?.brandings?.company_name || "";
                   const startDate = item.desired_start_date
