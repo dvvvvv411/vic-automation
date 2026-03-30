@@ -35,6 +35,12 @@ interface PhoneEntry {
   created_at: string;
 }
 
+interface IdentAssignment {
+  id: string;
+  employment_contracts: { first_name: string | null; last_name: string | null } | null;
+  orders: { title: string } | null;
+}
+
 function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
@@ -49,6 +55,18 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
       return data;
     },
     refetchInterval: 5000,
+  });
+
+  const { data: assignments = [] } = useQuery<IdentAssignment[]>({
+    queryKey: ["phone_assignments", entry.api_url],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ident_sessions")
+        .select("id, employment_contracts:contract_id(first_name, last_name), orders:order_id(title)")
+        .eq("phone_api_url", entry.api_url);
+      if (error) throw error;
+      return (data as any) ?? [];
+    },
   });
 
   const copyNumber = (e: React.MouseEvent) => {
