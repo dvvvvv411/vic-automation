@@ -1,33 +1,31 @@
 
 
-## Plan: Notizfeld + Fehlgeschlagen-Grund bei 1. Arbeitstag
+## Plan: Profil-Daten als Fallback fuer leere Vertraege
 
-### 1. `BrandingNotes.tsx` — pageContext erweitern
+### Ursache
 
-Die `pageContext`-Typdefinition wird um `"erster-arbeitstag"` erweitert:
+`create_contract_on_interview_success` legt Vertraege nur mit `application_id` und `created_by` an — ohne persoenliche Daten. Die kommen erst bei `submit_employment_contract`. Aber der Vertrag hat ein `user_id`-Feld, das auf `profiles` zeigt, wo `full_name`, `email` und `phone` bereits vorhanden sind.
+
+### Loesung
+
+In `AdminErsterArbeitstag.tsx` die Query erweitern, um auch `profiles` ueber `user_id` mitzuladen:
+
 ```
-pageContext: "bewerbungsgespraeche" | "probetag" | "erster-arbeitstag"
+employment_contracts:contract_id!inner(
+  id, first_name, last_name, email, phone, employment_type, branding_id, user_id,
+  brandings:branding_id(id, company_name),
+  profiles:user_id(full_name, email, phone)
+)
 ```
 
-### 2. `AdminErsterArbeitstag.tsx` — BrandingNotes einbinden
+Im Rendering dann Fallback-Logik:
+- Name: `ec.first_name` / `ec.last_name` → falls leer, `ec.profiles?.full_name` splitten
+- Email: `ec.email` → falls leer, `ec.profiles?.email`
+- Telefon: `ec.phone` → falls leer, `ec.profiles?.phone`
 
-- `BrandingNotes` importieren und nach dem Header/vor den View-Buttons rendern (gleich wie bei Probetag/Bewerbungsgespraeche):
-  `{activeBrandingId && <BrandingNotes brandingId={activeBrandingId} pageContext="erster-arbeitstag" />}`
-
-### 3. `AdminErsterArbeitstag.tsx` — Fehlgeschlagen-Dialog mit Pflichtgrund
-
-- Neue States: `failTarget` (item), `failReason` (string)
-- Den direkten `handleStatusUpdate(item, "fehlgeschlagen")`-Klick ersetzen durch `setFailTarget(item); setFailReason("")`
-- Dialog (gleich wie bei Bewerbungsgespraeche): Textarea fuer Grund, Button disabled wenn leer
-- Bei Bestaetigung:
-  1. `handleStatusUpdate(item, "fehlgeschlagen")` ausfuehren
-  2. Notiz in `branding_notes` speichern mit `page_context: "erster-arbeitstag"` und Inhalt `"{Name} — Fehlgeschlagen: {Grund}"`
-  3. `queryClient.invalidateQueries` fuer branding-notes
-
-### Betroffene Dateien
+### Betroffene Datei
 
 | Datei | Aenderung |
 |---|---|
-| `src/components/admin/BrandingNotes.tsx` | `pageContext` Typ um `"erster-arbeitstag"` erweitern |
-| `src/pages/admin/AdminErsterArbeitstag.tsx` | BrandingNotes einbinden, Fehlgeschlagen-Dialog mit Grund + auto-Notiz |
+| `src/pages/admin/AdminErsterArbeitstag.tsx` | Query um `profiles:user_id(...)` erweitern, Fallback-Rendering fuer Name/Email/Phone |
 
