@@ -176,6 +176,7 @@ export default function AdminErsterArbeitstag() {
   const profilesMap = data?.profilesMap ?? new Map();
   const applicationsMap = data?.applicationsMap ?? new Map();
   const templatesMap = data?.templatesMap ?? new Map();
+  const emailTypeMap = data?.emailTypeMap ?? new Map();
 
   const handleStatusUpdate = async (item: any, newStatus: string) => {
     const { error } = await supabase.rpc("update_first_workday_status" as any, {
