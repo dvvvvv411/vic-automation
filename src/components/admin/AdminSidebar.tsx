@@ -158,7 +158,6 @@ export function AdminSidebar() {
     refetchInterval: 30000,
   });
 
-
   const { data: probetagTodayCount } = useQuery({
     queryKey: ["badge-probetag-heute", activeBrandingId],
     enabled: !!activeBrandingId,
@@ -167,6 +166,19 @@ export function AdminSidebar() {
       const today = format(now, "yyyy-MM-dd");
       const nowTime = format(now, "HH:mm:ss");
       const { count } = await supabase.from("trial_day_appointments" as any).select("*, applications!inner(branding_id)", { count: "exact", head: true }).eq("appointment_date", today).gte("appointment_time", nowTime).eq("applications.branding_id", activeBrandingId!);
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
+  const { data: firstWorkdayTodayCount } = useQuery({
+    queryKey: ["badge-erster-arbeitstag-heute", activeBrandingId],
+    enabled: !!activeBrandingId,
+    queryFn: async () => {
+      const now = new Date();
+      const today = format(now, "yyyy-MM-dd");
+      const nowTime = format(now, "HH:mm:ss");
+      const { count } = await supabase.from("first_workday_appointments").select("*, employment_contracts!inner(branding_id)", { count: "exact", head: true }).eq("appointment_date", today).gte("appointment_time", nowTime).eq("employment_contracts.branding_id", activeBrandingId!);
       return count ?? 0;
     },
     refetchInterval: 30000,
@@ -211,6 +223,7 @@ export function AdminSidebar() {
     "/admin/bewerbungen": neuCount ?? 0,
     "/admin/bewerbungsgespraeche": todayCount ?? 0,
     "/admin/probetag": probetagTodayCount ?? 0,
+    "/admin/erster-arbeitstag": firstWorkdayTodayCount ?? 0,
     "/admin/arbeitsvertraege": eingereichtCount ?? 0,
     "/admin/idents": identWaitingCount ?? 0,
     "/admin/anhaenge": anhaengeEingereichtCount ?? 0,
