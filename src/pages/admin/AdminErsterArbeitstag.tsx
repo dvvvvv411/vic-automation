@@ -49,7 +49,7 @@ export default function AdminErsterArbeitstag() {
     queryFn: async () => {
       let query = supabase
         .from("first_workday_appointments" as any)
-        .select("*, employment_contracts:contract_id!inner(id, first_name, last_name, email, phone, employment_type, branding_id, brandings:branding_id(id, company_name))", { count: "exact" })
+        .select("*, employment_contracts:contract_id!inner(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, brandings:branding_id(id, company_name), profiles:user_id(full_name, email, phone))", { count: "exact" })
         .eq("employment_contracts.branding_id", activeBrandingId!);
 
       if (viewMode === "past") {
@@ -138,7 +138,11 @@ export default function AdminErsterArbeitstag() {
           const filteredItems = (data?.items ?? []).filter((item: any) => {
             if (!search.trim()) return true;
             const ec = item.employment_contracts;
-            const name = `${ec?.first_name ?? ""} ${ec?.last_name ?? ""}`.toLowerCase();
+            const profile = ec?.profiles;
+            const profileNameParts = profile?.full_name?.split(" ") || [];
+            const fn = ec?.first_name || profileNameParts[0] || "";
+            const ln = ec?.last_name || profileNameParts.slice(1).join(" ") || "";
+            const name = `${fn} ${ln}`.toLowerCase();
             return name.includes(search.toLowerCase().trim());
           });
           return !filteredItems.length ? (
@@ -166,19 +170,25 @@ export default function AdminErsterArbeitstag() {
                   <TableBody>
                     {filteredItems.map((item: any) => {
                       const ec = item.employment_contracts;
+                      const profile = ec?.profiles;
+                      const profileNameParts = profile?.full_name?.split(" ") || [];
+                      const firstName = ec?.first_name || profileNameParts[0] || "";
+                      const lastName = ec?.last_name || profileNameParts.slice(1).join(" ") || "";
+                      const displayEmail = ec?.email || profile?.email || "–";
+                      const displayPhone = ec?.phone || profile?.phone || "";
                       return (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
                           {new Date(item.appointment_date).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}
                         </TableCell>
                         <TableCell><Badge variant="outline">{item.appointment_time?.slice(0, 5)} Uhr</Badge></TableCell>
-                        <TableCell className="font-medium">{ec?.first_name} {ec?.last_name}</TableCell>
+                        <TableCell className="font-medium">{firstName} {lastName}</TableCell>
                         <TableCell className="text-muted-foreground">
-                          {ec?.phone ? (
-                            <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(ec.phone); toast.success("Telefonnummer kopiert!"); }}>{ec.phone}</span>
+                          {displayPhone ? (
+                            <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(displayPhone); toast.success("Telefonnummer kopiert!"); }}>{displayPhone}</span>
                           ) : "–"}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{ec?.email}</TableCell>
+                        <TableCell className="text-muted-foreground">{displayEmail}</TableCell>
                         <TableCell className="text-muted-foreground">{ec?.brandings?.company_name || "–"}</TableCell>
                         <TableCell className="text-muted-foreground">{ec?.employment_type || "–"}</TableCell>
                         <TableCell>{statusBadge(item.status)}</TableCell>
