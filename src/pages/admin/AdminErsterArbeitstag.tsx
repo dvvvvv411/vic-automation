@@ -84,8 +84,7 @@ export default function AdminErsterArbeitstag() {
       // Main query without profiles embed
       let query = supabase
         .from("first_workday_appointments" as any)
-        .select("*, employment_contracts:contract_id!inner(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, application_id, template_id, brandings:branding_id(id, company_name))", { count: "exact" })
-        .eq("employment_contracts.branding_id", activeBrandingId!);
+        .select("*, employment_contracts:contract_id(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, application_id, template_id, brandings:branding_id(id, company_name))", { count: "exact" });
 
       if (viewMode === "past") {
         query = query
