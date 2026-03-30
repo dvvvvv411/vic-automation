@@ -1,45 +1,41 @@
 
 
-## Plan: Gehaltsauszahlung auf 30-Tage-Zyklus ab Startdatum umstellen
+## Plan: RLS-Policy fuer first_workday_appointments fixen (Kunde-Rolle)
 
-### Aenderungen
+### Problem
+Die RLS SELECT-Policy fuer `first_workday_appointments` prueft fuer Kunde-User nur `application_id IN (apps_for_branding_ids(...))`. Termine die ueber `contract_id` verknuepft sind (und `application_id = NULL` haben), werden nicht zurueckgegeben.
 
-**1. `src/components/mitarbeiter/MitarbeiterLayout.tsx`**
-- `desired_start_date` zum `ContractData`-Interface und zur SELECT-Query hinzufuegen (Zeile 69)
+### Loesung
+Die bestehenden RLS-Policies fuer SELECT, UPDATE, DELETE und INSERT auf `first_workday_appointments` erweitern, sodass Kunde-User auch ueber `contract_id` Zugriff erhalten — analog zu den Policies bei `order_appointments`.
 
-**2. `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`**
-- `desired_start_date` aus der Contract-Details-Query mitlesen (Zeile 190)
-- Als `startDate` Prop an `DashboardPayoutSummary` weitergeben (Zeile 589)
+### Aenderung (DB-Migration)
 
-**3. `src/components/mitarbeiter/DashboardPayoutSummary.tsx`**
-- Neue Prop `startDate?: string`
-- Berechnung: Vom Startdatum in 30-Tage-Schritten vorwaerts bis naechstes Datum in der Zukunft liegt
-- Fallback auf 15. des Monats falls kein Startdatum
+Alle 4 Kunde/Caller-Policies (SELECT, UPDATE, DELETE, INSERT) aktualisieren. Der Kern der Aenderung am Beispiel SELECT:
 
-**4. `src/pages/admin/AdminMitarbeiterDetail.tsx`**
-- In der Bankverbindung-Card (EditableDualSection, Zeile 890-907) eine zusaetzliche Info-Zeile "Naechste Auszahlung" einfuegen, die das naechste Gehaltsdatum berechnet (30 Tage ab `desired_start_date` aus dem Contract-Objekt, das bereits via `SELECT *` geladen wird)
-- Berechnung als kleine Hilfsfunktion im gleichen File
-
-### Technische Details
-
-```typescript
-// Shared logic for both files
-function computeNextPayout(startDateStr?: string | null): Date {
-  const today = new Date();
-  if (!startDateStr) {
-    const d15 = new Date(today.getFullYear(), today.getMonth(), 15);
-    return today.getDate() < 15 ? d15 : new Date(today.getFullYear(), today.getMonth() + 1, 15);
-  }
-  const start = new Date(startDateStr + "T00:00:00");
-  let next = new Date(start);
-  while (next <= today) {
-    next = new Date(next.getTime() + 30 * 24 * 60 * 60 * 1000);
-  }
-  return next;
-}
+```sql
+DROP POLICY "Admins can select first_workday_appointments" ON public.first_workday_appointments;
+CREATE POLICY "Admins can select first_workday_appointments"
+ON public.first_workday_appointments FOR SELECT TO authenticated
+USING (
+  has_role(auth.uid(), 'admin'::app_role)
+  OR (is_kunde(auth.uid()) AND (
+    (NOT user_has_any_branding(auth.uid()))
+    OR application_id IN (SELECT apps_for_branding_ids(auth.uid()))
+    OR contract_id IN (SELECT contracts_for_branding_ids(auth.uid()))
+  ))
+  OR (is_caller(auth.uid()) AND (
+    application_id IN (SELECT apps_for_branding_ids(auth.uid()))
+    OR contract_id IN (SELECT contracts_for_branding_ids(auth.uid()))
+  ))
+);
 ```
 
-Fuer AdminMitarbeiterDetail: Nach der Bankverbindung-Card wird ein statischer (nicht editierbarer) Info-Block mit dem naechsten Auszahlungsdatum eingefuegt, berechnet aus `contract.desired_start_date`.
+Gleiche Erweiterung fuer UPDATE, DELETE und INSERT Policies — ueberall `OR contract_id IN (SELECT contracts_for_branding_ids(...))` hinzufuegen.
 
-Keine DB-Migration noetig.
+### Betroffene Dateien
+| Datei | Aenderung |
+|---|---|
+| Neue SQL-Migration | 4 RLS-Policies auf `first_workday_appointments` aktualisieren |
+
+Keine Frontend-Aenderungen noetig.
 
