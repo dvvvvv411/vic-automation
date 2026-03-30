@@ -3,19 +3,32 @@ import { motion } from "framer-motion";
 import { CalendarDays, Euro, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { format, addMonths, startOfMonth } from "date-fns";
+import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
 interface Props {
   balance: number;
   isFixedSalary?: boolean;
+  startDate?: string | null;
 }
 
-const DashboardPayoutSummary = ({ balance, isFixedSalary }: Props) => {
-  const navigate = useNavigate();
+function computeNextPayout(startDateStr?: string | null): Date {
   const today = new Date();
-  const fifteenthThisMonth = new Date(today.getFullYear(), today.getMonth(), 15);
-  const nextPayout = today.getDate() < 15 ? fifteenthThisMonth : new Date(today.getFullYear(), today.getMonth() + 1, 15);
+  if (!startDateStr) {
+    const d15 = new Date(today.getFullYear(), today.getMonth(), 15);
+    return today.getDate() < 15 ? d15 : new Date(today.getFullYear(), today.getMonth() + 1, 15);
+  }
+  const start = new Date(startDateStr + "T00:00:00");
+  let next = new Date(start);
+  while (next <= today) {
+    next = new Date(next.getTime() + 30 * 24 * 60 * 60 * 1000);
+  }
+  return next;
+}
+
+const DashboardPayoutSummary = ({ balance, isFixedSalary, startDate }: Props) => {
+  const navigate = useNavigate();
+  const nextPayout = computeNextPayout(startDate);
 
   return (
     <motion.div
