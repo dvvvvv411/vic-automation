@@ -1,38 +1,33 @@
 
 
-## Plan: KI-Polish mit Vorschau-Bar ueber dem Chat
+## Plan: Notizfeld + Fehlgeschlagen-Grund bei 1. Arbeitstag
 
-### Umsetzung
+### 1. `BrandingNotes.tsx` — pageContext erweitern
 
-**1. Neue Edge Function `ai-chat-polish/index.ts`**
-- Empfaengt `{ text: string }`
-- System-Prompt: "Korrigiere Rechtschreibung/Grammatik, formuliere professioneller. Antworte NUR mit dem verbesserten Text."
-- Gibt `{ polished: string }` zurueck
-- Fehlerbehandlung 429/402
+Die `pageContext`-Typdefinition wird um `"erster-arbeitstag"` erweitert:
+```
+pageContext: "bewerbungsgespraeche" | "probetag" | "erster-arbeitstag"
+```
 
-**2. `supabase/config.toml`**
-- `[functions.ai-chat-polish]` mit `verify_jwt = false`
+### 2. `AdminErsterArbeitstag.tsx` — BrandingNotes einbinden
 
-**3. `ChatInput.tsx` — KI-Button + Vorschau-Leiste**
+- `BrandingNotes` importieren und nach dem Header/vor den View-Buttons rendern (gleich wie bei Probetag/Bewerbungsgespraeche):
+  `{activeBrandingId && <BrandingNotes brandingId={activeBrandingId} pageContext="erster-arbeitstag" />}`
 
-- Neuer State: `polishing` (boolean), `polishedText` (string | null)
-- Kleiner "KI"-Button (Sparkles-Icon) neben dem Textarea, nur sichtbar wenn `showTemplates` (= Admin) und `input.trim()` nicht leer
-- Klick ruft `supabase.functions.invoke("ai-chat-polish", { body: { text: input } })` auf
-- Waehrend Loading: Button zeigt Loader/disabled
+### 3. `AdminErsterArbeitstag.tsx` — Fehlgeschlagen-Dialog mit Pflichtgrund
 
-**Vorschau-Leiste** (aehnlich wie `AiSuggestionBar`):
-- Erscheint oberhalb der Eingabezeile wenn `polishedText` gesetzt ist
-- Zeigt den verbesserten Text in einer blauen Box mit Sparkles-Icon + Label "KI-Vorschlag"
-- Drei Aktionen:
-  - **Uebernehmen** (Check-Icon): setzt `input` auf `polishedText`, schliesst Vorschau
-  - **Neu formulieren** (RefreshCw-Icon): ruft erneut `ai-chat-polish` mit aktuellem `input` auf
-  - **Verwerfen** (X-Icon): schliesst Vorschau ohne Aenderung
+- Neue States: `failTarget` (item), `failReason` (string)
+- Den direkten `handleStatusUpdate(item, "fehlgeschlagen")`-Klick ersetzen durch `setFailTarget(item); setFailReason("")`
+- Dialog (gleich wie bei Bewerbungsgespraeche): Textarea fuer Grund, Button disabled wenn leer
+- Bei Bestaetigung:
+  1. `handleStatusUpdate(item, "fehlgeschlagen")` ausfuehren
+  2. Notiz in `branding_notes` speichern mit `page_context: "erster-arbeitstag"` und Inhalt `"{Name} — Fehlgeschlagen: {Grund}"`
+  3. `queryClient.invalidateQueries` fuer branding-notes
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `supabase/functions/ai-chat-polish/index.ts` | Neue Edge Function |
-| `supabase/config.toml` | Neuer Funktionseintrag |
-| `src/components/chat/ChatInput.tsx` | KI-Button, polishedText State, Vorschau-Leiste mit Uebernehmen/Neu/Verwerfen |
+| `src/components/admin/BrandingNotes.tsx` | `pageContext` Typ um `"erster-arbeitstag"` erweitern |
+| `src/pages/admin/AdminErsterArbeitstag.tsx` | BrandingNotes einbinden, Fehlgeschlagen-Dialog mit Grund + auto-Notiz |
 
