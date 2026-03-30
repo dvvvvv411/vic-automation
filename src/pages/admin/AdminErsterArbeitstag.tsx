@@ -41,8 +41,8 @@ export default function AdminErsterArbeitstag() {
     queryFn: async () => {
       let query = supabase
         .from("first_workday_appointments" as any)
-        .select("*, applications!inner(first_name, last_name, email, phone, employment_type, branding_id, brandings(id, company_name))", { count: "exact" })
-        .eq("applications.branding_id", activeBrandingId!);
+        .select("*, employment_contracts:contract_id!inner(id, first_name, last_name, email, phone, employment_type, branding_id, brandings:branding_id(id, company_name))", { count: "exact" })
+        .eq("employment_contracts.branding_id", activeBrandingId!);
 
       if (viewMode === "past") {
         query = query
@@ -127,7 +127,8 @@ export default function AdminErsterArbeitstag() {
         ) : (() => {
           const filteredItems = (data?.items ?? []).filter((item: any) => {
             if (!search.trim()) return true;
-            const name = `${item.applications?.first_name ?? ""} ${item.applications?.last_name ?? ""}`.toLowerCase();
+            const ec = item.employment_contracts;
+            const name = `${ec?.first_name ?? ""} ${ec?.last_name ?? ""}`.toLowerCase();
             return name.includes(search.toLowerCase().trim());
           });
           return !filteredItems.length ? (
@@ -153,21 +154,23 @@ export default function AdminErsterArbeitstag() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredItems.map((item: any) => (
+                    {filteredItems.map((item: any) => {
+                      const ec = item.employment_contracts;
+                      return (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
                           {new Date(item.appointment_date).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}
                         </TableCell>
                         <TableCell><Badge variant="outline">{item.appointment_time?.slice(0, 5)} Uhr</Badge></TableCell>
-                        <TableCell className="font-medium">{item.applications?.first_name} {item.applications?.last_name}</TableCell>
+                        <TableCell className="font-medium">{ec?.first_name} {ec?.last_name}</TableCell>
                         <TableCell className="text-muted-foreground">
-                          {item.applications?.phone ? (
-                            <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.applications.phone); toast.success("Telefonnummer kopiert!"); }}>{item.applications.phone}</span>
+                          {ec?.phone ? (
+                            <span className="cursor-pointer hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(ec.phone); toast.success("Telefonnummer kopiert!"); }}>{ec.phone}</span>
                           ) : "–"}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{item.applications?.email}</TableCell>
-                        <TableCell className="text-muted-foreground">{item.applications?.brandings?.company_name || "–"}</TableCell>
-                        <TableCell className="text-muted-foreground">{item.applications?.employment_type || "–"}</TableCell>
+                        <TableCell className="text-muted-foreground">{ec?.email}</TableCell>
+                        <TableCell className="text-muted-foreground">{ec?.brandings?.company_name || "–"}</TableCell>
+                        <TableCell className="text-muted-foreground">{ec?.employment_type || "–"}</TableCell>
                         <TableCell>{statusBadge(item.status)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -179,13 +182,14 @@ export default function AdminErsterArbeitstag() {
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => handleStatusUpdate(item, "fehlgeschlagen")} title="Als fehlgeschlagen markieren">
                               <XCircle className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => setDeleteTarget({ id: item.id, name: `${item.applications?.first_name} ${item.applications?.last_name}` })} title="Termin löschen">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => setDeleteTarget({ id: item.id, name: `${ec?.first_name} ${ec?.last_name}` })} title="Termin löschen">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

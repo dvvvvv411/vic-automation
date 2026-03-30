@@ -38,7 +38,7 @@ function generateTimeSlots(start: string, end: string, interval: number) {
 }
 
 export default function ErsterArbeitstag() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{ id: string }>(); // This is now contract_id
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -50,20 +50,22 @@ export default function ErsterArbeitstag() {
   const [editedPhone, setEditedPhone] = useState("");
   const [isRebooking, setIsRebooking] = useState(false);
 
-  const { data: application, isLoading, error } = useQuery({
-    queryKey: ["application-erster-arbeitstag", id],
+  // Load contract data instead of application data
+  const { data: contract, isLoading, error } = useQuery({
+    queryKey: ["contract-erster-arbeitstag", id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("applications")
-        .select("*, brandings(company_name, logo_url, brand_color, favicon_url, project_manager_name, project_manager_title, project_manager_image_url)")
+        .from("employment_contracts")
+        .select("*, brandings:branding_id(company_name, logo_url, brand_color, favicon_url, project_manager_name, project_manager_title, project_manager_image_url, sms_sender_name)")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
       if (data) {
+        // Load existing first workday appointment by contract_id
         const { data: fwAppt } = await supabase
           .from("first_workday_appointments" as any)
           .select("id, appointment_date, appointment_time")
-          .eq("application_id", id!)
+          .eq("contract_id", id!)
           .maybeSingle();
         (data as any).first_workday_appointments = fwAppt;
       }
@@ -73,12 +75,12 @@ export default function ErsterArbeitstag() {
   });
 
   useEffect(() => {
-    const faviconUrl = (application as any)?.brandings?.favicon_url;
+    const faviconUrl = (contract as any)?.brandings?.favicon_url;
     const el = document.getElementById("app-favicon") as HTMLLinkElement | null;
     if (el) el.href = faviconUrl || "/favicon.png";
-  }, [application]);
+  }, [contract]);
 
-  const brandingId = application?.branding_id;
+  const brandingId = contract?.branding_id;
 
   const { data: scheduleSettings } = useQuery({
     queryKey: ["branding-schedule-settings-public", brandingId, "trial"],
@@ -95,24 +97,49 @@ export default function ErsterArbeitstag() {
     },
   });
 
+  // Load booked slots by branding_id directly
   const { data: bookedSlots } = useQuery({
     queryKey: ["first-workday-booked-slots", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
+      // Get all contracts for this branding to find their booked slots
+      const { data: contracts } = await supabase
+        .from("employment_contracts")
+        .select("id")
+        .eq("branding_id", brandingId!);
+      if (!contracts || contracts.length === 0) return [];
+      const contractIds = contracts.map((c) => c.id);
+
+      // Also get application-based slots for legacy data
       const { data: apps } = await supabase
         .from("applications")
         .select("id")
         .eq("branding_id", brandingId!);
-      if (!apps || apps.length === 0) return [];
-      const appIds = apps.map((a) => a.id);
-      const [fwRes, trialRes] = await Promise.all([
-        supabase.from("first_workday_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
-        supabase.from("trial_day_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
-      ]);
-      return [
-        ...((fwRes.data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>),
-        ...((trialRes.data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>),
+      const appIds = (apps || []).map((a) => a.id);
+
+      const fwByContract = await supabase.from("first_workday_appointments" as any).select("appointment_date, appointment_time").in("contract_id", contractIds);
+      const allSlots: Array<{ appointment_date: string; appointment_time: string }> = [
+        ...((fwByContract.data || []) as any[]),
       ];
+
+      if (appIds.length > 0) {
+        const [fwByApp, trialByApp] = await Promise.all([
+          supabase.from("first_workday_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
+          supabase.from("trial_day_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
+        ]);
+        allSlots.push(...((fwByApp.data || []) as any[]), ...((trialByApp.data || []) as any[]));
+      }
+
+
+
+      // Deduplicate
+      const seen = new Set<string>();
+      return allSlots.filter((s) => {
+        const key = `${s.appointment_date}_${s.appointment_time}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     },
   });
 
@@ -147,13 +174,13 @@ export default function ErsterArbeitstag() {
     return generateTimeSlots(effectiveStart, effectiveEnd, scheduleInterval);
   }, [selectedDate, scheduleStart, scheduleEnd, scheduleInterval, weekendStart, weekendEnd]);
 
-  const brandColor = application?.brandings?.brand_color || "#3B82F6";
-  const logoUrl = application?.brandings?.logo_url;
-  const companyName = application?.brandings?.company_name;
-  const existingAppointment = (application as any)?.first_workday_appointments;
-  const applicantName = application ? `${application.first_name} ${application.last_name}` : "";
-  const applicantPhone = application?.phone;
-  const employmentType = application?.employment_type;
+  const brandColor = (contract as any)?.brandings?.brand_color || "#3B82F6";
+  const logoUrl = (contract as any)?.brandings?.logo_url;
+  const companyName = (contract as any)?.brandings?.company_name;
+  const existingAppointment = (contract as any)?.first_workday_appointments;
+  const applicantName = contract ? `${contract.first_name || ""} ${contract.last_name || ""}`.trim() : "";
+  const applicantPhone = contract?.phone;
+  const employmentType = contract?.employment_type;
 
   const employmentLabels: Record<string, string> = {
     minijob: "Minijob",
@@ -199,64 +226,58 @@ export default function ErsterArbeitstag() {
         if (delError) throw delError;
       }
 
-      const { data: appData } = await supabase
-        .from("applications")
-        .select("created_by")
-        .eq("id", id!)
-        .maybeSingle();
+      // Insert with contract_id
       const { error: insertError } = await supabase
         .from("first_workday_appointments" as any)
-        .insert({ application_id: id!, appointment_date: dateStr, appointment_time: timeStr, created_by: appData?.created_by || null });
+        .insert({
+          contract_id: id!,
+          application_id: contract?.application_id || null,
+          appointment_date: dateStr,
+          appointment_time: timeStr,
+          created_by: contract?.created_by || null,
+        });
       if (insertError) throw insertError;
 
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
       const telegramPrefix = isRebooking ? "🏢 1. Arbeitstag umgebucht" : "🏢 1. Arbeitstag gebucht";
-      await sendTelegram("erster_arbeitstag_gebucht", `${telegramPrefix}\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`, application.branding_id);
+      await sendTelegram("erster_arbeitstag_gebucht", `${telegramPrefix}\n\nName: ${applicantName}\nDatum: ${formattedDate}\nUhrzeit: ${selectedTime} Uhr`, contract?.branding_id);
 
-      if (application?.email) {
+      if (contract?.email) {
         await sendEmail({
-          to: application.email,
+          to: contract.email,
           recipient_name: applicantName,
           subject: `Ihr 1. Arbeitstag am ${formattedDateLong}`,
           body_title: "Terminbestätigung – 1. Arbeitstag",
           body_lines: [
-            `Hallo ${application.first_name},`,
+            `Hallo ${contract.first_name || ""},`,
             `Ihr 1. Arbeitstag wurde erfolgreich ${isRebooking ? "umgebucht" : "gebucht"}.`,
             `Datum: ${formattedDateLong}`,
             `Uhrzeit: ${selectedTime} Uhr`,
             `Wir freuen uns auf Sie!`,
           ],
           event_type: "erster_arbeitstag_bestaetigung",
-          branding_id: application.branding_id,
+          branding_id: contract.branding_id,
         });
       }
 
-      if (application?.phone) {
+      if (contract?.phone) {
         const { data: tpl } = await supabase
           .from("sms_templates" as any)
           .select("message")
           .eq("event_type", "erster_arbeitstag_bestaetigung")
           .single();
         const smsText = (tpl as any)?.message
-          ? ((tpl as any).message as string).replace("{name}", application.first_name).replace("{datum}", formattedDate).replace("{uhrzeit}", selectedTime!)
-          : `Hallo ${application.first_name}, Ihr 1. Arbeitstag ist bestätigt: ${formattedDate} um ${selectedTime} Uhr. Wir freuen uns auf Sie!`;
-        let smsSender: string | undefined;
-        if (application.branding_id) {
-          const { data: branding } = await supabase
-            .from("brandings")
-            .select("sms_sender_name")
-            .eq("id", application.branding_id)
-            .single();
-          smsSender = (branding as any)?.sms_sender_name || undefined;
-        }
+          ? ((tpl as any).message as string).replace("{name}", contract.first_name || "").replace("{datum}", formattedDate).replace("{uhrzeit}", selectedTime!)
+          : `Hallo ${contract.first_name || ""}, Ihr 1. Arbeitstag ist bestätigt: ${formattedDate} um ${selectedTime} Uhr. Wir freuen uns auf Sie!`;
+        const smsSender = (contract as any)?.brandings?.sms_sender_name || undefined;
         await sendSms({
-          to: application.phone,
+          to: contract.phone,
           text: smsText,
           event_type: "erster_arbeitstag_bestaetigung",
           recipient_name: applicantName,
           from: smsSender,
-          branding_id: application.branding_id,
+          branding_id: contract.branding_id,
         });
       }
     },
@@ -266,13 +287,13 @@ export default function ErsterArbeitstag() {
       setBooked(true);
       setConfirmOpen(false);
       setIsRebooking(false);
-      queryClient.invalidateQueries({ queryKey: ["application-erster-arbeitstag", id] });
+      queryClient.invalidateQueries({ queryKey: ["contract-erster-arbeitstag", id] });
       queryClient.invalidateQueries({ queryKey: ["first-workday-booked-slots"] });
     },
     onError: () => setConfirmOpen(false),
   });
 
-  if (!isLoading && (error || !application)) {
+  if (!isLoading && (error || !contract)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30 p-4">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} className="max-w-md w-full">
@@ -399,11 +420,11 @@ export default function ErsterArbeitstag() {
           <motion.img initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} src={logoUrl} alt={companyName || "Logo"} className="h-12 mx-auto object-contain mb-8 drop-shadow-sm" />
         )}
 
-        {application?.brandings?.project_manager_name && (
+        {(contract as any)?.brandings?.project_manager_name && (
           <ContactCard
-            name={(application.brandings as any).project_manager_name}
-            title={(application.brandings as any).project_manager_title}
-            imageUrl={(application.brandings as any).project_manager_image_url}
+            name={(contract as any).brandings.project_manager_name}
+            title={(contract as any).brandings.project_manager_title}
+            imageUrl={(contract as any).brandings.project_manager_image_url}
             brandColor={brandColor}
             label="Ihr Ansprechpartner"
           />
@@ -458,8 +479,9 @@ export default function ErsterArbeitstag() {
                       <Input type="tel" value={editedPhone} onChange={(e) => setEditedPhone(e.target.value)} className="h-7 w-40 text-sm" autoFocus />
                       <button onClick={async () => {
                         if (!editedPhone.trim()) return;
-                        await supabase.rpc("update_application_phone", { _application_id: id!, _phone: editedPhone.trim() });
-                        queryClient.invalidateQueries({ queryKey: ["application-erster-arbeitstag", id] });
+                        // Update phone on the contract directly
+                        await supabase.from("employment_contracts").update({ phone: editedPhone.trim() }).eq("id", id!);
+                        queryClient.invalidateQueries({ queryKey: ["contract-erster-arbeitstag", id] });
                         setIsEditingPhone(false);
                       }} className="hover:text-foreground transition-colors">
                         <Check className="h-3.5 w-3.5" />

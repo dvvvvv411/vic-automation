@@ -691,9 +691,10 @@ export type Database = {
       }
       first_workday_appointments: {
         Row: {
-          application_id: string
+          application_id: string | null
           appointment_date: string
           appointment_time: string
+          contract_id: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -701,9 +702,10 @@ export type Database = {
           status: string
         }
         Insert: {
-          application_id: string
+          application_id?: string | null
           appointment_date: string
           appointment_time: string
+          contract_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -711,9 +713,10 @@ export type Database = {
           status?: string
         }
         Update: {
-          application_id?: string
+          application_id?: string | null
           appointment_date?: string
           appointment_time?: string
+          contract_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -726,6 +729,13 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: true
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "first_workday_appointments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
             referencedColumns: ["id"]
           },
         ]

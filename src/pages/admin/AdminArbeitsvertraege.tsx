@@ -114,41 +114,6 @@ export default function AdminArbeitsvertraege() {
     setStartDateDialogOpen(true);
   };
 
-  // Ensure a valid application_id exists for the contract; create one if missing
-  const ensureApplicationId = async (contract: any): Promise<string | null> => {
-    // Already has one
-    const existing = contract.application_id || contract.applications?.id;
-    if (existing) return existing;
-
-    // Create a new applications row from contract data
-    const brandingId = contract.branding_id || contract.applications?.brandings?.id;
-    const { data: newApp, error } = await supabase
-      .from("applications")
-      .insert({
-        first_name: contract.first_name || "Unbekannt",
-        last_name: contract.last_name || "Unbekannt",
-        email: contract.email || null,
-        phone: contract.phone || null,
-        branding_id: brandingId || null,
-        status: "angenommen",
-        is_external: false,
-      })
-      .select("id")
-      .single();
-
-    if (error || !newApp) {
-      console.error("Failed to create application for contract", error);
-      return null;
-    }
-
-    // Backfill application_id on the contract
-    await supabase
-      .from("employment_contracts")
-      .update({ application_id: newApp.id })
-      .eq("id", contract.id);
-
-    return newApp.id;
-  };
 
   const handleApprove = async (contractId: string) => {
     try {
@@ -165,15 +130,9 @@ export default function AdminArbeitsvertraege() {
         }
       }
 
-      // 2. Guarantee application_id exists → build first workday link
-      const applicationId = await ensureApplicationId(selectedContract);
-      if (!applicationId) {
-        toast.error("Konnte keine Bewerber-ID erzeugen. Genehmigung abgebrochen.");
-        return;
-      }
-
+      // 2. Build first workday link directly from contract id
       const brandingId = selectedContract?.branding_id || selectedContract?.applications?.brandings?.id;
-      const firstWorkdayLink = await buildBrandingUrl(brandingId, `/erster-arbeitstag/${applicationId}`);
+      const firstWorkdayLink = await buildBrandingUrl(brandingId, `/erster-arbeitstag/${contractId}`);
 
       // 3. Approve the contract
       const { error } = await supabase.rpc("approve_employment_contract", { _contract_id: contractId });
@@ -560,15 +519,10 @@ export default function AdminArbeitsvertraege() {
               <Button
                 variant="ghost"
                 onClick={async () => {
-                  const appId = await ensureApplicationId(selectedContract);
                   const brandingId = selectedContract?.branding_id || selectedContract?.applications?.brandings?.id;
-                  if (appId) {
-                    const url = await buildBrandingUrl(brandingId, `/erster-arbeitstag/${appId}`);
-                    navigator.clipboard.writeText(url);
-                    toast.success("1. Arbeitstag Link kopiert!");
-                  } else {
-                    toast.error("Konnte keine Bewerber-ID erzeugen.");
-                  }
+                  const url = await buildBrandingUrl(brandingId, `/erster-arbeitstag/${selectedContract.id}`);
+                  navigator.clipboard.writeText(url);
+                  toast.success("1. Arbeitstag Link kopiert!");
                 }}
               >
                 <CalendarIcon className="h-4 w-4 mr-1" /> 1. Arbeitstag Link kopieren
