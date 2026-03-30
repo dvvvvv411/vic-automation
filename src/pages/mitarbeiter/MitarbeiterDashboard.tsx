@@ -198,6 +198,7 @@ const MitarbeiterDashboard = () => {
         setContractSubmittedAt(contractDetails.submitted_at || null);
         setContractStatus(contractDetails.status || null);
         setContractDismissed((contractDetails as any).contract_dismissed || false);
+        setDesiredStartDate((contractDetails as any).desired_start_date || null);
       }
 
       // Fetch assignments
