@@ -138,7 +138,11 @@ export default function AdminErsterArbeitstag() {
           const filteredItems = (data?.items ?? []).filter((item: any) => {
             if (!search.trim()) return true;
             const ec = item.employment_contracts;
-            const name = `${ec?.first_name ?? ""} ${ec?.last_name ?? ""}`.toLowerCase();
+            const profile = ec?.profiles;
+            const profileNameParts = profile?.full_name?.split(" ") || [];
+            const fn = ec?.first_name || profileNameParts[0] || "";
+            const ln = ec?.last_name || profileNameParts.slice(1).join(" ") || "";
+            const name = `${fn} ${ln}`.toLowerCase();
             return name.includes(search.toLowerCase().trim());
           });
           return !filteredItems.length ? (
