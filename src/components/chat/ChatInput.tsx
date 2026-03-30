@@ -112,6 +112,28 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
     setTemplateManagerOpen(true);
   };
 
+  const handleAiPolish = async () => {
+    if (!input.trim() || polishing) return;
+    setPolishing(true);
+    setPolishedText(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-chat-polish", {
+        body: { text: input.trim() },
+      });
+      if (error) throw new Error(error.message || "Fehler");
+      if (data?.error) {
+        toast.error(data.error);
+      } else if (data?.polished) {
+        setPolishedText(data.polished);
+      }
+    } catch (err: any) {
+      console.error("AI polish error:", err);
+      toast.error("KI-Optimierung fehlgeschlagen");
+    } finally {
+      setPolishing(false);
+    }
+  };
+
   return (
     <div className="relative border-t border-border p-3">
       {showTemplates && (
