@@ -1,78 +1,42 @@
 
 
-## Plan: /erster-arbeitstag fuer eingeloggte User (Rolle `user`) vollstaendig nutzbar machen
+## Plan: Gehaltsauszahlung auf 30-Tage-Zyklus ab Startdatum umstellen
 
-### Problem
-Eingeloggte Mitarbeiter (Rolle `user`) koennen die Seite `/erster-arbeitstag/:id` nicht vollstaendig nutzen, weil mehrere Datenbankabfragen an RLS-Policies scheitern:
+### Aktuell
+Die naechste Auszahlung wird fix auf den 15. jedes Monats berechnet (Zeilen 16-18 in `DashboardPayoutSummary.tsx`).
 
-1. **bookedSlots-Query scheitert**: Die Seite fragt ALLE `employment_contracts` und `applications` eines Brandings ab (Zeilen 106-131), um belegte Slots zu berechnen. Ein `user` darf aber nur seinen eigenen Vertrag sehen — die Query liefert daher fast leere Ergebnisse oder Fehler.
-2. **Umbuchen (DELETE) scheitert**: Beim Umbuchen wird der alte `first_workday_appointments`-Datensatz geloescht. Es gibt keine DELETE-Policy fuer die `user`-Rolle.
-3. **SMS-Template-Abfrage scheitert**: Nach der Buchung wird ein SMS-Template gelesen (`sms_templates`). Ohne Leserecht fuer `user` schlaegt das fehl (die Buchung selbst funktioniert, aber die SMS wird nicht gesendet).
+### Aenderung
+Die naechste Auszahlung soll alle 30 Tage ab dem `desired_start_date` des Mitarbeiters berechnet werden.
 
-### Loesung
-
-#### 1. Neue SECURITY DEFINER Funktion fuer gebuchte Slots
-Erstellt eine DB-Funktion `booked_slots_for_branding(_branding_id uuid)` die alle belegten Termine eines Brandings zurueckgibt — ohne dass der User direkten Lesezugriff auf fremde Vertraege braucht.
-
-#### 2. DELETE-Policy fuer eigene first_workday_appointments
-Erlaubt `user`-Rolle das Loeschen eigener Termine (wo `contract_id` zum eigenen Vertrag gehoert).
-
-#### 3. SELECT-Policy fuer sms_templates
-Erlaubt allen authentifizierten Usern das Lesen von SMS-Templates (enthalten keine sensiblen Daten).
-
-#### 4. Frontend: bookedSlots-Query auf RPC umstellen
-In `ErsterArbeitstag.tsx` die komplexe Multi-Table-Query (Zeilen 100-143) durch einen einzelnen `supabase.rpc('booked_slots_for_branding', ...)` Aufruf ersetzen.
+**Logik:** Vom Startdatum aus in 30-Tage-Schritten vorwaerts rechnen, bis das naechste Datum in der Zukunft liegt. Beispiel: Start 10.01. → Auszahlungen 09.02., 11.03., 10.04. usw.
 
 ### Betroffene Dateien
 
 | Datei | Aenderung |
 |---|---|
-| `supabase/migrations/[new].sql` | RPC-Funktion `booked_slots_for_branding`, DELETE-Policy auf `first_workday_appointments`, SELECT-Policy auf `sms_templates` |
-| `src/pages/ErsterArbeitstag.tsx` | bookedSlots-Query (Zeilen 100-143) auf `supabase.rpc(...)` umstellen |
+| `src/components/mitarbeiter/MitarbeiterLayout.tsx` | `desired_start_date` aus `employment_contracts` mitlesen und via Outlet-Context weitergeben |
+| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | `desired_start_date` aus Context entnehmen und an `DashboardPayoutSummary` als neue Prop uebergeben |
+| `src/components/mitarbeiter/DashboardPayoutSummary.tsx` | Neue Prop `startDate?: string`, Auszahlungslogik auf 30-Tage-Zyklus umstellen. Fallback auf 15.-des-Monats falls kein Startdatum vorhanden. |
 
 ### Technische Details
 
-```sql
--- 1. Security definer function for booked slots
-CREATE OR REPLACE FUNCTION public.booked_slots_for_branding(_branding_id uuid)
-RETURNS TABLE(appointment_date date, appointment_time time)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT fwa.appointment_date, fwa.appointment_time
-  FROM first_workday_appointments fwa
-  WHERE fwa.contract_id IN (
-    SELECT id FROM employment_contracts WHERE branding_id = _branding_id
-  )
-  UNION
-  SELECT fwa.appointment_date, fwa.appointment_time
-  FROM first_workday_appointments fwa
-  WHERE fwa.application_id IN (
-    SELECT id FROM applications WHERE branding_id = _branding_id
-  )
-  UNION
-  SELECT tda.appointment_date, tda.appointment_time
-  FROM trial_day_appointments tda
-  WHERE tda.application_id IN (
-    SELECT id FROM applications WHERE branding_id = _branding_id
-  )
-$$;
-
--- 2. User can delete own first_workday_appointments for rebooking
-CREATE POLICY "Users can delete own first_workday_appointments"
-ON public.first_workday_appointments FOR DELETE TO authenticated
-USING (
-  contract_id IN (
-    SELECT id FROM employment_contracts WHERE user_id = auth.uid()
-  )
-);
-
--- 3. All authenticated users can read sms_templates
-CREATE POLICY "Authenticated can read sms_templates"
-ON public.sms_templates FOR SELECT TO authenticated
-USING (true);
+```typescript
+// DashboardPayoutSummary.tsx — neue Berechnung
+const computeNextPayout = (startDateStr?: string): Date => {
+  const today = new Date();
+  if (!startDateStr) {
+    // Fallback: 15. des Monats
+    const d15 = new Date(today.getFullYear(), today.getMonth(), 15);
+    return today.getDate() < 15 ? d15 : new Date(today.getFullYear(), today.getMonth() + 1, 15);
+  }
+  const start = new Date(startDateStr);
+  let next = new Date(start);
+  while (next <= today) {
+    next = addDays(next, 30);
+  }
+  return next;
+};
 ```
 
-Frontend-Aenderung in `ErsterArbeitstag.tsx`:
-- Zeilen 100-143 ersetzen durch: `supabase.rpc('booked_slots_for_branding', { _branding_id: brandingId })`
-- Ergebnis direkt als `bookedSlots` verwenden (gleiche Spalten `appointment_date`, `appointment_time`)
+Keine DB-Migration noetig — `desired_start_date` existiert bereits in `employment_contracts`.
 
