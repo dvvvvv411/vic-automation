@@ -9,6 +9,11 @@ import {
 } from "@/components/ui/table";
 
 import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import BrandingNotes from "@/components/admin/BrandingNotes";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -29,6 +34,9 @@ export default function AdminErsterArbeitstag() {
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [failTarget, setFailTarget] = useState<any>(null);
+  const [failReason, setFailReason] = useState("");
+  const [failSubmitting, setFailSubmitting] = useState(false);
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
@@ -107,6 +115,8 @@ export default function AdminErsterArbeitstag() {
         </p>
       </motion.div>
 
+      {activeBrandingId && <BrandingNotes brandingId={activeBrandingId} pageContext="erster-arbeitstag" />}
+
       <div className="flex gap-2 mb-4">
         <Button variant={viewMode === "past" ? "default" : "outline"} size="sm" onClick={() => toggleView("past")}>
           <History className="h-4 w-4 mr-1" /> Vergangene Termine
@@ -179,7 +189,11 @@ export default function AdminErsterArbeitstag() {
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
                             )}
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => handleStatusUpdate(item, "fehlgeschlagen")} title="Als fehlgeschlagen markieren">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                              const ec = item.employment_contracts;
+                              setFailTarget(item);
+                              setFailReason("");
+                            }} title="Als fehlgeschlagen markieren">
                               <XCircle className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => setDeleteTarget({ id: item.id, name: `${ec?.first_name} ${ec?.last_name}` })} title="Termin löschen">
@@ -235,6 +249,53 @@ export default function AdminErsterArbeitstag() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!failTarget} onOpenChange={(v) => { if (!v) setFailTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Grund für Fehlschlag</DialogTitle>
+            <DialogDescription>
+              Bitte gib einen Grund an, warum der 1. Arbeitstag von {failTarget?.employment_contracts?.first_name} {failTarget?.employment_contracts?.last_name} fehlgeschlagen ist.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder="Grund eingeben..."
+            value={failReason}
+            onChange={(e) => setFailReason(e.target.value)}
+            className="min-h-[80px]"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFailTarget(null)}>Abbrechen</Button>
+            <Button
+              variant="destructive"
+              disabled={!failReason.trim() || failSubmitting}
+              onClick={async () => {
+                if (!failTarget || !failReason.trim()) return;
+                setFailSubmitting(true);
+                const ec = failTarget.employment_contracts;
+                const name = `${ec?.first_name ?? ""} ${ec?.last_name ?? ""}`.trim();
+
+                await handleStatusUpdate(failTarget, "fehlgeschlagen");
+
+                const { data: userData } = await supabase.auth.getUser();
+                const email = userData.user?.email ?? "System";
+                await supabase.from("branding_notes" as any).insert({
+                  branding_id: activeBrandingId,
+                  page_context: "erster-arbeitstag",
+                  content: `${name} — Fehlgeschlagen: ${failReason.trim()}`,
+                  author_email: email,
+                } as any);
+                queryClient.invalidateQueries({ queryKey: ["branding-notes", activeBrandingId, "erster-arbeitstag"] });
+
+                setFailTarget(null);
+                setFailSubmitting(false);
+              }}
+            >
+              Bestätigen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
