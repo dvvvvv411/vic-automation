@@ -1,31 +1,51 @@
 
+Ziel: `/admin/erster-arbeitstag` sofort wieder stabil anzeigen und fehlende Felder (Name, Telefon, E-Mail, Anstellungsart) korrekt aus vorhandenen Datenquellen auflösen – ohne Ausblenden.
 
-## Plan: Profil-Daten als Fallback fuer leere Vertraege
+### Diagnose (warum jetzt gar nichts mehr kommt)
+- Der aktuelle Query in `AdminErsterArbeitstag.tsx` nutzt:
+  - `profiles:user_id(...)` innerhalb des eingebetteten `employment_contracts` Selects.
+- Laut Network-Fehler liefert PostgREST dafür `400 PGRST200`:
+  - „Could not find a relationship between employment_contracts and user_id in schema cache“
+- Ergebnis: Query bricht komplett, daher erscheinen 0 Termine.
 
-### Ursache
+### Umsetzung (konkret)
+1. **Defekten Embedded-Join entfernen**
+   - In `src/pages/admin/AdminErsterArbeitstag.tsx` die `profiles:user_id(...)`-Einbettung aus dem Haupt-Select entfernen.
+   - Hauptquery bleibt auf `first_workday_appointments + employment_contracts + brandings` fokussiert und funktioniert wieder.
 
-`create_contract_on_interview_success` legt Vertraege nur mit `application_id` und `created_by` an — ohne persoenliche Daten. Die kommen erst bei `submit_employment_contract`. Aber der Vertrag hat ein `user_id`-Feld, das auf `profiles` zeigt, wo `full_name`, `email` und `phone` bereits vorhanden sind.
+2. **Daten korrekt per Folgequeries holen (ohne FK-Abhängigkeit)**
+   - Nach dem paginierten Hauptquery:
+     - `user_id`s der geladenen Contracts sammeln
+     - `application_id`s der Termine (und optional `employment_contracts.application_id`) sammeln
+   - Danach parallel:
+     - `profiles` per `.in("id", userIds)` laden (`id, full_name, email, phone`)
+     - `applications` per `.in("id", applicationIds)` laden (`first_name, last_name, email, phone, employment_type`)
+   - Diese Daten in Maps zusammenführen und pro Termin ein `resolved`-Objekt bauen.
 
-### Loesung
+3. **Fallback-Logik im Rendering vereinheitlichen**
+   - Name: `contract.first/last` → `profile.full_name` → `application.first/last`
+   - Telefon/E-Mail: `contract` → `profile` → `application`
+   - Anstellungsart: `contract.employment_type` → `application.employment_type` → `–`
+   - Dieselbe Logik für:
+     - Tabellenanzeige
+     - Suche
+     - Delete-Dialog-Name
+     - „Fehlgeschlagen“-Dialogtext
+     - Notizinhalt bei Fehlgeschlagen
 
-In `AdminErsterArbeitstag.tsx` die Query erweitern, um auch `profiles` ueber `user_id` mitzuladen:
+4. **Fehlerzustand sichtbar machen (kein stilles „Keine Termine“)**
+   - `isError`/`error` aus `useQuery` behandeln und klare Fehlermeldung rendern (statt leerer Liste), damit ein API-Fehler sofort erkennbar ist.
 
-```
-employment_contracts:contract_id!inner(
-  id, first_name, last_name, email, phone, employment_type, branding_id, user_id,
-  brandings:branding_id(id, company_name),
-  profiles:user_id(full_name, email, phone)
-)
-```
-
-Im Rendering dann Fallback-Logik:
-- Name: `ec.first_name` / `ec.last_name` → falls leer, `ec.profiles?.full_name` splitten
-- Email: `ec.email` → falls leer, `ec.profiles?.email`
-- Telefon: `ec.phone` → falls leer, `ec.profiles?.phone`
+### Warum das deine Anforderung trifft
+- Kein „Ausblenden“-Workaround.
+- Es werden weiterhin alle gebuchten 1.-Arbeitstag-Termine gezeigt.
+- Daten kommen robust aus den real existierenden Mitarbeiter-/Bewerberdaten, auch wenn einzelne Felder im Contract leer sind.
+- Der aktuelle Totalausfall wird direkt behoben.
 
 ### Betroffene Datei
+- `src/pages/admin/AdminErsterArbeitstag.tsx`
 
-| Datei | Aenderung |
-|---|---|
-| `src/pages/admin/AdminErsterArbeitstag.tsx` | Query um `profiles:user_id(...)` erweitern, Fallback-Rendering fuer Name/Email/Phone |
-
+### Technische Details (kurz)
+- Kein DB-Schema-Change nötig.
+- Kein RLS-Change nötig.
+- Ursache ist ein ungültiger relationaler Embed (fehlende FK-Relation für PostgREST), nicht dein Buchungsworkflow.
