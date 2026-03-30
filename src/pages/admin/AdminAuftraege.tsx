@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Eye, Users, MoreVertical, Pencil, Trash2, Star, Clock, PackageOpen, Video, Paperclip } from "lucide-react";
+import { Plus, Eye, Users, MoreVertical, Pencil, Trash2, Star, Clock, PackageOpen, Video, Paperclip, Copy } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useState } from "react";
@@ -159,6 +159,9 @@ export default function AdminAuftraege() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => navigate(`/admin/auftraege/${o.id}/bearbeiten`)}>
                           <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/admin/auftraege/neu?copy=${o.id}`)}>
+                          <Copy className="h-4 w-4 mr-2" /> Kopieren
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteMutation.mutate(o.id)}>
                           <Trash2 className="h-4 w-4 mr-2" /> Löschen

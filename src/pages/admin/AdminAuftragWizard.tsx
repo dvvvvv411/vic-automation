@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,8 @@ const emptyForm = {
 export default function AdminAuftragWizard() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const copyId = searchParams.get("copy");
   const queryClient = useQueryClient();
   const { activeBrandingId } = useBrandingFilter();
   const [step, setStep] = useState(0);
@@ -72,12 +74,14 @@ export default function AdminAuftragWizard() {
 
   const isFixedSalary = (activeBranding as any)?.payment_model === "fixed_salary";
 
-  // Load existing order for editing
+  const loadId = id || copyId;
+
+  // Load existing order for editing or copying
   const { data: existingOrder, isLoading } = useQuery({
-    queryKey: ["order-edit", id],
-    enabled: !!id,
+    queryKey: ["order-edit", loadId],
+    enabled: !!loadId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("orders").select("*").eq("id", id!).single();
+      const { data, error } = await supabase.from("orders").select("*").eq("id", loadId!).single();
       if (error) throw error;
       return data;
     },
@@ -91,7 +95,7 @@ export default function AdminAuftragWizard() {
         return fallback;
       };
       setForm({
-        title: existingOrder.title ?? "",
+        title: (existingOrder.title ?? "") + (copyId ? " (Kopie)" : ""),
         description: (existingOrder as any).description ?? "",
         order_type: (existingOrder as any).order_type ?? "andere",
         reward: existingOrder.reward ?? "",
@@ -164,7 +168,7 @@ export default function AdminAuftragWizard() {
     setForm((f) => ({ ...f, required_attachments: f.required_attachments.map((a, idx) => idx === i ? { ...a, ...patch } : a) }));
   const removeAttachment = (i: number) => setForm((f) => ({ ...f, required_attachments: f.required_attachments.filter((_, idx) => idx !== i) }));
 
-  if (isEditing && isLoading) {
+  if ((isEditing || copyId) && isLoading) {
     return <div className="text-center py-12 text-muted-foreground">Laden...</div>;
   }
 
