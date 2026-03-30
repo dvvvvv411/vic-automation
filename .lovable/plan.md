@@ -1,11 +1,28 @@
 
 
-## Plan: 1. Arbeitstag Link-Button aus Probetag entfernen
+## Plan: Realtime fuer chat_messages fixen (REPLICA IDENTITY FULL)
 
-In `src/pages/admin/AdminProbetag.tsx` den gesamten Block entfernen, der bei `status === "erfolgreich"` den Copy-Button für den 1. Arbeitstag Link rendert (ca. Zeilen 219-236 im aktuellen File — der Button mit `<Copy>` Icon und `buildBrandingUrl`/`employment_contracts`-Query).
+### Problem
+Supabase Realtime mit aktiviertem RLS erfordert `REPLICA IDENTITY FULL` auf der Tabelle, damit Realtime die RLS-Policies gegen die neuen Zeilen evaluieren kann. Ohne das werden Events stillschweigend verworfen — deshalb kommen keine Live-Updates und man muss die Seite refreshen.
 
-### Betroffene Datei
-| Datei | Änderung |
+### Loesung
+
+**SQL-Migration:**
+
+```sql
+ALTER TABLE public.chat_messages REPLICA IDENTITY FULL;
+ALTER TABLE public.employment_contracts REPLICA IDENTITY FULL;
+```
+
+Beide Tabellen brauchen es:
+- `chat_messages` — fuer neue Nachrichten im Chat (useChatRealtime + Konversationsliste)
+- `employment_contracts` — fuer den Online-Status-Heartbeat (chat_active_at Updates)
+
+### Betroffene Dateien
+
+| Datei | Aenderung |
 |---|---|
-| `src/pages/admin/AdminProbetag.tsx` | Copy-Link-Button Block entfernen |
+| `supabase/migrations/[new].sql` | `REPLICA IDENTITY FULL` auf beiden Tabellen |
+
+Kein Frontend-Code-Change noetig. Die Subscriptions sind bereits korrekt implementiert.
 
