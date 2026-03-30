@@ -148,6 +148,7 @@ export default function AdminErsterArbeitstag() {
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
   const profilesMap = data?.profilesMap ?? new Map();
   const applicationsMap = data?.applicationsMap ?? new Map();
+  const templatesMap = data?.templatesMap ?? new Map();
 
   const handleStatusUpdate = async (item: any, newStatus: string) => {
     const { error } = await supabase.rpc("update_first_workday_status" as any, {
@@ -180,7 +181,7 @@ export default function AdminErsterArbeitstag() {
 
   // Resolve all items
   const resolvedItems = (data?.items ?? []).map((item: any) =>
-    resolveItemData(item, profilesMap, applicationsMap)
+    resolveItemData(item, profilesMap, applicationsMap, templatesMap)
   );
 
   const filteredItems = resolvedItems.filter((r) => {
