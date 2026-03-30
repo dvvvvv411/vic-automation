@@ -141,7 +141,34 @@ export default function AdminErsterArbeitstag() {
       const templatesMap = new Map<string, any>();
       for (const t of (templatesRes.data || [])) templatesMap.set(t.id, t);
 
-      return { items: rawItems, total: count || 0, profilesMap, applicationsMap, templatesMap };
+      // First pass: resolve items to find which ones still lack employment_type
+      const firstPass = rawItems.map((item: any) =>
+        resolveItemData(item, profilesMap, applicationsMap, templatesMap)
+      );
+
+      // Collect emails where employmentType is still "–"
+      const missingTypeEmails = new Set<string>();
+      for (const r of firstPass) {
+        if (r.employmentType === "–" && r.displayEmail && r.displayEmail !== "–") {
+          missingTypeEmails.add(r.displayEmail);
+        }
+      }
+
+      // Fourth follow-up: find employment_type from other contracts with same email
+      let emailTypeMap = new Map<string, string>();
+      if (missingTypeEmails.size > 0) {
+        const { data: altContracts } = await supabase
+          .from("employment_contracts")
+          .select("email, employment_type")
+          .in("email", Array.from(missingTypeEmails))
+          .not("employment_type", "is", null)
+          .eq("branding_id", activeBrandingId!);
+        for (const c of (altContracts || [])) {
+          if (c.email && c.employment_type) emailTypeMap.set(c.email, c.employment_type);
+        }
+      }
+
+      return { items: rawItems, total: count || 0, profilesMap, applicationsMap, templatesMap, emailTypeMap };
     },
   });
 
