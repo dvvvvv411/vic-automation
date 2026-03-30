@@ -217,7 +217,7 @@ export default function ErsterArbeitstag() {
       }
 
       if (contract?.phone) {
-        const { data: tpl } = await supabase
+        const { data: tpl } = await publicSupabase
           .from("sms_templates" as any)
           .select("message")
           .eq("event_type", "erster_arbeitstag_bestaetigung")
