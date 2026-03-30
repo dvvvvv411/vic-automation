@@ -40,7 +40,8 @@ interface ResolvedItem {
 function resolveItemData(
   item: any,
   profilesMap: Map<string, any>,
-  applicationsMap: Map<string, any>
+  applicationsMap: Map<string, any>,
+  templatesMap: Map<string, any>
 ): ResolvedItem {
   const ec = item.employment_contracts;
   const profile = ec?.user_id ? profilesMap.get(ec.user_id) : null;
@@ -53,7 +54,8 @@ function resolveItemData(
   const lastName = ec?.last_name || profileNameParts.slice(1).join(" ") || resolvedApp?.last_name || "";
   const displayEmail = ec?.email || profile?.email || resolvedApp?.email || "–";
   const displayPhone = ec?.phone || profile?.phone || resolvedApp?.phone || "";
-  const employmentType = ec?.employment_type || resolvedApp?.employment_type || "–";
+  const template = ec?.template_id ? templatesMap.get(ec.template_id) : null;
+  const employmentType = ec?.employment_type || resolvedApp?.employment_type || template?.employment_type || "–";
   const brandingName = ec?.brandings?.company_name || "–";
 
   return { item, firstName, lastName, displayEmail, displayPhone, employmentType, brandingName };
@@ -82,7 +84,7 @@ export default function AdminErsterArbeitstag() {
       // Main query without profiles embed
       let query = supabase
         .from("first_workday_appointments" as any)
-        .select("*, employment_contracts:contract_id!inner(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, application_id, brandings:branding_id(id, company_name))", { count: "exact" })
+        .select("*, employment_contracts:contract_id!inner(id, first_name, last_name, email, phone, employment_type, branding_id, user_id, application_id, template_id, brandings:branding_id(id, company_name))", { count: "exact" })
         .eq("employment_contracts.branding_id", activeBrandingId!);
 
       if (viewMode === "past") {
@@ -107,21 +109,26 @@ export default function AdminErsterArbeitstag() {
       // Collect user_ids and application_ids for follow-up queries
       const userIds = new Set<string>();
       const applicationIds = new Set<string>();
+      const templateIds = new Set<string>();
 
       for (const item of rawItems) {
         const ec = item.employment_contracts;
         if (ec?.user_id) userIds.add(ec.user_id);
         if (ec?.application_id) applicationIds.add(ec.application_id);
+        if (ec?.template_id) templateIds.add(ec.template_id);
         if (item.application_id) applicationIds.add(item.application_id);
       }
 
       // Parallel follow-up queries
-      const [profilesRes, applicationsRes] = await Promise.all([
+      const [profilesRes, applicationsRes, templatesRes] = await Promise.all([
         userIds.size > 0
           ? supabase.from("profiles").select("id, full_name, email, phone").in("id", Array.from(userIds))
           : { data: [] },
         applicationIds.size > 0
           ? supabase.from("applications").select("id, first_name, last_name, email, phone, employment_type").in("id", Array.from(applicationIds))
+          : { data: [] },
+        templateIds.size > 0
+          ? supabase.from("contract_templates").select("id, employment_type").in("id", Array.from(templateIds))
           : { data: [] },
       ]);
 
@@ -131,7 +138,10 @@ export default function AdminErsterArbeitstag() {
       const applicationsMap = new Map<string, any>();
       for (const a of (applicationsRes.data || [])) applicationsMap.set(a.id, a);
 
-      return { items: rawItems, total: count || 0, profilesMap, applicationsMap };
+      const templatesMap = new Map<string, any>();
+      for (const t of (templatesRes.data || [])) templatesMap.set(t.id, t);
+
+      return { items: rawItems, total: count || 0, profilesMap, applicationsMap, templatesMap };
     },
   });
 
