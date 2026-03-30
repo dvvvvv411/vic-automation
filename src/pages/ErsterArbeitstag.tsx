@@ -184,13 +184,21 @@ export default function ErsterArbeitstag() {
       const dateStr = format(selectedDate!, "yyyy-MM-dd");
       const timeStr = selectedTime! + ":00";
 
-      // Use public RPC — works for both anon and authenticated
-      const { error: rpcError } = await publicSupabase.rpc("book_first_workday_public" as any, {
+      // Use public RPC — works for both anon and authenticated, returns new appointment ID
+      const { data: newId, error: rpcError } = await publicSupabase.rpc("book_first_workday_public" as any, {
         _contract_id: id!,
         _appointment_date: dateStr,
         _appointment_time: timeStr,
       });
       if (rpcError) throw rpcError;
+
+      // Verify the appointment was actually persisted
+      const { data: verify } = await publicSupabase
+        .from("first_workday_appointments" as any)
+        .select("id")
+        .eq("contract_id", id!)
+        .maybeSingle();
+      if (!verify) throw new Error("Termin konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.");
 
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
