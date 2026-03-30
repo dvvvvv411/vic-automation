@@ -1,34 +1,35 @@
 
+Ziel: In `/admin/arbeitsvertraege` sollen E-Mails immer kleingeschrieben angezeigt werden, und neue/aktualisierte E-Mails sollen dauerhaft in lowercase gespeichert werden.
 
-## Plan: Anstellungsart per Email-Lookup aus anderem Vertrag holen
+1) Anzeige in `/admin/arbeitsvertraege` auf lowercase erzwingen  
+- In `src/pages/admin/AdminArbeitsvertraege.tsx` eine kleine Helper-Funktion einbauen (`normalizeEmail(email)`), die `trim()` + `toLowerCase()` macht.  
+- Diese Helper-Funktion an allen Anzeige-Stellen verwenden (Kartenliste + Detaildialog), egal ob E-Mail aus `employment_contracts.email` oder `applications.email` kommt.
 
-### Problem
-Der Termin haengt an einem leeren Draft-Vertrag. Der echte ausgefuellte Vertrag (z.B. mit "Minijob") hat dieselbe Email, aber eine andere `id`. Die bisherige Fallback-Kette greift nicht, weil sie nur den direkt verknuepften Vertrag prueft.
+2) Schreibpfade im Frontend normalisieren  
+- `src/pages/Arbeitsvertrag.tsx`: bei RPC `submit_employment_contract` `_email` als `form.email.trim().toLowerCase()` senden.  
+- `src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx`: gleiches für `_email`.  
+- `src/pages/Auth.tsx`: beim initialen Insert in `employment_contracts` `email: regEmail.trim().toLowerCase()` speichern.
 
-### Loesung in `AdminErsterArbeitstag.tsx`
+3) DB-seitige Absicherung („immer lowercase“, unabhängig vom Client)  
+- SQL-Migration erstellen mit `BEFORE INSERT OR UPDATE` Trigger auf `public.employment_contracts` und `public.applications`, der `NEW.email := lower(trim(NEW.email))` setzt (falls nicht null).  
+- Dadurch werden auch zukünftige Schreibpfade (z. B. andere Seiten/Functions) automatisch korrekt normalisiert.
 
-Nach den bestehenden Follow-up-Queries eine **vierte Query** hinzufuegen:
+4) Bestehende Daten einmalig bereinigen  
+- Einmaliges Daten-Update ausführen: vorhandene `employment_contracts.email` und `applications.email` auf `lower(trim(email))` setzen (nur non-null, nur wenn sich Wert ändert).  
+- So sind alte Mixed-Case-Einträge sofort sauber.
 
-1. Alle aufgeloesten Emails sammeln (aus `ec.email`, `profile.email`, `app.email`) wo `employmentType` noch fehlt
-2. Per `supabase.from("employment_contracts").select("email, employment_type").in("email", [...emails]).not("employment_type", "is", null)` die ausgefuellten Vertraege laden
-3. In `resolveItemData` als letzten Fallback vor `"–"` eine neue `contractsByEmailMap` nutzen
+5) Kurztest (End-to-End)  
+- Testfall mit gemischter Schreibweise (z. B. `Otto_Eggert@t-online.de`) durchspielen: Vertrag speichern/aktualisieren → in `/admin/arbeitsvertraege` prüfen, dass Anzeige lowercase ist.  
+- Zusätzlich prüfen, dass nach Reload und bei neu angelegten Datensätzen weiterhin lowercase gespeichert bleibt.
 
-### Konkrete Aenderungen
+Betroffene Dateien:
+- `src/pages/admin/AdminArbeitsvertraege.tsx`
+- `src/pages/Arbeitsvertrag.tsx`
+- `src/pages/mitarbeiter/MitarbeiterArbeitsvertrag.tsx`
+- `src/pages/Auth.tsx`
+- `supabase/migrations/*` (neue Migration für Email-Normalisierung per Trigger)
 
-**queryFn erweitern** (nach Zeile 142):
-- Erste Runde: `resolveItemData` aufrufen um Emails zu ermitteln
-- Emails sammeln wo `employmentType === "–"`
-- Query: `employment_contracts` mit `.in("email", emails)` und `.not("employment_type", "is", null)` und `.eq("branding_id", activeBrandingId)`
-- Map `email → employment_type` bauen
-- In `resolveItemData` oder danach den Fallback anwenden
-
-Da `resolveItemData` vor der Email-Query laeuft, wird die Logik **zweistufig**:
-1. Erst normal resolven (wie jetzt)
-2. Dann fuer alle Items mit `employmentType === "–"`: per Email in der `contractsByEmailMap` nachschauen
-
-### Betroffene Datei
-
-| Datei | Aenderung |
-|---|---|
-| `src/pages/admin/AdminErsterArbeitstag.tsx` | Email-basierte Nachschlage-Query fuer `employment_type` + zweistufiger Fallback |
-
+Technische Details:
+- Kein Rollen-/RLS-Umbau nötig.  
+- Kein Schema-Redesign nötig; nur Trigger-Funktion + Trigger + Datenbereinigung.  
+- Ergebnis: UI ist sofort konsistent, und Datenqualität bleibt dauerhaft stabil.
