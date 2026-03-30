@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.delete-employee]
 verify_jwt = false
+
+[functions.ai-chat-polish]
+verify_jwt = false

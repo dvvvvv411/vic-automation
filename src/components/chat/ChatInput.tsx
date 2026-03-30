@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Plus, X, FileText } from "lucide-react";
+import { Send, Plus, X, FileText, Sparkles, Check, RefreshCw, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TemplateDropdown } from "./TemplateDropdown";
 import { TemplateManager } from "./TemplateManager";
 import { EmojiPicker } from "./EmojiPicker";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface ChatInputProps {
   onSend: (text: string, file?: File) => void;
@@ -21,6 +22,8 @@ export function ChatInput({ onSend, showTemplates = false, contractData, onTypin
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
+  const [polishing, setPolishing] = useState(false);
+  const [polishedText, setPolishedText] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
