@@ -434,8 +434,7 @@ export default function ErsterArbeitstag() {
                       <Input type="tel" value={editedPhone} onChange={(e) => setEditedPhone(e.target.value)} className="h-7 w-40 text-sm" autoFocus />
                       <button onClick={async () => {
                         if (!editedPhone.trim()) return;
-                        // Update phone on the contract directly
-                        await supabase.from("employment_contracts").update({ phone: editedPhone.trim() }).eq("id", id!);
+                        await publicSupabase.rpc("update_contract_phone_public" as any, { _contract_id: id!, _phone: editedPhone.trim() });
                         queryClient.invalidateQueries({ queryKey: ["contract-erster-arbeitstag", id] });
                         setIsEditingPhone(false);
                       }} className="hover:text-foreground transition-colors">
