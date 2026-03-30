@@ -49,6 +49,13 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
 
   const { isTyping, sendTyping } = useChatTyping({ contractId, role: "user" });
 
+  // Request notification permission on mount
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
   // DB-based heartbeat: update chat_active_at every 30s when chat is open
   useEffect(() => {
     if (!open || !contractId) {
@@ -76,6 +83,20 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
         if (!openRef.current || document.hidden) {
           setUnreadCount((c) => c + 1);
           playNotification();
+
+          // Browser push notification
+          if ("Notification" in window && Notification.permission === "granted" && document.hidden) {
+            const preview = msg.content.length > 80 ? msg.content.slice(0, 80) + "…" : msg.content;
+            const n = new Notification("Neue Nachricht", {
+              body: preview,
+              icon: adminProfile.avatar_url || undefined,
+            });
+            n.onclick = () => {
+              window.focus();
+              setOpen(true);
+              n.close();
+            };
+          }
         } else {
           supabase.from("chat_messages").update({ read: true }).eq("id", msg.id).then(() => {});
         }
@@ -439,21 +460,32 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
 
       {/* FAB */}
       {!(isMobile && open) && (
-        <button
+        <motion.button
+          initial={{ x: 80, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ type: "spring", damping: 20, stiffness: 300, delay: 0.5 }}
           onClick={() => setOpen(!open)}
           className={cn(
-            "h-14 w-14 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105",
+            "shadow-lg flex items-center justify-center transition-all hover:scale-105",
             "bg-primary text-primary-foreground",
-            !open && unreadCount > 0 && "animate-pulse"
+            !open && unreadCount > 0 && "animate-pulse",
+            open ? "h-14 w-14 rounded-full" : "h-12 rounded-full px-5 gap-2.5"
           )}
         >
-          {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+          {open ? (
+            <X className="h-6 w-6" />
+          ) : (
+            <>
+              <MessageCircle className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-semibold whitespace-nowrap">Chatte jetzt mit uns</span>
+            </>
+          )}
           {!open && unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs font-bold rounded-full h-5 min-w-[20px] flex items-center justify-center px-1">
               {unreadCount}
             </span>
           )}
-        </button>
+        </motion.button>
       )}
     </div>
   );
