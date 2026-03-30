@@ -185,26 +185,13 @@ export default function ErsterArbeitstag() {
       const dateStr = format(selectedDate!, "yyyy-MM-dd");
       const timeStr = selectedTime! + ":00";
 
-      // If rebooking, delete old appointment first
-      if (existingAppointment?.id) {
-        const { error: delError } = await supabase
-          .from("first_workday_appointments" as any)
-          .delete()
-          .eq("id", existingAppointment.id);
-        if (delError) throw delError;
-      }
-
-      // Insert with contract_id
-      const { error: insertError } = await supabase
-        .from("first_workday_appointments" as any)
-        .insert({
-          contract_id: id!,
-          application_id: contract?.application_id || null,
-          appointment_date: dateStr,
-          appointment_time: timeStr,
-          created_by: contract?.created_by || null,
-        });
-      if (insertError) throw insertError;
+      // Use public RPC — works for both anon and authenticated
+      const { error: rpcError } = await publicSupabase.rpc("book_first_workday_public" as any, {
+        _contract_id: id!,
+        _appointment_date: dateStr,
+        _appointment_time: timeStr,
+      });
+      if (rpcError) throw rpcError;
 
       const formattedDate = format(selectedDate!, "dd.MM.yyyy");
       const formattedDateLong = format(selectedDate!, "dd. MMMM yyyy", { locale: de });
