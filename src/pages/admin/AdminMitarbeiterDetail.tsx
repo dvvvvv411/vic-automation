@@ -917,7 +917,7 @@ export default function AdminMitarbeiterDetail() {
                   return (
                     <div className="flex justify-between items-center py-2.5 px-4 bg-muted/30 rounded-lg border border-border/40">
                       <span className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-green-500" />
+                        <Clock className="h-4 w-4 text-green-500" />
                         Nächste Auszahlung
                       </span>
                       <span className="text-sm font-medium text-foreground">
