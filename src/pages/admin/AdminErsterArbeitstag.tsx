@@ -34,6 +34,9 @@ export default function AdminErsterArbeitstag() {
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [failTarget, setFailTarget] = useState<any>(null);
+  const [failReason, setFailReason] = useState("");
+  const [failSubmitting, setFailSubmitting] = useState(false);
 
   const now = new Date();
   const today = format(now, "yyyy-MM-dd");
@@ -112,6 +115,8 @@ export default function AdminErsterArbeitstag() {
         </p>
       </motion.div>
 
+      {activeBrandingId && <BrandingNotes brandingId={activeBrandingId} pageContext="erster-arbeitstag" />}
+
       <div className="flex gap-2 mb-4">
         <Button variant={viewMode === "past" ? "default" : "outline"} size="sm" onClick={() => toggleView("past")}>
           <History className="h-4 w-4 mr-1" /> Vergangene Termine
@@ -184,7 +189,11 @@ export default function AdminErsterArbeitstag() {
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
                             )}
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => handleStatusUpdate(item, "fehlgeschlagen")} title="Als fehlgeschlagen markieren">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                              const ec = item.employment_contracts;
+                              setFailTarget(item);
+                              setFailReason("");
+                            }} title="Als fehlgeschlagen markieren">
                               <XCircle className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50" onClick={() => setDeleteTarget({ id: item.id, name: `${ec?.first_name} ${ec?.last_name}` })} title="Termin löschen">
