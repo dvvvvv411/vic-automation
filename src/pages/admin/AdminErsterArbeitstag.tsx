@@ -9,6 +9,11 @@ import {
 } from "@/components/ui/table";
 
 import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import BrandingNotes from "@/components/admin/BrandingNotes";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,

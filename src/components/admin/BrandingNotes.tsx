@@ -11,7 +11,7 @@ import { motion } from "framer-motion";
 
 interface BrandingNotesProps {
   brandingId: string;
-  pageContext: "bewerbungsgespraeche" | "probetag";
+  pageContext: "bewerbungsgespraeche" | "probetag" | "erster-arbeitstag";
 }
 
 export default function BrandingNotes({ brandingId, pageContext }: BrandingNotesProps) {
