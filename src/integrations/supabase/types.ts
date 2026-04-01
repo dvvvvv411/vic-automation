@@ -780,7 +780,7 @@ export type Database = {
       }
       ident_sessions: {
         Row: {
-          assignment_id: string
+          assignment_id: string | null
           branding_id: string | null
           completed_at: string | null
           contract_id: string
@@ -788,14 +788,14 @@ export type Database = {
           email_tan_enabled: boolean
           email_tans: Json
           id: string
-          order_id: string
+          order_id: string | null
           phone_api_url: string | null
           status: string
           test_data: Json | null
           updated_at: string
         }
         Insert: {
-          assignment_id: string
+          assignment_id?: string | null
           branding_id?: string | null
           completed_at?: string | null
           contract_id: string
@@ -803,14 +803,14 @@ export type Database = {
           email_tan_enabled?: boolean
           email_tans?: Json
           id?: string
-          order_id: string
+          order_id?: string | null
           phone_api_url?: string | null
           status?: string
           test_data?: Json | null
           updated_at?: string
         }
         Update: {
-          assignment_id?: string
+          assignment_id?: string | null
           branding_id?: string | null
           completed_at?: string | null
           contract_id?: string
@@ -818,7 +818,7 @@ export type Database = {
           email_tan_enabled?: boolean
           email_tans?: Json
           id?: string
-          order_id?: string
+          order_id?: string | null
           phone_api_url?: string | null
           status?: string
           test_data?: Json | null

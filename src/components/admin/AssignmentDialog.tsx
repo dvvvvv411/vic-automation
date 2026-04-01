@@ -124,23 +124,8 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
     mutationFn: async () => {
       const existingIds = new Set(existing?.map((a) => (mode === "order" ? a.contract_id : a.order_id)) ?? []);
       const newlyAdded = Array.from(selected).filter((id) => !existingIds.has(id));
-      const toRemove = Array.from(existingIds).filter((id) => !selected.has(id));
 
-      // Only delete assignments that were explicitly removed
-      if (toRemove.length > 0) {
-        const col = mode === "order" ? "order_id" : "contract_id";
-        const targetCol = mode === "order" ? "contract_id" : "order_id";
-        for (const targetId of toRemove) {
-          const { error: delErr } = await supabase
-            .from("order_assignments")
-            .delete()
-            .eq(col, sourceId)
-            .eq(targetCol, targetId);
-          if (delErr) throw delErr;
-        }
-      }
-
-      // Only insert newly added assignments
+      // Only insert newly added assignments — never delete
       if (newlyAdded.length > 0) {
         const rows = newlyAdded.map((targetId) =>
           mode === "order"
@@ -274,6 +259,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                       >
                         <Checkbox
                           checked={selected.has(item.id)}
+                          disabled={existing?.some((a) => (mode === "order" ? a.contract_id : a.order_id) === item.id)}
                           onCheckedChange={() => toggle(item.id)}
                         />
                         <div className="min-w-0 flex-1">
