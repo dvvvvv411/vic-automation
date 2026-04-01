@@ -259,6 +259,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                       >
                         <Checkbox
                           checked={selected.has(item.id)}
+                          disabled={existing?.some((a) => (mode === "order" ? a.contract_id : a.order_id) === item.id)}
                           onCheckedChange={() => toggle(item.id)}
                         />
                         <div className="min-w-0 flex-1">
