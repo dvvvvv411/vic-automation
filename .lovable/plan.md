@@ -1,61 +1,46 @@
+## Plan: Keine Löschungen mehr im AssignmentDialog + CASCADE-Schutz
 
+### Problem
 
-## Plan: AssignmentDialog Fix + betroffene Aufträge reparieren
+Der AssignmentDialog kann aktuell Zuweisungen löschen (wenn ein Admin jemanden abwählt und speichert). Durch `ON DELETE CASCADE` auf `ident_sessions` werden dabei auch Ident-Sessions unwiederbringlich gelöscht.
 
-### Was kaputt ist
-
-`AssignmentDialog.tsx` Zeile 129-144: Beim Speichern wird **alles gelöscht** und **neu eingefügt** — ohne Status. Die DB setzt dann den Default `offen`. Jeder Klick auf "Zuweisen > Speichern" setzt alle Mitarbeiter-Status zurück.
-
-### Betroffene Datensätze
-
-15 Zuweisungen stehen aktuell auf `offen`, obwohl sie Reviews oder Anhänge haben (= waren definitiv weiter als "offen"):
-
-| Mitarbeiter | Auftrag |
-|---|---|
-| Felix Ledwon | Coinfinity |
-| Yvonne Reiter | Coinfinity |
-| Vildan Özmen | Coinfinity |
-| Tanja Gädtke | Bewertung ASX Onlineshop |
-| Traude Eggert | Bewertung ASX Onlineshop |
-| Kevin Vongries | Bewertung ASX Onlineshop |
-| Manuela Ganske | Bewertung ASX Onlineshop |
-| Simon Alebachew | Bewertung ASX Onlineshop |
-| Bernhard Garritzmann | Bewertung ASX Onlineshop |
-| Traude Eggert | Bewertung Engelhorn Onlineshop |
-| Kevin Vongries | Bewertung Engelhorn Onlineshop |
-| Tanja Gädtke | Bewertung Engelhorn Onlineshop |
-| Manuela Ganske | Bewertung Engelhorn Onlineshop |
-| Simon Alebachew | Bewertung Engelhorn Onlineshop |
-| Bernhard Garritzmann | Bewertung Engelhorn Onlineshop |
-
-### Fix 1: AssignmentDialog — diff-basiertes Update
+### Fix 1: DELETE-Logik komplett entfernen
 
 **Datei:** `src/components/admin/AssignmentDialog.tsx`
 
-Die `saveMutation` wird umgebaut:
+Die gesamte Delete-Logik (Zeilen 129-141) wird entfernt. Der Dialog kann nur noch:
+- Neue Mitarbeiter/Aufträge **hinzufügen**
+- Bereits zugewiesene Einträge werden als checked angezeigt, aber ein Abwählen hat **keinen Effekt** — es wird nichts gelöscht
 
-```text
-existingIds = IDs die vorher zugewiesen waren
-selected    = IDs die jetzt ausgewählt sind
+Konkret:
+- `toRemove`-Berechnung und der zugehörige DELETE-Block werden entfernt
+- Bereits zugewiesene Checkboxen werden **disabled** dargestellt (ausgegraut, nicht abwählbar), damit klar ist, dass man sie hier nicht entfernen kann
+- Nur neu hinzugefügte werden beim Speichern eingefügt
 
-toRemove = existingIds - selected  → nur diese DELETE
-toAdd    = selected - existingIds  → nur diese INSERT
+### Fix 2: CASCADE → SET NULL (Defense-in-Depth)
 
-Alles andere wird NICHT angefasst → Status bleibt erhalten
+**SQL-Migration** für `ident_sessions`:
+
+```sql
+ALTER TABLE ident_sessions ALTER COLUMN assignment_id DROP NOT NULL;
+ALTER TABLE ident_sessions ALTER COLUMN order_id DROP NOT NULL;
+
+ALTER TABLE ident_sessions
+  DROP CONSTRAINT ident_sessions_assignment_id_fkey,
+  ADD CONSTRAINT ident_sessions_assignment_id_fkey
+    FOREIGN KEY (assignment_id) REFERENCES order_assignments(id) ON DELETE SET NULL;
+
+ALTER TABLE ident_sessions
+  DROP CONSTRAINT ident_sessions_order_id_fkey,
+  ADD CONSTRAINT ident_sessions_order_id_fkey
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
 ```
 
-### Fix 2: Betroffene Zuweisungen auf `erfolgreich` setzen
-
-**SQL-Migration** die alle 15 betroffenen Zuweisungen prüft und korrekt setzt:
-
-- Hat Reviews UND alle Anhänge genehmigt → `erfolgreich`
-- Hat Reviews aber Anhänge noch offen → `in_pruefung`
-- Sicherheitshalber nur Zuweisungen mit Status `offen` die nachweislich Reviews haben
+Selbst wenn irgendwo anders im System ein Assignment gelöscht wird, bleibt die Ident-Session erhalten.
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/components/admin/AssignmentDialog.tsx` | saveMutation: diff-basiert statt delete-all |
-| Neue SQL-Migration | Betroffene 15 Zuweisungen Status korrigieren |
-
+| `src/components/admin/AssignmentDialog.tsx` | DELETE-Logik entfernen, bestehende Zuweisungen als disabled anzeigen |
+| Neue SQL-Migration | `ident_sessions` FK von CASCADE auf SET NULL |
