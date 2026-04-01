@@ -1,3 +1,5 @@
+
+
 ## Plan: Keine Löschungen mehr im AssignmentDialog + CASCADE-Schutz
 
 ### Problem
@@ -10,12 +12,9 @@ Der AssignmentDialog kann aktuell Zuweisungen löschen (wenn ein Admin jemanden 
 
 Die gesamte Delete-Logik (Zeilen 129-141) wird entfernt. Der Dialog kann nur noch:
 - Neue Mitarbeiter/Aufträge **hinzufügen**
-- Bereits zugewiesene Einträge werden als checked angezeigt, aber ein Abwählen hat **keinen Effekt** — es wird nichts gelöscht
-
-Konkret:
-- `toRemove`-Berechnung und der zugehörige DELETE-Block werden entfernt
-- Bereits zugewiesene Checkboxen werden **disabled** dargestellt (ausgegraut, nicht abwählbar), damit klar ist, dass man sie hier nicht entfernen kann
+- Bereits zugewiesene Einträge werden als checked und **disabled** (ausgegraut, nicht abwählbar) angezeigt
 - Nur neu hinzugefügte werden beim Speichern eingefügt
+- Niemand kann versehentlich Zuweisungen löschen
 
 ### Fix 2: CASCADE → SET NULL (Defense-in-Depth)
 
@@ -44,3 +43,4 @@ Selbst wenn irgendwo anders im System ein Assignment gelöscht wird, bleibt die 
 |---|---|
 | `src/components/admin/AssignmentDialog.tsx` | DELETE-Logik entfernen, bestehende Zuweisungen als disabled anzeigen |
 | Neue SQL-Migration | `ident_sessions` FK von CASCADE auf SET NULL |
+
