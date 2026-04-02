@@ -3,7 +3,8 @@ import { format, isToday, isYesterday } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { AvatarUpload } from "./AvatarUpload";
-import { CalendarCheck, FileText, Download, PencilLine, Check, X } from "lucide-react";
+import { CalendarCheck, FileText, Download, PencilLine, Check, X, CheckCheck } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ChatBubbleProps {
   content: string;
