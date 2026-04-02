@@ -1,46 +1,50 @@
 
 
-## Plan: Keine Löschungen mehr im AssignmentDialog + CASCADE-Schutz
+## Plan: Simon & Andrea DKB-Auftrag auf Anhänge-Schritt setzen + Ident-Sessions als abgeschlossen eintragen
 
-### Problem
+### Aktuelle Lage
 
-Der AssignmentDialog kann aktuell Zuweisungen löschen (wenn ein Admin jemanden abwählt und speichert). Durch `ON DELETE CASCADE` auf `ident_sessions` werden dabei auch Ident-Sessions unwiederbringlich gelöscht.
+| Mitarbeiter | Assignment | Reviews | Status |
+|---|---|---|---|
+| Simon Alebachew | `8e0f3e2a` | 0 (gelöscht durch Bug) | offen |
+| Andrea Sebastian Vendramin | `24098b3d` | 7 vorhanden | offen |
 
-### Fix 1: DELETE-Logik komplett entfernen
+Beide haben keine Ident-Sessions mehr (durch CASCADE gelöscht).
 
-**Datei:** `src/components/admin/AssignmentDialog.tsx`
+### Was gemacht wird (alles via Supabase Insert-Tool, keine Code-Änderungen)
 
-Die gesamte Delete-Logik (Zeilen 129-141) wird entfernt. Der Dialog kann nur noch:
-- Neue Mitarbeiter/Aufträge **hinzufügen**
-- Bereits zugewiesene Einträge werden als checked und **disabled** (ausgegraut, nicht abwählbar) angezeigt
-- Nur neu hinzugefügte werden beim Speichern eingefügt
-- Niemand kann versehentlich Zuweisungen löschen
-
-### Fix 2: CASCADE → SET NULL (Defense-in-Depth)
-
-**SQL-Migration** für `ident_sessions`:
+**1. Beide Assignments auf `in_pruefung` setzen**
 
 ```sql
-ALTER TABLE ident_sessions ALTER COLUMN assignment_id DROP NOT NULL;
-ALTER TABLE ident_sessions ALTER COLUMN order_id DROP NOT NULL;
-
-ALTER TABLE ident_sessions
-  DROP CONSTRAINT ident_sessions_assignment_id_fkey,
-  ADD CONSTRAINT ident_sessions_assignment_id_fkey
-    FOREIGN KEY (assignment_id) REFERENCES order_assignments(id) ON DELETE SET NULL;
-
-ALTER TABLE ident_sessions
-  DROP CONSTRAINT ident_sessions_order_id_fkey,
-  ADD CONSTRAINT ident_sessions_order_id_fkey
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
+UPDATE order_assignments 
+SET status = 'in_pruefung'
+WHERE id IN ('8e0f3e2a-f5e0-4f09-8190-0d9338712b7a', '24098b3d-7add-4fe7-8cec-6de524fb9c43');
 ```
 
-Selbst wenn irgendwo anders im System ein Assignment gelöscht wird, bleibt die Ident-Session erhalten.
+**2. Für Simon 7 Reviews einfügen** (gleiche Fragen wie der Auftrag, neutrale 4/5 Bewertung)
+
+Die 7 Fragen werden aus `orders.review_questions` des DKB-Auftrags (`f1c42b20-1207-46cb-9eed-c97edefaaddd`) übernommen.
+
+**3. Für beide eine abgeschlossene Ident-Session einfügen**
+
+```sql
+INSERT INTO ident_sessions (contract_id, assignment_id, order_id, branding_id, status, completed_at)
+VALUES
+-- Simon
+('de992ca7-...', '8e0f3e2a-...', 'f1c42b20-...', '<branding_id>', 'completed', now()),
+-- Andrea
+('f477225a-...', '24098b3d-...', 'f1c42b20-...', '<branding_id>', 'completed', now());
+```
+
+Diese tauchen dann in `/admin/idents` unter "Abgeschlossen" auf, weil `AdminIdents.tsx` nach `branding_id` filtert und Sessions mit Status `completed` in der "Abgeschlossen"-Sektion anzeigt.
+
+### Ergebnis
+
+- Beide sehen in ihrer App den Auftrag im Status "Anhänge hochladen"
+- Beide erscheinen in `/admin/idents` als abgeschlossene Ident-Sessions
+- Simon hat seine 7 Reviews wiederhergestellt
 
 ### Betroffene Dateien
 
-| Datei | Änderung |
-|---|---|
-| `src/components/admin/AssignmentDialog.tsx` | DELETE-Logik entfernen, bestehende Zuweisungen als disabled anzeigen |
-| Neue SQL-Migration | `ident_sessions` FK von CASCADE auf SET NULL |
+Keine Code-Änderungen — nur Datenbank-Updates über das Insert-Tool.
 
