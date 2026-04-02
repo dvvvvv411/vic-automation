@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -168,6 +169,7 @@ function IdentDetailContent({
   const [idDialogOpen, setIdDialogOpen] = useState(false);
   const [assigningPhone, setAssigningPhone] = useState(false);
   const [addToBranding, setAddToBranding] = useState(false);
+  const [infoNotes, setInfoNotes] = useState((session as any).info_notes ?? "");
   const queryClient = useQueryClient();
 
   // Fetch contract details for Mitarbeiterdaten card
@@ -251,6 +253,7 @@ function IdentDetailContent({
       .from("ident_sessions" as any)
       .update({
         test_data: filteredData,
+        info_notes: infoNotes,
         status: filteredData.length > 0 ? "data_sent" : session.status,
         updated_at: new Date().toISOString(),
       } as any)
@@ -631,6 +634,18 @@ function IdentDetailContent({
                 </div>
               </PopoverContent>
             </Popover>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Info / Fragen und Antworten (optional)</Label>
+              <Textarea
+                value={infoNotes}
+                onChange={(e) => setInfoNotes(e.target.value)}
+                placeholder="Zusätzliche Infos für den Mitarbeiter eingeben..."
+                className="min-h-[100px]"
+              />
+            </div>
 
             <Separator />
 

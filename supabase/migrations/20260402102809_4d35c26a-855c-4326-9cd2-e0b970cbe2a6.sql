@@ -1,0 +1,1 @@
+ALTER TABLE ident_sessions ADD COLUMN IF NOT EXISTS info_notes text DEFAULT '';
