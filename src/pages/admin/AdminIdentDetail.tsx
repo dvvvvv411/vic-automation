@@ -637,6 +637,18 @@ function IdentDetailContent({
 
             <Separator />
 
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Info / Fragen und Antworten (optional)</Label>
+              <Textarea
+                value={infoNotes}
+                onChange={(e) => setInfoNotes(e.target.value)}
+                placeholder="Zusätzliche Infos für den Mitarbeiter eingeben..."
+                className="min-h-[100px]"
+              />
+            </div>
+
+            <Separator />
+
             <div className="flex gap-2">
               <Button onClick={handleSave} disabled={saving} className="flex-1 gap-2">
                 <Save className="h-4 w-4" />

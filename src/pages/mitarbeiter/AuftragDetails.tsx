@@ -859,6 +859,18 @@ const AuftragDetails = () => {
                     ))}
                   </div>
 
+                  {(identSession as any)?.info_notes && (identSession as any).info_notes.trim() !== "" && (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50/30 p-4">
+                      <div className="flex items-start gap-2">
+                        <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-700">Info / Fragen und Antworten</p>
+                          <p className="text-sm text-blue-600 mt-1 whitespace-pre-wrap">{(identSession as any).info_notes}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <Separator />
 
                   <Button size="lg" className="w-full gap-2" onClick={() => setConfirmDialogOpen(true)}>
