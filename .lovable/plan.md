@@ -1,50 +1,56 @@
 
-## Plan: 3 Erweiterungen — AssignmentDialog Stunden, Probetag Erfolgs-Resend, Spoof-Dashboard-Link
 
-### 1. AssignmentDialog: Arbeitsstunden anzeigen
+## Plan: SMS History — Alle Einträge laden (über 1000er Limit)
 
-**Datei:** `src/components/admin/AssignmentDialog.tsx` (Zeile 274-281)
+### Problem
 
-In der Sublabel-Zeile wird nach `employmentType` die Stundenzahl ergänzt:
-- `Minijob · 10h/Woche`
-- `Teilzeit · 20h/Woche`
-- `Vollzeit · 40h/Woche`
+Supabase limitiert Queries auf 1000 Rows. Die `sms_logs` und `sms_spoof_logs` Queries in `AdminSmsHistory.tsx` (Zeile 96-106 und 112-122) holen nur eine einzelne Page — Statistik-Cards zeigen maximal 1000.
 
----
+### Fix
 
-### 2. Probetag: Erfolgs-SMS/E-Mail erneut senden
+**Datei:** `src/pages/admin/AdminSmsHistory.tsx`
 
-**Datei:** `src/pages/admin/AdminProbetag.tsx`
+Eine Helper-Funktion `fetchAllRows` einbauen, die in 1000er-Batches mit `.range(from, to)` paginiert bis keine weiteren Rows kommen. Beide queryFn's (smsLogs + spoofLogs) nutzen diesen Helper statt des einfachen `.select()`.
 
-Neuer Button (CheckCircle oder ähnliches Icon, grüne Farbe) bei Terminen mit Status `erfolgreich`:
-- Klick → Lade SMS-Template `probetag_erfolgreich` + Preview-Dialog (gleicher Stil wie Erinnerungs-Preview)
-- Bestätigen → SMS via `sendSms` + E-Mail via `sendEmail` senden
-- Counter `success_notification_count` + Timestamps `success_notification_timestamps` in DB updaten
-- Roter Badge + Popover mit Zeitstempeln (1:1 wie beim Erinnerungs-Button)
-
-### 3. Probetag: Spoof-SMS mit Dashboard-Link
-
-**Datei:** `src/pages/admin/AdminProbetag.tsx`
-
-Neuer Button (Link-Icon) bei erfolgreichen Terminen:
-- Klick → Preview-Dialog mit Text wie `"Logge dich jetzt in dein Dashboard ein: {url}"`
-- URL via `buildBrandingUrl(brandingId, "/")` — kein `/mitarbeiter` nötig
-- Absendername aus `brandings.sms_sender_name`
-- Versand über `supabase.functions.invoke("sms-spoof", { body: { action: "send", to, senderID, text, brandingId } })`
-- Kein separater Counter
-
-### 4. SQL-Migration
-
-```sql
-ALTER TABLE trial_day_appointments 
-ADD COLUMN IF NOT EXISTS success_notification_count integer DEFAULT 0,
-ADD COLUMN IF NOT EXISTS success_notification_timestamps jsonb DEFAULT '[]'::jsonb;
+```typescript
+async function fetchAllRows(query: any) {
+  const PAGE = 1000;
+  let all: any[] = [];
+  let from = 0;
+  while (true) {
+    const { data } = await query.range(from, from + PAGE - 1);
+    if (!data || data.length === 0) break;
+    all = all.concat(data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
 ```
+
+Problem: Supabase-Query-Builder ist nicht wiederverwendbar nach `.range()`. Deshalb muss die Query-Erstellung als Funktion übergeben werden, die bei jedem Batch neu aufgerufen wird:
+
+```typescript
+async function fetchAllRows(buildQuery: () => any) {
+  const PAGE = 1000;
+  let all: any[] = [];
+  let from = 0;
+  while (true) {
+    const { data } = await buildQuery().range(from, from + PAGE - 1);
+    if (!data || data.length === 0) break;
+    all = all.concat(data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+```
+
+Beide queryFn's übergeben eine Builder-Funktion statt direkt `.select()` auszuführen.
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/components/admin/AssignmentDialog.tsx` | Stunden-Mapping neben Anstellungsart (Zeile 279) |
-| `src/pages/admin/AdminProbetag.tsx` | 2 neue Buttons + 2 Preview-Dialoge + Handler |
-| Neue SQL-Migration | `success_notification_count` + `success_notification_timestamps` |
+| `src/pages/admin/AdminSmsHistory.tsx` | `fetchAllRows` Helper + beide Queries umstellen |
+
