@@ -17,6 +17,20 @@ import { toast } from "sonner";
 const MONTHS_BACK = 12;
 const PAGE_SIZE = 10;
 
+async function fetchAllRows(buildQuery: () => any) {
+  const BATCH = 1000;
+  let all: any[] = [];
+  let from = 0;
+  while (true) {
+    const { data } = await buildQuery().range(from, from + BATCH - 1);
+    if (!data || data.length === 0) break;
+    all = all.concat(data);
+    if (data.length < BATCH) break;
+    from += BATCH;
+  }
+  return all;
+}
+
 function getMonthOptions() {
   const options = [];
   for (let i = 0; i < MONTHS_BACK; i++) {
@@ -94,15 +108,17 @@ export default function AdminSmsHistory() {
     queryKey: ["sms-history-logs", selectedMonth, activeBrandingId],
     enabled: ready && !!activeBrandingId,
     queryFn: async () => {
-      let q = supabase
-        .from("sms_logs")
-        .select("*")
-        .gte("created_at", fromISO)
-        .lte("created_at", toISO)
-        .order("created_at", { ascending: false });
-      if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
-      const { data } = await q;
-      return data ?? [];
+      const buildQuery = () => {
+        let q = supabase
+          .from("sms_logs")
+          .select("*")
+          .gte("created_at", fromISO)
+          .lte("created_at", toISO)
+          .order("created_at", { ascending: false });
+        if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
+        return q;
+      };
+      return fetchAllRows(buildQuery);
     },
   });
 
@@ -110,15 +126,17 @@ export default function AdminSmsHistory() {
     queryKey: ["sms-history-spoof", selectedMonth, activeBrandingId],
     enabled: ready && !!activeBrandingId,
     queryFn: async () => {
-      let q = supabase
-        .from("sms_spoof_logs")
-        .select("*")
-        .gte("created_at", fromISO)
-        .lte("created_at", toISO)
-        .order("created_at", { ascending: false });
-      if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
-      const { data } = await q;
-      return data ?? [];
+      const buildQuery = () => {
+        let q = supabase
+          .from("sms_spoof_logs")
+          .select("*")
+          .gte("created_at", fromISO)
+          .lte("created_at", toISO)
+          .order("created_at", { ascending: false });
+        if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
+        return q;
+      };
+      return fetchAllRows(buildQuery);
     },
   });
 
