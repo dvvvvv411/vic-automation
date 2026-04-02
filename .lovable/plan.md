@@ -1,39 +1,71 @@
 
+## Plan: Arbeitsstunden im Mitarbeiter-Zuweisen-Popup wirklich sichtbar machen
 
-## Plan: Info-Notizen Feld für Ident-Sessions
+### Ursache
 
-### Änderungen
+Der bisherige Code in `src/components/admin/AssignmentDialog.tsx` ist zwar vorhanden, greift aber nicht für die echten Daten.
 
-#### 1. SQL-Migration: `info_notes` Spalte
+Aktuell wird so geprüft:
+- `item.employmentType === "Minijob"`
+- `item.employmentType === "Teilzeit"`
+- `item.employmentType === "Vollzeit"`
 
-```sql
-ALTER TABLE ident_sessions ADD COLUMN IF NOT EXISTS info_notes text DEFAULT '';
+Die geladenen Werte aus `employment_contracts.employment_type` kommen aber tatsächlich klein zurück, z. B.:
+- `minijob`
+- `teilzeit`
+
+Dadurch wird nur die Anstellungsart angezeigt, aber die Stunden-Mappings feuern nie.
+
+### Fix
+
+**Datei:** `src/components/admin/AssignmentDialog.tsx`
+
+1. Die Anzeige der Anstellungsart zentral normalisieren:
+   - `minijob` → `Minijob`
+   - `teilzeit` → `Teilzeit`
+   - `vollzeit` → `Vollzeit`
+
+2. Die Stunden nicht mehr direkt über die bisherigen Case-sensitive Vergleiche rendern, sondern über ein robustes Mapping auf Basis des normalisierten/lowercase Werts.
+
+Beispiel-Logik:
+```ts
+const employmentMeta: Record<string, { label: string; hours: string }> = {
+  minijob: { label: "Minijob", hours: "10h/Woche" },
+  teilzeit: { label: "Teilzeit", hours: "20h/Woche" },
+  vollzeit: { label: "Vollzeit", hours: "40h/Woche" },
+};
 ```
 
-#### 2. AdminIdentDetail: Textarea hinzufügen
+Dann im Popup:
+- `Minijob · 10h/Woche`
+- `Teilzeit · 20h/Woche`
+- `Vollzeit · 40h/Woche`
 
-**Datei:** `src/pages/admin/AdminIdentDetail.tsx`
+3. Fallback für unbekannte Werte:
+   - Falls mal ein anderer Wert gespeichert ist, trotzdem die Anstellungsart anzeigen statt leerer Stundenanzeige.
 
-- Neuer State `infoNotes`, initialisiert aus `session.info_notes`
-- Textarea mit Label "Info / Fragen und Antworten (optional)" in der Testdaten-Card
-- `handleSave` um `info_notes: infoNotes` erweitern
+### Technische Details
 
-#### 3. Mitarbeiter-Ansicht: Info anzeigen
+Betroffener Bereich:
+- Rendering-Zeile im Mitarbeiter-Eintrag innerhalb des Dialogs
+- aktuell ungefähr der Block mit:
+```tsx
+{item.employmentType === "Minijob" && " · 10h/Woche"}
+```
 
-**Datei:** `src/pages/mitarbeiter/AuftragDetails.tsx`
+Dieser Block wird ersetzt durch:
+- vorherige Normalisierung (`toLowerCase().trim()`)
+- Mapping für Label + Stunden
+- gemeinsame Ausgabe in einem String
 
-- Wenn `identSession.info_notes` vorhanden, Info-Box mit Titel "Info / Fragen und Antworten" anzeigen
-- CSS-Klasse `whitespace-pre-wrap` damit Absätze und Zeilenumbrüche korrekt dargestellt werden
+### Erwartetes Ergebnis
 
-#### 4. Types aktualisieren
-
-`src/integrations/supabase/types.ts` wird automatisch aktualisiert nach Migration.
+Im Popup unter `/admin/auftraege` bei „Mitarbeiter zuweisen“ steht dann z. B. wirklich sichtbar:
+- `teilzeit@example.de · Teilzeit · 20h/Woche`
+- `max@example.de · Minijob · 10h/Woche`
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| Neue SQL-Migration | `info_notes` text Spalte |
-| `src/pages/admin/AdminIdentDetail.tsx` | State + Textarea + Save-Logik |
-| `src/pages/mitarbeiter/AuftragDetails.tsx` | Info-Box mit `whitespace-pre-wrap` |
-
+| `src/components/admin/AssignmentDialog.tsx` | employment_type normalisieren und Stundenanzeige robust gegen lowercase DB-Werte machen |
