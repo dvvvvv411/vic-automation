@@ -80,6 +80,9 @@ export default function AdminSmsHistory() {
   };
 
 
+  const failedLogs = useMemo(() => smsLogs?.filter((l: any) => l.status === "failed") ?? [], [smsLogs]);
+  const failedCount = failedLogs.length;
+
 
   const handleRetryAll = async () => {
     setRetryingAll(true);
