@@ -1,44 +1,42 @@
 
 
-## Plan: Lesebestätigung für Admin-Nachrichten im Livechat
+## Plan: Probetag-Buchung sieht keine vertragsbasierten 1. Arbeitstag-Termine
 
 ### Problem
 
-Admins sehen aktuell nicht, ob der Mitarbeiter ihre Nachricht gelesen hat. Die `chat_messages`-Tabelle hat ein `read`-Boolean, aber kein `read_at`-Timestamp.
+`Probetag.tsx` (Zeile 108-111) holt gebuchte Slots manuell:
+- `trial_day_appointments` gefiltert nach `application_id` ✅
+- `first_workday_appointments` gefiltert nach `application_id` ❌
 
-### Änderungen
+Neuere 1. Arbeitstag-Termine sind aber über `contract_id` verknüpft (nicht `application_id`). Diese werden komplett übersehen → Doppelbuchung möglich.
 
-#### 1. SQL-Migration: `read_at` Spalte hinzufügen
+`ErsterArbeitstag.tsx` nutzt korrekt die RPC-Funktion `booked_slots_for_branding`, die alle Varianten abdeckt.
 
-```sql
-ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS read_at timestamptz DEFAULT NULL;
+### Fix
+
+**Datei:** `src/pages/Probetag.tsx` (Zeile 98-117)
+
+Die manuelle Query durch denselben RPC-Aufruf `booked_slots_for_branding` ersetzen, der bereits alle trial_day + first_workday Appointments (sowohl application_id als auch contract_id basiert) abdeckt.
+
+```typescript
+const { data: bookedSlots } = useQuery({
+  queryKey: ["trial-day-booked-slots", brandingId],
+  enabled: !!brandingId,
+  queryFn: async () => {
+    const { data, error } = await supabase.rpc("booked_slots_for_branding" as any, {
+      _branding_id: brandingId!,
+    });
+    if (error) throw error;
+    return (data || []) as Array<{ appointment_date: string; appointment_time: string }>;
+  },
+});
 ```
 
-#### 2. ChatWidget: `read_at` beim Lesen setzen
-
-In `src/components/chat/ChatWidget.tsx` — überall wo `.update({ read: true })` steht, zusätzlich `read_at: new Date().toISOString()` setzen. Betrifft:
-- Zeile 101: Einzelnachricht beim Empfang im offenen Chat
-- Zeile 220: Bulk-Mark beim Öffnen des Chats
-
-#### 3. ChatBubble: Lesebestätigung anzeigen
-
-In `src/components/chat/ChatBubble.tsx`:
-- Neue Props: `read?: boolean`, `readAt?: string | null`
-- Bei `isOwnMessage`-Bubbles: Neben dem Zeitstempel ein Doppel-Häkchen (✓✓) in Blau anzeigen wenn gelesen, einfaches Häkchen (✓) in Grau wenn nicht gelesen
-- Bei gelesen: Tooltip oder kleiner Text mit `read_at`-Timestamp (z.B. "Gelesen um 14:32")
-
-#### 4. AdminLivechat: Props durchreichen
-
-In `src/pages/admin/AdminLivechat.tsx` (Zeile 506): `read` und `readAt` Props an `ChatBubble` weitergeben, aber nur für Admin-Nachrichten (`sender_role === "admin"`).
-
-Die `useChatRealtime`-Hook liefert bereits alle Felder via `SELECT *`, also wird `read_at` automatisch mit geladen und bei Realtime-UPDATEs aktualisiert.
+Das ersetzt die 15-zeilige manuelle Query durch einen einzigen RPC-Aufruf und stellt sicher, dass beide Termintypen korrekt blockiert werden.
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| Neue SQL-Migration | `read_at` timestamptz Spalte |
-| `src/components/chat/ChatWidget.tsx` | `read_at` beim Lesen setzen |
-| `src/components/chat/ChatBubble.tsx` | `read`/`readAt` Props + Häkchen-Anzeige |
-| `src/pages/admin/AdminLivechat.tsx` | Props an ChatBubble durchreichen |
+| `src/pages/Probetag.tsx` | Booked-Slots Query durch `booked_slots_for_branding` RPC ersetzen |
 
