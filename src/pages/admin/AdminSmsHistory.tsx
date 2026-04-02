@@ -49,6 +49,7 @@ export default function AdminSmsHistory() {
   const [smsLimit, setSmsLimit] = useState(PAGE_SIZE);
   const [spoofLimit, setSpoofLimit] = useState(PAGE_SIZE);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [retryingAll, setRetryingAll] = useState(false);
   const queryClient = useQueryClient();
 
   const handleRetry = async (log: any) => {
