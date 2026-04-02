@@ -78,6 +78,32 @@ export default function AdminSmsHistory() {
       setRetryingId(null);
     }
   };
+
+  const failedLogs = useMemo(() => smsLogs?.filter((l: any) => l.status === "failed") ?? [], [smsLogs]);
+  const failedCount = failedLogs.length;
+
+  const handleRetryAll = async () => {
+    setRetryingAll(true);
+    let successCount = 0;
+    for (const log of failedLogs) {
+      try {
+        const ok = await sendSms({
+          to: log.recipient_phone,
+          text: log.message,
+          event_type: log.event_type,
+          recipient_name: log.recipient_name || undefined,
+          branding_id: log.branding_id,
+        });
+        if (ok) {
+          await supabase.from("sms_logs").update({ status: "sent", error_message: null }).eq("id", log.id);
+          successCount++;
+        }
+      } catch {}
+    }
+    queryClient.invalidateQueries({ queryKey: ["sms-history-logs"] });
+    toast.success(`${successCount}/${failedLogs.length} SMS erfolgreich nachgesendet`);
+    setRetryingAll(false);
+  };
   const monthStart = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
     return startOfMonth(new Date(y, m - 1));
