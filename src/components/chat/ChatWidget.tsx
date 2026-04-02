@@ -98,7 +98,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
             };
           }
         } else {
-          supabase.from("chat_messages").update({ read: true }).eq("id", msg.id).then(() => {});
+          supabase.from("chat_messages").update({ read: true, read_at: new Date().toISOString() } as any).eq("id", msg.id).then(() => {});
         }
       }
     },
