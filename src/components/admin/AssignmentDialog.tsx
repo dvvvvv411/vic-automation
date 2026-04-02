@@ -273,17 +273,23 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                           </div>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             {item.sublabel && <span className="truncate">{item.sublabel}</span>}
-                            {item.employmentType && (
-                              <>
-                                {item.sublabel && <span>·</span>}
-                                <span className="shrink-0">
-                                  {item.employmentType}
-                                  {item.employmentType === "Minijob" && " · 10h/Woche"}
-                                  {item.employmentType === "Teilzeit" && " · 20h/Woche"}
-                                  {item.employmentType === "Vollzeit" && " · 40h/Woche"}
-                                </span>
-                              </>
-                            )}
+                            {item.employmentType && (() => {
+                              const meta: Record<string, { label: string; hours: string }> = {
+                                minijob: { label: "Minijob", hours: "10h/Woche" },
+                                teilzeit: { label: "Teilzeit", hours: "20h/Woche" },
+                                vollzeit: { label: "Vollzeit", hours: "40h/Woche" },
+                              };
+                              const key = item.employmentType!.toLowerCase().trim();
+                              const m = meta[key];
+                              return (
+                                <>
+                                  {item.sublabel && <span>·</span>}
+                                  <span className="shrink-0">
+                                    {m ? `${m.label} · ${m.hours}` : item.employmentType}
+                                  </span>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       </label>
