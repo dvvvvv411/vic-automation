@@ -156,7 +156,7 @@ function EditTextarea({ editText, onEditChange, onEditSave, onEditCancel }: {
   );
 }
 
-export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, senderName, attachmentUrl, messageId, onEdit, isEditing, editText, onEditChange, onEditSave, onEditCancel }: ChatBubbleProps) {
+export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, senderName, attachmentUrl, messageId, onEdit, isEditing, editText, onEditChange, onEditSave, onEditCancel, read, readAt }: ChatBubbleProps) {
   return (
     <div className={cn("flex w-full mb-3 gap-2 group", isOwnMessage ? "justify-end" : "justify-start")}>
       {!isOwnMessage && (
