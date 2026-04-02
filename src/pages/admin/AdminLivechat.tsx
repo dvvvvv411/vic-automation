@@ -521,6 +521,8 @@ export default function AdminLivechat() {
                             setEditingMessageId(null);
                           } : undefined}
                           onEditCancel={editingMessageId === msg.id ? () => setEditingMessageId(null) : undefined}
+                          read={msg.sender_role === "admin" ? msg.read : undefined}
+                          readAt={msg.sender_role === "admin" ? (msg as any).read_at : undefined}
                         />
                       )}
                     </div>
