@@ -21,6 +21,8 @@ interface ChatBubbleProps {
   onEditChange?: (text: string) => void;
   onEditSave?: () => void;
   onEditCancel?: () => void;
+  read?: boolean;
+  readAt?: string | null;
 }
 
 function getFileName(url: string) {
