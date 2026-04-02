@@ -257,6 +257,7 @@ export default function AdminSmsHistory() {
             ))}
           </SelectContent>
         </Select>
+        </div>
       </div>
 
       {/* Stats Cards */}
