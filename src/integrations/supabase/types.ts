@@ -369,6 +369,7 @@ export type Database = {
           id: string
           metadata: Json | null
           read: boolean
+          read_at: string | null
           sender_role: string
         }
         Insert: {
@@ -380,6 +381,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           read?: boolean
+          read_at?: string | null
           sender_role: string
         }
         Update: {
@@ -391,6 +393,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           read?: boolean
+          read_at?: string | null
           sender_role?: string
         }
         Relationships: [
