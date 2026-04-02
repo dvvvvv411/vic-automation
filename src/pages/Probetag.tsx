@@ -99,20 +99,11 @@ export default function Probetag() {
     queryKey: ["trial-day-booked-slots", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
-      const { data: apps } = await supabase
-        .from("applications")
-        .select("id")
-        .eq("branding_id", brandingId!);
-      if (!apps || apps.length === 0) return [];
-      const appIds = apps.map((a) => a.id);
-      const [trialRes, fwRes] = await Promise.all([
-        supabase.from("trial_day_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
-        supabase.from("first_workday_appointments" as any).select("appointment_date, appointment_time").in("application_id", appIds),
-      ]);
-      return [
-        ...((trialRes.data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>),
-        ...((fwRes.data || []) as unknown as Array<{ appointment_date: string; appointment_time: string }>),
-      ];
+      const { data, error } = await supabase.rpc("booked_slots_for_branding" as any, {
+        _branding_id: brandingId!,
+      });
+      if (error) throw error;
+      return (data || []) as Array<{ appointment_date: string; appointment_time: string }>;
     },
   });
 
