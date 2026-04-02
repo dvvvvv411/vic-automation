@@ -126,15 +126,17 @@ export default function AdminSmsHistory() {
     queryKey: ["sms-history-spoof", selectedMonth, activeBrandingId],
     enabled: ready && !!activeBrandingId,
     queryFn: async () => {
-      let q = supabase
-        .from("sms_spoof_logs")
-        .select("*")
-        .gte("created_at", fromISO)
-        .lte("created_at", toISO)
-        .order("created_at", { ascending: false });
-      if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
-      const { data } = await q;
-      return data ?? [];
+      const buildQuery = () => {
+        let q = supabase
+          .from("sms_spoof_logs")
+          .select("*")
+          .gte("created_at", fromISO)
+          .lte("created_at", toISO)
+          .order("created_at", { ascending: false });
+        if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
+        return q;
+      };
+      return fetchAllRows(buildQuery);
     },
   });
 
