@@ -253,6 +253,7 @@ function IdentDetailContent({
       .from("ident_sessions" as any)
       .update({
         test_data: filteredData,
+        info_notes: infoNotes,
         status: filteredData.length > 0 ? "data_sent" : session.status,
         updated_at: new Date().toISOString(),
       } as any)
