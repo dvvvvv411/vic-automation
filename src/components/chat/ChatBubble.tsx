@@ -195,14 +195,37 @@ export function ChatBubble({ content, createdAt, isOwnMessage, avatarUrl, sender
             ) : (
               content && <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{linkifyContent(content, isOwnMessage)}</p>
             )}
-            <p
-              className={cn(
-                "text-[10px] mt-1.5 opacity-60",
+            <div className={cn(
+              "flex items-center gap-1 mt-1.5",
+              isOwnMessage ? "justify-end" : ""
+            )}>
+              <span className={cn(
+                "text-[10px] opacity-60",
                 isOwnMessage ? "text-primary-foreground" : "text-muted-foreground"
+              )}>
+                {format(new Date(createdAt), "HH:mm")}
+              </span>
+              {isOwnMessage && read !== undefined && (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center">
+                        {read ? (
+                          <CheckCheck className="h-3.5 w-3.5 text-blue-400" />
+                        ) : (
+                          <Check className="h-3 w-3 text-primary-foreground/50" />
+                        )}
+                      </span>
+                    </TooltipTrigger>
+                    {read && readAt && (
+                      <TooltipContent side="left" className="text-xs">
+                        Gelesen um {format(new Date(readAt), "HH:mm", { locale: de })}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               )}
-            >
-              {format(new Date(createdAt), "HH:mm")}
-            </p>
+            </div>
           </div>
         </div>
       </div>

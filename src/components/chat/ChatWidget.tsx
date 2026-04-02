@@ -217,7 +217,7 @@ export function ChatWidget({ contractId, brandColor }: ChatWidgetProps) {
     if (open && contractId && unreadCount > 0) {
       supabase
         .from("chat_messages")
-        .update({ read: true })
+        .update({ read: true, read_at: new Date().toISOString() } as any)
         .eq("contract_id", contractId)
         .in("sender_role", ["admin", "system"])
         .eq("read", false)
