@@ -276,7 +276,12 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                             {item.employmentType && (
                               <>
                                 {item.sublabel && <span>·</span>}
-                                <span className="shrink-0">{item.employmentType}</span>
+                                <span className="shrink-0">
+                                  {item.employmentType}
+                                  {item.employmentType === "Minijob" && " · 10h/Woche"}
+                                  {item.employmentType === "Teilzeit" && " · 20h/Woche"}
+                                  {item.employmentType === "Vollzeit" && " · 40h/Woche"}
+                                </span>
                               </>
                             )}
                           </div>

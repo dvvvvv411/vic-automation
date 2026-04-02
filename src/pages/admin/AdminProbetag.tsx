@@ -12,7 +12,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2, MessageSquare } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, Search, Trash2, MessageSquare, Link2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -39,6 +39,10 @@ export default function AdminProbetag() {
   const [search, setSearch] = useState("");
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
   const [reminderPreview, setReminderPreview] = useState<{ item: any; message: string; name: string; phone: string; brandingId?: string; senderName?: string } | null>(null);
+  const [successPreview, setSuccessPreview] = useState<{ item: any; message: string; name: string; phone: string; brandingId?: string; senderName?: string } | null>(null);
+  const [spoofPreview, setSpoofPreview] = useState<{ item: any; message: string; name: string; phone: string; brandingId?: string; senderName?: string } | null>(null);
+  const [sendingSuccess, setSendingSuccess] = useState<string | null>(null);
+  const [sendingSpoof, setSendingSpoof] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -190,6 +194,167 @@ export default function AdminProbetag() {
     }
   };
 
+  // === Success notification (Probetag erfolgreich) ===
+  const handlePrepareSuccess = async (item: any) => {
+    const app = item.applications;
+    if (!app?.phone) {
+      toast.error("Keine Telefonnummer vorhanden");
+      return;
+    }
+    setSendingSuccess(item.id);
+    try {
+      const brandingId = app.brandings?.id;
+      let senderName: string | undefined;
+      if (brandingId) {
+        const { data: branding } = await supabase
+          .from("brandings")
+          .select("sms_sender_name" as any)
+          .eq("id", brandingId)
+          .maybeSingle();
+        senderName = (branding as any)?.sms_sender_name || undefined;
+      }
+
+      const { data: template } = await supabase
+        .from("sms_templates" as any)
+        .select("message")
+        .eq("event_type", "probetag_erfolgreich")
+        .maybeSingle();
+
+      const name = `${app.first_name} ${app.last_name}`;
+      const smsText = ((template as any)?.message || "Hallo {name}, herzlichen Glückwunsch! Ihr Probetag war erfolgreich. Wir freuen uns auf die Zusammenarbeit mit Ihnen!")
+        .replace(/\{name\}/g, name);
+
+      setSuccessPreview({ item, message: smsText, name, phone: app.phone, brandingId, senderName });
+    } catch (err) {
+      console.error("Success prepare error:", err);
+      toast.error("Fehler beim Laden der Vorlage");
+    } finally {
+      setSendingSuccess(null);
+    }
+  };
+
+  const handleConfirmSuccess = async () => {
+    if (!successPreview) return;
+    const { item, message, name, brandingId, senderName } = successPreview;
+    const app = item.applications;
+    setSendingSuccess(item.id);
+    try {
+      const smsOk = await sendSms({
+        to: app.phone,
+        text: message,
+        event_type: "probetag_erfolgreich",
+        recipient_name: name,
+        from: senderName,
+        branding_id: brandingId || null,
+      });
+
+      const dashboardUrl = await buildBrandingUrl(brandingId || null, "/");
+
+      await sendEmail({
+        to: app.email,
+        recipient_name: name,
+        subject: "Ihr Probetag war erfolgreich!",
+        body_title: "Herzlichen Glückwunsch!",
+        body_lines: [
+          `Sehr geehrte/r ${name},`,
+          "Ihr Probetag war erfolgreich! Wir freuen uns auf die Zusammenarbeit mit Ihnen.",
+          "Bitte loggen Sie sich in Ihr Dashboard ein, um die nächsten Schritte einzusehen.",
+        ],
+        button_text: "Zum Dashboard",
+        button_url: dashboardUrl,
+        branding_id: brandingId || null,
+        event_type: "probetag_erfolgreich",
+        metadata: { appointment_id: item.id, application_id: item.application_id },
+      });
+
+      // Increment success_notification_count and add timestamp
+      const currentTimestamps = Array.isArray(item.success_notification_timestamps) ? item.success_notification_timestamps : [];
+      await supabase
+        .from("trial_day_appointments" as any)
+        .update({
+          success_notification_count: (item.success_notification_count || 0) + 1,
+          success_notification_timestamps: [...currentTimestamps, new Date().toISOString()],
+        } as any)
+        .eq("id", item.id);
+
+      if (smsOk) {
+        toast.success("Erfolgs-Benachrichtigung (SMS + E-Mail) gesendet!");
+      } else {
+        toast.warning("E-Mail gesendet, SMS fehlgeschlagen");
+      }
+      queryClient.invalidateQueries({ queryKey: ["trial-day-appointments-admin"] });
+    } catch (err) {
+      console.error("Success notification error:", err);
+      toast.error("Fehler beim Senden");
+    } finally {
+      setSendingSuccess(null);
+      setSuccessPreview(null);
+    }
+  };
+
+  // === Spoof SMS with Dashboard Link ===
+  const handlePrepareSpoof = async (item: any) => {
+    const app = item.applications;
+    if (!app?.phone) {
+      toast.error("Keine Telefonnummer vorhanden");
+      return;
+    }
+    setSendingSpoof(item.id);
+    try {
+      const brandingId = app.brandings?.id;
+      let senderName: string | undefined;
+      if (brandingId) {
+        const { data: branding } = await supabase
+          .from("brandings")
+          .select("sms_sender_name" as any)
+          .eq("id", brandingId)
+          .maybeSingle();
+        senderName = (branding as any)?.sms_sender_name || undefined;
+      }
+
+      const dashboardUrl = await buildBrandingUrl(brandingId || null, "/");
+      const name = `${app.first_name} ${app.last_name}`;
+      const smsText = `Logge dich jetzt in dein Dashboard ein: ${dashboardUrl}`;
+
+      setSpoofPreview({ item, message: smsText, name, phone: app.phone, brandingId, senderName });
+    } catch (err) {
+      console.error("Spoof prepare error:", err);
+      toast.error("Fehler beim Vorbereiten");
+    } finally {
+      setSendingSpoof(null);
+    }
+  };
+
+  const handleConfirmSpoof = async () => {
+    if (!spoofPreview) return;
+    const { item, message, phone, brandingId, senderName, name } = spoofPreview;
+    if (!senderName) {
+      toast.error("Kein SMS-Absendername für dieses Branding konfiguriert");
+      return;
+    }
+    setSendingSpoof(item.id);
+    try {
+      const { error } = await supabase.functions.invoke("sms-spoof", {
+        body: {
+          action: "send",
+          to: phone,
+          senderID: senderName,
+          text: message,
+          recipientName: name,
+          brandingId: brandingId || undefined,
+        },
+      });
+      if (error) throw error;
+      toast.success("Dashboard-Link per SMS gesendet!");
+    } catch (err) {
+      console.error("Spoof send error:", err);
+      toast.error("Fehler beim Senden der Spoof-SMS");
+    } finally {
+      setSendingSpoof(null);
+      setSpoofPreview(null);
+    }
+  };
+
   const toggleView = (mode: ViewMode) => {
     setViewMode((prev) => (prev === mode ? "default" : mode));
     setPage(0);
@@ -317,6 +482,57 @@ export default function AdminProbetag() {
                                 )}
                               </div>
                             )}
+
+                            {/* Success notification button — only for erfolgreich */}
+                            {item.status === "erfolgreich" && item.applications?.phone && (
+                              <div className="relative">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  onClick={() => handlePrepareSuccess(item)}
+                                  disabled={sendingSuccess === item.id}
+                                  title="Erfolgs-Benachrichtigung erneut senden"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                                {(item.success_notification_count || 0) > 0 && (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center cursor-pointer z-10">
+                                        {item.success_notification_count}
+                                      </span>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56 p-3" onClick={(e) => e.stopPropagation()}>
+                                      <p className="text-sm font-semibold mb-2">Erfolgs-Benachrichtigungen:</p>
+                                      <ul className="space-y-1 text-xs text-muted-foreground">
+                                        {(Array.isArray(item.success_notification_timestamps) ? item.success_notification_timestamps : []).map((ts: string, i: number) => (
+                                          <li key={i}>{format(new Date(ts), "dd.MM.yyyy HH:mm")} Uhr</li>
+                                        ))}
+                                        {(!Array.isArray(item.success_notification_timestamps) || item.success_notification_timestamps.length === 0) && (
+                                          <li className="italic">Keine Zeitstempel verfügbar</li>
+                                        )}
+                                      </ul>
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Spoof SMS dashboard link — only for erfolgreich */}
+                            {item.status === "erfolgreich" && item.applications?.phone && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => handlePrepareSpoof(item)}
+                                disabled={sendingSpoof === item.id}
+                                title="Dashboard-Link per Spoof-SMS senden"
+                              >
+                                <Link2 className="h-4 w-4" />
+                              </Button>
+                            )}
+
                             {item.status !== "erfolgreich" && (
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(item, "erfolgreich")} title="Als erfolgreich markieren">
                                 <CheckCircle className="h-4 w-4" />
@@ -376,6 +592,68 @@ export default function AdminProbetag() {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setReminderPreview(null)}>Abbrechen</Button>
             <Button className="shadow-sm hover:shadow-md transition-all" onClick={handleConfirmReminder} disabled={sendingReminder === reminderPreview?.item?.id}>
+              Senden
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Notification Preview Dialog */}
+      <Dialog open={!!successPreview} onOpenChange={(open) => !open && setSuccessPreview(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Erfolgs-Benachrichtigung senden</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm">
+              <span className="text-muted-foreground">Empfänger:</span>{" "}
+              <span className="font-medium">{successPreview?.name}</span>
+            </div>
+            <div className="text-sm">
+              <span className="text-muted-foreground">Telefon:</span>{" "}
+              <span className="font-medium">{successPreview?.phone}</span>
+            </div>
+            <div className="rounded-md border border-border bg-muted/50 p-3 text-sm whitespace-pre-wrap">
+              {successPreview?.message}
+            </div>
+            <p className="text-xs text-muted-foreground">SMS + E-Mail werden gesendet.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setSuccessPreview(null)}>Abbrechen</Button>
+            <Button className="bg-green-600 hover:bg-green-700 shadow-sm hover:shadow-md transition-all" onClick={handleConfirmSuccess} disabled={sendingSuccess === successPreview?.item?.id}>
+              Senden
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Spoof SMS Dashboard Link Preview Dialog */}
+      <Dialog open={!!spoofPreview} onOpenChange={(open) => !open && setSpoofPreview(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Dashboard-Link per SMS senden</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm">
+              <span className="text-muted-foreground">Empfänger:</span>{" "}
+              <span className="font-medium">{spoofPreview?.name}</span>
+            </div>
+            <div className="text-sm">
+              <span className="text-muted-foreground">Telefon:</span>{" "}
+              <span className="font-medium">{spoofPreview?.phone}</span>
+            </div>
+            <div className="text-sm">
+              <span className="text-muted-foreground">Absender:</span>{" "}
+              <span className="font-medium">{spoofPreview?.senderName || "–"}</span>
+            </div>
+            <div className="rounded-md border border-border bg-muted/50 p-3 text-sm whitespace-pre-wrap">
+              {spoofPreview?.message}
+            </div>
+            <p className="text-xs text-muted-foreground">Wird über die Spoof-API versendet (Links erlaubt).</p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setSpoofPreview(null)}>Abbrechen</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm hover:shadow-md transition-all" onClick={handleConfirmSpoof} disabled={sendingSpoof === spoofPreview?.item?.id}>
               Senden
             </Button>
           </DialogFooter>

@@ -1608,6 +1608,8 @@ export type Database = {
           reminder_sent: boolean
           reminder_timestamps: Json
           status: string
+          success_notification_count: number | null
+          success_notification_timestamps: Json | null
         }
         Insert: {
           application_id: string
@@ -1620,6 +1622,8 @@ export type Database = {
           reminder_sent?: boolean
           reminder_timestamps?: Json
           status?: string
+          success_notification_count?: number | null
+          success_notification_timestamps?: Json | null
         }
         Update: {
           application_id?: string
@@ -1632,6 +1636,8 @@ export type Database = {
           reminder_sent?: boolean
           reminder_timestamps?: Json
           status?: string
+          success_notification_count?: number | null
+          success_notification_timestamps?: Json | null
         }
         Relationships: [
           {
