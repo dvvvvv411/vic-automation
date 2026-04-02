@@ -235,6 +235,18 @@ export default function AdminSmsHistory() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight text-foreground">SMS History</h2>
+        <div className="flex items-center gap-2">
+          {failedCount > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={retryingAll}
+              onClick={handleRetryAll}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${retryingAll ? "animate-spin" : ""}`} />
+              Alle fehlgeschlagenen erneut senden ({failedCount})
+            </Button>
+          )}
         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
           <SelectTrigger className="w-[200px]">
             <SelectValue />
