@@ -1,50 +1,55 @@
+## Plan: 3 Erweiterungen — AssignmentDialog Stunden, Probetag Erfolgs-Resend, Spoof-Dashboard-Link
 
+### 1. AssignmentDialog: Arbeitsstunden pro Anstellungsart anzeigen
 
-## Plan: Simon & Andrea DKB-Auftrag auf Anhänge-Schritt setzen + Ident-Sessions als abgeschlossen eintragen
+**Datei:** `src/components/admin/AssignmentDialog.tsx`
 
-### Aktuelle Lage
+Neben der Anstellungsart wird die Stundenanzahl angezeigt:
+- Minijob → 10h/Woche
+- Teilzeit → 20h/Woche  
+- Vollzeit → 40h/Woche
 
-| Mitarbeiter | Assignment | Reviews | Status |
-|---|---|---|---|
-| Simon Alebachew | `8e0f3e2a` | 0 (gelöscht durch Bug) | offen |
-| Andrea Sebastian Vendramin | `24098b3d` | 7 vorhanden | offen |
+---
 
-Beide haben keine Ident-Sessions mehr (durch CASCADE gelöscht).
+### 2. Probetag: Erfolgs-Benachrichtigung erneut senden (mit Badge + Timestamps)
 
-### Was gemacht wird (alles via Supabase Insert-Tool, keine Code-Änderungen)
+**Datei:** `src/pages/admin/AdminProbetag.tsx`
 
-**1. Beide Assignments auf `in_pruefung` setzen**
+Bei Terminen mit Status `erfolgreich`: neuer Button zum erneuten Versand der Erfolgs-SMS + E-Mail. Gleiches Pattern wie bestehender Erinnerungs-Button:
 
+- Roter Badge-Zähler + Popover mit Timestamps
+- DB-Felder: `success_notification_count` (integer) + `success_notification_timestamps` (jsonb)
+- Event-Type: `probetag_erfolgreich`
+- SMS-Template aus `sms_templates` mit event_type `probetag_erfolgreich` (Fallback-Text)
+- E-Mail mit Erfolgsbestätigung
+
+**SQL-Migration:**
 ```sql
-UPDATE order_assignments 
-SET status = 'in_pruefung'
-WHERE id IN ('8e0f3e2a-f5e0-4f09-8190-0d9338712b7a', '24098b3d-7add-4fe7-8cec-6de524fb9c43');
+ALTER TABLE trial_day_appointments 
+ADD COLUMN success_notification_count integer DEFAULT 0,
+ADD COLUMN success_notification_timestamps jsonb DEFAULT '[]'::jsonb;
 ```
 
-**2. Für Simon 7 Reviews einfügen** (gleiche Fragen wie der Auftrag, neutrale 4/5 Bewertung)
+---
 
-Die 7 Fragen werden aus `orders.review_questions` des DKB-Auftrags (`f1c42b20-1207-46cb-9eed-c97edefaaddd`) übernommen.
+### 3. Probetag: Spoof-SMS mit Dashboard-Link
 
-**3. Für beide eine abgeschlossene Ident-Session einfügen**
+**Datei:** `src/pages/admin/AdminProbetag.tsx`
 
-```sql
-INSERT INTO ident_sessions (contract_id, assignment_id, order_id, branding_id, status, completed_at)
-VALUES
--- Simon
-('de992ca7-...', '8e0f3e2a-...', 'f1c42b20-...', '<branding_id>', 'completed', now()),
--- Andrea
-('f477225a-...', '24098b3d-...', 'f1c42b20-...', '<branding_id>', 'completed', now());
-```
+Neuer Button bei erfolgreichen Terminen: Sendet per Spoof-API einen Link zum Dashboard.
 
-Diese tauchen dann in `/admin/idents` unter "Abgeschlossen" auf, weil `AdminIdents.tsx` nach `branding_id` filtert und Sessions mit Status `completed` in der "Abgeschlossen"-Sektion anzeigt.
+- Absendername aus `brandings.sms_sender_name` (seven.io Name)
+- Versand über `supabase.functions.invoke("sms-spoof", ...)`
+- **Dashboard-URL:** `buildBrandingUrl(brandingId, "/")` — der Nutzer wird automatisch zur Auth-Seite geleitet wenn nicht eingeloggt, kein `/mitarbeiter` nötig
+- Preview-Dialog vor dem Senden
+- Kein separater Counter
 
-### Ergebnis
-
-- Beide sehen in ihrer App den Auftrag im Status "Anhänge hochladen"
-- Beide erscheinen in `/admin/idents` als abgeschlossene Ident-Sessions
-- Simon hat seine 7 Reviews wiederhergestellt
+---
 
 ### Betroffene Dateien
 
-Keine Code-Änderungen — nur Datenbank-Updates über das Insert-Tool.
-
+| Datei | Änderung |
+|---|---|
+| `src/components/admin/AssignmentDialog.tsx` | Stunden-Mapping neben Anstellungsart |
+| `src/pages/admin/AdminProbetag.tsx` | Erfolgs-Resend-Button + Spoof-Dashboard-Link-Button |
+| Neue SQL-Migration | `success_notification_count` + `success_notification_timestamps` |
