@@ -1,20 +1,18 @@
 
+## Plan: Kopier-Button für Original-API-Link bei Telefonnummern
 
-## Plan: Alle fehlgeschlagenen SMS löschen
+### Änderung
 
-### Aktion
+**Datei:** `src/pages/admin/AdminTelefonnummern.tsx`
 
-Eine SQL-Migration die alle Einträge mit `status = 'failed'` aus der `sms_logs` Tabelle löscht.
+In der `PhoneRow`-Komponente wird neben dem Löschen-Button ein weiterer Icon-Button hinzugefügt, der `entry.api_url` in die Zwischenablage kopiert und einen Toast zeigt.
 
-```sql
-DELETE FROM sms_logs WHERE status = 'failed';
-```
-
-**Betroffen:** 553 Einträge werden gelöscht.
+- Icon: `Link` aus lucide-react
+- Position: vor dem Trash-Button in der letzten TableCell
+- Toast: "Link kopiert"
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| Neue SQL-Migration | `DELETE FROM sms_logs WHERE status = 'failed'` |
-
+| `src/pages/admin/AdminTelefonnummern.tsx` | Kopier-Button für `api_url` in jeder Zeile |
