@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, ChevronDown, ChevronRight, Copy, Loader2 } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, Copy, Loader2, Link } from "lucide-react";
 import { format } from "date-fns";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
@@ -165,6 +165,19 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
             <TableCell>{format(new Date(data.endDate), "dd.MM.yyyy HH:mm")}</TableCell>
             <TableCell>{stateBadge(data.state)}</TableCell>
             <TableCell>
+              <div className="flex items-center">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(entry.api_url);
+                    toast({ title: "Link kopiert", description: "API-Link wurde in die Zwischenablage kopiert." });
+                  }}
+                  title="Original-Link kopieren"
+                >
+                  <Link className="h-4 w-4 text-muted-foreground" />
+                </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
@@ -182,6 +195,7 @@ function PhoneRow({ entry, onDelete }: { entry: PhoneEntry; onDelete: (id: strin
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+              </div>
             </TableCell>
           </TableRow>
         </CollapsibleTrigger>
