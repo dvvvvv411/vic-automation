@@ -57,85 +57,94 @@ import ShortRedirect from "./pages/ShortRedirect";
 
 const queryClient = new QueryClient();
 
+/** Routes that require AuthProvider (login, admin, mitarbeiter) */
+const AuthenticatedRoutes = () => (
+  <AuthProvider>
+    <QueryCacheClearer />
+    <Routes>
+      <Route path="/" element={<Navigate to="/auth" replace />} />
+      <Route path="/auth" element={<Auth />} />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRole={["admin", "kunde", "caller"]}>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="brandings" element={<AdminBrandings />} />
+        <Route path="brandings/neu" element={<AdminBrandingForm />} />
+        <Route path="brandings/:id" element={<AdminBrandingForm />} />
+        <Route path="bewerbungen" element={<AdminBewerbungen />} />
+        <Route path="bewerbungsgespraeche" element={<AdminBewerbungsgespraeche />} />
+        <Route path="probetag" element={<AdminProbetag />} />
+        <Route path="erster-arbeitstag" element={<AdminErsterArbeitstag />} />
+        <Route path="arbeitsvertraege" element={<AdminArbeitsvertraege />} />
+        <Route path="mitarbeiter" element={<AdminMitarbeiter />} />
+        <Route path="mitarbeiter/:id" element={<AdminMitarbeiterDetail />} />
+        <Route path="auftraege" element={<AdminAuftraege />} />
+        <Route path="auftraege/neu" element={<AdminAuftragWizard />} />
+        <Route path="auftraege/:id/bearbeiten" element={<AdminAuftragWizard />} />
+        <Route path="anhaenge" element={<AdminAnhaenge />} />
+        <Route path="anhaenge/:contractId/:orderId" element={<AdminAnhaengeDetail />} />
+        <Route path="idents" element={<AdminIdents />} />
+        <Route path="idents/:id" element={<AdminIdentDetail />} />
+        <Route path="livechat" element={<AdminLivechat />} />
+        <Route path="livechat-einstellungen" element={<AdminLivechatEinstellungen />} />
+        <Route path="bewertungen" element={<AdminBewertungen />} />
+        <Route path="emails" element={<AdminEmails />} />
+        <Route path="sms" element={<AdminSmsTemplates />} />
+        <Route path="telegram" element={<AdminTelegram />} />
+        <Route path="zeitplan" element={<AdminZeitplan />} />
+        <Route path="telefonnummern" element={<AdminTelefonnummern />} />
+        <Route path="sms-spoof" element={<AdminSmsSpoof />} />
+        <Route path="sms-history" element={<AdminSmsHistory />} />
+        <Route path="vertragsvorlagen" element={<AdminVertragsvorlagen />} />
+        <Route path="vertragsvorlagen/neu" element={<AdminVertragsvorlageForm />} />
+        <Route path="vertragsvorlagen/:id" element={<AdminVertragsvorlageForm />} />
+        <Route path="kunden" element={<AdminKunden />} />
+        <Route path="caller" element={<AdminCaller />} />
+      </Route>
+      <Route
+        path="/mitarbeiter"
+        element={
+          <ProtectedRoute allowedRole="user">
+            <MitarbeiterLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<MitarbeiterDashboard />} />
+        <Route path="auftraege" element={<MitarbeiterAuftraege />} />
+        <Route path="auftragdetails/:id" element={<AuftragDetails />} />
+        <Route path="bewertung/:id" element={<Bewertung />} />
+        <Route path="bewertungen" element={<MitarbeiterBewertungen />} />
+        <Route path="arbeitsvertrag" element={<MitarbeiterArbeitsvertrag />} />
+        <Route path="meine-daten" element={<MeineDaten />} />
+      </Route>
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  </AuthProvider>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthProvider>
-          <QueryCacheClearer />
-          <Routes>
-            <Route path="/" element={<Navigate to="/auth" replace />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute allowedRole={["admin", "kunde", "caller"]}>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<AdminDashboard />} />
-              <Route path="brandings" element={<AdminBrandings />} />
-              <Route path="brandings/neu" element={<AdminBrandingForm />} />
-              <Route path="brandings/:id" element={<AdminBrandingForm />} />
-              <Route path="bewerbungen" element={<AdminBewerbungen />} />
-              <Route path="bewerbungsgespraeche" element={<AdminBewerbungsgespraeche />} />
-              <Route path="probetag" element={<AdminProbetag />} />
-              <Route path="erster-arbeitstag" element={<AdminErsterArbeitstag />} />
-              <Route path="arbeitsvertraege" element={<AdminArbeitsvertraege />} />
-              <Route path="mitarbeiter" element={<AdminMitarbeiter />} />
-              <Route path="mitarbeiter/:id" element={<AdminMitarbeiterDetail />} />
-              <Route path="auftraege" element={<AdminAuftraege />} />
-              <Route path="auftraege/neu" element={<AdminAuftragWizard />} />
-              <Route path="auftraege/:id/bearbeiten" element={<AdminAuftragWizard />} />
-              <Route path="anhaenge" element={<AdminAnhaenge />} />
-              <Route path="anhaenge/:contractId/:orderId" element={<AdminAnhaengeDetail />} />
-              
-              <Route path="idents" element={<AdminIdents />} />
-              <Route path="idents/:id" element={<AdminIdentDetail />} />
-              <Route path="livechat" element={<AdminLivechat />} />
-              <Route path="livechat-einstellungen" element={<AdminLivechatEinstellungen />} />
-              <Route path="bewertungen" element={<AdminBewertungen />} />
-              <Route path="emails" element={<AdminEmails />} />
-              <Route path="sms" element={<AdminSmsTemplates />} />
-              <Route path="telegram" element={<AdminTelegram />} />
-              <Route path="zeitplan" element={<AdminZeitplan />} />
-              <Route path="telefonnummern" element={<AdminTelefonnummern />} />
-              <Route path="sms-spoof" element={<AdminSmsSpoof />} />
-              <Route path="sms-history" element={<AdminSmsHistory />} />
-              <Route path="vertragsvorlagen" element={<AdminVertragsvorlagen />} />
-              <Route path="vertragsvorlagen/neu" element={<AdminVertragsvorlageForm />} />
-              <Route path="vertragsvorlagen/:id" element={<AdminVertragsvorlageForm />} />
-              <Route path="kunden" element={<AdminKunden />} />
-              <Route path="caller" element={<AdminCaller />} />
-            </Route>
-            <Route path="/bewerbungsgespraech/buchen" element={<BewerbungsgespraechPublic />} />
-            <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
-            <Route path="/probetag/:id" element={<Probetag />} />
-            <Route path="/erster-arbeitstag/:id" element={<ErsterArbeitstag />} />
-            <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />
-            <Route
-              path="/mitarbeiter"
-              element={
-                <ProtectedRoute allowedRole="user">
-                  <MitarbeiterLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<MitarbeiterDashboard />} />
-              <Route path="auftraege" element={<MitarbeiterAuftraege />} />
-              <Route path="auftragdetails/:id" element={<AuftragDetails />} />
-              <Route path="bewertung/:id" element={<Bewertung />} />
-              <Route path="bewertungen" element={<MitarbeiterBewertungen />} />
-              <Route path="arbeitsvertrag" element={<MitarbeiterArbeitsvertrag />} />
-              <Route path="meine-daten" element={<MeineDaten />} />
-            </Route>
-            <Route path="/r/:code" element={<ShortRedirect />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          {/* Öffentliche Routen — OHNE AuthProvider */}
+          <Route path="/bewerbungsgespraech/buchen" element={<BewerbungsgespraechPublic />} />
+          <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
+          <Route path="/probetag/:id" element={<Probetag />} />
+          <Route path="/erster-arbeitstag/:id" element={<ErsterArbeitstag />} />
+          <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />
+          <Route path="/r/:code" element={<ShortRedirect />} />
+
+          {/* Alles andere — MIT AuthProvider */}
+          <Route path="/*" element={<AuthenticatedRoutes />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
