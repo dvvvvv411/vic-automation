@@ -73,7 +73,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
       if (mode === "order") {
         let query = supabase
           .from("employment_contracts")
-          .select("id, first_name, last_name, email, employment_type")
+          .select("id, first_name, last_name, email, employment_type, template_id")
           .in("status", ["offen", "eingereicht", "genehmigt", "unterzeichnet"])
           .not("first_name", "is", null);
         if (brandingId) query = query.eq("branding_id", brandingId);
