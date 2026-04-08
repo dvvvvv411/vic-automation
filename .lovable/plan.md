@@ -1,20 +1,21 @@
 
 
-## Plan: Verlauf-Card auf 5 Einträge mit Scrollbar begrenzen
+## Plan: Verlauf-Card Scrollbar richtig implementieren
 
-### Änderung
+### Problem
+Die `ScrollArea` mit `max-h-[320px]` funktioniert nicht, weil Radix ScrollArea die Höhenbegrenzung auf dem Root-Element braucht und eine feste Höhe (`h-[320px]`) statt `max-h` benötigt. Außerdem ist ein überflüssiges `div.premium-card` dazwischen, das die Scroll-Logik stört.
 
-**Datei: `src/pages/admin/AdminSmsSpoof.tsx`**, Zeile 400
+### Lösung
 
-Die `CardContent` bekommt eine feste max-Höhe, sodass ca. 5 SMS-Einträge sichtbar sind und der Rest per ScrollArea scrollbar wird.
+**Datei: `src/pages/admin/AdminSmsSpoof.tsx`**, Zeilen 412-442
 
-- `ScrollArea` aus `@/components/ui/scroll-area` importieren
-- Die Table in eine `ScrollArea` mit `className="max-h-[320px]"` wrappen (5 Zeilen × ~64px)
-- Die bestehende `overflow-auto` Klasse auf `CardContent` entfernen, da ScrollArea das übernimmt
+- `ScrollArea` bekommt `className="h-[320px]"` statt `max-h-[320px]`
+- Das überflüssige `<div className="premium-card overflow-hidden">` Wrapper entfernen — die Table direkt in die ScrollArea
+- Damit werden ca. 5 Einträge sichtbar und der Rest ist scrollbar
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/admin/AdminSmsSpoof.tsx` | ScrollArea um die Verlauf-Tabelle, max-Höhe begrenzen |
+| `src/pages/admin/AdminSmsSpoof.tsx` | ScrollArea Höhe fixen, überflüssigen Wrapper entfernen |
 
