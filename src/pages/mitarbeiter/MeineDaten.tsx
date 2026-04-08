@@ -56,7 +56,7 @@ const MeineDaten = () => {
       const [contractRes, reviewsRes, assignmentsRes] = await Promise.all([
         supabase
           .from("employment_contracts")
-          .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name, employment_type")
+          .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name, employment_type, submitted_at")
           .eq("id", contract.id)
           .maybeSingle(),
         supabase
@@ -72,6 +72,7 @@ const MeineDaten = () => {
 
       if (contractRes.data) {
         setContractDetails(contractRes.data);
+        setContractExtra(prev => ({ ...prev, submitted_at: contractRes.data.submitted_at ?? undefined }));
       }
 
       if (reviewsRes.data && reviewsRes.data.length > 0) {
