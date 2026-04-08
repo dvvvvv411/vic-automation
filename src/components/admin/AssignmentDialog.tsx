@@ -73,18 +73,34 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
       if (mode === "order") {
         let query = supabase
           .from("employment_contracts")
-          .select("id, first_name, last_name, email, employment_type")
+          .select("id, first_name, last_name, email, employment_type, template_id")
           .in("status", ["offen", "eingereicht", "genehmigt", "unterzeichnet"])
           .not("first_name", "is", null);
         if (brandingId) query = query.eq("branding_id", brandingId);
         const { data, error } = await query;
         if (error) throw error;
-        return (data ?? []).map((c) => ({
-          id: c.id,
-          label: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(),
-          sublabel: c.email ?? "",
-          employmentType: c.employment_type ?? null,
-        }));
+
+        // Batch-load template titles for all contracts that have a template_id
+        const templateIds = (data ?? []).map((c) => c.template_id).filter(Boolean) as string[];
+        let templateMap: Record<string, string> = {};
+        if (templateIds.length > 0) {
+          const { data: templates } = await supabase
+            .from("contract_templates")
+            .select("id, title")
+            .in("id", templateIds);
+          (templates ?? []).forEach((t) => { templateMap[t.id] = t.title; });
+        }
+
+        return (data ?? []).map((c) => {
+          const templateTitle = c.template_id ? templateMap[c.template_id] ?? null : null;
+          return {
+            id: c.id,
+            label: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(),
+            sublabel: c.email ?? "",
+            employmentType: c.employment_type ?? null,
+            templateTitle,
+          };
+        });
       } else {
         let query = supabase
           .from("orders")
@@ -97,6 +113,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           label: `${o.order_number} – ${o.title}`,
           sublabel: o.provider ?? "",
           employmentType: null as string | null,
+          templateTitle: null as string | null,
         }));
       }
     },
@@ -274,18 +291,18 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             {item.sublabel && <span className="truncate">{item.sublabel}</span>}
                             {item.employmentType && (() => {
-                              const meta: Record<string, { label: string; hours: string }> = {
-                                minijob: { label: "Minijob", hours: "10h/Woche" },
-                                teilzeit: { label: "Teilzeit", hours: "20h/Woche" },
-                                vollzeit: { label: "Vollzeit", hours: "40h/Woche" },
-                              };
-                              const key = item.employmentType!.toLowerCase().trim();
-                              const m = meta[key];
+                              // Parse hours from template title (e.g. "Minijob 5 Stunden" → 5)
+                              let hoursLabel: string | null = null;
+                              if (item.templateTitle) {
+                                const match = item.templateTitle.match(/(\d+)\s*Stunden/i);
+                                if (match) hoursLabel = `${match[1]}h/Woche`;
+                              }
+                              const typeLabel = item.employmentType!.charAt(0).toUpperCase() + item.employmentType!.slice(1).toLowerCase();
                               return (
                                 <>
                                   {item.sublabel && <span>·</span>}
                                   <span className="shrink-0">
-                                    {m ? `${m.label} · ${m.hours}` : item.employmentType}
+                                    {hoursLabel ? `${typeLabel} · ${hoursLabel}` : typeLabel}
                                   </span>
                                 </>
                               );
