@@ -1,26 +1,43 @@
 
 
-## Plan: Stundenlohn-Card im Dashboard vereinfachen
+## Plan: Dashboard-Payout-Betrag an MeineDaten angleichen
 
 ### Problem
-Die Statistik-Card für Stundenlohn-Mitarbeiter zeigt aktuell zwei Zeilen: den Gesamtverdienst als großen Wert und darunter den Stundensatz. Der User möchte stattdessen nur den Stundenlohn sehen — groß z.B. "29,00 €" und darunter "pro Stunde".
+Im Dashboard wird bei Stundenlohn-Mitarbeitern `hourlyEarnings` (tatsächlicher Verdienst aus Stunden × Stundensatz) als Betrag angezeigt. Auf `/mitarbeiter/meine-daten` wird dagegen `estimatedSalary` (das im Branding hinterlegte voraussichtliche Monatsgehalt) angezeigt. Die Werte sollen übereinstimmen.
 
 ### Lösung
 
-**Datei: `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`**, Zeile 353-354
+**Datei: `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`**, Zeile 591
 
-Die `isHourlyRate`-Variante in der `stats`-Array ändern von:
+Die `balance`-Prop für `DashboardPayoutSummary` bei `isHourlyRate` ändern: statt `hourlyEarnings` bzw. nur Minijob-Check soll dieselbe `getEstimatedMonthlySalary()`-Logik verwendet werden.
+
+Konkret eine Hilfsfunktion hinzufügen (analog zu MeineDaten):
+
+```typescript
+const getEstimatedMonthlySalary = () => {
+  if (!branding) return 0;
+  switch (employmentType?.toLowerCase()) {
+    case "minijob": return Number(branding.estimated_salary_minijob) || 0;
+    case "teilzeit": return Number(branding.estimated_salary_teilzeit) || 0;
+    case "vollzeit": return Number(branding.estimated_salary_vollzeit) || 0;
+    default: return 0;
+  }
+};
 ```
-{ label: "Verdienst (Stundenlohn)", value: `${hourlyEarnings.toFixed(2)} €`, icon: Euro, detail: `${getHourlyRate().toFixed(2)} €/Std.` }
-```
-zu:
-```
-{ label: "Stundenlohn", value: `${getHourlyRate().toFixed(2)} €`, icon: Euro, detail: "pro Stunde" }
+
+Dann Zeile 591 vereinfachen:
+
+```tsx
+<DashboardPayoutSummary 
+  balance={isHourlyRate ? getEstimatedMonthlySalary() : isFixedSalary ? fixedSalary : balance} 
+  isFixedSalary={isFixedSalary && !isHourlyRate} 
+  startDate={contractSubmittedAt} 
+/>
 ```
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | Stats-Card: Stundensatz als Hauptwert, "pro Stunde" als Detail |
+| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | `getEstimatedMonthlySalary()` Funktion hinzufügen, Payout-Balance auf estimated salary umstellen |
 
