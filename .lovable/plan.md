@@ -1,33 +1,26 @@
 
 
-## Plan: `submitted_at` beim initialen Laden abrufen
+## Plan: Stundenlohn-Card im Dashboard vereinfachen
 
 ### Problem
-
-`submitted_at` wird erst geladen wenn der Vertragsbereich aufgeklappt wird (Zeile 253), aber das Auszahlungsdatum (Zeile 372) braucht den Wert sofort. Deshalb fällt es auf den Fallback (15. des Monats) zurück.
+Die Statistik-Card für Stundenlohn-Mitarbeiter zeigt aktuell zwei Zeilen: den Gesamtverdienst als großen Wert und darunter den Stundensatz. Der User möchte stattdessen nur den Stundenlohn sehen — groß z.B. "29,00 €" und darunter "pro Stunde".
 
 ### Lösung
 
-**Datei: `src/pages/mitarbeiter/MeineDaten.tsx`**
+**Datei: `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`**, Zeile 353-354
 
-In der initialen Query (Zeile 57-60) `submitted_at` zum Select hinzufügen:
-
+Die `isHourlyRate`-Variante in der `stats`-Array ändern von:
 ```
-.select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name, employment_type, submitted_at")
+{ label: "Verdienst (Stundenlohn)", value: `${hourlyEarnings.toFixed(2)} €`, icon: Euro, detail: `${getHourlyRate().toFixed(2)} €/Std.` }
 ```
-
-Dann in Zeile 73-75 den Wert in `contractExtra` setzen:
-
-```typescript
-if (contractRes.data) {
-  setContractDetails(contractRes.data);
-  setContractExtra(prev => ({ ...prev, submitted_at: contractRes.data.submitted_at ?? undefined }));
-}
+zu:
+```
+{ label: "Stundenlohn", value: `${getHourlyRate().toFixed(2)} €`, icon: Euro, detail: "pro Stunde" }
 ```
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/mitarbeiter/MeineDaten.tsx` | `submitted_at` in initiale Query aufnehmen und sofort in State setzen |
+| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | Stats-Card: Stundensatz als Hauptwert, "pro Stunde" als Detail |
 
