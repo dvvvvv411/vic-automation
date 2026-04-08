@@ -1,27 +1,29 @@
 
 
-## Plan: Stundenanzahl aus Vertragstitel statt Hardcoded-Werte
+## Plan: Meldenachweis im KYC-Tab anzeigen wenn hochgeladen
 
 ### Problem
-Im AssignmentDialog (Zeile 277-280) sind die Stunden pro Woche hardcoded: Minijob=10h, Teilzeit=20h, Vollzeit=40h. Die tatsächliche Stundenanzahl steht im Titel der Vertragsvorlage (z.B. "Teilzeit 10 Stunden", "Minijob 5 Stunden").
+
+Die Meldenachweis-Sektion im KYC-Tab wird nur angezeigt wenn `requires_proof_of_address === true`. Bei den genannten Mitarbeitern ist dieses Flag `false`, obwohl sie einen Meldenachweis hochgeladen haben (`proof_of_address_url` ist gesetzt). Das liegt daran, dass der Arbeitsvertrag-Flow den Upload durchführt, aber das Flag nicht auf `true` setzt.
 
 ### Lösung
 
-**Datei: `src/components/admin/AssignmentDialog.tsx`**
+**Datei: `src/pages/admin/AdminMitarbeiterDetail.tsx`**, Zeile 1013
 
-1. **Query erweitern** (Zeile 76): `template_id` mit abfragen
-2. **Template-Titel laden**: Zweite Query auf `contract_templates` mit den gesammelten `template_id`s, um den Titel zu holen
-3. **Stunden aus Titel parsen**: Regex `(\d+)\s*Stunden` auf den Template-Titel anwenden
-4. **Anzeige anpassen** (Zeile 277-291): Statt der hardcoded `meta`-Map den geparseten Wert aus dem Vertragstitel nutzen. Fallback auf den `employment_type` ohne Stundenangabe, falls kein Template vorhanden.
+Die Bedingung ändern von:
+```typescript
+{(contract as any).requires_proof_of_address && (
+```
+zu:
+```typescript
+{((contract as any).requires_proof_of_address || (contract as any).proof_of_address_url) && (
+```
 
-Konkret:
-- In der Query zusätzlich `template_id` selektieren und als Property im Item-Objekt mitgeben
-- Nach dem Laden der Contracts eine Batch-Query auf `contract_templates` machen um die Titel zu holen
-- Im Render-Block: Template-Titel parsen → z.B. "Teilzeit 10 Stunden" → "Teilzeit · 10h/Woche"
+So wird der Meldenachweis-Bereich angezeigt wenn entweder das Flag aktiv ist ODER bereits eine Datei hochgeladen wurde.
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/components/admin/AssignmentDialog.tsx` | `template_id` laden, Template-Titel abfragen, Stunden daraus parsen statt hardcoded |
+| `src/pages/admin/AdminMitarbeiterDetail.tsx` | Bedingung erweitern: Meldenachweis zeigen wenn Flag aktiv ODER URL vorhanden |
 
