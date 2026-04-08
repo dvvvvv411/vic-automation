@@ -113,6 +113,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           label: `${o.order_number} – ${o.title}`,
           sublabel: o.provider ?? "",
           employmentType: null as string | null,
+          templateTitle: null as string | null,
         }));
       }
     },
