@@ -18,18 +18,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Send, Search, Loader2, CheckCircle, XCircle, Pencil, Plus, Info, Eye, History, MessageSquare, Zap, Trash2 } from "lucide-react";
+import { Send, Search, Loader2, Pencil, Plus, Info, Eye, History, MessageSquare, Zap, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-
-interface HlrResult {
-  number_type: string;
-  location: string;
-  region_code: string;
-  is_valid: boolean;
-  formatted_international: string;
-  carrier: string;
-  time_zones: string[];
-}
 
 interface SpoofTemplate {
   id: string;
@@ -63,8 +53,6 @@ export default function AdminSmsSpoof() {
   const [senderID, setSenderID] = useState("");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
-  const [hlrLoading, setHlrLoading] = useState(false);
-  const [hlrResult, setHlrResult] = useState<HlrResult | null>(null);
 
   // Templates
   const [templates, setTemplates] = useState<SpoofTemplate[]>([]);
@@ -176,22 +164,6 @@ export default function AdminSmsSpoof() {
       .replace(/%Nachname%/g, emp.last_name || "");
   };
 
-  const handleHlr = async () => {
-    if (!to.trim()) return;
-    setHlrLoading(true);
-    setHlrResult(null);
-    try {
-      const { data, error } = await supabase.functions.invoke("sms-spoof", {
-        body: { action: "hlr", number: to.trim() },
-      });
-      if (error) throw error;
-      setHlrResult(data);
-    } catch (err) {
-      toast({ title: "HLR Lookup fehlgeschlagen", description: String(err), variant: "destructive" });
-    } finally {
-      setHlrLoading(false);
-    }
-  };
 
   const handleSend = async () => {
     if (!to.trim() || !senderID.trim() || !text.trim()) {
@@ -396,30 +368,8 @@ export default function AdminSmsSpoof() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label className="text-xs">Empfängernummer (international)</Label>
-              <div className="flex gap-2">
-                <Input placeholder="491234567890" value={to} onChange={(e) => setTo(e.target.value)} className="flex-1" />
-                <Button variant="outline" size="icon" onClick={handleHlr} disabled={hlrLoading || !to.trim()}>
-                  {hlrLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                </Button>
-              </div>
+              <Input placeholder="491234567890" value={to} onChange={(e) => setTo(e.target.value)} />
             </div>
-
-            {hlrResult && (
-              <div className="rounded-lg border p-3 text-sm space-y-1 bg-muted/30">
-                <div className="flex items-center gap-2">
-                  {hlrResult.is_valid ? (
-                    <Badge variant="default" className="gap-1"><CheckCircle className="h-3 w-3" /> Gültig</Badge>
-                  ) : (
-                    <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> Ungültig</Badge>
-                  )}
-                  <span className="text-muted-foreground">{hlrResult.region_code}</span>
-                </div>
-                {hlrResult.formatted_international && <p>Formatiert: {hlrResult.formatted_international}</p>}
-                {hlrResult.number_type && <p>Typ: {hlrResult.number_type}</p>}
-                {hlrResult.location && <p>Ort: {hlrResult.location}</p>}
-                {hlrResult.carrier && <p>Carrier: {hlrResult.carrier}</p>}
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label className="text-xs">Absendername (max. 11 Zeichen)</Label>
