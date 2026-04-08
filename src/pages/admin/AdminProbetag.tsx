@@ -519,8 +519,8 @@ export default function AdminProbetag() {
                               </div>
                             )}
 
-                            {/* Spoof SMS dashboard link — only for erfolgreich */}
-                            {item.status === "erfolgreich" && item.applications?.phone && (
+                            {/* Spoof SMS dashboard link */}
+                            {item.applications?.phone && (
                               <Button
                                 variant="ghost"
                                 size="icon"
