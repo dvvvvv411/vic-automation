@@ -351,7 +351,7 @@ const MitarbeiterDashboard = () => {
   const stats = [
     { label: "Zugewiesene Tests", value: orders.length.toString(), icon: Smartphone, detail: orders.length === 1 ? "1 Test" : `${orders.length} Tests` },
     isHourlyRate
-      ? { label: "Verdienst (Stundenlohn)", value: `${hourlyEarnings.toFixed(2)} €`, icon: Euro, detail: `${getHourlyRate().toFixed(2)} €/Std.` }
+      ? { label: "Stundenlohn", value: `${getHourlyRate().toFixed(2)} €`, icon: Euro, detail: "pro Stunde" }
       : isFixedSalary
         ? { label: "Festgehalt", value: `${fixedSalary.toFixed(2)} €`, icon: Euro, detail: employmentType ? employmentType.charAt(0).toUpperCase() + employmentType.slice(1) : "Festgehalt" }
         : { label: "Guthaben", value: `${balance.toFixed(2)} €`, icon: Euro, detail: "Aktueller Kontostand" },
