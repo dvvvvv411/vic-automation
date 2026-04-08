@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,8 +6,9 @@ import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Video, Clock, User, MessageSquare } from "lucide-react";
+import { Video, Clock, User, MessageSquare, Hourglass } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface IdentSession {
   id: string;
@@ -22,10 +23,21 @@ interface IdentSession {
   branding_id: string | null;
 }
 
+interface PendingIdent {
+  assignment_id: string;
+  contract_id: string;
+  order_id: string;
+  contract_first_name: string;
+  contract_last_name: string;
+  order_title: string;
+  branding_id: string | null;
+}
+
 export default function AdminIdents() {
   const { activeBrandingId } = useBrandingFilter();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [creatingId, setCreatingId] = useState<string | null>(null);
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["ident-sessions", activeBrandingId],
@@ -39,6 +51,37 @@ export default function AdminIdents() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as IdentSession[];
+    },
+  });
+
+  // Query for pending idents: assignments to videochat orders without an ident_session
+  const { data: pendingIdents = [] } = useQuery({
+    queryKey: ["pending-idents", activeBrandingId, sessions],
+    enabled: !!activeBrandingId,
+    queryFn: async () => {
+      // Get all videochat assignments for this branding
+      const { data: assignments, error: aErr } = await supabase
+        .from("order_assignments")
+        .select("id, contract_id, order_id, employment_contracts!inner(first_name, last_name, branding_id), orders!inner(title, is_videochat)")
+        .eq("orders.is_videochat", true)
+        .eq("employment_contracts.branding_id", activeBrandingId!);
+      if (aErr) throw aErr;
+      if (!assignments?.length) return [];
+
+      // Filter out assignments that already have an ident_session
+      const existingAssignmentIds = new Set(sessions.map(s => s.assignment_id).filter(Boolean));
+      
+      return (assignments as any[])
+        .filter(a => !existingAssignmentIds.has(a.id))
+        .map(a => ({
+          assignment_id: a.id,
+          contract_id: a.contract_id,
+          order_id: a.order_id,
+          contract_first_name: a.employment_contracts?.first_name || "",
+          contract_last_name: a.employment_contracts?.last_name || "",
+          order_title: a.orders?.title || "",
+          branding_id: activeBrandingId,
+        })) as PendingIdent[];
     },
   });
 
@@ -100,8 +143,36 @@ export default function AdminIdents() {
     }
   };
 
+  const handleCreatePendingSession = async (pending: PendingIdent) => {
+    if (creatingId) return;
+    setCreatingId(pending.assignment_id);
+    try {
+      const { data, error } = await supabase
+        .from("ident_sessions")
+        .insert({
+          contract_id: pending.contract_id,
+          order_id: pending.order_id,
+          assignment_id: pending.assignment_id,
+          branding_id: pending.branding_id,
+          status: "waiting",
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["ident-sessions", activeBrandingId] });
+      queryClient.invalidateQueries({ queryKey: ["pending-idents", activeBrandingId] });
+      navigate(`/admin/idents/${data.id}`);
+    } catch (e: any) {
+      toast.error("Fehler beim Erstellen der Ident-Session");
+      console.error(e);
+    } finally {
+      setCreatingId(null);
+    }
+  };
+
   const activeSessions = sessions.filter(s => s.status === "waiting" || s.status === "data_sent");
   const completedSessions = sessions.filter(s => s.status === "completed" || s.status === "cancelled");
+  const hasAnyContent = sessions.length > 0 || pendingIdents.length > 0;
 
   if (isLoading) {
     return (
@@ -129,7 +200,7 @@ export default function AdminIdents() {
         )}
       </div>
 
-      {sessions.length === 0 ? (
+      {!hasAnyContent ? (
         <Card className="border-dashed border-2">
           <CardContent className="py-16 text-center">
             <Video className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
@@ -160,6 +231,39 @@ export default function AdminIdents() {
                       <div className="text-right shrink-0 space-y-1">
                         {statusBadge(session.status)}
                         <p className="text-[10px] text-muted-foreground">{format(new Date(session.created_at), "dd.MM.yyyy HH:mm")}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {pendingIdents.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Ausstehend</h3>
+              <div className="grid gap-3">
+                {pendingIdents.map(pending => (
+                  <Card
+                    key={pending.assignment_id}
+                    className="border border-dashed border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleCreatePendingSession(pending)}
+                  >
+                    <CardContent className="py-4 flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <Hourglass className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">
+                          {`${pending.contract_first_name} ${pending.contract_last_name}`.trim() || "Unbekannt"}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">{pending.order_title}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <Badge variant="outline" className="gap-1 text-muted-foreground">
+                          <Hourglass className="h-3 w-3" />
+                          {creatingId === pending.assignment_id ? "Erstelle..." : "Ausstehend"}
+                        </Badge>
                       </div>
                     </CardContent>
                   </Card>
