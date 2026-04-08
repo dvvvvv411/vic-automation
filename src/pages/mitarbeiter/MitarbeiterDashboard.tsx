@@ -348,6 +348,16 @@ const MitarbeiterDashboard = () => {
 
   const fixedSalary = getFixedSalary();
 
+  const getEstimatedMonthlySalary = () => {
+    if (!branding) return 0;
+    switch (employmentType?.toLowerCase()) {
+      case "minijob": return Number(branding.estimated_salary_minijob) || 0;
+      case "teilzeit": return Number(branding.estimated_salary_teilzeit) || 0;
+      case "vollzeit": return Number(branding.estimated_salary_vollzeit) || 0;
+      default: return 0;
+    }
+  };
+
   const stats = [
     { label: "Zugewiesene Tests", value: orders.length.toString(), icon: Smartphone, detail: orders.length === 1 ? "1 Test" : `${orders.length} Tests` },
     isHourlyRate
@@ -588,7 +598,7 @@ const MitarbeiterDashboard = () => {
       {/* Summary Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <DashboardReviewsSummary recentReviews={recentReviews} />
-        <DashboardPayoutSummary balance={isHourlyRate && employmentType?.toLowerCase() === 'minijob' && Number(branding?.estimated_salary_minijob) > 0 ? Number(branding?.estimated_salary_minijob) : isHourlyRate ? hourlyEarnings : isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary && !isHourlyRate} startDate={contractSubmittedAt} />
+        <DashboardPayoutSummary balance={isHourlyRate ? getEstimatedMonthlySalary() : isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary && !isHourlyRate} startDate={contractSubmittedAt} />
       </div>
     </div>
   );
