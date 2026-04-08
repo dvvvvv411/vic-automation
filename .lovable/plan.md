@@ -1,43 +1,27 @@
 
 
-## Plan: Dashboard-Payout-Betrag an MeineDaten angleichen
+## Plan: Stundenanzahl aus Vertragstitel statt Hardcoded-Werte
 
 ### Problem
-Im Dashboard wird bei Stundenlohn-Mitarbeitern `hourlyEarnings` (tatsächlicher Verdienst aus Stunden × Stundensatz) als Betrag angezeigt. Auf `/mitarbeiter/meine-daten` wird dagegen `estimatedSalary` (das im Branding hinterlegte voraussichtliche Monatsgehalt) angezeigt. Die Werte sollen übereinstimmen.
+Im AssignmentDialog (Zeile 277-280) sind die Stunden pro Woche hardcoded: Minijob=10h, Teilzeit=20h, Vollzeit=40h. Die tatsächliche Stundenanzahl steht im Titel der Vertragsvorlage (z.B. "Teilzeit 10 Stunden", "Minijob 5 Stunden").
 
 ### Lösung
 
-**Datei: `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`**, Zeile 591
+**Datei: `src/components/admin/AssignmentDialog.tsx`**
 
-Die `balance`-Prop für `DashboardPayoutSummary` bei `isHourlyRate` ändern: statt `hourlyEarnings` bzw. nur Minijob-Check soll dieselbe `getEstimatedMonthlySalary()`-Logik verwendet werden.
+1. **Query erweitern** (Zeile 76): `template_id` mit abfragen
+2. **Template-Titel laden**: Zweite Query auf `contract_templates` mit den gesammelten `template_id`s, um den Titel zu holen
+3. **Stunden aus Titel parsen**: Regex `(\d+)\s*Stunden` auf den Template-Titel anwenden
+4. **Anzeige anpassen** (Zeile 277-291): Statt der hardcoded `meta`-Map den geparseten Wert aus dem Vertragstitel nutzen. Fallback auf den `employment_type` ohne Stundenangabe, falls kein Template vorhanden.
 
-Konkret eine Hilfsfunktion hinzufügen (analog zu MeineDaten):
-
-```typescript
-const getEstimatedMonthlySalary = () => {
-  if (!branding) return 0;
-  switch (employmentType?.toLowerCase()) {
-    case "minijob": return Number(branding.estimated_salary_minijob) || 0;
-    case "teilzeit": return Number(branding.estimated_salary_teilzeit) || 0;
-    case "vollzeit": return Number(branding.estimated_salary_vollzeit) || 0;
-    default: return 0;
-  }
-};
-```
-
-Dann Zeile 591 vereinfachen:
-
-```tsx
-<DashboardPayoutSummary 
-  balance={isHourlyRate ? getEstimatedMonthlySalary() : isFixedSalary ? fixedSalary : balance} 
-  isFixedSalary={isFixedSalary && !isHourlyRate} 
-  startDate={contractSubmittedAt} 
-/>
-```
+Konkret:
+- In der Query zusätzlich `template_id` selektieren und als Property im Item-Objekt mitgeben
+- Nach dem Laden der Contracts eine Batch-Query auf `contract_templates` machen um die Titel zu holen
+- Im Render-Block: Template-Titel parsen → z.B. "Teilzeit 10 Stunden" → "Teilzeit · 10h/Woche"
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | `getEstimatedMonthlySalary()` Funktion hinzufügen, Payout-Balance auf estimated salary umstellen |
+| `src/components/admin/AssignmentDialog.tsx` | `template_id` laden, Template-Titel abfragen, Stunden daraus parsen statt hardcoded |
 
