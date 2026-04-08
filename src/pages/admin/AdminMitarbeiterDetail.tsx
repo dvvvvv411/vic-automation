@@ -1010,7 +1010,7 @@ export default function AdminMitarbeiterDetail() {
                 </div>
 
                 {/* Meldenachweis */}
-                {(contract as any).requires_proof_of_address && (
+                {((contract as any).requires_proof_of_address || (contract as any).proof_of_address_url) && (
                   <div className="border-t border-border pt-4">
                     <h4 className="text-sm font-semibold mb-3">Meldenachweis</h4>
                     {!(contract as any).proof_of_address_url ? (
