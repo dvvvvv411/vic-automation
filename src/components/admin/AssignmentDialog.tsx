@@ -79,12 +79,28 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
         if (brandingId) query = query.eq("branding_id", brandingId);
         const { data, error } = await query;
         if (error) throw error;
-        return (data ?? []).map((c) => ({
-          id: c.id,
-          label: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(),
-          sublabel: c.email ?? "",
-          employmentType: c.employment_type ?? null,
-        }));
+
+        // Batch-load template titles for all contracts that have a template_id
+        const templateIds = (data ?? []).map((c) => c.template_id).filter(Boolean) as string[];
+        let templateMap: Record<string, string> = {};
+        if (templateIds.length > 0) {
+          const { data: templates } = await supabase
+            .from("contract_templates")
+            .select("id, title")
+            .in("id", templateIds);
+          (templates ?? []).forEach((t) => { templateMap[t.id] = t.title; });
+        }
+
+        return (data ?? []).map((c) => {
+          const templateTitle = c.template_id ? templateMap[c.template_id] ?? null : null;
+          return {
+            id: c.id,
+            label: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(),
+            sublabel: c.email ?? "",
+            employmentType: c.employment_type ?? null,
+            templateTitle,
+          };
+        });
       } else {
         let query = supabase
           .from("orders")
