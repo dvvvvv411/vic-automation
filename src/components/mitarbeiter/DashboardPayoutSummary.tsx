@@ -18,7 +18,11 @@ function computeNextPayout(startDateStr?: string | null): Date {
     const d15 = new Date(today.getFullYear(), today.getMonth(), 15);
     return today.getDate() < 15 ? d15 : new Date(today.getFullYear(), today.getMonth() + 1, 15);
   }
-  const start = new Date(startDateStr + "T00:00:00");
+  const start = new Date(startDateStr);
+  if (isNaN(start.getTime())) {
+    const d15 = new Date(today.getFullYear(), today.getMonth(), 15);
+    return today.getDate() < 15 ? d15 : new Date(today.getFullYear(), today.getMonth() + 1, 15);
+  }
   let next = new Date(start);
   while (next <= today) {
     next = new Date(next.getTime() + 30 * 24 * 60 * 60 * 1000);
