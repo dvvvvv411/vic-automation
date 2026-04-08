@@ -1,35 +1,35 @@
 
-## Plan: "Ausstehend"-Sektion auf /admin/idents
 
-### Konzept
+## Plan: Drei Anpassungen für Mitarbeiter-Ansichten
 
-Zwischen "Aktiv" und "Abgeschlossen" wird eine neue Sektion **"Ausstehend"** eingefügt. Sie zeigt Mitarbeiter, die einem Videochat-Auftrag zugewiesen sind, aber noch keine Ident-Session gestartet haben. Der Admin kann dort eine Ident-Session vorab erstellen und Identdaten vorausfüllen.
+### 1. Verdienst-Historie nur bei "Vergütung pro Auftrag" anzeigen
 
-### Logik
+**Datei: `src/pages/mitarbeiter/MeineDaten.tsx`**, Zeile 386
 
-**Ausstehende Idents** = `order_assignments` wo:
-- Der zugehörige `order` hat `is_videochat = true`
-- Es existiert keine `ident_sessions`-Zeile mit `assignment_id = oa.id`
-- Gefiltert nach `branding_id` des Contracts
+`(!isFixedSalary || isHourlyRate)` → `!isFixedSalary`
 
-### Änderungen
+Bei Festgehalt-Brandings (egal ob mit Stundenlohn oder ohne) wird die Verdienst-Historie ausgeblendet. Nur bei `payment_model === 'per_order'` bleibt sie sichtbar.
 
-**Datei: `src/pages/admin/AdminIdents.tsx`**
+### 2. Voraussichtlicher Betrag = Statistiken-Wert
 
-1. Neue Query: Lade `order_assignments` mit Join auf `orders` (where `is_videochat = true`) und `employment_contracts` (Name + branding_id), filtere die raus die bereits eine `ident_session` haben
-2. Neue Sektion "Ausstehend" zwischen Aktiv und Abgeschlossen rendern
-3. Jede Karte zeigt Mitarbeitername + Auftragsname + Badge "Ausstehend"
-4. Klick auf eine Karte erstellt eine neue `ident_session` (mit `status: 'waiting'`, `contract_id`, `order_id`, `assignment_id`, `branding_id`) und navigiert dann zur Detail-Seite `/admin/idents/{neue_id}` — dort kann der Admin sofort Identdaten vorausfüllen
+**Datei: `src/pages/mitarbeiter/MeineDaten.tsx`**, Zeile 376
 
-### Technische Details
+Die Betragslogik in der Bankverbindung-Card vereinheitlichen: Bei `isHourlyRate` wird `estimatedSalary` statt `hourlyEarnings` angezeigt (identisch mit der Statistiken-Card "Voraussichtl. Gehalt").
 
-- Die Query nutzt die bestehenden Tabellen, keine DB-Änderung nötig
-- Beim Klick wird per `supabase.from("ident_sessions").insert(...)` eine Session erstellt und der User direkt zur Detailseite weitergeleitet
-- Die leere Sektion wird nur angezeigt wenn es ausstehende Einträge gibt
-- Die bestehende Prüfung `sessions.length === 0` für den Empty-State wird angepasst, damit auch ausstehende Idents den Empty-State verhindern
+### 3. Auszahlungsdatum = 30 Tage nach Vertragsunterzeichnung
+
+**Datei: `src/pages/mitarbeiter/MeineDaten.tsx`**, Zeile 372
+
+Die Inline-Berechnung (15. des Monats) durch 30-Tage-Zyklen ab `contractExtra?.submitted_at` ersetzen — gleiche Logik wie `computeNextPayout` in `DashboardPayoutSummary.tsx`.
+
+**Datei: `src/pages/mitarbeiter/MitarbeiterDashboard.tsx`**, Zeile 591
+
+`startDate={desiredStartDate}` → `startDate={contractSubmittedAt}` — damit auch das Dashboard-Widget `submitted_at` als Basis nutzt.
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/admin/AdminIdents.tsx` | Neue Query für ausstehende Idents, neue "Ausstehend"-Sektion mit Klick-to-Create |
+| `src/pages/mitarbeiter/MeineDaten.tsx` | Verdienst-Historie nur bei per_order; Betrag = estimatedSalary bei Stundenlohn; Auszahlung ab submitted_at |
+| `src/pages/mitarbeiter/MitarbeiterDashboard.tsx` | `startDate` von `desiredStartDate` auf `contractSubmittedAt` |
+
