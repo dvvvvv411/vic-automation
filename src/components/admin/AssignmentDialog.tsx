@@ -290,18 +290,18 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             {item.sublabel && <span className="truncate">{item.sublabel}</span>}
                             {item.employmentType && (() => {
-                              const meta: Record<string, { label: string; hours: string }> = {
-                                minijob: { label: "Minijob", hours: "10h/Woche" },
-                                teilzeit: { label: "Teilzeit", hours: "20h/Woche" },
-                                vollzeit: { label: "Vollzeit", hours: "40h/Woche" },
-                              };
-                              const key = item.employmentType!.toLowerCase().trim();
-                              const m = meta[key];
+                              // Parse hours from template title (e.g. "Minijob 5 Stunden" → 5)
+                              let hoursLabel: string | null = null;
+                              if (item.templateTitle) {
+                                const match = item.templateTitle.match(/(\d+)\s*Stunden/i);
+                                if (match) hoursLabel = `${match[1]}h/Woche`;
+                              }
+                              const typeLabel = item.employmentType!.charAt(0).toUpperCase() + item.employmentType!.slice(1).toLowerCase();
                               return (
                                 <>
                                   {item.sublabel && <span>·</span>}
                                   <span className="shrink-0">
-                                    {m ? `${m.label} · ${m.hours}` : item.employmentType}
+                                    {hoursLabel ? `${typeLabel} · ${hoursLabel}` : typeLabel}
                                   </span>
                                 </>
                               );
