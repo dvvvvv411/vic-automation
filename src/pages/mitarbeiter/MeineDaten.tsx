@@ -369,11 +369,11 @@ const MeineDaten = () => {
                 <div className="rounded-xl bg-muted/50 p-5 space-y-3">
                   <p className="text-xs text-muted-foreground">Anstehende Gehaltsauszahlung am</p>
                   <p className="text-lg font-bold text-foreground">
-                    {(() => { const t = new Date(); const d = t.getDate() < 15 ? new Date(t.getFullYear(), t.getMonth(), 15) : new Date(t.getFullYear(), t.getMonth() + 1, 15); return format(d, "dd.MM.yyyy", { locale: de }); })()}
+                    {(() => { const startStr = contractExtra?.submitted_at; const today = new Date(); if (!startStr) { const d15 = new Date(today.getFullYear(), today.getMonth(), 15); return format(today.getDate() < 15 ? d15 : new Date(today.getFullYear(), today.getMonth() + 1, 15), "dd.MM.yyyy", { locale: de }); } const start = new Date(startStr + "T00:00:00"); let next = new Date(start); while (next <= today) { next = new Date(next.getTime() + 30 * 24 * 60 * 60 * 1000); } return format(next, "dd.MM.yyyy", { locale: de }); })()}
                   </p>
                   <div className="border-t border-border pt-3">
                     <p className="text-xs text-muted-foreground">{isFixedSalary && !isHourlyRate ? "Betrag" : "Voraussichtlicher Betrag"}</p>
-                    <p className="text-2xl font-bold text-primary">€{isHourlyRate && contractDetails.employment_type?.toLowerCase() === 'minijob' && estimatedSalary > 0 ? estimatedSalary.toFixed(2) : isHourlyRate ? hourlyEarnings.toFixed(2) : isFixedSalary ? fixedSalary.toFixed(2) : pendingPayout.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-primary">€{isHourlyRate ? estimatedSalary.toFixed(2) : isFixedSalary ? fixedSalary.toFixed(2) : pendingPayout.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -383,7 +383,7 @@ const MeineDaten = () => {
       </motion.div>
 
       {/* Reward History - for per_order OR hourly_rate model */}
-      {(!isFixedSalary || isHourlyRate) && (
+      {!isFixedSalary && (
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.4 }}>
           <Card className="bg-white border border-border/40 shadow-md rounded-2xl">
             <CardHeader className="pb-4">

@@ -588,7 +588,7 @@ const MitarbeiterDashboard = () => {
       {/* Summary Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <DashboardReviewsSummary recentReviews={recentReviews} />
-        <DashboardPayoutSummary balance={isHourlyRate && employmentType?.toLowerCase() === 'minijob' && Number(branding?.estimated_salary_minijob) > 0 ? Number(branding?.estimated_salary_minijob) : isHourlyRate ? hourlyEarnings : isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary && !isHourlyRate} startDate={desiredStartDate} />
+        <DashboardPayoutSummary balance={isHourlyRate && employmentType?.toLowerCase() === 'minijob' && Number(branding?.estimated_salary_minijob) > 0 ? Number(branding?.estimated_salary_minijob) : isHourlyRate ? hourlyEarnings : isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary && !isHourlyRate} startDate={contractSubmittedAt} />
       </div>
     </div>
   );
