@@ -1,73 +1,35 @@
 
+## Plan: "Ausstehend"-Sektion auf /admin/idents
 
-## Plan: Öffentliche Routen aus AuthProvider herauslösen
+### Konzept
 
-### Problem
+Zwischen "Aktiv" und "Abgeschlossen" wird eine neue Sektion **"Ausstehend"** eingefügt. Sie zeigt Mitarbeiter, die einem Videochat-Auftrag zugewiesen sind, aber noch keine Ident-Session gestartet haben. Der Admin kann dort eine Ident-Session vorab erstellen und Identdaten vorausfüllen.
 
-Alle Routen — auch öffentliche wie `/erster-arbeitstag/:id` — laufen unter `AuthProvider` und `QueryCacheClearer`. Wenn eine eingeloggte Nutzerin die Seite öffnet und ihr Token abgelaufen ist, feuert `QueryCacheClearer` bei jedem Auth-State-Wechsel `queryClient.clear()` und löscht damit die laufende `publicSupabase`-Abfrage. Die Seite bleibt ewig in den Skeletons hängen.
+### Logik
 
-### Lösung
+**Ausstehende Idents** = `order_assignments` wo:
+- Der zugehörige `order` hat `is_videochat = true`
+- Es existiert keine `ident_sessions`-Zeile mit `assignment_id = oa.id`
+- Gefiltert nach `branding_id` des Contracts
 
-**Datei: `src/App.tsx`**
+### Änderungen
 
-Öffentliche Routen AUSSERHALB von `AuthProvider` und `QueryCacheClearer` rendern. Diese Routen brauchen keine Auth-Session:
+**Datei: `src/pages/admin/AdminIdents.tsx`**
 
-```text
-<QueryClientProvider>
-  <TooltipProvider>
-    <Toaster />
-    <Sonner />
-    <BrowserRouter>
-      <Routes>
-        {/* Öffentliche Routen — OHNE AuthProvider */}
-        <Route path="/erster-arbeitstag/:id" element={<ErsterArbeitstag />} />
-        <Route path="/probetag/:id" element={<Probetag />} />
-        <Route path="/bewerbungsgespraech/:id" element={<Bewerbungsgespraech />} />
-        <Route path="/bewerbungsgespraech/buchen" element={<BewerbungsgespraechPublic />} />
-        <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />
-        <Route path="/r/:code" element={<ShortRedirect />} />
+1. Neue Query: Lade `order_assignments` mit Join auf `orders` (where `is_videochat = true`) und `employment_contracts` (Name + branding_id), filtere die raus die bereits eine `ident_session` haben
+2. Neue Sektion "Ausstehend" zwischen Aktiv und Abgeschlossen rendern
+3. Jede Karte zeigt Mitarbeitername + Auftragsname + Badge "Ausstehend"
+4. Klick auf eine Karte erstellt eine neue `ident_session` (mit `status: 'waiting'`, `contract_id`, `order_id`, `assignment_id`, `branding_id`) und navigiert dann zur Detail-Seite `/admin/idents/{neue_id}` — dort kann der Admin sofort Identdaten vorausfüllen
 
-        {/* Alles andere — MIT AuthProvider */}
-        <Route path="/*" element={
-          <AuthProvider>
-            <QueryCacheClearer />
-            <Routes>
-              <Route path="/" element={<Navigate to="/auth" replace />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/admin" element={...}>
-                ...alle admin routes...
-              </Route>
-              <Route path="/mitarbeiter" element={...}>
-                ...alle mitarbeiter routes...
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
-        } />
-      </Routes>
-    </BrowserRouter>
-  </TooltipProvider>
-</QueryClientProvider>
-```
+### Technische Details
 
-**Zusätzlich: `src/pages/ShortRedirect.tsx`**
-
-ShortRedirect verwendet noch den normalen `supabase`-Client. Da es jetzt außerhalb von AuthProvider liegt, auf `publicSupabase` umstellen:
-
-```typescript
-import { publicSupabase as supabase } from "@/integrations/supabase/publicClient";
-```
+- Die Query nutzt die bestehenden Tabellen, keine DB-Änderung nötig
+- Beim Klick wird per `supabase.from("ident_sessions").insert(...)` eine Session erstellt und der User direkt zur Detailseite weitergeleitet
+- Die leere Sektion wird nur angezeigt wenn es ausstehende Einträge gibt
+- Die bestehende Prüfung `sessions.length === 0` für den Empty-State wird angepasst, damit auch ausstehende Idents den Empty-State verhindern
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/App.tsx` | Öffentliche Routen aus AuthProvider herauslösen |
-| `src/pages/ShortRedirect.tsx` | `supabase` → `publicSupabase` |
-
-### Erwartetes Ergebnis
-
-- `/erster-arbeitstag/:id` lädt sofort, egal ob eingeloggt oder nicht
-- Kein `queryClient.clear()` kann mehr die Buchungsseiten-Queries löschen
-- Kein Whitescreen / endlose Skeletons mehr auf Mobilgeräten
-
+| `src/pages/admin/AdminIdents.tsx` | Neue Query für ausstehende Idents, neue "Ausstehend"-Sektion mit Klick-to-Create |
