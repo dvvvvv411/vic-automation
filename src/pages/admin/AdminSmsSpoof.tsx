@@ -18,7 +18,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Send, Search, Loader2, CheckCircle, XCircle, Pencil, Plus, Info, Eye, History, MessageSquare, Zap, Trash2 } from "lucide-react";
+import { Send, Loader2, Pencil, Plus, Eye, History, MessageSquare, Zap, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface SpoofTemplate {
