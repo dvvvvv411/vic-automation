@@ -1,29 +1,44 @@
 
 
-## Plan: Meldenachweis im KYC-Tab anzeigen wenn hochgeladen
+## Plan: SMS Spoof API von nigga.life auf LimitlessTXT umstellen
 
-### Problem
+### Zusammenfassung
+Die alte Spoof-API (nigga.life) wird vollständig durch die neue LimitlessTXT API (`api.limitlesstxt.com`) ersetzt. Route 7 wird immer verwendet. Ein neues Secret `LIMITLESSTXT_API_KEY` wird benötigt.
 
-Die Meldenachweis-Sektion im KYC-Tab wird nur angezeigt wenn `requires_proof_of_address === true`. Bei den genannten Mitarbeitern ist dieses Flag `false`, obwohl sie einen Meldenachweis hochgeladen haben (`proof_of_address_url` ist gesetzt). Das liegt daran, dass der Arbeitsvertrag-Flow den Upload durchführt, aber das Flag nicht auf `true` setzt.
+### Neues Secret
 
-### Lösung
+Du wirst aufgefordert, den LimitlessTXT API-Key (`ltxt_...`) als Supabase Secret `LIMITLESSTXT_API_KEY` hinzuzufügen.
 
-**Datei: `src/pages/admin/AdminMitarbeiterDetail.tsx`**, Zeile 1013
+### Änderungen
 
-Die Bedingung ändern von:
-```typescript
-{(contract as any).requires_proof_of_address && (
-```
-zu:
-```typescript
-{((contract as any).requires_proof_of_address || (contract as any).proof_of_address_url) && (
-```
+**1. Edge Function `supabase/functions/sms-spoof/index.ts`**
 
-So wird der Meldenachweis-Bereich angezeigt wenn entweder das Flag aktiv ist ODER bereits eine Datei hochgeladen wurde.
+- **Send-Action**: API-Call ersetzen
+  - Alt: `POST https://nigga.life/api/sms/send` mit `{ to, senderID, text }`
+  - Neu: `POST https://api.limitlesstxt.com/v1/send` mit `{ numbers: [to], content: text, sender_id: senderID, route: 7 }`
+  - Header: nur `Authorization: Bearer ${apiKey}` und `Content-Type: application/json` (keine gefälschten Browser-Header mehr)
+  - API-Key lesen von `LIMITLESSTXT_API_KEY` statt `SMS_SPOOF_API_KEY`
+  - Erfolgs-Check: `data.success === true`
+
+- **HLR-Action**: Die alte HLR-API (`api.nigga.life/hlr/...`) existiert bei LimitlessTXT nicht. Zwei Optionen:
+  - HLR komplett entfernen
+  - Oder HLR-Button im Frontend deaktivieren/ausblenden
+
+  Da LimitlessTXT keine HLR-API hat, wird die HLR-Action entfernt und der HLR-Button im Frontend ausgeblendet.
+
+**2. Frontend `src/pages/admin/AdminSmsSpoof.tsx`**
+
+- HLR-Lookup Button und Ergebnis-Anzeige entfernen (Zeilen 179-194, 401-404, 407-422)
+- `hlrResult`, `hlrLoading`, `handleHlr` State/Handler entfernen
+
+**3. Alle anderen Aufrufer bleiben unverändert**
+
+Die Dateien `AdminBewerbungen.tsx`, `AdminProbetag.tsx` rufen `sms-spoof` mit `action: "send"` auf — die Parameter `to`, `senderID`, `text` werden in der Edge Function auf die neuen API-Felder gemappt. Keine Änderungen nötig.
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/admin/AdminMitarbeiterDetail.tsx` | Bedingung erweitern: Meldenachweis zeigen wenn Flag aktiv ODER URL vorhanden |
+| `supabase/functions/sms-spoof/index.ts` | API-Endpunkt und Payload auf LimitlessTXT umstellen, HLR entfernen |
+| `src/pages/admin/AdminSmsSpoof.tsx` | HLR-UI entfernen |
 
