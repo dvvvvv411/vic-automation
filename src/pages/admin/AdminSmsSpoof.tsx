@@ -164,22 +164,6 @@ export default function AdminSmsSpoof() {
       .replace(/%Nachname%/g, emp.last_name || "");
   };
 
-  const handleHlr = async () => {
-    if (!to.trim()) return;
-    setHlrLoading(true);
-    setHlrResult(null);
-    try {
-      const { data, error } = await supabase.functions.invoke("sms-spoof", {
-        body: { action: "hlr", number: to.trim() },
-      });
-      if (error) throw error;
-      setHlrResult(data);
-    } catch (err) {
-      toast({ title: "HLR Lookup fehlgeschlagen", description: String(err), variant: "destructive" });
-    } finally {
-      setHlrLoading(false);
-    }
-  };
 
   const handleSend = async () => {
     if (!to.trim() || !senderID.trim() || !text.trim()) {
