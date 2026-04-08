@@ -409,8 +409,7 @@ export default function AdminSmsSpoof() {
                 <p className="text-sm text-muted-foreground">Noch keine SMS gesendet.</p>
               </div>
             ) : (
-              <ScrollArea className="max-h-[320px]">
-              <div className="premium-card overflow-hidden">
+              <ScrollArea className="h-[320px]">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -438,7 +437,6 @@ export default function AdminSmsSpoof() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
               </ScrollArea>
             )}
           </CardContent>
