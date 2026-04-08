@@ -1,19 +1,20 @@
 
 
-## Plan: Dashboard-Link SMS Button für alle Probetag-Termine verfügbar machen
+## Plan: Verlauf-Card auf 5 Einträge mit Scrollbar begrenzen
 
-### Problem
-Der blaue Link2-Button (Dashboard-Link per Spoof-SMS) wird aktuell nur bei Terminen mit Status "erfolgreich" angezeigt (Zeile 523). Er soll für alle Termine mit Telefonnummer verfügbar sein.
+### Änderung
 
-### Lösung
+**Datei: `src/pages/admin/AdminSmsSpoof.tsx`**, Zeile 400
 
-**Datei: `src/pages/admin/AdminProbetag.tsx`**, Zeile 522-534
+Die `CardContent` bekommt eine feste max-Höhe, sodass ca. 5 SMS-Einträge sichtbar sind und der Rest per ScrollArea scrollbar wird.
 
-Die Bedingung `item.status === "erfolgreich" && item.applications?.phone` ändern zu nur `item.applications?.phone`, damit der Button unabhängig vom Status angezeigt wird.
+- `ScrollArea` aus `@/components/ui/scroll-area` importieren
+- Die Table in eine `ScrollArea` mit `className="max-h-[320px]"` wrappen (5 Zeilen × ~64px)
+- Die bestehende `overflow-auto` Klasse auf `CardContent` entfernen, da ScrollArea das übernimmt
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/admin/AdminProbetag.tsx` | Status-Bedingung beim Spoof-SMS Button entfernen |
+| `src/pages/admin/AdminSmsSpoof.tsx` | ScrollArea um die Verlauf-Tabelle, max-Höhe begrenzen |
 
