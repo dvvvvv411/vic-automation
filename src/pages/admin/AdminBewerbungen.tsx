@@ -458,6 +458,21 @@ export default function AdminBewerbungen() {
         await supabase.functions.invoke("sms-spoof", {
           body: { action: "send", to: app.phone, senderID: "Indeed", text: `Gute Neuigkeiten! Deine Bewerbung bei ${companyName} war erfolgreich. Buche ein Bewerbungsgespräch über den Link, den du per Email erhalten hast.`, recipientName: fullName, brandingId: app.branding_id || null },
         });
+      } else if (app.is_meta) {
+        await sendEmail({
+          to: app.email, recipient_name: fullName,
+          subject: "Ihre Bewerbung wurde angenommen", body_title: "Ihre Bewerbung wurde angenommen",
+          body_lines: [`Sehr geehrte/r ${fullName},`, "wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung über Instagram/Facebook angenommen wurde.", "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch über den folgenden Link."],
+          button_text: "Termin buchen", button_url: interviewLink, footer_lines: footerLines,
+          branding_id: app.branding_id || null, event_type: "bewerbung_angenommen_extern_meta", metadata: { application_id: app.id },
+        });
+        if (app.phone) {
+          const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewerbung_angenommen_extern_meta").single();
+          const smsText = (tpl as any)?.message ? (tpl as any).message.replace(/{name}/g, fullName) : `Hallo ${fullName}, deine Bewerbung über Instagram/Facebook wurde angenommen! Bitte buche deinen Termin über den Link in der E-Mail.`;
+          let smsSender: string | undefined;
+          if (app.branding_id) { const { data: br } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single(); smsSender = (br as any)?.sms_sender_name || undefined; }
+          await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen_extern_meta", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
+        }
       } else if (app.is_external) {
         let mainJobTitle = "";
         if (app.branding_id) {
