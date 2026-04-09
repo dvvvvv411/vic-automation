@@ -1175,7 +1175,8 @@ export default function AdminBewerbungen() {
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           {a.is_indeed && <Badge variant="outline" className="text-[10px]">Indeed</Badge>}
-                          {a.is_external && <Badge variant="outline" className="text-[10px]">Extern</Badge>}
+                          {(a as any).is_meta && <Badge variant="outline" className="text-[10px]">Extern (META)</Badge>}
+                          {a.is_external && !(a as any).is_meta && <Badge variant="outline" className="text-[10px]">Extern (Allg.)</Badge>}
                           {a.resume_url && (
                             <a
                               href={a.resume_url}
