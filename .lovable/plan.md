@@ -1,32 +1,48 @@
 
 
-## Plan: Telefonnummer-Normalisierung für Spoof-SMS
+## Plan: Verlauf auf /admin/sms-spoof nur manuell gesendete SMS anzeigen
 
 ### Problem
-Zeile 268: `selectedEmployee.phone.replace(/[^0-9]/g, "")` entfernt nur Nicht-Ziffern, wandelt aber `0176...` nicht in `49176...` um.
+Der Verlauf auf der Spoof-Seite zeigt alle Spoof-SMS — auch die automatisch versendeten (z.B. bei Bewerbung annehmen, Probetag-Erinnerung). Diese gehören in die SMS History, nicht in den Seiten-Verlauf.
 
 ### Lösung
-Eine Normalisierungsfunktion einbauen, die nach dem Entfernen von Nicht-Ziffern prüft ob die Nummer mit `0` beginnt und das durch `49` ersetzt. Wird an beiden Stellen angewendet (Template-Versand Zeile 268 und manueller Versand Zeile 177).
+Eine `source`-Spalte in `sms_spoof_logs` hinzufügen, die angibt woher die SMS kam. Auf der Spoof-Seite wird dann nur nach `source = 'manual'` gefiltert.
 
-### Änderung in `src/pages/admin/AdminSmsSpoof.tsx`
+### Datenbank-Migration
 
-1. **Hilfsfunktion** oben in der Komponente:
-```typescript
-const normalizeTo49 = (phone: string): string => {
-  let digits = phone.replace(/[^0-9]/g, "");
-  if (digits.startsWith("0")) digits = "49" + digits.slice(1);
-  if (!digits.startsWith("49")) digits = "49" + digits;
-  return digits;
-};
+```sql
+ALTER TABLE public.sms_spoof_logs 
+  ADD COLUMN source text DEFAULT 'auto';
+
+-- Bestehende Logs von der Spoof-Seite erkennen (template_id gesetzt = Template-Versand)
+UPDATE public.sms_spoof_logs SET source = 'manual';
 ```
 
-2. **Zeile 268** (Template-Versand): `to: selectedEmployee.phone.replace(/[^0-9]/g, "")` → `to: normalizeTo49(selectedEmployee.phone)`
+Alle bisherigen Logs werden als `manual` markiert (da es keinen Weg gibt, alte automatische von manuellen zu unterscheiden).
 
-3. **Zeile 177** (manueller Versand): `to: to.trim()` — hier auch `normalizeTo49()` anwenden, falls der User `0176...` eingibt
+### Code-Änderungen
+
+**`supabase/functions/sms-spoof/index.ts`**
+- Neuen Parameter `source` aus dem Request-Body lesen
+- Beim Insert in `sms_spoof_logs` das `source`-Feld mitschreiben
+
+**`src/pages/admin/AdminSmsSpoof.tsx`**
+- Beide `supabase.functions.invoke("sms-spoof")`-Aufrufe: `source: "manual"` im Body mitschicken
+- `fetchLogs`: Filter `.eq("source", "manual")` hinzufügen
+
+**`src/pages/admin/AdminBewerbungen.tsx`**
+- Beide Spoof-Aufrufe (Extern Allgemein + Indeed): `source: "auto"` im Body mitschicken
+
+**`src/pages/admin/AdminProbetag.tsx`**
+- Spoof-Aufruf: `source: "auto"` im Body mitschicken
 
 ### Betroffene Dateien
 
-| Datei | Änderung |
+| Resource | Änderung |
 |---|---|
-| `src/pages/admin/AdminSmsSpoof.tsx` | Normalisierungsfunktion + 2 Stellen anpassen |
+| DB: `sms_spoof_logs` | Neue Spalte `source` |
+| `supabase/functions/sms-spoof/index.ts` | `source` Parameter speichern |
+| `src/pages/admin/AdminSmsSpoof.tsx` | `source: "manual"` senden + Verlauf filtern |
+| `src/pages/admin/AdminBewerbungen.tsx` | `source: "auto"` senden |
+| `src/pages/admin/AdminProbetag.tsx` | `source: "auto"` senden |
 
