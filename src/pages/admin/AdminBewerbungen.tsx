@@ -991,7 +991,7 @@ export default function AdminBewerbungen() {
                 </>
               )}
               <div className="space-y-2">
-                <Label>Branding {(isIndeed || isExternal) ? "*" : ""}</Label>
+                <Label>Branding {(isIndeed || isExternal || isMeta) ? "*" : ""}</Label>
                 <Select value={form.branding_id} onValueChange={(v) => updateField("branding_id", v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Branding wählen" />
@@ -1005,7 +1005,7 @@ export default function AdminBewerbungen() {
                 {errors.branding_id && <p className="text-xs text-destructive">{errors.branding_id}</p>}
               </div>
               <Button onClick={handleSubmit} disabled={createMutation.isPending || massImportMutation.isPending} className="w-full mt-2 shadow-sm hover:shadow-md transition-all">
-                {(isIndeed || isExternal) && isMassImport
+                {(isIndeed || isExternal || isMeta) && isMassImport
                   ? massImportMutation.isPending
                     ? "Wird importiert..."
                     : `${massImportText.split("\n").filter((l) => l.trim()).length} Bewerbungen importieren`
