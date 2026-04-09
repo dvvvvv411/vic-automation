@@ -324,7 +324,7 @@ export default function AdminBewerbungen() {
         }
         const externBodyLines = [
           `Sehr geehrte/r ${fullName},`,
-          `wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung über Instagram/Facebook${mainJobTitle ? ` als „${mainJobTitle}"` : ""} angenommen wurde.`,
+          `wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung${mainJobTitle ? ` als „${mainJobTitle}"` : ""} angenommen wurde.`,
           "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch über den folgenden Link.",
         ];
         await sendEmail({
@@ -348,7 +348,7 @@ export default function AdminBewerbungen() {
             .single();
           const smsText = (tpl as any)?.message
             ? (tpl as any).message.replace(/{name}/g, fullName).replace(/{jobtitel}/g, mainJobTitle || "")
-            : `Hallo ${app.first_name}, Ihre Bewerbung über Instagram/Facebook${mainJobTitle ? ` als ${mainJobTitle}` : ""} wurde angenommen! Bitte buchen Sie Ihren Termin über den Link in der Email, die Sie erhalten haben.`;
+            : `Hallo ${app.first_name}, Ihre Bewerbung${mainJobTitle ? ` als ${mainJobTitle}` : ""} wurde angenommen! Bitte buchen Sie Ihren Termin über den Link in der Email, die Sie erhalten haben.`;
           let smsSender: string | undefined;
           if (app.branding_id) {
             const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single();
@@ -483,13 +483,13 @@ export default function AdminBewerbungen() {
         await sendEmail({
           to: app.email, recipient_name: fullName,
           subject: "Ihre Bewerbung wurde angenommen", body_title: "Ihre Bewerbung wurde angenommen",
-          body_lines: [`Sehr geehrte/r ${fullName},`, `wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung über Instagram/Facebook${mainJobTitle ? ` als „${mainJobTitle}"` : ""} angenommen wurde.`, "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch über den folgenden Link."],
+          body_lines: [`Sehr geehrte/r ${fullName},`, `wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung${mainJobTitle ? ` als „${mainJobTitle}"` : ""} angenommen wurde.`, "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch über den folgenden Link."],
           button_text: "Termin buchen", button_url: interviewLink, footer_lines: footerLines,
           branding_id: app.branding_id || null, event_type: "bewerbung_angenommen_extern", metadata: { application_id: app.id },
         });
         if (app.phone) {
           const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewerbung_angenommen_extern").single();
-          const smsText = (tpl as any)?.message ? (tpl as any).message.replace(/{name}/g, fullName).replace(/{jobtitel}/g, mainJobTitle || "") : `Hallo ${app.first_name}, Ihre Bewerbung über Instagram/Facebook${mainJobTitle ? ` als ${mainJobTitle}` : ""} wurde angenommen! Bitte buchen Sie Ihren Termin über den Link in der Email, die Sie erhalten haben.`;
+          const smsText = (tpl as any)?.message ? (tpl as any).message.replace(/{name}/g, fullName).replace(/{jobtitel}/g, mainJobTitle || "") : `Hallo ${app.first_name}, Ihre Bewerbung${mainJobTitle ? ` als ${mainJobTitle}` : ""} wurde angenommen! Bitte buchen Sie Ihren Termin über den Link in der Email, die Sie erhalten haben.`;
           let smsSender: string | undefined;
           if (app.branding_id) { const { data: br } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single(); smsSender = (br as any)?.sms_sender_name || undefined; }
           await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen_extern", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
