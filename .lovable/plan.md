@@ -1,34 +1,49 @@
 
 
-## Plan: Ident-Prozess Neustart nach fehlgeschlagener Bewertung verhindern
+## Plan: Suchleiste auf 4 Admin-Seiten einbauen
 
-### Problem-Analyse
+### Zusammenfassung
+Auf den Seiten `/admin/arbeitsvertraege`, `/admin/idents`, `/admin/bewertungen` und `/admin/anhaenge` wird jeweils eine Suchleiste eingefügt, mit der nach Mitarbeiternamen gefiltert werden kann. Das bestehende Muster aus `AdminMitarbeiter.tsx` / `AdminErsterArbeitstag.tsx` wird übernommen: `Search`-Icon + `Input` mit `pl-9`.
 
-Zwei zusammenhängende Bugs:
+### Änderungen pro Datei
 
-1. **Ident-Prozess startet neu**: Wenn ein Mitarbeiter den Videochat abschliesst (ident_session = "completed"), zur Bewertungsseite navigiert wird, dort aber die Bewertung nicht abschicken kann und zurück navigiert, zeigt AuftragDetails den "Auftrag starten" Button an. Der Grund: Die Flow-Logik (Zeile 167-175) setzt `flowStep` nur auf "videident" wenn der Ident-Status "waiting" oder "data_sent" ist. Bei "completed" bleibt es auf "overview", und da der Assignment-Status noch "offen" ist, wird der "Auftrag starten" Button gezeigt. Ein Klick darauf erstellt eine NEUE Ident-Session.
+**1. `src/pages/admin/AdminArbeitsvertraege.tsx`**
+- `useState` für `search` hinzufügen, `Search` Icon und `Input` importieren
+- Suchleiste zwischen Tabs und der Kartenliste einfügen
+- `sortedItems` zusätzlich nach `first_name`/`last_name` filtern
 
-2. **Bewertung konnte nicht abgeschickt werden**: Mögliche Ursache unklar (kein Error-Log), aber das eigentliche Problem ist, dass der Nutzer nach einem Fehler keinen Weg zurück zur Bewertung hat, ohne den gesamten Prozess neu zu durchlaufen.
+**2. `src/pages/admin/AdminIdents.tsx`**
+- `useState` für `search`, `Search` Icon und `Input` importieren
+- Suchleiste nach dem Header einfügen
+- `activeSessions`, `pendingIdents` und `completedSessions` nach Name filtern (über `getContractName` bzw. `contract_first_name`/`contract_last_name`)
 
-Adrian Tomczyk hat deshalb 2 completed Ident-Sessions und 0 Reviews für den BBVA-Auftrag.
+**3. `src/pages/admin/AdminBewertungen.tsx`**
+- `useState` für `search`, `Search` Icon und `Input` importieren
+- Suchleiste zwischen Titel und Tabs einfügen
+- `pendingReviews`, `approvedReviews`, `rejectedReviews` nach `employee_name` filtern
 
-### Lösung
+**4. `src/pages/admin/AdminAnhaenge.tsx`**
+- `useState` für `search`, `Search` Icon und `Input` importieren
+- Suchleiste zwischen Beschreibung und Tabelle einfügen
+- `groups` nach `employee_name` filtern
 
-**Datei: `src/pages/mitarbeiter/AuftragDetails.tsx`**
+### Suchleisten-Pattern (identisch auf allen 4 Seiten)
+```tsx
+const [search, setSearch] = useState("");
 
-1. **Completed-Ident erkennen und direkt zur Bewertung leiten** (Zeile 156-175):
-   - Wenn eine completed Ident-Session existiert UND der Assignment-Status "offen" ist UND noch keine Reviews existieren → `flowStep` auf "review" setzen (neuer Zwischen-Step der direkt "Bewertung starten" anbietet)
-   
-2. **Neuen FlowStep "review" rendern** (nach dem "videident" Block):
-   - Zeigt eine Card mit "Video-Chat abgeschlossen" und Button "Jetzt bewerten" der zu `/mitarbeiter/bewertung/{orderId}` navigiert
-   
-3. **Duplikat-Ident verhindern** in `handleStartVideoIdent` (Zeile 272):
-   - Vor dem Insert prüfen ob bereits eine completed Ident-Session existiert
-   - Wenn ja, direkt zur Bewertung navigieren statt neue Session zu erstellen
+// Im JSX:
+<div className="relative mb-4">
+  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+  <Input placeholder="Name suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+</div>
+```
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/mitarbeiter/AuftragDetails.tsx` | Completed-Ident-Erkennung, neuer "review" FlowStep, Duplikat-Schutz |
+| `src/pages/admin/AdminArbeitsvertraege.tsx` | Search-State + Input + Filter auf sortedItems |
+| `src/pages/admin/AdminIdents.tsx` | Search-State + Input + Filter auf alle 3 Sektionen |
+| `src/pages/admin/AdminBewertungen.tsx` | Search-State + Input + Filter auf grouped Reviews |
+| `src/pages/admin/AdminAnhaenge.tsx` | Search-State + Input + Filter auf groups |
 
