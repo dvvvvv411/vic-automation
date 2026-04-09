@@ -1,24 +1,32 @@
 
 
-## Plan: Extern (Allg.) → Extern (META) umlabeln
+## Plan: Telefonnummer-Normalisierung für Spoof-SMS
 
-### Was passiert
-420 Bewerbungen die aktuell `is_external = true, is_meta = false` sind, werden auf `is_meta = true, is_external = false` gesetzt. Die 111 Bewerbungen vom heutigen Massenimport (created_at >= '2026-04-09 17:23:00') bleiben unverändert.
+### Problem
+Zeile 268: `selectedEmployee.phone.replace(/[^0-9]/g, "")` entfernt nur Nicht-Ziffern, wandelt aber `0176...` nicht in `49176...` um.
 
-### SQL (per Insert-Tool)
-```sql
-UPDATE applications 
-SET is_meta = true, is_external = false
-WHERE is_external = true 
-  AND is_meta = false 
-  AND is_indeed = false
-  AND created_at < '2026-04-09 17:23:00';
+### Lösung
+Eine Normalisierungsfunktion einbauen, die nach dem Entfernen von Nicht-Ziffern prüft ob die Nummer mit `0` beginnt und das durch `49` ersetzt. Wird an beiden Stellen angewendet (Template-Versand Zeile 268 und manueller Versand Zeile 177).
+
+### Änderung in `src/pages/admin/AdminSmsSpoof.tsx`
+
+1. **Hilfsfunktion** oben in der Komponente:
+```typescript
+const normalizeTo49 = (phone: string): string => {
+  let digits = phone.replace(/[^0-9]/g, "");
+  if (digits.startsWith("0")) digits = "49" + digits.slice(1);
+  if (!digits.startsWith("49")) digits = "49" + digits;
+  return digits;
+};
 ```
 
-### Betroffene Ressourcen
-| Resource | Änderung |
-|---|---|
-| DB: `applications` | 420 Zeilen: `is_meta` → true, `is_external` → false |
+2. **Zeile 268** (Template-Versand): `to: selectedEmployee.phone.replace(/[^0-9]/g, "")` → `to: normalizeTo49(selectedEmployee.phone)`
 
-Keine Code-Änderungen nötig.
+3. **Zeile 177** (manueller Versand): `to: to.trim()` — hier auch `normalizeTo49()` anwenden, falls der User `0176...` eingibt
+
+### Betroffene Dateien
+
+| Datei | Änderung |
+|---|---|
+| `src/pages/admin/AdminSmsSpoof.tsx` | Normalisierungsfunktion + 2 Stellen anpassen |
 
