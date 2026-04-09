@@ -839,15 +839,17 @@ export default function AdminBewerbungen() {
 
       {/* Funnel Stats */}
       {applications && applications.length > 0 && (() => {
-        const selfApps = applications.filter(a => !a.is_external && !a.is_indeed);
-        const externalApps = applications.filter(a => a.is_external);
+        const selfApps = applications.filter(a => !a.is_external && !a.is_indeed && !(a as any).is_meta);
+        const externalApps = applications.filter(a => a.is_external && !(a as any).is_meta);
+        const metaApps = applications.filter(a => (a as any).is_meta);
         const indeedApps = applications.filter(a => a.is_indeed);
         const withBooking = (list: typeof applications) => list.filter(a => a.interview_appointments && (Array.isArray(a.interview_appointments) ? a.interview_appointments.length > 0 : true)).length;
         const pct = (booked: number, total: number) => total > 0 ? Math.round((booked / total) * 100) : 0;
 
         const stats = [
           { label: "Selbst registriert", icon: Users, total: selfApps.length, booked: withBooking(selfApps), color: "border-t-blue-500" },
-          { label: "Extern hinzugefügt", icon: Globe, total: externalApps.length, booked: withBooking(externalApps), color: "border-t-orange-500" },
+          { label: "Extern (Allgemein)", icon: Globe, total: externalApps.length, booked: withBooking(externalApps), color: "border-t-orange-500" },
+          { label: "Extern (META)", icon: Globe, total: metaApps.length, booked: withBooking(metaApps), color: "border-t-purple-500" },
           { label: "Indeed Bewerber", icon: Briefcase, total: indeedApps.length, booked: withBooking(indeedApps), color: "border-t-green-500" },
         ];
 
@@ -872,7 +874,7 @@ export default function AdminBewerbungen() {
         );
       })()}
 
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMeta(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Neue Bewerbung hinzufügen</DialogTitle>
@@ -880,18 +882,24 @@ export default function AdminBewerbungen() {
             <div className="grid gap-4 py-4">
               {/* Indeed Toggle */}
               <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
-                <Switch checked={isIndeed} onCheckedChange={(v) => { setIsIndeed(v); if (v) setIsExternal(false); if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
+                <Switch checked={isIndeed} onCheckedChange={(v) => { setIsIndeed(v); if (v) { setIsExternal(false); setIsMeta(false); } if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
                 <Label className="cursor-pointer font-medium">Indeed Bewerbung</Label>
               </div>
 
-              {/* External Toggle */}
+              {/* External Toggle (Allgemein) */}
               <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
-                <Switch checked={isExternal} onCheckedChange={(v) => { setIsExternal(v); if (v) setIsIndeed(false); if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
-                <Label className="cursor-pointer font-medium">Externe Bewerbung</Label>
+                <Switch checked={isExternal} onCheckedChange={(v) => { setIsExternal(v); if (v) { setIsIndeed(false); setIsMeta(false); } if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
+                <Label className="cursor-pointer font-medium">Externe Bewerbung (Allgemein)</Label>
               </div>
 
-              {/* Mass Import Toggle - when Indeed or External is active */}
-              {(isIndeed || isExternal) && (
+              {/* META Toggle */}
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                <Switch checked={isMeta} onCheckedChange={(v) => { setIsMeta(v); if (v) { setIsIndeed(false); setIsExternal(false); } if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
+                <Label className="cursor-pointer font-medium">Externe Bewerbung (META)</Label>
+              </div>
+
+              {/* Mass Import Toggle - when Indeed, External, or META is active */}
+              {(isIndeed || isExternal || isMeta) && (
                 <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
                   <Switch checked={isMassImport} onCheckedChange={(v) => { setIsMassImport(v); setMassImportErrors([]); setErrors({}); }} />
                   <div className="flex items-center gap-2">
