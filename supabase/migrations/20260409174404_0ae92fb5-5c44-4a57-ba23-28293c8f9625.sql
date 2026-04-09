@@ -1,0 +1,1 @@
+UPDATE sms_spoof_logs SET source = 'auto' WHERE message LIKE '%Deine Bewerbung bei%war erfolgreich%';
