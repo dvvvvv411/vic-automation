@@ -1,48 +1,26 @@
 
 
-## Plan: Verlauf auf /admin/sms-spoof nur manuell gesendete SMS anzeigen
+## Plan: Automatische Spoof-SMS korrekt als "auto" markieren
 
 ### Problem
-Der Verlauf auf der Spoof-Seite zeigt alle Spoof-SMS — auch die automatisch versendeten (z.B. bei Bewerbung annehmen, Probetag-Erinnerung). Diese gehören in die SMS History, nicht in den Seiten-Verlauf.
+Die Migration hat alle bestehenden 208 Spoof-Logs als `source = 'manual'` markiert. Davon sind aber 167 automatisch generierte SMS (Bewerbung angenommen), die den Text "Deine Bewerbung bei ... war erfolgreich" enthalten. Diese werden fälschlicherweise im Verlauf der Spoof-Seite angezeigt.
 
 ### Lösung
-Eine `source`-Spalte in `sms_spoof_logs` hinzufügen, die angibt woher die SMS kam. Auf der Spoof-Seite wird dann nur nach `source = 'manual'` gefiltert.
-
-### Datenbank-Migration
+Eine Migration die alle Logs mit dem Bewerbungs-Muster auf `source = 'auto'` setzt:
 
 ```sql
-ALTER TABLE public.sms_spoof_logs 
-  ADD COLUMN source text DEFAULT 'auto';
-
--- Bestehende Logs von der Spoof-Seite erkennen (template_id gesetzt = Template-Versand)
-UPDATE public.sms_spoof_logs SET source = 'manual';
+UPDATE sms_spoof_logs 
+SET source = 'auto' 
+WHERE message LIKE '%Deine Bewerbung bei%war erfolgreich%';
 ```
 
-Alle bisherigen Logs werden als `manual` markiert (da es keinen Weg gibt, alte automatische von manuellen zu unterscheiden).
+Das trifft die 167 automatisch generierten SMS. Die restlichen 41 (manuelle Tests, Template-Versand etc.) bleiben `manual`.
 
-### Code-Änderungen
-
-**`supabase/functions/sms-spoof/index.ts`**
-- Neuen Parameter `source` aus dem Request-Body lesen
-- Beim Insert in `sms_spoof_logs` das `source`-Feld mitschreiben
-
-**`src/pages/admin/AdminSmsSpoof.tsx`**
-- Beide `supabase.functions.invoke("sms-spoof")`-Aufrufe: `source: "manual"` im Body mitschicken
-- `fetchLogs`: Filter `.eq("source", "manual")` hinzufügen
-
-**`src/pages/admin/AdminBewerbungen.tsx`**
-- Beide Spoof-Aufrufe (Extern Allgemein + Indeed): `source: "auto"` im Body mitschicken
-
-**`src/pages/admin/AdminProbetag.tsx`**
-- Spoof-Aufruf: `source: "auto"` im Body mitschicken
-
-### Betroffene Dateien
+### Betroffene Ressourcen
 
 | Resource | Änderung |
 |---|---|
-| DB: `sms_spoof_logs` | Neue Spalte `source` |
-| `supabase/functions/sms-spoof/index.ts` | `source` Parameter speichern |
-| `src/pages/admin/AdminSmsSpoof.tsx` | `source: "manual"` senden + Verlauf filtern |
-| `src/pages/admin/AdminBewerbungen.tsx` | `source: "auto"` senden |
-| `src/pages/admin/AdminProbetag.tsx` | `source: "auto"` senden |
+| DB: `sms_spoof_logs` | 167 Zeilen: `source` → 'auto' |
+
+Keine Code-Änderungen nötig — der Filter in `fetchLogs` funktioniert bereits korrekt.
 
