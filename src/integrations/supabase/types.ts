@@ -47,6 +47,7 @@ export type Database = {
           id: string
           is_external: boolean
           is_indeed: boolean
+          is_meta: boolean
           last_name: string
           notification_count: number
           notification_timestamps: Json
@@ -67,6 +68,7 @@ export type Database = {
           id?: string
           is_external?: boolean
           is_indeed?: boolean
+          is_meta?: boolean
           last_name: string
           notification_count?: number
           notification_timestamps?: Json
@@ -87,6 +89,7 @@ export type Database = {
           id?: string
           is_external?: boolean
           is_indeed?: boolean
+          is_meta?: boolean
           last_name?: string
           notification_count?: number
           notification_timestamps?: Json

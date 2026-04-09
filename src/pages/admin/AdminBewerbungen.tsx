@@ -160,6 +160,7 @@ export default function AdminBewerbungen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isIndeed, setIsIndeed] = useState(false);
   const [isExternal, setIsExternal] = useState(false);
+  const [isMeta, setIsMeta] = useState(false);
   const [isMassImport, setIsMassImport] = useState(false);
   const [massImportText, setMassImportText] = useState("");
   const [massImportErrors, setMassImportErrors] = useState<string[]>([]);
@@ -274,8 +275,43 @@ export default function AdminBewerbungen() {
             brandingId: app.branding_id || null,
           },
         });
+      } else if (app.is_meta) {
+        // META (Instagram/Facebook): Email + SMS from sms_templates
+        await sendEmail({
+          to: app.email,
+          recipient_name: fullName,
+          subject: "Ihre Bewerbung wurde angenommen",
+          body_title: "Ihre Bewerbung wurde angenommen",
+          body_lines: [
+            `Sehr geehrte/r ${fullName},`,
+            "wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung über Instagram/Facebook angenommen wurde.",
+            "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch über den folgenden Link.",
+          ],
+          button_text: "Termin buchen",
+          button_url: interviewLink,
+          footer_lines: footerLines,
+          branding_id: app.branding_id || null,
+          event_type: "bewerbung_angenommen_extern_meta",
+          metadata: { application_id: app.id },
+        });
+        if (app.phone) {
+          const { data: tpl } = await supabase
+            .from("sms_templates" as any)
+            .select("message")
+            .eq("event_type", "bewerbung_angenommen_extern_meta")
+            .single();
+          const smsText = (tpl as any)?.message
+            ? (tpl as any).message.replace(/{name}/g, fullName)
+            : `Hallo ${fullName}, deine Bewerbung über Instagram/Facebook wurde angenommen! Bitte buche deinen Termin über den Link in der E-Mail.`;
+          let smsSender: string | undefined;
+          if (app.branding_id) {
+            const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single();
+            smsSender = (branding as any)?.sms_sender_name || undefined;
+          }
+          await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen_extern_meta", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
+        }
       } else if (app.is_external) {
-        // External (Instagram/Facebook): Email with job title + SMS
+        // External (Allgemein): Email with job title + SMS
         let mainJobTitle = "";
         if (app.branding_id) {
           const { data: brandingData } = await supabase
@@ -422,6 +458,21 @@ export default function AdminBewerbungen() {
         await supabase.functions.invoke("sms-spoof", {
           body: { action: "send", to: app.phone, senderID: "Indeed", text: `Gute Neuigkeiten! Deine Bewerbung bei ${companyName} war erfolgreich. Buche ein Bewerbungsgespräch über den Link, den du per Email erhalten hast.`, recipientName: fullName, brandingId: app.branding_id || null },
         });
+      } else if (app.is_meta) {
+        await sendEmail({
+          to: app.email, recipient_name: fullName,
+          subject: "Ihre Bewerbung wurde angenommen", body_title: "Ihre Bewerbung wurde angenommen",
+          body_lines: [`Sehr geehrte/r ${fullName},`, "wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung über Instagram/Facebook angenommen wurde.", "Bitte buchen Sie nun einen Termin für Ihr Bewerbungsgespräch über den folgenden Link."],
+          button_text: "Termin buchen", button_url: interviewLink, footer_lines: footerLines,
+          branding_id: app.branding_id || null, event_type: "bewerbung_angenommen_extern_meta", metadata: { application_id: app.id },
+        });
+        if (app.phone) {
+          const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewerbung_angenommen_extern_meta").single();
+          const smsText = (tpl as any)?.message ? (tpl as any).message.replace(/{name}/g, fullName) : `Hallo ${fullName}, deine Bewerbung über Instagram/Facebook wurde angenommen! Bitte buche deinen Termin über den Link in der E-Mail.`;
+          let smsSender: string | undefined;
+          if (app.branding_id) { const { data: br } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single(); smsSender = (br as any)?.sms_sender_name || undefined; }
+          await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen_extern_meta", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
+        }
       } else if (app.is_external) {
         let mainJobTitle = "";
         if (app.branding_id) {
@@ -492,6 +543,7 @@ export default function AdminBewerbungen() {
       setErrors({});
       setIsIndeed(false);
       setIsExternal(false);
+      setIsMeta(false);
       toast.success("Bewerbung hinzugefügt");
     },
     onError: () => toast.error("Fehler beim Erstellen"),
@@ -505,8 +557,9 @@ export default function AdminBewerbungen() {
         email: a.email,
         phone: a.phone,
         branding_id: form.branding_id,
-        is_indeed: isIndeed && !isExternal,
-        is_external: isExternal,
+        is_indeed: isIndeed && !isExternal && !isMeta,
+        is_external: isExternal && !isMeta,
+        is_meta: isMeta,
       }));
       const { error } = await supabase.from("applications").insert(rows as any);
       if (error) throw error;
@@ -519,6 +572,7 @@ export default function AdminBewerbungen() {
       setErrors({});
       setIsIndeed(false);
       setIsExternal(false);
+      setIsMeta(false);
       setIsMassImport(false);
       setMassImportText("");
       toast.success(`${count} Bewerbungen importiert`);
@@ -575,7 +629,7 @@ export default function AdminBewerbungen() {
   };
 
   const handleSubmit = () => {
-    const isSimplified = isIndeed || isExternal;
+    const isSimplified = isIndeed || isExternal || isMeta;
 
     if (isSimplified && isMassImport) {
       // Mass import
@@ -631,7 +685,8 @@ export default function AdminBewerbungen() {
         phone: formatPhone(form.phone),
         branding_id: form.branding_id,
         is_indeed: isIndeed,
-        is_external: isExternal,
+        is_external: isExternal && !isMeta,
+        is_meta: isMeta,
       });
     } else {
       const result = applicationSchema.safeParse(form);
@@ -651,6 +706,7 @@ export default function AdminBewerbungen() {
         phone: result.data.phone ? formatPhone(result.data.phone) : undefined,
         is_indeed: false,
         is_external: false,
+        is_meta: false,
       };
       createMutation.mutate(formatted);
     }
@@ -784,20 +840,22 @@ export default function AdminBewerbungen() {
 
       {/* Funnel Stats */}
       {applications && applications.length > 0 && (() => {
-        const selfApps = applications.filter(a => !a.is_external && !a.is_indeed);
-        const externalApps = applications.filter(a => a.is_external);
+        const selfApps = applications.filter(a => !a.is_external && !a.is_indeed && !(a as any).is_meta);
+        const externalApps = applications.filter(a => a.is_external && !(a as any).is_meta);
+        const metaApps = applications.filter(a => (a as any).is_meta);
         const indeedApps = applications.filter(a => a.is_indeed);
         const withBooking = (list: typeof applications) => list.filter(a => a.interview_appointments && (Array.isArray(a.interview_appointments) ? a.interview_appointments.length > 0 : true)).length;
         const pct = (booked: number, total: number) => total > 0 ? Math.round((booked / total) * 100) : 0;
 
         const stats = [
           { label: "Selbst registriert", icon: Users, total: selfApps.length, booked: withBooking(selfApps), color: "border-t-blue-500" },
-          { label: "Extern hinzugefügt", icon: Globe, total: externalApps.length, booked: withBooking(externalApps), color: "border-t-orange-500" },
+          { label: "Extern (Allgemein)", icon: Globe, total: externalApps.length, booked: withBooking(externalApps), color: "border-t-orange-500" },
+          { label: "Extern (META)", icon: Globe, total: metaApps.length, booked: withBooking(metaApps), color: "border-t-purple-500" },
           { label: "Indeed Bewerber", icon: Briefcase, total: indeedApps.length, booked: withBooking(indeedApps), color: "border-t-green-500" },
         ];
 
         return (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             {stats.map(s => (
               <Card key={s.label} className={`border-t-4 ${s.color}`}>
                 <CardContent className="pt-4 pb-4">
@@ -817,7 +875,7 @@ export default function AdminBewerbungen() {
         );
       })()}
 
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setForm(initialForm); setErrors({}); setIsIndeed(false); setIsExternal(false); setIsMeta(false); setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Neue Bewerbung hinzufügen</DialogTitle>
@@ -825,18 +883,24 @@ export default function AdminBewerbungen() {
             <div className="grid gap-4 py-4">
               {/* Indeed Toggle */}
               <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
-                <Switch checked={isIndeed} onCheckedChange={(v) => { setIsIndeed(v); if (v) setIsExternal(false); if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
+                <Switch checked={isIndeed} onCheckedChange={(v) => { setIsIndeed(v); if (v) { setIsExternal(false); setIsMeta(false); } if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
                 <Label className="cursor-pointer font-medium">Indeed Bewerbung</Label>
               </div>
 
-              {/* External Toggle */}
+              {/* External Toggle (Allgemein) */}
               <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
-                <Switch checked={isExternal} onCheckedChange={(v) => { setIsExternal(v); if (v) setIsIndeed(false); if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
-                <Label className="cursor-pointer font-medium">Externe Bewerbung</Label>
+                <Switch checked={isExternal} onCheckedChange={(v) => { setIsExternal(v); if (v) { setIsIndeed(false); setIsMeta(false); } if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
+                <Label className="cursor-pointer font-medium">Externe Bewerbung (Allgemein)</Label>
               </div>
 
-              {/* Mass Import Toggle - when Indeed or External is active */}
-              {(isIndeed || isExternal) && (
+              {/* META Toggle */}
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                <Switch checked={isMeta} onCheckedChange={(v) => { setIsMeta(v); if (v) { setIsIndeed(false); setIsExternal(false); } if (!v) { setIsMassImport(false); setMassImportText(""); setMassImportErrors([]); } setErrors({}); }} />
+                <Label className="cursor-pointer font-medium">Externe Bewerbung (META)</Label>
+              </div>
+
+              {/* Mass Import Toggle - when Indeed, External, or META is active */}
+              {(isIndeed || isExternal || isMeta) && (
                 <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
                   <Switch checked={isMassImport} onCheckedChange={(v) => { setIsMassImport(v); setMassImportErrors([]); setErrors({}); }} />
                   <div className="flex items-center gap-2">
@@ -847,7 +911,7 @@ export default function AdminBewerbungen() {
               )}
 
               {/* Mass Import Textarea */}
-              {(isIndeed || isExternal) && isMassImport ? (
+              {(isIndeed || isExternal || isMeta) && isMassImport ? (
                 <>
                   <div className="space-y-2">
                     <Label>Bewerber (eine Zeile pro Person)</Label>
@@ -888,12 +952,12 @@ export default function AdminBewerbungen() {
                       {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label>Telefon {(isIndeed || isExternal) ? "*" : ""}</Label>
+                      <Label>Telefon {(isIndeed || isExternal || isMeta) ? "*" : ""}</Label>
                       <Input value={form.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="+49 123 456789" />
                       {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                     </div>
                   </div>
-                  {!isIndeed && !isExternal && (
+                  {!isIndeed && !isExternal && !isMeta && (
                     <>
                       <div className="space-y-2">
                         <Label>Straße & Hausnummer</Label>
@@ -928,7 +992,7 @@ export default function AdminBewerbungen() {
                 </>
               )}
               <div className="space-y-2">
-                <Label>Branding {(isIndeed || isExternal) ? "*" : ""}</Label>
+                <Label>Branding {(isIndeed || isExternal || isMeta) ? "*" : ""}</Label>
                 <Select value={form.branding_id} onValueChange={(v) => updateField("branding_id", v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Branding wählen" />
@@ -942,7 +1006,7 @@ export default function AdminBewerbungen() {
                 {errors.branding_id && <p className="text-xs text-destructive">{errors.branding_id}</p>}
               </div>
               <Button onClick={handleSubmit} disabled={createMutation.isPending || massImportMutation.isPending} className="w-full mt-2 shadow-sm hover:shadow-md transition-all">
-                {(isIndeed || isExternal) && isMassImport
+                {(isIndeed || isExternal || isMeta) && isMassImport
                   ? massImportMutation.isPending
                     ? "Wird importiert..."
                     : `${massImportText.split("\n").filter((l) => l.trim()).length} Bewerbungen importieren`
@@ -1112,7 +1176,8 @@ export default function AdminBewerbungen() {
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           {a.is_indeed && <Badge variant="outline" className="text-[10px]">Indeed</Badge>}
-                          {a.is_external && <Badge variant="outline" className="text-[10px]">Extern</Badge>}
+                          {(a as any).is_meta && <Badge variant="outline" className="text-[10px]">Extern (META)</Badge>}
+                          {a.is_external && !(a as any).is_meta && <Badge variant="outline" className="text-[10px]">Extern (Allg.)</Badge>}
                           {a.resume_url && (
                             <a
                               href={a.resume_url}
@@ -1124,7 +1189,7 @@ export default function AdminBewerbungen() {
                               <FileText className="h-4 w-4" />
                             </a>
                           )}
-                          {!a.is_indeed && !a.is_external && !a.resume_url && <span className="text-muted-foreground">–</span>}
+                          {!a.is_indeed && !a.is_external && !(a as any).is_meta && !a.resume_url && <span className="text-muted-foreground">–</span>}
                         </div>
                       </TableCell>
                       <TableCell>
