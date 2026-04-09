@@ -1,0 +1,1 @@
+ALTER TABLE public.applications ADD COLUMN is_meta boolean NOT NULL DEFAULT false;
