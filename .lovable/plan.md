@@ -1,49 +1,35 @@
 
 
-## Plan: Suchleiste auf 4 Admin-Seiten einbauen
+## Plan: Download-Links und Info-Notes im Videident-Step anzeigen
 
-### Zusammenfassung
-Auf den Seiten `/admin/arbeitsvertraege`, `/admin/idents`, `/admin/bewertungen` und `/admin/anhaenge` wird jeweils eine Suchleiste eingefügt, mit der nach Mitarbeiternamen gefiltert werden kann. Das bestehende Muster aus `AdminMitarbeiter.tsx` / `AdminErsterArbeitstag.tsx` wird übernommen: `Search`-Icon + `Input` mit `pl-9`.
+### Problem 1: info_notes wird nie angezeigt
+Das `IdentSession` Interface (Zeile 60-68) enthält kein `info_notes` Feld. Beim Setzen des State (Zeile 158-166) wird `info_notes` nicht übernommen, obwohl es per `select("*")` geladen wird. Das Rendering bei Zeile 889 greift auf `(identSession as any)?.info_notes` zu, was immer `undefined` ist.
 
-### Änderungen pro Datei
+### Problem 2: Download-Links fehlen im Videident-Step
+Die App Store / Play Store Buttons werden nur im "preparation" Step angezeigt (Zeile 584), nicht im "videident" Step wo der Mitarbeiter die Test-Daten sieht und den Video-Chat durchführt.
 
-**1. `src/pages/admin/AdminArbeitsvertraege.tsx`**
-- `useState` für `search` hinzufügen, `Search` Icon und `Input` importieren
-- Suchleiste zwischen Tabs und der Kartenliste einfügen
-- `sortedItems` zusätzlich nach `first_name`/`last_name` filtern
+### Lösung
 
-**2. `src/pages/admin/AdminIdents.tsx`**
-- `useState` für `search`, `Search` Icon und `Input` importieren
-- Suchleiste nach dem Header einfügen
-- `activeSessions`, `pendingIdents` und `completedSessions` nach Name filtern (über `getContractName` bzw. `contract_first_name`/`contract_last_name`)
+**Datei: `src/pages/mitarbeiter/AuftragDetails.tsx`**
 
-**3. `src/pages/admin/AdminBewertungen.tsx`**
-- `useState` für `search`, `Search` Icon und `Input` importieren
-- Suchleiste zwischen Titel und Tabs einfügen
-- `pendingReviews`, `approvedReviews`, `rejectedReviews` nach `employee_name` filtern
+1. **`info_notes` zum IdentSession Interface hinzufügen** (Zeile 60-68):
+   - Neues Feld: `info_notes: string | null`
 
-**4. `src/pages/admin/AdminAnhaenge.tsx`**
-- `useState` für `search`, `Search` Icon und `Input` importieren
-- Suchleiste zwischen Beschreibung und Tabelle einfügen
-- `groups` nach `employee_name` filtern
+2. **`info_notes` beim State-Setzen übernehmen** (3 Stellen: Zeile 158, 207, 321):
+   - `info_notes: session.info_notes ?? null` zu allen `setIdentSession` Aufrufen hinzufügen
 
-### Suchleisten-Pattern (identisch auf allen 4 Seiten)
-```tsx
-const [search, setSearch] = useState("");
+3. **`(identSession as any)` Casts entfernen** (Zeile 889, 895):
+   - Direkt `identSession?.info_notes` verwenden
 
-// Im JSX:
-<div className="relative mb-4">
-  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-  <Input placeholder="Name suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-</div>
-```
+4. **info_notes auch anzeigen wenn KEINE Test-Daten vorhanden** (Zeile 842-877):
+   - Im "Warte auf Test-Daten" Block (hasTestData === false) ebenfalls info_notes anzeigen, falls vorhanden
+
+5. **Download-Links im Videident-Step hinzufügen** (nach Zeile 727, vor dem Grid):
+   - App Store / Play Store Badges wie im Preparation-Step einfügen, wenn `order.appstore_url` oder `order.playstore_url` vorhanden
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/admin/AdminArbeitsvertraege.tsx` | Search-State + Input + Filter auf sortedItems |
-| `src/pages/admin/AdminIdents.tsx` | Search-State + Input + Filter auf alle 3 Sektionen |
-| `src/pages/admin/AdminBewertungen.tsx` | Search-State + Input + Filter auf grouped Reviews |
-| `src/pages/admin/AdminAnhaenge.tsx` | Search-State + Input + Filter auf groups |
+| `src/pages/mitarbeiter/AuftragDetails.tsx` | IdentSession Interface erweitern, info_notes in State übernehmen, Download-Links im Videident-Step, info_notes auch ohne Test-Daten anzeigen |
 
