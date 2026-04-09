@@ -166,6 +166,17 @@ const AuftragDetails = () => {
         });
         if (session.status === "waiting" || session.status === "data_sent") {
           setFlowStep("videident");
+        } else if (session.status === "completed" && assignment.status === "offen") {
+          // Ident completed but review not yet submitted → show review step
+          const { data: existingReviews } = await supabase
+            .from("order_reviews")
+            .select("id")
+            .eq("order_id", id)
+            .eq("contract_id", contract.id)
+            .limit(1);
+          if (!existingReviews || existingReviews.length === 0) {
+            setFlowStep("review");
+          }
         }
       }
 
@@ -271,6 +282,22 @@ const AuftragDetails = () => {
 
   const handleStartVideoIdent = async () => {
     if (!contract || !id || !assignmentId || !order) return;
+
+    // Check for existing completed ident session to prevent duplicates
+    const { data: existingCompleted } = await supabase
+      .from("ident_sessions" as any)
+      .select("id")
+      .eq("order_id", id)
+      .eq("contract_id", contract.id)
+      .eq("status", "completed")
+      .limit(1);
+
+    if (existingCompleted && (existingCompleted as any[]).length > 0) {
+      // Already completed → go directly to review
+      toast.info("Video-Chat bereits abgeschlossen. Bitte Bewertung ausfüllen.");
+      navigate(`/mitarbeiter/bewertung/${order.id}`);
+      return;
+    }
 
     const { data: session, error: insertErr } = await supabase
       .from("ident_sessions" as any)
@@ -900,6 +927,34 @@ const AuftragDetails = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      </div>
+    );
+  }
+
+  // ── Step: Review (completed ident, pending review) ──
+  if (flowStep === "review") {
+    return (
+      <div className="max-w-3xl space-y-6">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4 mr-1.5" /> Zurück
+          </Button>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <Card className="border border-green-300 bg-green-50/30 shadow-sm">
+            <CardContent className="py-8 text-center space-y-4">
+              <CheckCircle className="h-10 w-10 text-green-500 mx-auto" />
+              <div>
+                <p className="font-semibold text-foreground text-lg">Video-Chat abgeschlossen</p>
+                <p className="text-sm text-muted-foreground mt-1">Bitte fülle jetzt die Bewertung aus, um den Auftrag abzuschließen.</p>
+              </div>
+              <Button size="lg" className="gap-2" onClick={() => navigate(`/mitarbeiter/bewertung/${order.id}`)}>
+                <Star className="h-4 w-4" /> Jetzt bewerten
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     );
   }
