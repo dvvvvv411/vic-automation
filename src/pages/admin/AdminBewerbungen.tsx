@@ -543,6 +543,7 @@ export default function AdminBewerbungen() {
       setErrors({});
       setIsIndeed(false);
       setIsExternal(false);
+      setIsMeta(false);
       toast.success("Bewerbung hinzugefügt");
     },
     onError: () => toast.error("Fehler beim Erstellen"),
@@ -556,8 +557,9 @@ export default function AdminBewerbungen() {
         email: a.email,
         phone: a.phone,
         branding_id: form.branding_id,
-        is_indeed: isIndeed && !isExternal,
-        is_external: isExternal,
+        is_indeed: isIndeed && !isExternal && !isMeta,
+        is_external: isExternal && !isMeta,
+        is_meta: isMeta,
       }));
       const { error } = await supabase.from("applications").insert(rows as any);
       if (error) throw error;
@@ -570,6 +572,7 @@ export default function AdminBewerbungen() {
       setErrors({});
       setIsIndeed(false);
       setIsExternal(false);
+      setIsMeta(false);
       setIsMassImport(false);
       setMassImportText("");
       toast.success(`${count} Bewerbungen importiert`);
@@ -626,7 +629,7 @@ export default function AdminBewerbungen() {
   };
 
   const handleSubmit = () => {
-    const isSimplified = isIndeed || isExternal;
+    const isSimplified = isIndeed || isExternal || isMeta;
 
     if (isSimplified && isMassImport) {
       // Mass import
@@ -682,7 +685,8 @@ export default function AdminBewerbungen() {
         phone: formatPhone(form.phone),
         branding_id: form.branding_id,
         is_indeed: isIndeed,
-        is_external: isExternal,
+        is_external: isExternal && !isMeta,
+        is_meta: isMeta,
       });
     } else {
       const result = applicationSchema.safeParse(form);
