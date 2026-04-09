@@ -910,7 +910,7 @@ export default function AdminBewerbungen() {
               )}
 
               {/* Mass Import Textarea */}
-              {(isIndeed || isExternal) && isMassImport ? (
+              {(isIndeed || isExternal || isMeta) && isMassImport ? (
                 <>
                   <div className="space-y-2">
                     <Label>Bewerber (eine Zeile pro Person)</Label>
@@ -951,12 +951,12 @@ export default function AdminBewerbungen() {
                       {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label>Telefon {(isIndeed || isExternal) ? "*" : ""}</Label>
+                      <Label>Telefon {(isIndeed || isExternal || isMeta) ? "*" : ""}</Label>
                       <Input value={form.phone} onChange={(e) => updateField("phone", e.target.value)} placeholder="+49 123 456789" />
                       {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                     </div>
                   </div>
-                  {!isIndeed && !isExternal && (
+                  {!isIndeed && !isExternal && !isMeta && (
                     <>
                       <div className="space-y-2">
                         <Label>Straße & Hausnummer</Label>
