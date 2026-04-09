@@ -706,6 +706,7 @@ export default function AdminBewerbungen() {
         phone: result.data.phone ? formatPhone(result.data.phone) : undefined,
         is_indeed: false,
         is_external: false,
+        is_meta: false,
       };
       createMutation.mutate(formatted);
     }
