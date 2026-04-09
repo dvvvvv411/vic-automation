@@ -160,6 +160,7 @@ export default function AdminBewerbungen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isIndeed, setIsIndeed] = useState(false);
   const [isExternal, setIsExternal] = useState(false);
+  const [isMeta, setIsMeta] = useState(false);
   const [isMassImport, setIsMassImport] = useState(false);
   const [massImportText, setMassImportText] = useState("");
   const [massImportErrors, setMassImportErrors] = useState<string[]>([]);
