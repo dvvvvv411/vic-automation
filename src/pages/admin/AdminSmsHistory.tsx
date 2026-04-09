@@ -464,6 +464,7 @@ export default function AdminSmsHistory() {
                       <TableHead>Absender</TableHead>
                       <TableHead>Nachricht</TableHead>
                       <TableHead>Branding</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -484,6 +485,7 @@ export default function AdminSmsHistory() {
                             <Eye className="h-4 w-4" />
                           </Button>
                         </TableCell>
+                      </TableRow>
                     ))}
                   </TableBody>
                 </Table>
