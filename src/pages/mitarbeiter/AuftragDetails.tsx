@@ -65,6 +65,7 @@ interface IdentSession {
   updated_at: string;
   email_tan_enabled: boolean;
   email_tans: Array<{ code: string; created_at: string }>;
+  info_notes: string | null;
 }
 
 interface AnosimSms {
@@ -163,6 +164,7 @@ const AuftragDetails = () => {
           updated_at: session.updated_at,
           email_tan_enabled: session.email_tan_enabled ?? false,
           email_tans: Array.isArray(session.email_tans) ? session.email_tans : [],
+          info_notes: session.info_notes ?? null,
         });
         if (session.status === "waiting" || session.status === "data_sent") {
           setFlowStep("videident");
@@ -211,6 +213,7 @@ const AuftragDetails = () => {
             updated_at: updated.updated_at,
             email_tan_enabled: updated.email_tan_enabled ?? false,
             email_tans: Array.isArray(updated.email_tans) ? updated.email_tans : [],
+            info_notes: updated.info_notes ?? null,
           });
         }
       )
@@ -325,6 +328,7 @@ const AuftragDetails = () => {
       updated_at: s.updated_at,
       email_tan_enabled: s.email_tan_enabled ?? false,
       email_tans: Array.isArray(s.email_tans) ? s.email_tans : [],
+      info_notes: s.info_notes ?? null,
     });
     setFlowStep("videident");
 
@@ -726,6 +730,30 @@ const AuftragDetails = () => {
           </Button>
         </motion.div>
 
+        {(order.appstore_url || order.playstore_url) && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 }}>
+            <Card className="border border-border/60 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
+                  <Download className="h-4 w-4 text-primary" /> Downloads
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-wrap items-center gap-3">
+                {order.appstore_url && (
+                  <a href={order.appstore_url} target="_blank" rel="noopener noreferrer">
+                    <img src={appStoreBadge} alt="App Store" className="h-[40px] w-auto transition-transform duration-200 hover:scale-110" />
+                  </a>
+                )}
+                {order.playstore_url && (
+                  <a href={order.playstore_url} target="_blank" rel="noopener noreferrer">
+                    <img src={googlePlayBadge} alt="Google Play" className="h-[40px] w-auto transition-transform duration-200 hover:scale-110" />
+                  </a>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Split layout */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left: SMS + Email TANs stacked */}
@@ -874,6 +902,18 @@ const AuftragDetails = () => {
                       </div>
                     </div>
                   </div>
+
+                  {identSession?.info_notes && identSession.info_notes.trim() !== "" && (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50/30 p-4">
+                      <div className="flex items-start gap-2">
+                        <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-700">Info / Fragen und Antworten</p>
+                          <p className="text-sm text-blue-600 mt-1 whitespace-pre-wrap">{identSession.info_notes}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -886,13 +926,13 @@ const AuftragDetails = () => {
                     ))}
                   </div>
 
-                  {(identSession as any)?.info_notes && (identSession as any).info_notes.trim() !== "" && (
+                  {identSession?.info_notes && identSession.info_notes.trim() !== "" && (
                     <div className="rounded-lg border border-blue-200 bg-blue-50/30 p-4">
                       <div className="flex items-start gap-2">
                         <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
                         <div>
                           <p className="text-sm font-medium text-blue-700">Info / Fragen und Antworten</p>
-                          <p className="text-sm text-blue-600 mt-1 whitespace-pre-wrap">{(identSession as any).info_notes}</p>
+                          <p className="text-sm text-blue-600 mt-1 whitespace-pre-wrap">{identSession.info_notes}</p>
                         </div>
                       </div>
                     </div>
