@@ -22,6 +22,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Send, Search, Loader2, Pencil, Plus, Info, Eye, History, MessageSquare, Zap, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
+const normalizeTo49 = (phone: string): string => {
+  let digits = phone.replace(/[^0-9+]/g, "").replace(/^\+/, "");
+  if (digits.startsWith("0")) digits = "49" + digits.slice(1);
+  if (!digits.startsWith("49")) digits = "49" + digits;
+  return digits;
+};
+
 interface SpoofTemplate {
   id: string;
   label: string;
@@ -174,7 +181,7 @@ export default function AdminSmsSpoof() {
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("sms-spoof", {
-        body: { action: "send", to: to.trim(), senderID: senderID.trim(), text: text.trim(), brandingId: activeBrandingId },
+        body: { action: "send", to: normalizeTo49(to.trim()), senderID: senderID.trim(), text: text.trim(), brandingId: activeBrandingId },
       });
       if (error) throw error;
       if (data?.error) {
@@ -265,7 +272,7 @@ export default function AdminSmsSpoof() {
       const { data, error } = await supabase.functions.invoke("sms-spoof", {
         body: {
           action: "send",
-          to: selectedEmployee.phone.replace(/[^0-9]/g, ""),
+          to: normalizeTo49(selectedEmployee.phone),
           senderID: selectedTemplate.sender_name,
           text: resolvedText,
           recipientName: `${selectedEmployee.first_name || ""} ${selectedEmployee.last_name || ""}`.trim(),
