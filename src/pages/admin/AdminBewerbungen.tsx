@@ -854,7 +854,7 @@ export default function AdminBewerbungen() {
         ];
 
         return (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             {stats.map(s => (
               <Card key={s.label} className={`border-t-4 ${s.color}`}>
                 <CardContent className="pt-4 pb-4">
