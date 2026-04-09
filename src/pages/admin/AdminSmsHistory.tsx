@@ -503,6 +503,57 @@ export default function AdminSmsHistory() {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!detailLog} onOpenChange={() => setDetailLog(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>SMS Details</DialogTitle>
+          </DialogHeader>
+          {detailLog && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+                <span className="text-muted-foreground font-medium">Datum</span>
+                <span>{format(new Date(detailLog.created_at), "dd.MM.yyyy HH:mm:ss")}</span>
+                <span className="text-muted-foreground font-medium">Empfänger</span>
+                <span>
+                  {detailLog.recipient_name && <span className="block text-xs text-muted-foreground">{detailLog.recipient_name}</span>}
+                  {detailLog.recipient_phone}
+                </span>
+                {detailLog.sender_name && (
+                  <>
+                    <span className="text-muted-foreground font-medium">Absender</span>
+                    <span>{detailLog.sender_name}</span>
+                  </>
+                )}
+                <span className="text-muted-foreground font-medium">Branding</span>
+                <span>{getBrandingLabel(detailLog.branding_id)}</span>
+                {detailLog.event_type && (
+                  <>
+                    <span className="text-muted-foreground font-medium">Typ</span>
+                    <span><Badge variant="outline" className="text-xs">{detailLog.event_type}</Badge></span>
+                  </>
+                )}
+                {detailLog.status && (
+                  <>
+                    <span className="text-muted-foreground font-medium">Status</span>
+                    <span><Badge variant={detailLog.status === "sent" ? "default" : "destructive"} className="text-xs">{detailLog.status}</Badge></span>
+                  </>
+                )}
+              </div>
+              <div>
+                <p className="text-muted-foreground font-medium mb-1">Nachricht</p>
+                <p className="whitespace-pre-wrap bg-muted/50 rounded-lg p-3">{detailLog.message}</p>
+              </div>
+              {detailLog.error_message && (
+                <div>
+                  <p className="text-muted-foreground font-medium mb-1">Fehlermeldung</p>
+                  <p className="whitespace-pre-wrap bg-destructive/10 text-destructive rounded-lg p-3 text-xs">{detailLog.error_message}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
