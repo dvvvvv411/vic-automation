@@ -479,7 +479,11 @@ export default function AdminSmsHistory() {
                         <TableCell className="text-sm">{log.sender_name}</TableCell>
                         <TableCell className="max-w-[200px] truncate text-xs">{log.message}</TableCell>
                         <TableCell className="text-xs">{getBrandingLabel(log.branding_id)}</TableCell>
-                      </TableRow>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDetailLog(log)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                     ))}
                   </TableBody>
                 </Table>
