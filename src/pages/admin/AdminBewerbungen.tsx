@@ -1189,7 +1189,7 @@ export default function AdminBewerbungen() {
                               <FileText className="h-4 w-4" />
                             </a>
                           )}
-                          {!a.is_indeed && !a.is_external && !a.resume_url && <span className="text-muted-foreground">–</span>}
+                          {!a.is_indeed && !a.is_external && !(a as any).is_meta && !a.resume_url && <span className="text-muted-foreground">–</span>}
                         </div>
                       </TableCell>
                       <TableCell>
