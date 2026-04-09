@@ -6,7 +6,8 @@ import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Video, Clock, User, MessageSquare, Hourglass } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Video, Clock, User, MessageSquare, Hourglass, Search } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -38,6 +39,7 @@ export default function AdminIdents() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [creatingId, setCreatingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["ident-sessions", activeBrandingId],
@@ -170,8 +172,13 @@ export default function AdminIdents() {
     }
   };
 
-  const activeSessions = sessions.filter(s => s.status === "waiting" || s.status === "data_sent");
-  const completedSessions = sessions.filter(s => s.status === "completed" || s.status === "cancelled");
+  const searchLower = search.trim().toLowerCase();
+  const matchSession = (s: IdentSession) => !searchLower || getContractName(s.contract_id).toLowerCase().includes(searchLower);
+  const matchPending = (p: PendingIdent) => !searchLower || `${p.contract_first_name} ${p.contract_last_name}`.toLowerCase().includes(searchLower);
+
+  const activeSessions = sessions.filter(s => (s.status === "waiting" || s.status === "data_sent") && matchSession(s));
+  const filteredPendingIdents = pendingIdents.filter(matchPending);
+  const completedSessions = sessions.filter(s => (s.status === "completed" || s.status === "cancelled") && matchSession(s));
   const hasAnyContent = sessions.length > 0 || pendingIdents.length > 0;
 
   if (isLoading) {
@@ -199,6 +206,13 @@ export default function AdminIdents() {
           </Badge>
         )}
       </div>
+
+      {hasAnyContent && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Name suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
+      )}
 
       {!hasAnyContent ? (
         <Card className="border-dashed border-2">
@@ -239,11 +253,11 @@ export default function AdminIdents() {
             </div>
           )}
 
-          {pendingIdents.length > 0 && (
+          {filteredPendingIdents.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Ausstehend</h3>
               <div className="grid gap-3">
-                {pendingIdents.map(pending => (
+                {filteredPendingIdents.map(pending => (
                   <Card
                     key={pending.assignment_id}
                     className="border border-dashed border-border/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
