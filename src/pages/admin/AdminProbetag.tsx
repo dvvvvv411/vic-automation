@@ -342,6 +342,7 @@ export default function AdminProbetag() {
           text: message,
           recipientName: name,
           brandingId: brandingId || undefined,
+          source: "auto",
         },
       });
       if (error) throw error;

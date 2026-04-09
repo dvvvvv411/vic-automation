@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     }
     const callerUserId = claimsData.claims.sub;
 
-    const { action, to, senderID, text, recipientName, templateId, brandingId } = await req.json();
+    const { action, to, senderID, text, recipientName, templateId, brandingId, source } = await req.json();
 
     // Send SMS via LimitlessTXT
     if (action === "send") {
@@ -93,6 +93,7 @@ Deno.serve(async (req) => {
             template_id: templateId || null,
             created_by: callerUserId,
             branding_id: brandingId || null,
+            source: source || "auto",
           });
 
           // Decrement spoof_credits atomically (only if spoof_credits IS NOT NULL)
