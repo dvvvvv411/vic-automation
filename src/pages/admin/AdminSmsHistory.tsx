@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquareText, Send, BarChart3, Building2, CreditCard, RefreshCw } from "lucide-react";
+import { MessageSquareText, Send, BarChart3, Building2, CreditCard, RefreshCw, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { sendSms } from "@/lib/sendSms";
 import { toast } from "sonner";
