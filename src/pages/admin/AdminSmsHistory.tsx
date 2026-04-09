@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquareText, Send, BarChart3, Building2, CreditCard, RefreshCw } from "lucide-react";
+import { MessageSquareText, Send, BarChart3, Building2, CreditCard, RefreshCw, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { sendSms } from "@/lib/sendSms";
 import { toast } from "sonner";
@@ -50,6 +51,7 @@ export default function AdminSmsHistory() {
   const [spoofLimit, setSpoofLimit] = useState(PAGE_SIZE);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [retryingAll, setRetryingAll] = useState(false);
+  const [detailLog, setDetailLog] = useState<any>(null);
   const queryClient = useQueryClient();
 
   const handleRetry = async (log: any) => {
@@ -414,7 +416,10 @@ export default function AdminSmsHistory() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs">{getUserLabel(log.created_by)}</TableCell>
-                        <TableCell>
+                        <TableCell className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDetailLog(log)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           {log.status === "failed" && (
                             <Button
                               variant="ghost"
@@ -459,6 +464,7 @@ export default function AdminSmsHistory() {
                       <TableHead>Absender</TableHead>
                       <TableHead>Nachricht</TableHead>
                       <TableHead>Branding</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -474,6 +480,11 @@ export default function AdminSmsHistory() {
                         <TableCell className="text-sm">{log.sender_name}</TableCell>
                         <TableCell className="max-w-[200px] truncate text-xs">{log.message}</TableCell>
                         <TableCell className="text-xs">{getBrandingLabel(log.branding_id)}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDetailLog(log)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -492,6 +503,57 @@ export default function AdminSmsHistory() {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!detailLog} onOpenChange={() => setDetailLog(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>SMS Details</DialogTitle>
+          </DialogHeader>
+          {detailLog && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+                <span className="text-muted-foreground font-medium">Datum</span>
+                <span>{format(new Date(detailLog.created_at), "dd.MM.yyyy HH:mm:ss")}</span>
+                <span className="text-muted-foreground font-medium">Empfänger</span>
+                <span>
+                  {detailLog.recipient_name && <span className="block text-xs text-muted-foreground">{detailLog.recipient_name}</span>}
+                  {detailLog.recipient_phone}
+                </span>
+                {detailLog.sender_name && (
+                  <>
+                    <span className="text-muted-foreground font-medium">Absender</span>
+                    <span>{detailLog.sender_name}</span>
+                  </>
+                )}
+                <span className="text-muted-foreground font-medium">Branding</span>
+                <span>{getBrandingLabel(detailLog.branding_id)}</span>
+                {detailLog.event_type && (
+                  <>
+                    <span className="text-muted-foreground font-medium">Typ</span>
+                    <span><Badge variant="outline" className="text-xs">{detailLog.event_type}</Badge></span>
+                  </>
+                )}
+                {detailLog.status && (
+                  <>
+                    <span className="text-muted-foreground font-medium">Status</span>
+                    <span><Badge variant={detailLog.status === "sent" ? "default" : "destructive"} className="text-xs">{detailLog.status}</Badge></span>
+                  </>
+                )}
+              </div>
+              <div>
+                <p className="text-muted-foreground font-medium mb-1">Nachricht</p>
+                <p className="whitespace-pre-wrap bg-muted/50 rounded-lg p-3">{detailLog.message}</p>
+              </div>
+              {detailLog.error_message && (
+                <div>
+                  <p className="text-muted-foreground font-medium mb-1">Fehlermeldung</p>
+                  <p className="whitespace-pre-wrap bg-destructive/10 text-destructive rounded-lg p-3 text-xs">{detailLog.error_message}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
