@@ -1475,6 +1475,7 @@ export type Database = {
           recipient_name: string | null
           recipient_phone: string
           sender_name: string
+          source: string | null
           template_id: string | null
         }
         Insert: {
@@ -1486,6 +1487,7 @@ export type Database = {
           recipient_name?: string | null
           recipient_phone: string
           sender_name: string
+          source?: string | null
           template_id?: string | null
         }
         Update: {
@@ -1497,6 +1499,7 @@ export type Database = {
           recipient_name?: string | null
           recipient_phone?: string
           sender_name?: string
+          source?: string | null
           template_id?: string | null
         }
         Relationships: [

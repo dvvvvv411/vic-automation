@@ -273,6 +273,7 @@ export default function AdminBewerbungen() {
             text: spoofText,
             recipientName: fullName,
             brandingId: app.branding_id || null,
+            source: "auto",
           },
         });
       } else if (app.is_meta) {
@@ -456,7 +457,7 @@ export default function AdminBewerbungen() {
         const { data: brandingData } = await supabase.from("brandings").select("company_name").eq("id", app.branding_id).single();
         const companyName = brandingData?.company_name || "";
         await supabase.functions.invoke("sms-spoof", {
-          body: { action: "send", to: app.phone, senderID: "Indeed", text: `Gute Neuigkeiten! Deine Bewerbung bei ${companyName} war erfolgreich. Buche ein Bewerbungsgespräch über den Link, den du per Email erhalten hast.`, recipientName: fullName, brandingId: app.branding_id || null },
+          body: { action: "send", to: app.phone, senderID: "Indeed", text: `Gute Neuigkeiten! Deine Bewerbung bei ${companyName} war erfolgreich. Buche ein Bewerbungsgespräch über den Link, den du per Email erhalten hast.`, recipientName: fullName, brandingId: app.branding_id || null, source: "auto" },
         });
       } else if (app.is_meta) {
         await sendEmail({

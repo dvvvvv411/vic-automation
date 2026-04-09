@@ -106,6 +106,7 @@ export default function AdminSmsSpoof() {
     let q = supabase
       .from("sms_spoof_logs" as any)
       .select("*")
+      .eq("source", "manual")
       .order("created_at", { ascending: false })
       .limit(100);
     if (activeBrandingId) q = q.eq("branding_id", activeBrandingId);
@@ -181,7 +182,7 @@ export default function AdminSmsSpoof() {
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("sms-spoof", {
-        body: { action: "send", to: normalizeTo49(to.trim()), senderID: senderID.trim(), text: text.trim(), brandingId: activeBrandingId },
+        body: { action: "send", to: normalizeTo49(to.trim()), senderID: senderID.trim(), text: text.trim(), brandingId: activeBrandingId, source: "manual" },
       });
       if (error) throw error;
       if (data?.error) {
@@ -278,6 +279,7 @@ export default function AdminSmsSpoof() {
           recipientName: `${selectedEmployee.first_name || ""} ${selectedEmployee.last_name || ""}`.trim(),
           templateId: selectedTemplate.id,
           brandingId: activeBrandingId,
+          source: "manual",
         },
       });
       if (error) throw error;
