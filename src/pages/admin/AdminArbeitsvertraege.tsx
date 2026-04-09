@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { FileCheck, ChevronLeft, ChevronRight, Eye, CheckCircle, User, Phone, Mail, Building2, CreditCard, Shield, ImageIcon, Copy, CalendarIcon } from "lucide-react";
+import { FileCheck, ChevronLeft, ChevronRight, Eye, CheckCircle, User, Phone, Mail, Building2, CreditCard, Shield, ImageIcon, Copy, CalendarIcon, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
@@ -26,6 +27,7 @@ type TabValue = "all" | "offen" | "eingereicht" | "genehmigt";
 export default function AdminArbeitsvertraege() {
   const [page, setPage] = useState(0);
   const [activeTab, setActiveTab] = useState<TabValue>("all");
+  const [search, setSearch] = useState("");
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -78,7 +80,14 @@ export default function AdminArbeitsvertraege() {
           return s === activeTab;
         });
 
-    return [...filtered].sort((a, b) => {
+    const searched = search.trim()
+      ? filtered.filter((item: any) => {
+          const name = `${item.first_name || ""} ${item.last_name || ""}`.toLowerCase();
+          return name.includes(search.trim().toLowerCase());
+        })
+      : filtered;
+
+    return [...searched].sort((a, b) => {
       const rankA = statusOrder[a.status] ?? 3;
       const rankB = statusOrder[b.status] ?? 3;
       if (rankA !== rankB) return rankA - rankB;
@@ -97,7 +106,7 @@ export default function AdminArbeitsvertraege() {
       if (futureA && futureB) return dateA.getTime() - dateB.getTime();
       return dateB.getTime() - dateA.getTime();
     });
-  }, [data, activeTab]);
+  }, [data, activeTab, search]);
 
   const paginatedItems = sortedItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const totalPages = Math.ceil(sortedItems.length / PAGE_SIZE);
@@ -273,6 +282,11 @@ export default function AdminArbeitsvertraege() {
               <TabsTrigger value="genehmigt">Genehmigt<TabBadge count={counts.genehmigt} /></TabsTrigger>
               
             </TabsList>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Name suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 mb-4" />
+            </div>
 
             {/* Single content area for all tabs since filtering is done via sortedItems */}
             <div className="space-y-3">

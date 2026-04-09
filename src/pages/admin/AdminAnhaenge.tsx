@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 import { format } from "date-fns";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +22,7 @@ const groupStatus = (statuses: string[]) => {
 export default function AdminAnhaenge() {
   const navigate = useNavigate();
   const { activeBrandingId, ready } = useBrandingFilter();
+  const [search, setSearch] = useState("");
 
   const { data: groups, isLoading } = useQuery({
     queryKey: ["admin-order-attachments-grouped", activeBrandingId],
@@ -78,6 +82,11 @@ export default function AdminAnhaenge() {
         <p className="text-muted-foreground mt-1">Eingereichte Dokumente prüfen und genehmigen.</p>
       </div>
 
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Name suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+      </div>
+
       <div className="premium-card overflow-hidden">
         <Table>
           <TableHeader>
@@ -94,12 +103,15 @@ export default function AdminAnhaenge() {
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
               </TableRow>
-            ) : !groups?.length ? (
+            ) : (() => {
+              const searchLower = search.trim().toLowerCase();
+              const filtered = searchLower ? groups!.filter((g: any) => g.employee_name.toLowerCase().includes(searchLower)) : groups!;
+              return !filtered.length ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Keine Anhänge vorhanden</TableCell>
               </TableRow>
             ) : (
-              groups.map((g: any) => (
+              filtered.map((g: any) => (
                 <TableRow
                   key={`${g.contract_id}__${g.order_id}`}
                   className="cursor-pointer"
@@ -118,7 +130,7 @@ export default function AdminAnhaenge() {
                   </TableCell>
                 </TableRow>
               ))
-            )}
+            ); })()}
           </TableBody>
         </Table>
       </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Star, CheckCircle, XCircle, Eye } from "lucide-react";
+import { Star, CheckCircle, XCircle, Eye, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
@@ -60,6 +61,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 const AdminBewertungen = () => {
   const [selected, setSelected] = useState<GroupedReview | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
@@ -330,9 +332,11 @@ const AdminBewertungen = () => {
     );
   }
 
-  const pendingReviews = grouped.filter((g) => !["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status));
-  const approvedReviews = grouped.filter((g) => g.assignment_status === "erfolgreich");
-  const rejectedReviews = grouped.filter((g) => g.assignment_status === "fehlgeschlagen");
+  const searchLower = search.trim().toLowerCase();
+  const filteredGrouped = searchLower ? grouped.filter((g) => g.employee_name.toLowerCase().includes(searchLower)) : grouped;
+  const pendingReviews = filteredGrouped.filter((g) => !["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status));
+  const approvedReviews = filteredGrouped.filter((g) => g.assignment_status === "erfolgreich");
+  const rejectedReviews = filteredGrouped.filter((g) => g.assignment_status === "fehlgeschlagen");
 
   const renderTable = (items: GroupedReview[], showActions: boolean) => {
     if (items.length === 0) {
@@ -427,6 +431,11 @@ const AdminBewertungen = () => {
     <TooltipProvider>
     <div className="space-y-6">
       <h2 className="text-2xl font-bold tracking-tight text-foreground">Bewertungen</h2>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Name suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+      </div>
 
       <Tabs defaultValue="in-review" className="w-full">
         <TabsList>
