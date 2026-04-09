@@ -1,22 +1,24 @@
 
 
-## Plan: Details-Button mit Popup für SMS-Nachrichten
+## Plan: Extern (Allg.) → Extern (META) umlabeln
 
-### Änderung
+### Was passiert
+420 Bewerbungen die aktuell `is_external = true, is_meta = false` sind, werden auf `is_meta = true, is_external = false` gesetzt. Die 111 Bewerbungen vom heutigen Massenimport (created_at >= '2026-04-09 17:23:00') bleiben unverändert.
 
-In `src/pages/admin/AdminSmsHistory.tsx`:
+### SQL (per Insert-Tool)
+```sql
+UPDATE applications 
+SET is_meta = true, is_external = false
+WHERE is_external = true 
+  AND is_meta = false 
+  AND is_indeed = false
+  AND created_at < '2026-04-09 17:23:00';
+```
 
-1. **State hinzufügen**: `const [detailLog, setDetailLog] = useState<any>(null)` für das ausgewählte Log
-2. **Details-Button** in beide Tabellen (seven.io + Spoof) einfügen — ein `Eye`-Icon-Button pro Zeile, der `setDetailLog(log)` aufruft
-3. **Dialog-Popup** am Ende der Komponente mit:
-   - Datum, Empfänger (Name + Telefon), Branding, Event-Typ, Status
-   - **Vollständige Nachricht** ohne Truncation
-   - Bei seven.io: auch Fehlermeldung falls vorhanden
-4. **Imports**: `Dialog, DialogContent, DialogHeader, DialogTitle` + `Eye` Icon aus lucide-react
-
-### Betroffene Dateien
-
-| Datei | Änderung |
+### Betroffene Ressourcen
+| Resource | Änderung |
 |---|---|
-| `src/pages/admin/AdminSmsHistory.tsx` | State, Button in Tabellenzeilen, Dialog-Popup |
+| DB: `applications` | 420 Zeilen: `is_meta` → true, `is_external` → false |
+
+Keine Code-Änderungen nötig.
 
