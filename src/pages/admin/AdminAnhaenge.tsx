@@ -1,15 +1,18 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
+import { tryAutoComplete } from "./AdminAnhaengeDetail";
 
 const groupStatus = (statuses: string[]) => {
   if (statuses.every((s) => s === "genehmigt"))
@@ -21,6 +24,7 @@ const groupStatus = (statuses: string[]) => {
 
 export default function AdminAnhaenge() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
   const [search, setSearch] = useState("");
 
@@ -47,7 +51,6 @@ export default function AdminAnhaenge() {
         (contracts ?? []).map((c) => [c.id, `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim()])
       );
 
-      // Group by contract_id + order_id
       const map = new Map<string, any>();
       for (const a of (data ?? []) as any[]) {
         const key = `${a.contract_id}__${a.order_id}`;
@@ -62,18 +65,64 @@ export default function AdminAnhaenge() {
             required_count: requiredCount,
             uploaded_count: 0,
             statuses: [] as string[],
+            pending_ids: [] as string[],
             latest_created_at: a.created_at,
           });
         }
         const g = map.get(key)!;
         g.uploaded_count += 1;
         g.statuses.push(a.status);
+        if (a.status === "eingereicht") g.pending_ids.push(a.id);
         if (a.created_at > g.latest_created_at) g.latest_created_at = a.created_at;
       }
 
       return Array.from(map.values());
     },
   });
+
+  const bulkApproveMutation = useMutation({
+    mutationFn: async ({ ids, orderId, contractId }: { ids: string[]; orderId: string; contractId: string }) => {
+      for (const id of ids) {
+        const { error } = await supabase
+          .from("order_attachments" as any)
+          .update({ status: "genehmigt", reviewed_at: new Date().toISOString() } as any)
+          .eq("id", id);
+        if (error) throw error;
+      }
+      return tryAutoComplete(orderId, contractId);
+    },
+    onSuccess: (completed) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-order-attachments-grouped"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-attachment-detail"] });
+      if (completed) {
+        queryClient.invalidateQueries({ queryKey: ["admin-bewertungen"] });
+        toast({ title: "Alle Anhänge genehmigt — Auftrag abgeschlossen und Prämie gutgeschrieben!" });
+      } else {
+        toast({ title: "Alle Anhänge genehmigt" });
+      }
+    },
+    onError: (e: Error) => toast({ title: "Fehler", description: e.message, variant: "destructive" }),
+  });
+
+  const bulkRejectMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        const { error } = await supabase
+          .from("order_attachments" as any)
+          .update({ status: "abgelehnt", reviewed_at: new Date().toISOString() } as any)
+          .eq("id", id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-order-attachments-grouped"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-attachment-detail"] });
+      toast({ title: "Alle Anhänge abgelehnt" });
+    },
+    onError: (e: Error) => toast({ title: "Fehler", description: e.message, variant: "destructive" }),
+  });
+
+  const isMutating = bulkApproveMutation.isPending || bulkRejectMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -96,19 +145,20 @@ export default function AdminAnhaenge() {
               <TableHead>Hochgeladen</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Eingereicht am</TableHead>
+              <TableHead>Aktionen</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
               </TableRow>
             ) : (() => {
               const searchLower = search.trim().toLowerCase();
               const filtered = searchLower ? groups!.filter((g: any) => g.employee_name.toLowerCase().includes(searchLower)) : groups!;
               return !filtered.length ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Keine Anhänge vorhanden</TableCell>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Keine Anhänge vorhanden</TableCell>
               </TableRow>
             ) : (
               filtered.map((g: any) => (
@@ -127,6 +177,34 @@ export default function AdminAnhaenge() {
                   <TableCell>{groupStatus(g.statuses)}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {format(new Date(g.latest_created_at), "dd.MM.yyyy HH:mm")}
+                  </TableCell>
+                  <TableCell>
+                    {g.pending_ids.length > 0 ? (
+                      <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                          disabled={isMutating}
+                          onClick={() => bulkApproveMutation.mutate({ ids: g.pending_ids, orderId: g.order_id, contractId: g.contract_id })}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Genehmigen
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/5"
+                          disabled={isMutating}
+                          onClick={() => bulkRejectMutation.mutate(g.pending_ids)}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Ablehnen
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

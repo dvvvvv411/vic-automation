@@ -20,7 +20,7 @@ const statusBadge = (status: string) => {
 };
 
 /** After all attachments are approved, check if review is also done and auto-complete the order */
-async function tryAutoComplete(orderId: string, contractId: string) {
+export async function tryAutoComplete(orderId: string, contractId: string) {
   // Load order to check required_attachments
   const { data: order } = await supabase
     .from("orders")
