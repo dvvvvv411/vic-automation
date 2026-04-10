@@ -1,48 +1,40 @@
 
 
-## Plan: Filter-Dropdown nach Auftragstyp für Anhänge und Bewertungen
+## Plan: Serverseitige Suche für Mitarbeiter-Tabelle
 
-### Änderungen
+### Problem
+Die Suche filtert nur clientseitig auf der aktuell geladenen Seite (20 Einträge). Mitarbeiter auf anderen Seiten werden nie gefunden.
 
-**Beide Seiten** bekommen ein `Select`-Dropdown neben der Suchleiste mit den Optionen: Alle / Bankdrop / Exchanger / Platzhalter / Andere.
+### Lösung
+Wenn ein Suchbegriff eingegeben wird, die Suche serverseitig in der Supabase-Query durchführen und Seite auf 0 zurücksetzen.
 
-### 1. `src/pages/admin/AdminAnhaenge.tsx`
+### Änderungen in `src/pages/admin/AdminMitarbeiter.tsx`
 
-- **Import**: `Select, SelectContent, SelectItem, SelectTrigger, SelectValue` aus `@/components/ui/select`
-- **State**: `const [orderTypeFilter, setOrderTypeFilter] = useState("all")`
-- **Query anpassen**: In der `order_attachments`-Query zusätzlich `orders(title, required_attachments, order_type)` selektieren und `order_type` in die Gruppe speichern
-- **Filter**: Nach dem Search-Filter zusätzlich nach `order_type` filtern wenn nicht "all"
-- **UI**: Dropdown neben dem Suchfeld in einer Flex-Row
+1. **`search` in den queryKey aufnehmen** — damit bei Suchänderung neu gefetcht wird
+2. **Seite auf 0 zurücksetzen** wenn sich der Suchbegriff ändert (`onChange` Handler)
+3. **Serverseitige Filter**: Wenn `search.trim()` gesetzt ist, mit `.or()` nach `first_name`, `last_name`, `email`, `phone` filtern (ilike-Pattern)
+4. **Client-Filter entfernen** — `sortedAndFiltered` braucht keinen `search`-Filter mehr, nur noch die Sortierung
+5. **`totalPages` aus `data.total`** — funktioniert dann korrekt weil der Count die Suchfilter berücksichtigt
 
-### 2. `src/pages/admin/AdminBewertungen.tsx`
+### Technisches Detail
 
-- **Import**: `Select`-Komponenten
-- **State**: `const [orderTypeFilter, setOrderTypeFilter] = useState("all")`
-- **Query anpassen**: In der Orders-Query zusätzlich `order_type` selektieren und im `GroupedReview`-Interface + `orderMap` speichern, dann `order_type` in jede Gruppe übertragen
-- **Filter**: Nach dem Search-Filter zusätzlich nach `order_type` filtern
-- **UI**: Dropdown neben dem Suchfeld
+```typescript
+// queryKey inkl. search
+queryKey: ["mitarbeiter", page, activeBrandingId, debouncedSearch],
 
-### Dropdown-UI (identisch für beide Seiten)
-
-```tsx
-<Select value={orderTypeFilter} onValueChange={setOrderTypeFilter}>
-  <SelectTrigger className="w-[180px]">
-    <SelectValue placeholder="Alle Typen" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="all">Alle Typen</SelectItem>
-    <SelectItem value="bankdrop">Bankdrop</SelectItem>
-    <SelectItem value="exchanger">Exchanger</SelectItem>
-    <SelectItem value="platzhalter">Platzhalter</SelectItem>
-    <SelectItem value="andere">Andere</SelectItem>
-  </SelectContent>
-</Select>
+// In queryFn, nach .in("status", [...]):
+if (term) {
+  query = query.or(
+    `first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`
+  );
+}
 ```
+
+Optional ein kurzes Debounce (300ms) um nicht bei jedem Tastendruck eine Query auszulösen.
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/admin/AdminAnhaenge.tsx` | order_type in Query + State + Filter + Dropdown |
-| `src/pages/admin/AdminBewertungen.tsx` | order_type in Query/Interface + State + Filter + Dropdown |
+| `src/pages/admin/AdminMitarbeiter.tsx` | Serverseitige Suche + Page-Reset + Debounce |
 
