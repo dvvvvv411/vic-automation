@@ -1,33 +1,26 @@
 
 
-## Plan: E-Mail-Templates für Extern (Allgemein) vs. Extern (META) trennen
+## Plan: Aktionen-Spalte in der Anhänge-Tabelle
 
-### Problem
-Aktuell verwenden **beide** Extern-Typen (Allgemein + META) den gleichen E-Mail-Text mit "Instagram/Facebook"-Bezug. Extern (Allgemein) sollte diesen Bezug **nicht** haben.
+### Was passiert
+Eine neue Spalte "Aktionen" wird zur Tabelle auf `/admin/anhaenge` hinzugefügt. Dort erscheinen für Gruppen mit Status "Eingereicht" zwei Buttons: "Genehmigen" (grün) und "Ablehnen" (rot). Die Buttons führen die Sammelgenehmigung/-ablehnung direkt aus, ohne die Detailseite öffnen zu müssen. Die `tryAutoComplete`-Logik wird wiederverwendet.
 
-### Änderungen
+### Änderungen in `src/pages/admin/AdminAnhaenge.tsx`
 
-**1. `src/pages/admin/AdminEmails.tsx` — Templates-Vorschau**
+1. **Imports hinzufügen**: `useMutation`, `useQueryClient` von react-query, `Button` von ui, `CheckCircle`/`XCircle` von lucide, `toast`, und die `tryAutoComplete`-Funktion aus `AdminAnhaengeDetail.tsx` (wird dorthin exportiert oder inline dupliziert)
 
-- Bestehendes Template `bewerbung_angenommen_extern` umbenennen zu **"Bewerbung angenommen (Extern - META)"** und `eventType` auf `bewerbung_angenommen_extern_meta` setzen (mit Instagram/Facebook-Text)
-- Neues Template hinzufügen: **"Bewerbung angenommen (Extern - Allgemein)"** mit `eventType: "bewerbung_angenommen_extern"` — gleicher Text, aber **ohne** "über Instagram/Facebook", stattdessen z.B. "dass Ihre Bewerbung als ‚{Jobtitel}' angenommen wurde."
+2. **Attachment-IDs mitladen**: In der Query zusätzlich die IDs der eingereichten Anhänge pro Gruppe sammeln (`pending_ids: string[]`)
 
-**2. `src/pages/admin/AdminBewerbungen.tsx` — E-Mail-Text bei Annehmen**
+3. **Mutations hinzufügen**: Bulk-Approve und Bulk-Reject Mutations (analog zur Detailseite), inkl. `tryAutoComplete`-Aufruf nach Genehmigung
 
-4 Stellen anpassen (Einzel-Annehmen + Bulk-Annehmen, jeweils `is_external`-Block):
+4. **Neue Tabellenspalte**: `<TableHead>Aktionen</TableHead>` + `<TableCell>` mit Genehmigen/Ablehnen-Buttons (nur sichtbar wenn `statuses` eingereichte enthält). `colSpan` von 5 auf 6 anpassen. Click-Event auf Buttons mit `e.stopPropagation()` damit die Zeilen-Navigation nicht ausgelöst wird.
 
-- **Extern (Allgemein)** `body_lines`: "Instagram/Facebook" entfernen → `"wir freuen uns, Ihnen mitzuteilen, dass Ihre Bewerbung${mainJobTitle ? ` als „${mainJobTitle}"` : ""} angenommen wurde."`
-- **Extern (Allgemein)** SMS-Fallback: ebenfalls "Instagram/Facebook" entfernen
-- **Extern (META)** bleibt unverändert (hat bereits den Instagram/Facebook-Bezug)
+### Betroffene Dateien
 
-### Betroffene Stellen im Detail
+| Datei | Änderung |
+|---|---|
+| `src/pages/admin/AdminAnhaengeDetail.tsx` | `tryAutoComplete` exportieren |
+| `src/pages/admin/AdminAnhaenge.tsx` | Aktionen-Spalte + Mutations + pending_ids in Query |
 
-| Datei | Zeilen | Änderung |
-|---|---|---|
-| `AdminEmails.tsx` | 154-167 | Label → "Bewerbung angenommen (Extern - META)", eventType → `bewerbung_angenommen_extern_meta` |
-| `AdminEmails.tsx` | nach 167 | Neues Template "Bewerbung angenommen (Extern - Allgemein)" einfügen |
-| `AdminBewerbungen.tsx` | 325-328 | Einzel-Annehmen: "Instagram/Facebook" aus body_lines entfernen |
-| `AdminBewerbungen.tsx` | 351 | Einzel-Annehmen: SMS-Fallback ohne Instagram/Facebook |
-| `AdminBewerbungen.tsx` | 486 | Bulk-Annehmen: body_lines ohne Instagram/Facebook |
-| `AdminBewerbungen.tsx` | 492 | Bulk-Annehmen: SMS-Fallback ohne Instagram/Facebook |
+Keine DB-Änderungen nötig.
 
