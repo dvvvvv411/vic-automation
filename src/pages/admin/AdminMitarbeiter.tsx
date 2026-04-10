@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,7 @@ function formatDate(dateStr: string | null) {
 export default function AdminMitarbeiter() {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [assignContract, setAssignContract] = useState<{ id: string; label: string } | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string; isSuspended: boolean } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -45,16 +46,33 @@ export default function AdminMitarbeiter() {
   const { activeBrandingId, ready, brandings } = useBrandingFilter();
   const activeBrandingName = brandings.find(b => b.id === activeBrandingId)?.company_name ?? "–";
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["mitarbeiter", page, activeBrandingId],
+    queryKey: ["mitarbeiter", page, activeBrandingId, debouncedSearch],
     enabled: ready,
     queryFn: async () => {
-      const { data: contracts, error, count } = await supabase
+      let query = supabase
         .from("employment_contracts")
         .select("id, first_name, last_name, email, phone, temp_password, user_id, application_id, status, desired_start_date, is_suspended, branding_id", { count: "exact" })
         .eq("branding_id", activeBrandingId!)
         .in("status", ["offen", "eingereicht", "genehmigt", "unterzeichnet"])
-        .not("first_name", "is", null)
+        .not("first_name", "is", null);
+
+      if (debouncedSearch) {
+        query = query.or(
+          `first_name.ilike.%${debouncedSearch}%,last_name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`
+        );
+      }
+
+      const { data: contracts, error, count } = await query
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
@@ -117,11 +135,11 @@ export default function AdminMitarbeiter() {
     }
   };
 
-  const sortedAndFiltered = useMemo(() => {
+  const sortedItems = useMemo(() => {
     const items = data?.items ?? [];
     const today = startOfToday();
 
-    const sorted = [...items].sort((a: any, b: any) => {
+    return [...items].sort((a: any, b: any) => {
       const statusRank = (s: string) => s === "genehmigt" || s === "unterzeichnet" ? 0 : s === "eingereicht" ? 1 : 2;
       const rankA = statusRank(a.status);
       const rankB = statusRank(b.status);
@@ -140,15 +158,7 @@ export default function AdminMitarbeiter() {
       if (!futureA && !futureB) return dateB.getTime() - dateA.getTime();
       return futureA ? -1 : 1;
     });
-
-    if (!search.trim()) return sorted;
-    const term = search.toLowerCase().trim();
-    return sorted.filter((item: any) => {
-      const name = `${item.first_name ?? ""} ${item.last_name ?? ""}`.toLowerCase();
-      const branding = ((item as any).applications?.brandings?.company_name ?? "").toLowerCase();
-      return name.includes(term) || (item.email ?? "").toLowerCase().includes(term) || (item.phone ?? "").toLowerCase().includes(term) || branding.includes(term);
-    });
-  }, [data?.items, search]);
+  }, [data?.items]);
 
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
 
@@ -175,7 +185,7 @@ export default function AdminMitarbeiter() {
 
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Laden...</div>
-        ) : !sortedAndFiltered.length ? (
+        ) : !sortedItems.length ? (
           <div className="text-center py-16 border border-dashed border-border rounded-lg">
             <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">
@@ -200,7 +210,7 @@ export default function AdminMitarbeiter() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedAndFiltered.map((item: any) => {
+                  {sortedItems.map((item: any) => {
                     const count = assignmentCounts?.[item.id] || 0;
                     return (
                       <TableRow key={item.id}>
