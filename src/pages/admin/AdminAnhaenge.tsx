@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const groupStatus = (statuses: string[]) => {
   if (statuses.every((s) => s === "genehmigt"))
@@ -33,6 +34,7 @@ export default function AdminAnhaenge() {
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
   const [search, setSearch] = useState("");
+  const [orderTypeFilter, setOrderTypeFilter] = useState("all");
   const [rejectTarget, setRejectTarget] = useState<string[] | null>(null);
 
   const { data: groups, isLoading } = useQuery({
@@ -48,7 +50,7 @@ export default function AdminAnhaenge() {
 
       const { data, error } = await supabase
         .from("order_attachments" as any)
-        .select("*, orders(title, required_attachments)")
+        .select("*, orders(title, required_attachments, order_type)")
         .in("contract_id", contractIds)
         .neq("status", "entwurf")
         .order("created_at", { ascending: false });
@@ -69,6 +71,7 @@ export default function AdminAnhaenge() {
             order_id: a.order_id,
             employee_name: contractMap[a.contract_id] || "Unbekannt",
             order_title: a.orders?.title ?? "–",
+            order_type: a.orders?.order_type ?? "",
             required_count: requiredCount,
             uploaded_count: 0,
             statuses: [] as string[],
@@ -132,9 +135,13 @@ export default function AdminAnhaenge() {
   const isMutating = bulkApproveMutation.isPending || bulkRejectMutation.isPending;
 
   const searchLower = search.trim().toLowerCase();
-  const filtered = groups
-    ? (searchLower ? groups.filter((g: any) => g.employee_name.toLowerCase().includes(searchLower)) : groups)
-    : [];
+  const filtered = (groups ?? [])
+    .filter((g: any) => !searchLower || g.employee_name.toLowerCase().includes(searchLower))
+    .filter((g: any) => {
+      if (orderTypeFilter === "all") return true;
+      if (orderTypeFilter === "andere") return !["bankdrop", "exchanger", "platzhalter"].includes(g.order_type);
+      return g.order_type === orderTypeFilter;
+    });
 
   const pending = filtered.filter((g: any) => g.statuses.some((s: string) => s === "eingereicht") && !g.statuses.some((s: string) => s === "abgelehnt"));
   const approved = filtered.filter((g: any) => g.statuses.every((s: string) => s === "genehmigt"));
@@ -235,9 +242,23 @@ export default function AdminAnhaenge() {
         <p className="text-muted-foreground mt-1">Eingereichte Dokumente prüfen und genehmigen.</p>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Name suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Name suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <Select value={orderTypeFilter} onValueChange={setOrderTypeFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Alle Typen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alle Typen</SelectItem>
+            <SelectItem value="bankdrop">Bankdrop</SelectItem>
+            <SelectItem value="exchanger">Exchanger</SelectItem>
+            <SelectItem value="platzhalter">Platzhalter</SelectItem>
+            <SelectItem value="andere">Andere</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Tabs defaultValue="eingereicht">

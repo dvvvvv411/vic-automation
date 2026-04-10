@@ -19,6 +19,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
@@ -27,6 +28,7 @@ interface GroupedReview {
   contract_id: string;
   order_title: string;
   order_reward: string;
+  order_type: string;
   employee_name: string;
   avg_rating: number;
   date: string;
@@ -62,6 +64,7 @@ const AdminBewertungen = () => {
   const [selected, setSelected] = useState<GroupedReview | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [orderTypeFilter, setOrderTypeFilter] = useState("all");
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
 
@@ -93,7 +96,7 @@ const AdminBewertungen = () => {
       const orderIds = [...new Set(reviews.map((r) => r.order_id))];
 
       const [{ data: orders }, { data: assignments }] = await Promise.all([
-        supabase.from("orders").select("id, title, reward").in("id", orderIds),
+        supabase.from("orders").select("id, title, reward, order_type").in("id", orderIds),
         supabase.from("order_assignments").select("order_id, contract_id, status").in("contract_id", contractIds).in("order_id", orderIds),
       ]);
 
@@ -112,6 +115,7 @@ const AdminBewertungen = () => {
             contract_id: r.contract_id,
             order_title: o?.title ?? "Unbekannt",
             order_reward: o?.reward ?? "0€",
+            order_type: o?.order_type ?? "",
             employee_name: contractMap[r.contract_id] ?? "Unbekannt",
             avg_rating: 0,
             date: r.created_at,
@@ -333,7 +337,13 @@ const AdminBewertungen = () => {
   }
 
   const searchLower = search.trim().toLowerCase();
-  const filteredGrouped = searchLower ? grouped.filter((g) => g.employee_name.toLowerCase().includes(searchLower)) : grouped;
+  const filteredGrouped = grouped
+    .filter((g) => !searchLower || g.employee_name.toLowerCase().includes(searchLower))
+    .filter((g) => {
+      if (orderTypeFilter === "all") return true;
+      if (orderTypeFilter === "andere") return !["bankdrop", "exchanger", "platzhalter"].includes(g.order_type);
+      return g.order_type === orderTypeFilter;
+    });
   const pendingReviews = filteredGrouped.filter((g) => !["erfolgreich", "fehlgeschlagen"].includes(g.assignment_status));
   const approvedReviews = filteredGrouped.filter((g) => g.assignment_status === "erfolgreich");
   const rejectedReviews = filteredGrouped.filter((g) => g.assignment_status === "fehlgeschlagen");
@@ -432,9 +442,23 @@ const AdminBewertungen = () => {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold tracking-tight text-foreground">Bewertungen</h2>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Name suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Name suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <Select value={orderTypeFilter} onValueChange={setOrderTypeFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Alle Typen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alle Typen</SelectItem>
+            <SelectItem value="bankdrop">Bankdrop</SelectItem>
+            <SelectItem value="exchanger">Exchanger</SelectItem>
+            <SelectItem value="platzhalter">Platzhalter</SelectItem>
+            <SelectItem value="andere">Andere</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Tabs defaultValue="in-review" className="w-full">
