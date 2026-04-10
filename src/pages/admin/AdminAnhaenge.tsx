@@ -18,6 +18,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const groupStatus = (statuses: string[]) => {
   if (statuses.every((s) => s === "genehmigt"))
@@ -130,60 +131,56 @@ export default function AdminAnhaenge() {
 
   const isMutating = bulkApproveMutation.isPending || bulkRejectMutation.isPending;
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">Anhänge</h2>
-        <p className="text-muted-foreground mt-1">Eingereichte Dokumente prüfen und genehmigen.</p>
-      </div>
+  const searchLower = search.trim().toLowerCase();
+  const filtered = groups
+    ? (searchLower ? groups.filter((g: any) => g.employee_name.toLowerCase().includes(searchLower)) : groups)
+    : [];
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Name suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-      </div>
+  const pending = filtered.filter((g: any) => g.statuses.some((s: string) => s === "eingereicht") && !g.statuses.some((s: string) => s === "abgelehnt"));
+  const approved = filtered.filter((g: any) => g.statuses.every((s: string) => s === "genehmigt"));
+  const rejected = filtered.filter((g: any) => g.statuses.some((s: string) => s === "abgelehnt"));
 
-      <div className="premium-card overflow-hidden">
-        <Table>
-          <TableHeader>
+  const renderTable = (rows: any[], showActions: boolean) => (
+    <div className="premium-card overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Mitarbeiter</TableHead>
+            <TableHead>Auftrag</TableHead>
+            <TableHead>Hochgeladen</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Eingereicht am</TableHead>
+            {showActions && <TableHead>Aktionen</TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
             <TableRow>
-              <TableHead>Mitarbeiter</TableHead>
-              <TableHead>Auftrag</TableHead>
-              <TableHead>Hochgeladen</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Eingereicht am</TableHead>
-              <TableHead>Aktionen</TableHead>
+              <TableCell colSpan={showActions ? 6 : 5} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
-              </TableRow>
-            ) : (() => {
-              const searchLower = search.trim().toLowerCase();
-              const filtered = searchLower ? groups!.filter((g: any) => g.employee_name.toLowerCase().includes(searchLower)) : groups!;
-              return !filtered.length ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Keine Anhänge vorhanden</TableCell>
-              </TableRow>
-            ) : (
-              filtered.map((g: any) => (
-                <TableRow
-                  key={`${g.contract_id}__${g.order_id}`}
-                  className="cursor-pointer"
-                  onClick={() => navigate(`/admin/anhaenge/${g.contract_id}/${g.order_id}`)}
-                >
-                  <TableCell className="font-medium">{g.employee_name}</TableCell>
-                  <TableCell>{g.order_title}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="text-xs">
-                      {g.uploaded_count}/{g.required_count || g.uploaded_count}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{groupStatus(g.statuses)}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {format(new Date(g.latest_created_at), "dd.MM.yyyy HH:mm")}
-                  </TableCell>
+          ) : !rows.length ? (
+            <TableRow>
+              <TableCell colSpan={showActions ? 6 : 5} className="text-center py-8 text-muted-foreground">Keine Anhänge vorhanden</TableCell>
+            </TableRow>
+          ) : (
+            rows.map((g: any) => (
+              <TableRow
+                key={`${g.contract_id}__${g.order_id}`}
+                className="cursor-pointer"
+                onClick={() => navigate(`/admin/anhaenge/${g.contract_id}/${g.order_id}`)}
+              >
+                <TableCell className="font-medium">{g.employee_name}</TableCell>
+                <TableCell>{g.order_title}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary" className="text-xs">
+                    {g.uploaded_count}/{g.required_count || g.uploaded_count}
+                  </Badge>
+                </TableCell>
+                <TableCell>{groupStatus(g.statuses)}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {format(new Date(g.latest_created_at), "dd.MM.yyyy HH:mm")}
+                </TableCell>
+                {showActions && (
                   <TableCell>
                     {g.pending_ids.length > 0 ? (
                       <TooltipProvider delayDuration={300}>
@@ -222,12 +219,37 @@ export default function AdminAnhaenge() {
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                </TableRow>
-              ))
-            ); })()}
-          </TableBody>
-        </Table>
+                )}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">Anhänge</h2>
+        <p className="text-muted-foreground mt-1">Eingereichte Dokumente prüfen und genehmigen.</p>
       </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Name suchen..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+      </div>
+
+      <Tabs defaultValue="eingereicht">
+        <TabsList>
+          <TabsTrigger value="eingereicht">Eingereicht ({pending.length})</TabsTrigger>
+          <TabsTrigger value="genehmigt">Genehmigt ({approved.length})</TabsTrigger>
+          <TabsTrigger value="abgelehnt">Abgelehnt ({rejected.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="eingereicht">{renderTable(pending, true)}</TabsContent>
+        <TabsContent value="genehmigt">{renderTable(approved, false)}</TabsContent>
+        <TabsContent value="abgelehnt">{renderTable(rejected, false)}</TabsContent>
+      </Tabs>
 
       <AlertDialog open={!!rejectTarget} onOpenChange={(open) => { if (!open) setRejectTarget(null); }}>
         <AlertDialogContent>
