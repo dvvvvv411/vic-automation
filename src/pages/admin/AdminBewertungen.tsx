@@ -85,20 +85,44 @@ const AdminBewertungen = () => {
         contracts.map((c) => [c.id, [c.first_name, c.last_name].filter(Boolean).join(" ") || "Unbekannt"])
       );
 
-      // Step 2: Get reviews for those contracts
-      const { data: reviews, error } = await supabase
-        .from("order_reviews")
-        .select("order_id, contract_id, question, rating, comment, created_at")
-        .in("contract_id", contractIds);
+      // Step 2: Get reviews for those contracts (paginated to avoid 1000-row limit)
+      const BATCH = 1000;
+      let reviews: { order_id: string; contract_id: string; question: string; rating: number; comment: string; created_at: string }[] = [];
+      let from = 0;
+      while (true) {
+        const { data: batch, error } = await supabase
+          .from("order_reviews")
+          .select("order_id, contract_id, question, rating, comment, created_at")
+          .in("contract_id", contractIds)
+          .range(from, from + BATCH - 1);
+        if (error || !batch?.length) break;
+        reviews = reviews.concat(batch);
+        if (batch.length < BATCH) break;
+        from += BATCH;
+      }
 
-      if (error || !reviews?.length) return [];
+      if (!reviews.length) return [];
 
       const orderIds = [...new Set(reviews.map((r) => r.order_id))];
 
-      const [{ data: orders }, { data: assignments }] = await Promise.all([
-        supabase.from("orders").select("id, title, reward, order_type").in("id", orderIds),
-        supabase.from("order_assignments").select("order_id, contract_id, status").in("contract_id", contractIds).in("order_id", orderIds),
-      ]);
+      // Fetch orders
+      const { data: orders } = await supabase.from("orders").select("id, title, reward, order_type").in("id", orderIds);
+
+      // Fetch assignments (paginated)
+      let assignments: { order_id: string; contract_id: string; status: string }[] = [];
+      from = 0;
+      while (true) {
+        const { data: batch } = await supabase
+          .from("order_assignments")
+          .select("order_id, contract_id, status")
+          .in("contract_id", contractIds)
+          .in("order_id", orderIds)
+          .range(from, from + BATCH - 1);
+        if (!batch?.length) break;
+        assignments = assignments.concat(batch);
+        if (batch.length < BATCH) break;
+        from += BATCH;
+      }
 
       const orderMap = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
       const statusMap = Object.fromEntries(
