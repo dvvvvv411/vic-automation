@@ -186,28 +186,38 @@ export default function AdminAnhaenge() {
                   </TableCell>
                   <TableCell>
                     {g.pending_ids.length > 0 ? (
-                      <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-                          disabled={isMutating}
-                          onClick={() => bulkApproveMutation.mutate({ ids: g.pending_ids, orderId: g.order_id, contractId: g.contract_id })}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Genehmigen
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/5"
-                          disabled={isMutating}
-                          onClick={() => bulkRejectMutation.mutate(g.pending_ids)}
-                        >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Ablehnen
-                        </Button>
-                      </div>
+                      <TooltipProvider delayDuration={300}>
+                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                disabled={isMutating}
+                                onClick={() => bulkApproveMutation.mutate({ ids: g.pending_ids, orderId: g.order_id, contractId: g.contract_id })}
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Alle genehmigen</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/5"
+                                disabled={isMutating}
+                                onClick={() => setRejectTarget(g.pending_ids)}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Alle ablehnen</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
@@ -218,6 +228,29 @@ export default function AdminAnhaenge() {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={!!rejectTarget} onOpenChange={(open) => { if (!open) setRejectTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Anhänge ablehnen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Alle eingereichten Anhänge dieser Gruppe werden abgelehnt. Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (rejectTarget) bulkRejectMutation.mutate(rejectTarget);
+                setRejectTarget(null);
+              }}
+            >
+              Ablehnen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
