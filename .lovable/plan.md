@@ -1,40 +1,45 @@
 
 
-## Plan: Serverseitige Suche für Mitarbeiter-Tabelle
+## Problem: Supabase 1000-Zeilen-Limit
 
-### Problem
-Die Suche filtert nur clientseitig auf der aktuell geladenen Seite (20 Einträge). Mitarbeiter auf anderen Seiten werden nie gefunden.
+Es gibt **1167 Reviews** für dieses Branding, aber Supabase gibt standardmäßig maximal **1000 Zeilen** pro Query zurück. Die Reviews für den DKB-Auftrag werden abgeschnitten und deshalb nicht angezeigt.
+
+Betroffen sind zwei Queries in `AdminBewertungen.tsx`:
+1. `order_reviews` Query (Zeile 89-92) — 1167 Zeilen, Limit 1000
+2. `order_assignments` Query (Zeile 100) — potenziell auch betroffen
 
 ### Lösung
-Wenn ein Suchbegriff eingegeben wird, die Suche serverseitig in der Supabase-Query durchführen und Seite auf 0 zurücksetzen.
 
-### Änderungen in `src/pages/admin/AdminMitarbeiter.tsx`
+In `src/pages/admin/AdminBewertungen.tsx` beide betroffene Queries mit einer Batch-Funktion paginieren, die alle Ergebnisse über mehrere Requests in 1000er-Blöcken abruft.
 
-1. **`search` in den queryKey aufnehmen** — damit bei Suchänderung neu gefetcht wird
-2. **Seite auf 0 zurücksetzen** wenn sich der Suchbegriff ändert (`onChange` Handler)
-3. **Serverseitige Filter**: Wenn `search.trim()` gesetzt ist, mit `.or()` nach `first_name`, `last_name`, `email`, `phone` filtern (ilike-Pattern)
-4. **Client-Filter entfernen** — `sortedAndFiltered` braucht keinen `search`-Filter mehr, nur noch die Sortierung
-5. **`totalPages` aus `data.total`** — funktioniert dann korrekt weil der Count die Suchfilter berücksichtigt
+**Konkret:**
 
-### Technisches Detail
+1. Helper-Funktion `fetchAll` erstellen, die eine Supabase-Query in 1000er-Schritten mit `.range()` abruft bis keine weiteren Daten kommen
+2. Die `order_reviews`-Query (Zeile 89-92) durch `fetchAll` ersetzen
+3. Die `order_assignments`-Query (Zeile 100) ebenfalls durch `fetchAll` ersetzen
 
 ```typescript
-// queryKey inkl. search
-queryKey: ["mitarbeiter", page, activeBrandingId, debouncedSearch],
-
-// In queryFn, nach .in("status", [...]):
-if (term) {
-  query = query.or(
-    `first_name.ilike.%${term}%,last_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`
-  );
+// Helper zum paginierten Abruf
+async function fetchAll<T>(query: any): Promise<T[]> {
+  const PAGE = 1000;
+  let all: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data } = await query.range(from, from + PAGE - 1);
+    if (!data?.length) break;
+    all = all.concat(data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
 }
 ```
 
-Optional ein kurzes Debounce (300ms) um nicht bei jedem Tastendruck eine Query auszulösen.
+Das Problem: `.range()` kann nicht auf eine bereits gebaute Query angewandt werden, weil man die Query-Builder-Kette nicht klonen kann. Stattdessen wird die Query-Logik in eine Schleife umgebaut, die `.range(from, to)` an die bestehende Query anhängt.
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/admin/AdminMitarbeiter.tsx` | Serverseitige Suche + Page-Reset + Debounce |
+| `src/pages/admin/AdminBewertungen.tsx` | Paginierte Abfrage für `order_reviews` und `order_assignments` |
 
