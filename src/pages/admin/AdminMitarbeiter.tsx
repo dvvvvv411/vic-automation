@@ -185,7 +185,7 @@ export default function AdminMitarbeiter() {
 
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Laden...</div>
-        ) : !sortedAndFiltered.length ? (
+        ) : !sortedItems.length ? (
           <div className="text-center py-16 border border-dashed border-border rounded-lg">
             <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">
@@ -210,7 +210,7 @@ export default function AdminMitarbeiter() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedAndFiltered.map((item: any) => {
+                  {sortedItems.map((item: any) => {
                     const count = assignmentCounts?.[item.id] || 0;
                     return (
                       <TableRow key={item.id}>
