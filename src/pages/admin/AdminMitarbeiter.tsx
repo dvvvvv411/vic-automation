@@ -135,11 +135,11 @@ export default function AdminMitarbeiter() {
     }
   };
 
-  const sortedAndFiltered = useMemo(() => {
+  const sortedItems = useMemo(() => {
     const items = data?.items ?? [];
     const today = startOfToday();
 
-    const sorted = [...items].sort((a: any, b: any) => {
+    return [...items].sort((a: any, b: any) => {
       const statusRank = (s: string) => s === "genehmigt" || s === "unterzeichnet" ? 0 : s === "eingereicht" ? 1 : 2;
       const rankA = statusRank(a.status);
       const rankB = statusRank(b.status);
@@ -158,15 +158,7 @@ export default function AdminMitarbeiter() {
       if (!futureA && !futureB) return dateB.getTime() - dateA.getTime();
       return futureA ? -1 : 1;
     });
-
-    if (!search.trim()) return sorted;
-    const term = search.toLowerCase().trim();
-    return sorted.filter((item: any) => {
-      const name = `${item.first_name ?? ""} ${item.last_name ?? ""}`.toLowerCase();
-      const branding = ((item as any).applications?.brandings?.company_name ?? "").toLowerCase();
-      return name.includes(term) || (item.email ?? "").toLowerCase().includes(term) || (item.phone ?? "").toLowerCase().includes(term) || branding.includes(term);
-    });
-  }, [data?.items, search]);
+  }, [data?.items]);
 
   const totalPages = Math.ceil((data?.total || 0) / PAGE_SIZE);
 
