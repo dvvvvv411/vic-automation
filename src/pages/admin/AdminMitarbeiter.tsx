@@ -36,6 +36,7 @@ function formatDate(dateStr: string | null) {
 export default function AdminMitarbeiter() {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [assignContract, setAssignContract] = useState<{ id: string; label: string } | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string; isSuspended: boolean } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -45,16 +46,33 @@ export default function AdminMitarbeiter() {
   const { activeBrandingId, ready, brandings } = useBrandingFilter();
   const activeBrandingName = brandings.find(b => b.id === activeBrandingId)?.company_name ?? "–";
 
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["mitarbeiter", page, activeBrandingId],
+    queryKey: ["mitarbeiter", page, activeBrandingId, debouncedSearch],
     enabled: ready,
     queryFn: async () => {
-      const { data: contracts, error, count } = await supabase
+      let query = supabase
         .from("employment_contracts")
         .select("id, first_name, last_name, email, phone, temp_password, user_id, application_id, status, desired_start_date, is_suspended, branding_id", { count: "exact" })
         .eq("branding_id", activeBrandingId!)
         .in("status", ["offen", "eingereicht", "genehmigt", "unterzeichnet"])
-        .not("first_name", "is", null)
+        .not("first_name", "is", null);
+
+      if (debouncedSearch) {
+        query = query.or(
+          `first_name.ilike.%${debouncedSearch}%,last_name.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%,phone.ilike.%${debouncedSearch}%`
+        );
+      }
+
+      const { data: contracts, error, count } = await query
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
