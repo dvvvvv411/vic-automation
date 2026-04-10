@@ -13,6 +13,11 @@ import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { tryAutoComplete } from "./AdminAnhaengeDetail";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const groupStatus = (statuses: string[]) => {
   if (statuses.every((s) => s === "genehmigt"))
