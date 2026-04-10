@@ -32,6 +32,7 @@ export default function AdminAnhaenge() {
   const queryClient = useQueryClient();
   const { activeBrandingId, ready } = useBrandingFilter();
   const [search, setSearch] = useState("");
+  const [rejectTarget, setRejectTarget] = useState<string[] | null>(null);
 
   const { data: groups, isLoading } = useQuery({
     queryKey: ["admin-order-attachments-grouped", activeBrandingId],
