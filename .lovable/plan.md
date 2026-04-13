@@ -1,45 +1,54 @@
 
 
-## Problem: Supabase 1000-Zeilen-Limit
+## Plan: Bewertungs-Antworten werden bei Token-Refresh gelöscht
 
-Es gibt **1167 Reviews** für dieses Branding, aber Supabase gibt standardmäßig maximal **1000 Zeilen** pro Query zurück. Die Reviews für den DKB-Auftrag werden abgeschnitten und deshalb nicht angezeigt.
-
-Betroffen sind zwei Queries in `AdminBewertungen.tsx`:
-1. `order_reviews` Query (Zeile 89-92) — 1167 Zeilen, Limit 1000
-2. `order_assignments` Query (Zeile 100) — potenziell auch betroffen
+### Problem
+`Bewertung.tsx` Zeile 71-89: Der `useEffect` hat `[contract, id]` als Dependency. Bei jedem Supabase-Token-Refresh bekommt `contract` eine neue Objekt-Referenz (weil `MitarbeiterLayout` es neu fetcht), wodurch der Effect erneut feuert und `setAnswers(qs.map(() => ({ rating: 0, comment: "" })))` alle Eingaben löscht.
 
 ### Lösung
 
-In `src/pages/admin/AdminBewertungen.tsx` beide betroffene Queries mit einer Batch-Funktion paginieren, die alle Ergebnisse über mehrere Requests in 1000er-Blöcken abruft.
+**Datei: `src/pages/mitarbeiter/Bewertung.tsx`**
 
-**Konkret:**
-
-1. Helper-Funktion `fetchAll` erstellen, die eine Supabase-Query in 1000er-Schritten mit `.range()` abruft bis keine weiteren Daten kommen
-2. Die `order_reviews`-Query (Zeile 89-92) durch `fetchAll` ersetzen
-3. Die `order_assignments`-Query (Zeile 100) ebenfalls durch `fetchAll` ersetzen
+1. **Dependency auf `contract.id` statt `contract`**: Im useEffect nur `contract?.id` als Dependency verwenden (primitiver String, ändert sich nicht bei Token-Refresh)
+2. **Guard gegen erneutes Laden**: Wenn `order` bereits geladen ist und die `id` sich nicht geändert hat, nicht erneut fetchen. Einfach ein Early-Return wenn `order?.id === id` bereits gesetzt ist.
 
 ```typescript
-// Helper zum paginierten Abruf
-async function fetchAll<T>(query: any): Promise<T[]> {
-  const PAGE = 1000;
-  let all: T[] = [];
-  let from = 0;
-  while (true) {
-    const { data } = await query.range(from, from + PAGE - 1);
-    if (!data?.length) break;
-    all = all.concat(data);
-    if (data.length < PAGE) break;
-    from += PAGE;
-  }
-  return all;
-}
-```
+// Vorher:
+useEffect(() => {
+  if (!contract || !id) { ... }
+  const fetch = async () => { ... };
+  fetch();
+}, [contract, id]);
 
-Das Problem: `.range()` kann nicht auf eine bereits gebaute Query angewandt werden, weil man die Query-Builder-Kette nicht klonen kann. Stattdessen wird die Query-Logik in eine Schleife umgebaut, die `.range(from, to)` an die bestehende Query anhängt.
+// Nachher:
+const contractId = contract?.id;
+
+useEffect(() => {
+  if (!contractId || !id) { setLoading(false); return; }
+  
+  // Bereits geladen? Nicht erneut fetchen
+  if (order?.id === id) return;
+
+  const fetchOrder = async () => {
+    const { data } = await supabase
+      .from("orders")
+      .select("id, title, review_questions, required_attachments")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!data) { setLoading(false); return; }
+    setOrder(data);
+    const qs = parseQuestions(data.review_questions);
+    setAnswers(qs.map(() => ({ rating: 0, comment: "" })));
+    setLoading(false);
+  };
+  fetchOrder();
+}, [contractId, id]);
+```
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/admin/AdminBewertungen.tsx` | Paginierte Abfrage für `order_reviews` und `order_assignments` |
+| `src/pages/mitarbeiter/Bewertung.tsx` | useEffect-Dependency auf `contract?.id` ändern + Guard gegen doppeltes Laden |
 
