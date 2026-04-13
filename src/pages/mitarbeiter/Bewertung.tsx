@@ -68,10 +68,15 @@ const Bewertung = () => {
   const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<ReviewAnswer[]>([]);
 
-  useEffect(() => {
-    if (!contract || !id) { setLoading(false); return; }
+  const contractId = contract?.id;
 
-    const fetch = async () => {
+  useEffect(() => {
+    if (!contractId || !id) { setLoading(false); return; }
+
+    // Already loaded for this order? Don't re-fetch and wipe answers
+    if (order?.id === id) return;
+
+    const fetchOrder = async () => {
       const { data } = await supabase
         .from("orders")
         .select("id, title, review_questions, required_attachments")
@@ -85,8 +90,8 @@ const Bewertung = () => {
       setAnswers(qs.map(() => ({ rating: 0, comment: "" })));
       setLoading(false);
     };
-    fetch();
-  }, [contract, id]);
+    fetchOrder();
+  }, [contractId, id]);
 
   const parseQuestions = (raw: unknown): string[] => {
     if (!raw) return [];
