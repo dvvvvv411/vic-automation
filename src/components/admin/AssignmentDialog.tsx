@@ -331,7 +331,8 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                           </div>
                         </div>
                       </label>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </ScrollArea>
