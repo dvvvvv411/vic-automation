@@ -341,9 +341,15 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
         )}
         </div>
 
-        <DialogFooter className="px-6 pb-6">
+        <DialogFooter className="px-6 pb-6 flex-col gap-2 sm:flex-col">
+          {removedCount > 0 && (
+            <p className="text-sm text-destructive text-center">
+              {removedCount} {removedCount === 1 ? "Zuweisung wird entzogen" : "Zuweisungen werden entzogen"}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Abbrechen</Button>
-          <Button 
+          <Button
             className="shadow-sm hover:shadow-md transition-all"
             disabled={isLoading || saveMutation.isPending} 
             onClick={() => saveMutation.mutate()}
