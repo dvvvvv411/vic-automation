@@ -1,57 +1,34 @@
 
 
-## Plan: Text-Ausrichtung und Schriftgröße im Vertragsvorlagen-Editor
+## Plan: Aufträge von Mitarbeitern entziehen (Unassign)
 
-### Änderungen
+### Problem
+Der AssignmentDialog erlaubt aktuell nur das Hinzufügen von Zuweisungen. Bereits zugewiesene Checkboxen sind `disabled` und können nicht abgewählt werden. Es gibt keine Möglichkeit, einem Mitarbeiter einen Auftrag zu entziehen.
 
-**1. Neue TipTap-Extensions installieren**
-- `@tiptap/extension-text-align` — für links/mittig/rechts
-- `@tiptap/extension-text-style` + `@tiptap/extension-font-size` — für Schriftgröße (alternativ custom Extension mit `fontSize` als Inline-Style)
+### Lösung
 
-**2. `src/pages/admin/AdminVertragsvorlageForm.tsx`**
+**Datei: `src/components/admin/AssignmentDialog.tsx`**
 
-- **Extensions registrieren**: `TextAlign.configure({ types: ['heading', 'paragraph'] })`, `TextStyle`, und eine FontSize-Extension
-- **Alignment-Buttons** in der MenuBar: AlignLeft / AlignCenter / AlignRight Icons sind bereits importiert aber nicht verwendet — diese als Buttons hinzufügen nach den Listen-Buttons
-- **Font-Size-Dropdown** in der MenuBar: Ein `Select` mit Optionen wie 10px, 12px, 14px, 16px, 18px, 20px, 24px, 28px, 32px. Setzt `editor.chain().focus().setFontSize('16px').run()` bzw. `unsetFontSize()` für "Standard"
+1. **Checkbox für bestehende Zuweisungen aktivieren**: Das `disabled`-Attribut entfernen, sodass auch bereits zugewiesene Einträge abgewählt werden können.
 
-**3. Da `@tiptap/extension-font-size` kein offizielles Paket ist**, wird stattdessen eine custom Extension gebaut die `textStyle` nutzt:
+2. **Entfernte Zuweisungen in der saveMutation löschen**: Neben den neu hinzugefügten (`newlyAdded`) auch die entfernten (`removed`) berechnen -- das sind IDs die in `existingIds` sind aber nicht mehr in `selected`. Für jede entfernte ID wird ein gezieltes `DELETE` ausgeführt, das **beide Spalten** (`order_id` UND `contract_id`) matcht, sodass nur genau diese eine Zuweisung gelöscht wird.
 
-```typescript
-import { Extension } from "@tiptap/core";
+3. **Visuelle Kennzeichnung**: Bereits zugewiesene aber zum Entfernen markierte Einträge (abgewählt) bekommen einen roten Rahmen/Hintergrund als Warnung.
 
-const FontSize = Extension.create({
-  name: "fontSize",
-  addGlobalAttributes() {
-    return [{
-      types: ["textStyle"],
-      attributes: {
-        fontSize: {
-          default: null,
-          parseHTML: el => el.style.fontSize || null,
-          renderHTML: attrs => attrs.fontSize ? { style: `font-size: ${attrs.fontSize}` } : {},
-        },
-      },
-    }];
-  },
-  addCommands() {
-    return {
-      setFontSize: (size) => ({ chain }) => chain().setMark("textStyle", { fontSize: size }).run(),
-      unsetFontSize: () => ({ chain }) => chain().setMark("textStyle", { fontSize: null }).removeEmptyTextStyle().run(),
-    };
-  },
-});
+4. **Bestätigungshinweis**: Im Footer wird angezeigt wie viele Zuweisungen entfernt werden, z.B. "2 Zuweisungen werden entzogen".
+
+### Sicherheit
+
+Das DELETE-Statement ist maximal spezifisch:
+```sql
+DELETE FROM order_assignments 
+WHERE order_id = :sourceId AND contract_id = :targetId
 ```
-
-### Neue Pakete
-
-| Paket | Zweck |
-|---|---|
-| `@tiptap/extension-text-align` | Textausrichtung |
-| `@tiptap/extension-text-style` | Basis für inline Styles |
+Es wird immer nur die exakte Kombination aus `order_id` + `contract_id` gelöscht. Andere Mitarbeiter sind nicht betroffen.
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/admin/AdminVertragsvorlageForm.tsx` | Extensions + Alignment-Buttons + Font-Size-Dropdown |
+| `src/components/admin/AssignmentDialog.tsx` | Checkbox entblockieren, DELETE-Logik für entfernte Zuweisungen, visuelle Warnung |
 
