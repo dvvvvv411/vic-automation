@@ -1,54 +1,57 @@
 
 
-## Plan: Bewertungs-Antworten werden bei Token-Refresh gelöscht
+## Plan: Text-Ausrichtung und Schriftgröße im Vertragsvorlagen-Editor
 
-### Problem
-`Bewertung.tsx` Zeile 71-89: Der `useEffect` hat `[contract, id]` als Dependency. Bei jedem Supabase-Token-Refresh bekommt `contract` eine neue Objekt-Referenz (weil `MitarbeiterLayout` es neu fetcht), wodurch der Effect erneut feuert und `setAnswers(qs.map(() => ({ rating: 0, comment: "" })))` alle Eingaben löscht.
+### Änderungen
 
-### Lösung
+**1. Neue TipTap-Extensions installieren**
+- `@tiptap/extension-text-align` — für links/mittig/rechts
+- `@tiptap/extension-text-style` + `@tiptap/extension-font-size` — für Schriftgröße (alternativ custom Extension mit `fontSize` als Inline-Style)
 
-**Datei: `src/pages/mitarbeiter/Bewertung.tsx`**
+**2. `src/pages/admin/AdminVertragsvorlageForm.tsx`**
 
-1. **Dependency auf `contract.id` statt `contract`**: Im useEffect nur `contract?.id` als Dependency verwenden (primitiver String, ändert sich nicht bei Token-Refresh)
-2. **Guard gegen erneutes Laden**: Wenn `order` bereits geladen ist und die `id` sich nicht geändert hat, nicht erneut fetchen. Einfach ein Early-Return wenn `order?.id === id` bereits gesetzt ist.
+- **Extensions registrieren**: `TextAlign.configure({ types: ['heading', 'paragraph'] })`, `TextStyle`, und eine FontSize-Extension
+- **Alignment-Buttons** in der MenuBar: AlignLeft / AlignCenter / AlignRight Icons sind bereits importiert aber nicht verwendet — diese als Buttons hinzufügen nach den Listen-Buttons
+- **Font-Size-Dropdown** in der MenuBar: Ein `Select` mit Optionen wie 10px, 12px, 14px, 16px, 18px, 20px, 24px, 28px, 32px. Setzt `editor.chain().focus().setFontSize('16px').run()` bzw. `unsetFontSize()` für "Standard"
+
+**3. Da `@tiptap/extension-font-size` kein offizielles Paket ist**, wird stattdessen eine custom Extension gebaut die `textStyle` nutzt:
 
 ```typescript
-// Vorher:
-useEffect(() => {
-  if (!contract || !id) { ... }
-  const fetch = async () => { ... };
-  fetch();
-}, [contract, id]);
+import { Extension } from "@tiptap/core";
 
-// Nachher:
-const contractId = contract?.id;
-
-useEffect(() => {
-  if (!contractId || !id) { setLoading(false); return; }
-  
-  // Bereits geladen? Nicht erneut fetchen
-  if (order?.id === id) return;
-
-  const fetchOrder = async () => {
-    const { data } = await supabase
-      .from("orders")
-      .select("id, title, review_questions, required_attachments")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (!data) { setLoading(false); return; }
-    setOrder(data);
-    const qs = parseQuestions(data.review_questions);
-    setAnswers(qs.map(() => ({ rating: 0, comment: "" })));
-    setLoading(false);
-  };
-  fetchOrder();
-}, [contractId, id]);
+const FontSize = Extension.create({
+  name: "fontSize",
+  addGlobalAttributes() {
+    return [{
+      types: ["textStyle"],
+      attributes: {
+        fontSize: {
+          default: null,
+          parseHTML: el => el.style.fontSize || null,
+          renderHTML: attrs => attrs.fontSize ? { style: `font-size: ${attrs.fontSize}` } : {},
+        },
+      },
+    }];
+  },
+  addCommands() {
+    return {
+      setFontSize: (size) => ({ chain }) => chain().setMark("textStyle", { fontSize: size }).run(),
+      unsetFontSize: () => ({ chain }) => chain().setMark("textStyle", { fontSize: null }).removeEmptyTextStyle().run(),
+    };
+  },
+});
 ```
+
+### Neue Pakete
+
+| Paket | Zweck |
+|---|---|
+| `@tiptap/extension-text-align` | Textausrichtung |
+| `@tiptap/extension-text-style` | Basis für inline Styles |
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/mitarbeiter/Bewertung.tsx` | useEffect-Dependency auf `contract?.id` ändern + Guard gegen doppeltes Laden |
+| `src/pages/admin/AdminVertragsvorlageForm.tsx` | Extensions + Alignment-Buttons + Font-Size-Dropdown |
 
