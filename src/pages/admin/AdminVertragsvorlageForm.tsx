@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,16 +15,52 @@ import { toast } from "sonner";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
+import TextAlign from "@tiptap/extension-text-align";
+import TextStyle from "@tiptap/extension-text-style";
+import { Extension } from "@tiptap/core";
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   List, ListOrdered, AlignLeft, AlignCenter, AlignRight,
 } from "lucide-react";
 
+/* ── Custom FontSize extension ── */
+const FontSize = Extension.create({
+  name: "fontSize",
+  addGlobalAttributes() {
+    return [{
+      types: ["textStyle"],
+      attributes: {
+        fontSize: {
+          default: null,
+          parseHTML: (el) => (el as HTMLElement).style.fontSize || null,
+          renderHTML: (attrs) =>
+            attrs.fontSize ? { style: `font-size: ${attrs.fontSize}` } : {},
+        },
+      },
+    }];
+  },
+  addCommands() {
+    return {
+      setFontSize:
+        (size: string) =>
+        ({ chain }: any) =>
+          chain().setMark("textStyle", { fontSize: size }).run(),
+      unsetFontSize:
+        () =>
+        ({ chain }: any) =>
+          chain().setMark("textStyle", { fontSize: null }).removeEmptyTextStyle().run(),
+    };
+  },
+});
+
+/* ── Toolbar ── */
 function MenuBar({ editor }: { editor: any }) {
   if (!editor) return null;
 
   const btnClass = (active: boolean) =>
     `p-2 rounded hover:bg-muted transition-colors ${active ? "bg-muted text-foreground" : "text-muted-foreground"}`;
+
+  const currentFontSize = editor.getAttributes("textStyle")?.fontSize || "";
 
   return (
     <div className="flex items-center gap-0.5 border-b border-border px-3 py-2 flex-wrap">
@@ -40,14 +76,32 @@ function MenuBar({ editor }: { editor: any }) {
       <button type="button" className={btnClass(editor.isActive("strike"))} onClick={() => editor.chain().focus().toggleStrike().run()}>
         <Strikethrough className="h-4 w-4" />
       </button>
+
       <div className="w-px h-5 bg-border mx-1" />
+
       <button type="button" className={btnClass(editor.isActive("bulletList"))} onClick={() => editor.chain().focus().toggleBulletList().run()}>
         <List className="h-4 w-4" />
       </button>
       <button type="button" className={btnClass(editor.isActive("orderedList"))} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
         <ListOrdered className="h-4 w-4" />
       </button>
+
       <div className="w-px h-5 bg-border mx-1" />
+
+      {/* Alignment */}
+      <button type="button" className={btnClass(editor.isActive({ textAlign: "left" }))} onClick={() => editor.chain().focus().setTextAlign("left").run()}>
+        <AlignLeft className="h-4 w-4" />
+      </button>
+      <button type="button" className={btnClass(editor.isActive({ textAlign: "center" }))} onClick={() => editor.chain().focus().setTextAlign("center").run()}>
+        <AlignCenter className="h-4 w-4" />
+      </button>
+      <button type="button" className={btnClass(editor.isActive({ textAlign: "right" }))} onClick={() => editor.chain().focus().setTextAlign("right").run()}>
+        <AlignRight className="h-4 w-4" />
+      </button>
+
+      <div className="w-px h-5 bg-border mx-1" />
+
+      {/* Heading select */}
       <Select
         value={
           editor.isActive("heading", { level: 1 }) ? "h1"
@@ -70,6 +124,31 @@ function MenuBar({ editor }: { editor: any }) {
           <SelectItem value="h3">Überschrift 3</SelectItem>
         </SelectContent>
       </Select>
+
+      {/* Font size select */}
+      <Select
+        value={currentFontSize || "default"}
+        onValueChange={(val) => {
+          if (val === "default") editor.chain().focus().unsetFontSize().run();
+          else editor.chain().focus().setFontSize(val).run();
+        }}
+      >
+        <SelectTrigger className="h-8 w-20 text-xs">
+          <SelectValue placeholder="Größe" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="default">Standard</SelectItem>
+          <SelectItem value="10px">10</SelectItem>
+          <SelectItem value="12px">12</SelectItem>
+          <SelectItem value="14px">14</SelectItem>
+          <SelectItem value="16px">16</SelectItem>
+          <SelectItem value="18px">18</SelectItem>
+          <SelectItem value="20px">20</SelectItem>
+          <SelectItem value="24px">24</SelectItem>
+          <SelectItem value="28px">28</SelectItem>
+          <SelectItem value="32px">32</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -79,7 +158,7 @@ export default function AdminVertragsvorlageForm() {
   const isEdit = !!id;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { activeBrandingId, ready } = useBrandingFilter();
+  const { activeBrandingId } = useBrandingFilter();
 
   const [title, setTitle] = useState("");
   const [employmentType, setEmploymentType] = useState("");
@@ -87,7 +166,13 @@ export default function AdminVertragsvorlageForm() {
   const [isActive, setIsActive] = useState(true);
 
   const editor = useEditor({
-    extensions: [StarterKit, Underline],
+    extensions: [
+      StarterKit,
+      Underline,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      TextStyle,
+      FontSize,
+    ],
     content: "",
     editorProps: {
       attributes: {
@@ -96,7 +181,6 @@ export default function AdminVertragsvorlageForm() {
     },
   });
 
-  // Load existing template
   const { data: existing } = useQuery({
     queryKey: ["contract-template", id],
     enabled: isEdit,
