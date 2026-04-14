@@ -356,6 +356,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
           >
             {saveMutation.isPending ? "Speichern..." : "Speichern"}
           </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
