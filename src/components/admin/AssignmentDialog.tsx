@@ -137,12 +137,27 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
     );
   }, [items, search]);
 
+  // Calculate removed count for footer hint
+  const existingIds = new Set(existing?.map((a) => (mode === "order" ? a.contract_id : a.order_id)) ?? []);
+  const removedCount = Array.from(existingIds).filter((id) => !selected.has(id)).length;
+
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const existingIds = new Set(existing?.map((a) => (mode === "order" ? a.contract_id : a.order_id)) ?? []);
-      const newlyAdded = Array.from(selected).filter((id) => !existingIds.has(id));
+      const existingIdSet = new Set(existing?.map((a) => (mode === "order" ? a.contract_id : a.order_id)) ?? []);
+      const newlyAdded = Array.from(selected).filter((id) => !existingIdSet.has(id));
+      const removed = Array.from(existingIdSet).filter((id) => !selected.has(id));
 
-      // Only insert newly added assignments — never delete
+      // Delete removed assignments — targeted by BOTH order_id AND contract_id
+      for (const targetId of removed) {
+        const { error: delErr } = await supabase
+          .from("order_assignments")
+          .delete()
+          .eq(mode === "order" ? "order_id" : "contract_id", sourceId)
+          .eq(mode === "order" ? "contract_id" : "order_id", targetId);
+        if (delErr) throw delErr;
+      }
+
+      // Insert newly added assignments
       if (newlyAdded.length > 0) {
         const rows = newlyAdded.map((targetId) =>
           mode === "order"
@@ -269,14 +284,20 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                   {filteredItems.length === 0 ? (
                     <div className="py-6 text-center text-sm text-muted-foreground">Keine Ergebnisse für „{search}"</div>
                   ) : (
-                    filteredItems.map((item) => (
+                    filteredItems.map((item) => {
+                      const wasExisting = existingIds.has(item.id);
+                      const isMarkedForRemoval = wasExisting && !selected.has(item.id);
+                      return (
                       <label
                         key={item.id}
-                        className="flex items-center gap-3 rounded-md border border-border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                        className={`flex items-center gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
+                          isMarkedForRemoval
+                            ? "border-destructive bg-destructive/10 hover:bg-destructive/15"
+                            : "border-border hover:bg-muted/50"
+                        }`}
                       >
                         <Checkbox
                           checked={selected.has(item.id)}
-                          disabled={existing?.some((a) => (mode === "order" ? a.contract_id : a.order_id) === item.id)}
                           onCheckedChange={() => toggle(item.id)}
                         />
                         <div className="min-w-0 flex-1">
