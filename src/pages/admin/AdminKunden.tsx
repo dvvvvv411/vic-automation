@@ -300,6 +300,33 @@ export default function AdminKunden() {
           </div>
         )}
       </motion.div>
+
+      <Dialog open={!!pwKunde} onOpenChange={(o) => { if (!o) { setPwKunde(null); setNewPassword(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Passwort ändern</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-muted-foreground">Für: <span className="font-medium text-foreground">{pwKunde?.email}</span></p>
+            <div>
+              <Label>Neues Passwort</Label>
+              <Input
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mindestens 6 Zeichen"
+                type="text"
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => pwKunde && passwordMutation.mutate({ userId: pwKunde.id, password: newPassword })}
+              disabled={!newPassword || newPassword.length < 6 || passwordMutation.isPending}
+            >
+              {passwordMutation.isPending ? "Speichere..." : "Passwort speichern"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
