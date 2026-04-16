@@ -47,3 +47,9 @@ verify_jwt = false
 
 [functions.ai-chat-polish]
 verify_jwt = false
+
+[functions.reset-kunde-password]
+verify_jwt = false
+
+[functions.list-kunden]
+verify_jwt = false
