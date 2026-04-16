@@ -233,6 +233,18 @@ export default function AdminKunden() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => setPwKunde({ id: k.id, email: k.name })}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Passwort ändern</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="text-destructive hover:text-destructive"
                           onClick={() => {
                             if (confirm("Kundenzugang wirklich entfernen?")) {
