@@ -262,7 +262,11 @@ export default function Bewerbungsgespraech() {
       queryClient.invalidateQueries({ queryKey: ["application-public", id] });
       queryClient.invalidateQueries({ queryKey: ["booked-slots"] });
     },
-    onError: () => setConfirmOpen(false),
+    onError: (error: any) => {
+      console.error("Booking failed:", error);
+      toast.error(error?.message || "Termin konnte nicht gespeichert werden");
+      setConfirmOpen(false);
+    },
   });
 
   // --- Error state ---
