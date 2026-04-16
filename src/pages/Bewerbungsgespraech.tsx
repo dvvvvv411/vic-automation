@@ -18,6 +18,7 @@ import { AlertCircle, Briefcase, Check, CheckCircle2, Pencil, Phone, User, Calen
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isBefore, startOfDay, isToday } from "date-fns";
+import { toast } from "sonner";
 import { de } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -262,7 +263,11 @@ export default function Bewerbungsgespraech() {
       queryClient.invalidateQueries({ queryKey: ["application-public", id] });
       queryClient.invalidateQueries({ queryKey: ["booked-slots"] });
     },
-    onError: () => setConfirmOpen(false),
+    onError: (error: any) => {
+      console.error("Booking failed:", error);
+      toast.error(error?.message || "Termin konnte nicht gespeichert werden");
+      setConfirmOpen(false);
+    },
   });
 
   // --- Error state ---
