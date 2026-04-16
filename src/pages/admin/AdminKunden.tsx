@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
-import { UserPlus, Settings, Trash2, Users, Building2 } from "lucide-react";
+import { UserPlus, Settings, Trash2, Users, Building2, KeyRound } from "lucide-react";
 import { motion } from "framer-motion";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
@@ -20,31 +20,20 @@ export default function AdminKunden() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [expandedKunde, setExpandedKunde] = useState<string | null>(null);
+  const [pwKunde, setPwKunde] = useState<{ id: string; email: string } | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   const { data: kunden, isLoading } = useQuery({
     queryKey: ["admin-kunden", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "kunde" as any);
-
-      if (!roles?.length) return [];
-
-      const userIds = roles.map((r) => r.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, display_name, email")
-        .in("id", userIds);
-
-      return userIds.map((uid) => {
-        const profile = profiles?.find((p) => p.id === uid);
-        return {
-          id: uid,
-          name: profile?.email || profile?.display_name || profile?.full_name || uid,
-        };
-      });
+      const { data, error } = await supabase.functions.invoke("list-kunden");
+      if (error) throw error;
+      const list = (data?.kunden ?? []) as { id: string; email: string | null }[];
+      return list.map((k) => ({
+        id: k.id,
+        name: k.email || k.id,
+      }));
     },
   });
 
@@ -116,6 +105,24 @@ export default function AdminKunden() {
     onSuccess: () => {
       toast({ title: "Kundenzugang entfernt" });
       queryClient.invalidateQueries({ queryKey: ["admin-kunden"] });
+    },
+    onError: (e: any) => {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const passwordMutation = useMutation({
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      const { data, error } = await supabase.functions.invoke("reset-kunde-password", {
+        body: { user_id: userId, new_password: password },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      toast({ title: "Passwort geändert" });
+      setPwKunde(null);
+      setNewPassword("");
     },
     onError: (e: any) => {
       toast({ title: "Fehler", description: e.message, variant: "destructive" });
@@ -226,6 +233,18 @@ export default function AdminKunden() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => setPwKunde({ id: k.id, email: k.name })}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Passwort ändern</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="text-destructive hover:text-destructive"
                           onClick={() => {
                             if (confirm("Kundenzugang wirklich entfernen?")) {
@@ -281,6 +300,33 @@ export default function AdminKunden() {
           </div>
         )}
       </motion.div>
+
+      <Dialog open={!!pwKunde} onOpenChange={(o) => { if (!o) { setPwKunde(null); setNewPassword(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Passwort ändern</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-muted-foreground">Für: <span className="font-medium text-foreground">{pwKunde?.email}</span></p>
+            <div>
+              <Label>Neues Passwort</Label>
+              <Input
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mindestens 6 Zeichen"
+                type="text"
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => pwKunde && passwordMutation.mutate({ userId: pwKunde.id, password: newPassword })}
+              disabled={!newPassword || newPassword.length < 6 || passwordMutation.isPending}
+            >
+              {passwordMutation.isPending ? "Speichere..." : "Passwort speichern"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
