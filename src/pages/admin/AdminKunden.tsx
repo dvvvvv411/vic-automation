@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
-import { UserPlus, Settings, Trash2, Users, Building2 } from "lucide-react";
+import { UserPlus, Settings, Trash2, Users, Building2, KeyRound } from "lucide-react";
 import { motion } from "framer-motion";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
@@ -20,31 +20,20 @@ export default function AdminKunden() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [expandedKunde, setExpandedKunde] = useState<string | null>(null);
+  const [pwKunde, setPwKunde] = useState<{ id: string; email: string } | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   const { data: kunden, isLoading } = useQuery({
     queryKey: ["admin-kunden", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "kunde" as any);
-
-      if (!roles?.length) return [];
-
-      const userIds = roles.map((r) => r.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, display_name, email")
-        .in("id", userIds);
-
-      return userIds.map((uid) => {
-        const profile = profiles?.find((p) => p.id === uid);
-        return {
-          id: uid,
-          name: profile?.email || profile?.display_name || profile?.full_name || uid,
-        };
-      });
+      const { data, error } = await supabase.functions.invoke("list-kunden");
+      if (error) throw error;
+      const list = (data?.kunden ?? []) as { id: string; email: string | null }[];
+      return list.map((k) => ({
+        id: k.id,
+        name: k.email || k.id,
+      }));
     },
   });
 
