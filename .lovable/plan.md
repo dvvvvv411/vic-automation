@@ -1,34 +1,42 @@
 
 
-## Plan: Aufträge von Mitarbeitern entziehen (Unassign)
+## Plan: Sichere, minimale Diagnose-Verbesserung (kein Risiko)
 
-### Problem
-Der AssignmentDialog erlaubt aktuell nur das Hinzufügen von Zuweisungen. Bereits zugewiesene Checkboxen sind `disabled` und können nicht abgewählt werden. Es gibt keine Möglichkeit, einem Mitarbeiter einen Auftrag zu entziehen.
+### Ziel
+Keine Logikänderungen, keine neuen Features. Nur **Sichtbarkeit** der bereits bestehenden stillen Fehler verbessern, damit ihr beim nächsten Bewerber sofort seht, was schiefläuft.
 
-### Lösung
+### Eine einzige, risikofreie Änderung
 
-**Datei: `src/components/admin/AssignmentDialog.tsx`**
+**Datei: `src/pages/Bewerbungsgespraech.tsx`**
 
-1. **Checkbox für bestehende Zuweisungen aktivieren**: Das `disabled`-Attribut entfernen, sodass auch bereits zugewiesene Einträge abgewählt werden können.
+Im `bookMutation.onError`-Callback wird aktuell der Fehler stumm verschluckt (`onError: () => setConfirmOpen(false)`).
 
-2. **Entfernte Zuweisungen in der saveMutation löschen**: Neben den neu hinzugefügten (`newlyAdded`) auch die entfernten (`removed`) berechnen -- das sind IDs die in `existingIds` sind aber nicht mehr in `selected`. Für jede entfernte ID wird ein gezieltes `DELETE` ausgeführt, das **beide Spalten** (`order_id` UND `contract_id`) matcht, sodass nur genau diese eine Zuweisung gelöscht wird.
+**Ergänzung (additiv, ändert kein Verhalten):**
+- `console.error("Booking failed:", error)` -- damit der Fehler im Browser-Log landet
+- `toast.error(error.message || "Termin konnte nicht gespeichert werden")` -- damit der Bewerber merkt, dass etwas schiefging und es erneut versucht
 
-3. **Visuelle Kennzeichnung**: Bereits zugewiesene aber zum Entfernen markierte Einträge (abgewählt) bekommen einen roten Rahmen/Hintergrund als Warnung.
+**Was NICHT geändert wird:**
+- Keine RLS-Änderung
+- Keine DB-Migration
+- Keine Edge-Function-Änderung
+- Keine Logik in der `mutationFn`
+- Keine Duplikat-Prävention in `submit-application`
+- Kein Refactoring
 
-4. **Bestätigungshinweis**: Im Footer wird angezeigt wie viele Zuweisungen entfernt werden, z.B. "2 Zuweisungen werden entzogen".
+### Warum das sicher ist
 
-### Sicherheit
+Die Änderung betrifft ausschließlich den Error-Pfad. Wenn alles funktioniert (Happy Path), passiert exakt nichts Neues. Nur im Fehlerfall -- der heute schon auftritt, nur unsichtbar -- gibt es jetzt eine Toast-Meldung und einen Console-Log.
 
-Das DELETE-Statement ist maximal spezifisch:
-```sql
-DELETE FROM order_assignments 
-WHERE order_id = :sourceId AND contract_id = :targetId
-```
-Es wird immer nur die exakte Kombination aus `order_id` + `contract_id` gelöscht. Andere Mitarbeiter sind nicht betroffen.
+### Was ihr danach habt
+
+Beim nächsten Bewerber, der den Termin nicht buchen kann:
+1. Der Bewerber sieht eine Fehlermeldung statt eines verschwindenden Dialogs
+2. Ihr könnt im Browser-Log die exakte Fehlerursache nachlesen
+3. Damit lässt sich gezielt der echte Bug fixen, statt blind zu raten
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/components/admin/AssignmentDialog.tsx` | Checkbox entblockieren, DELETE-Logik für entfernte Zuweisungen, visuelle Warnung |
+| `src/pages/Bewerbungsgespraech.tsx` | Nur `onError`-Callback um `console.error` + `toast.error` erweitert |
 
