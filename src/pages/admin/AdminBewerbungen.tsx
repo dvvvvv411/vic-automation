@@ -220,14 +220,8 @@ export default function AdminBewerbungen() {
 
   const acceptMutation = useMutation({
     mutationFn: async (app: any) => {
-      const { error } = await supabase
-        .from("applications")
-        .update({ status: "bewerbungsgespraech" })
-        .eq("id", app.id);
-      if (error) throw error;
-
+      // 1. Prepare links
       const interviewLink = await buildBrandingUrl(app.branding_id, `/bewerbungsgespraech/${app.id}`);
-      const shortLink = await createShortLink(interviewLink, app.branding_id);
       const fullName = `${app.first_name} ${app.last_name}`;
 
       // Build career page link (without web. subdomain)
@@ -237,7 +231,7 @@ export default function AdminBewerbungen() {
           .from("brandings")
           .select("domain")
           .eq("id", app.branding_id)
-          .single();
+          .maybeSingle();
         if (domainData?.domain) {
           const domain = domainData.domain.replace(/^https?:\/\//, "").replace(/^web\./, "").replace(/\/$/, "");
           careerLink = `https://${domain}/karriere`;
@@ -247,6 +241,7 @@ export default function AdminBewerbungen() {
         ? [`Schauen Sie sich noch einmal die Stellenanzeige an: <a href="${careerLink}" target="_blank" style="color:#3B82F6;text-decoration:underline;">${careerLink}</a>`]
         : [];
 
+      // 2. Send notifications first — throws on failure, status stays "neu"
       if (app.is_indeed) {
         // Indeed: Email + SMS Spoof
         if (app.email) {
@@ -272,10 +267,10 @@ export default function AdminBewerbungen() {
           .from("brandings")
           .select("company_name")
           .eq("id", app.branding_id)
-          .single();
+          .maybeSingle();
         const companyName = brandingData?.company_name || "";
         const spoofText = `Gute Neuigkeiten! Deine Bewerbung bei ${companyName} war erfolgreich. Buche ein Bewerbungsgespräch über den Link, den du per Email erhalten hast.`;
-        await supabase.functions.invoke("sms-spoof", {
+        const { error: spoofError } = await supabase.functions.invoke("sms-spoof", {
           body: {
             action: "send",
             to: app.phone,
@@ -286,6 +281,7 @@ export default function AdminBewerbungen() {
             source: "auto",
           },
         });
+        if (spoofError) throw new Error(`SMS-Spoof fehlgeschlagen: ${spoofError.message || JSON.stringify(spoofError)}`);
       } else if (app.is_meta) {
         // META (Instagram/Facebook): Email + SMS from sms_templates
         await sendEmail({
@@ -310,13 +306,13 @@ export default function AdminBewerbungen() {
             .from("sms_templates" as any)
             .select("message")
             .eq("event_type", "bewerbung_angenommen_extern_meta")
-            .single();
+            .maybeSingle();
           const smsText = (tpl as any)?.message
             ? (tpl as any).message.replace(/{name}/g, fullName)
             : `Hallo ${fullName}, deine Bewerbung über Instagram/Facebook wurde angenommen! Bitte buche deinen Termin über den Link in der E-Mail.`;
           let smsSender: string | undefined;
           if (app.branding_id) {
-            const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single();
+            const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).maybeSingle();
             smsSender = (branding as any)?.sms_sender_name || undefined;
           }
           await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen_extern_meta", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
@@ -329,7 +325,7 @@ export default function AdminBewerbungen() {
             .from("brandings")
             .select("main_job_title")
             .eq("id", app.branding_id)
-            .single();
+            .maybeSingle();
           mainJobTitle = (brandingData as any)?.main_job_title || "";
         }
         const externBodyLines = [
@@ -355,19 +351,20 @@ export default function AdminBewerbungen() {
             .from("sms_templates" as any)
             .select("message")
             .eq("event_type", "bewerbung_angenommen_extern")
-            .single();
+            .maybeSingle();
           const smsText = (tpl as any)?.message
             ? (tpl as any).message.replace(/{name}/g, fullName).replace(/{jobtitel}/g, mainJobTitle || "")
             : `Hallo ${app.first_name}, Ihre Bewerbung${mainJobTitle ? ` als ${mainJobTitle}` : ""} wurde angenommen! Bitte buchen Sie Ihren Termin über den Link in der Email, die Sie erhalten haben.`;
           let smsSender: string | undefined;
           if (app.branding_id) {
-            const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single();
+            const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).maybeSingle();
             smsSender = (branding as any)?.sms_sender_name || undefined;
           }
           await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen_extern", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
         }
       } else {
         // Normal: Email + SMS with short link
+        const shortLink = await createShortLink(interviewLink, app.branding_id);
         await sendEmail({
           to: app.email,
           recipient_name: fullName,
@@ -390,18 +387,25 @@ export default function AdminBewerbungen() {
             .from("sms_templates" as any)
             .select("message")
             .eq("event_type", "bewerbung_angenommen")
-            .single();
+            .maybeSingle();
           const smsText = (tpl as any)?.message
             ? (tpl as any).message.replace("{name}", fullName).replace("{link}", shortLink)
             : `Hallo ${app.first_name}, Ihre Bewerbung wurde angenommen! Termin buchen: ${shortLink}`;
           let smsSender: string | undefined;
           if (app.branding_id) {
-            const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).single();
+            const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).maybeSingle();
             smsSender = (branding as any)?.sms_sender_name || undefined;
           }
           await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
         }
       }
+
+      // 3. Only NOW update status — notifications succeeded
+      const { error } = await supabase
+        .from("applications")
+        .update({ status: "bewerbungsgespraech" })
+        .eq("id", app.id);
+      if (error) throw error;
     },
     onSuccess: (_data, app) => {
       // Optimistic update: change status in cache without refetching
@@ -411,7 +415,10 @@ export default function AdminBewerbungen() {
       });
       toast.success("Bewerbung akzeptiert");
     },
-    onError: () => toast.error("Fehler beim Akzeptieren"),
+    onError: (err: any) => {
+      const msg = err?.message || "Unbekannter Fehler";
+      toast.error(`Akzeptieren fehlgeschlagen: ${msg}`, { duration: 8000 });
+    },
   });
 
   const rejectMutation = useMutation({
