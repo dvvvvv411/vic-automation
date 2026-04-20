@@ -15,14 +15,22 @@ interface SendEmailParams {
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<void> {
+  let data: any;
+  let error: any;
   try {
-    const { error } = await supabase.functions.invoke("send-email", {
-      body: params,
-    });
-    if (error) {
-      console.error("send-email error:", error);
-    }
+    const res = await supabase.functions.invoke("send-email", { body: params });
+    data = res.data;
+    error = res.error;
   } catch (err) {
     console.error("send-email call failed:", err);
+    throw new Error(`E-Mail-Versand fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  if (error) {
+    console.error("send-email error:", error);
+    throw new Error(`E-Mail-Versand fehlgeschlagen: ${error.message || JSON.stringify(error)}`);
+  }
+  if (data && typeof data === "object" && "error" in data && data.error) {
+    console.error("send-email returned error:", data);
+    throw new Error(`E-Mail-Versand fehlgeschlagen: ${data.error}`);
   }
 }
