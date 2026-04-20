@@ -1,43 +1,66 @@
 
 
-## Plan: Indeed-Bewerber wieder vollständig anzeigen
+## Plan: Status zurücksetzen + Reihenfolge fixen
 
-### Ursache (per DB verifiziert)
-Branding hat 1077 Bewerbungen total, davon 120 Indeed. Die Query auf `/admin/bewerbungen` lädt aber nur 1000 Zeilen (Supabase-Standardlimit). Da nach `created_at DESC` sortiert wird, fehlen die ältesten 77 — darunter ~76 Indeed-Bewerber. Resultat: nur ~44 Indeed sichtbar statt 120.
+### Teil 1 — Status-Reset für heutige META-Bewerber ohne SMS
 
-### Sichere, minimale Lösung
+Einmaliges SQL-Update (im Default-Mode):
 
-**Datei: `src/pages/admin/AdminBewerbungen.tsx`** — nur die `applications`-`queryFn` wird durch eine Batch-Loop ersetzt:
-
-```ts
-const BATCH = 1000;
-let all: any[] = [];
-let from = 0;
-while (true) {
-  const { data, error } = await supabase
-    .from("applications")
-    .select("*, brandings(...), interview_appointments(...)")
-    .eq("branding_id", activeBrandingId!)
-    .order("created_at", { ascending: false })
-    .range(from, from + BATCH - 1);
-  if (error) throw error;
-  if (!data?.length) break;
-  all = all.concat(data);
-  if (data.length < BATCH) break;
-  from += BATCH;
-}
-return all;
+```sql
+UPDATE applications
+SET status = 'neu'
+WHERE is_meta = true
+  AND created_at::date = '2026-04-20'
+  AND status = 'bewerbungsgespraech'
+  AND id NOT IN (
+    SELECT DISTINCT a.id FROM applications a
+    JOIN sms_logs s ON s.recipient_phone IS NOT NULL
+    WHERE s.event_type = 'bewerbung_angenommen_extern_meta'
+      AND s.created_at::date = '2026-04-20'
+      AND (s.recipient_name ILIKE a.first_name || ' ' || a.last_name)
+  );
 ```
 
-### Warum sicher
-Exakt dasselbe Pattern läuft bereits produktiv in `AdminMitarbeiter.tsx` und `AdminBewertungen.tsx`. Filter, Sortierung, Tabs, Mutationen — nichts wird angefasst. Bei <1000 Datensätzen identisches Verhalten.
+Vor Ausführung: Liste der betroffenen Bewerber zeigen, du bestätigst, dann Update. Zugehörige `interview_appointments` (falls automatisch erstellt) werden ebenfalls gelöscht, damit "Akzeptieren" sauber neu funktioniert.
 
-### Was NICHT geändert wird
-- Keine RLS-Änderung, keine Migration, keine Edge Function, keine UI/Filter-Logik
+### Teil 2 — Reihenfolge in `acceptMutation` umkehren
 
-### Betroffene Dateien
+**Datei `src/lib/sendSms.ts`:**
+- `return false` bei Fehler → `throw new Error("SMS-Versand fehlgeschlagen: ...")`
+
+**Datei `src/lib/sendEmail.ts`:**
+- Silent `console.error` bei Fehler → `throw new Error("E-Mail-Versand fehlgeschlagen: ...")`
+
+**Datei `src/pages/admin/AdminBewerbungen.tsx` → `acceptMutation`:**
+
+Neue Reihenfolge:
+1. Branding/Template/Short-Link vorbereiten
+2. `await sendEmail(...)` — wirft bei Fehler
+3. `await sendSms(...)` — wirft bei Fehler
+4. **Erst jetzt**: `supabase.from("applications").update({ status: "bewerbungsgespraech" })`
+5. Erfolgs-Toast nur nach Schritt 4
+
+Bei Fehler in Schritt 2 oder 3: Status bleibt `neu`, Fehler-Toast mit konkreter Meldung, Bewerber kann erneut akzeptiert werden.
+
+### Geänderte Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/admin/AdminBewerbungen.tsx` | Nur `queryFn` der `applications`-Query: `.range()`-Batch-Loop |
+| (SQL einmalig) | Status-Reset heutiger META-Bewerber ohne SMS |
+| `src/lib/sendSms.ts` | `throw` statt `return false` |
+| `src/lib/sendEmail.ts` | `throw` statt silent `console.error` |
+| `src/pages/admin/AdminBewerbungen.tsx` | `acceptMutation`: Notifications zuerst, Status zuletzt; konkrete Fehler-Toasts |
+
+### Was NICHT geändert wird
+
+- Keine DB-Migration für neue Tabellen/Trigger
+- Keine Edge-Function-Änderung
+- Keine UI-Umstrukturierung
+
+### Ablauf nach Freigabe
+
+1. Liste der betroffenen Bewerber von heute anzeigen → du bestätigst
+2. Status-Reset ausführen
+3. Code-Fix in den 3 Dateien deployen
+4. Du kannst die zurückgesetzten Bewerber erneut akzeptieren — diesmal mit garantiertem Versand oder klarer Fehlermeldung
 
