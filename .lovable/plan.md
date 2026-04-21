@@ -1,61 +1,60 @@
 
 
-## Ursache
+## Plan: PDF-Thumbnails + Vorschau mit Download
 
-In `src/pages/admin/AdminLivechat.tsx` wird die Konversationsliste so geladen:
+### Ziel
+Wenn KYC-Dateien (Vorderseite/Rückseite Ausweis) als PDF hochgeladen sind, werden statt kaputter `<img>`-Vorschau echte **PDF-Thumbnails** gezeigt. Klick auf Thumbnail → großer Vorschau-Dialog mit **Download-Button**.
 
+### Umsetzung
+
+**Bibliothek:** `react-pdf` (basiert auf pdf.js) für Thumbnail-Rendering im Browser. Wird per `package.json` ergänzt.
+
+**Komponente:** Neue wiederverwendbare `KycDocumentPreview.tsx` in `src/components/admin/`:
+- Props: `url: string`, `label: string` (z. B. "Vorderseite")
+- Erkennung: `url.toLowerCase().endsWith(".pdf")`
+- Bei Bild → bestehendes `<img>`-Verhalten
+- Bei PDF → `<Document><Page pageNumber={1} /></Document>` als Thumbnail (Höhe ~112px wie aktuell), gleicher Hover-Effekt
+- Klick öffnet Dialog mit:
+  - Bei Bild: großes `<img>` + Download-Button
+  - Bei PDF: volle erste Seite (oder alle Seiten scrollbar) + **Download-Button** (Anchor mit `download`-Attribut, öffnet/lädt Original-URL)
+
+**Integration:**
+- `src/pages/admin/AdminMitarbeiterDetail.tsx` — KYC-Block (Vorderseite/Rückseite) ersetzt durch `<KycDocumentPreview>`
+- `src/components/admin/MitarbeiterDetailPopup.tsx` — gleicher Ersatz im Popup
+- Bestehender `imagePreview`-Dialog wird in beiden Dateien entfernt (durch neue Komponente abgelöst)
+
+### Build-Fixes (parallel, da blockierend)
+
+`package.json`:
+- `react-pdf@^9.1.1` ergänzen (für PDF-Thumbnails)
+- `@tiptap/core@^2.12.0` ergänzen (fehlt → Build-Error)
+- `html2canvas@^1.4.1` ergänzen (fehlt → Build-Error)
+- `@tiptap/extension-text-align` und `@tiptap/extension-text-style` von v3 → `^2.12.0` (Versions-Mix)
+
+`src/main.tsx` (oder `App.tsx`): pdf.js Worker einmalig konfigurieren:
 ```ts
-supabase.from("chat_messages")
-  .select("contract_id, content, created_at, read, sender_role")
-  .in("contract_id", contractIds)
-  .order("created_at", { ascending: false });
+import { pdfjs } from "react-pdf";
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 ```
 
-**Kein `.limit()`** — d. h. Supabase greift auf das **Default-Limit von 1000 Zeilen** zurück. Sobald in den letzten ~7 Tagen 1000 Chat-Nachrichten zusammenkommen, fallen alle älteren Konversationen aus der Liste raus, weil ihre letzte Nachricht gar nicht erst geladen wird. Genau dein Symptom: „nur die letzten 7 Tage sichtbar".
-
-Das ist exakt das Muster aus Memory `tech/supabase-row-limit-constraint`.
-
-## Fix
-
-**Datei:** `src/pages/admin/AdminLivechat.tsx` → `loadConversations`
-
-Statt eine flache `chat_messages`-Query mit implizitem 1000-Limit zu nutzen, in **Batches per `.range()`** über alle Nachrichten der relevanten Contracts loopen, bis nichts mehr kommt:
-
-```ts
-const pageSize = 1000;
-let from = 0;
-let allMsgs: any[] = [];
-while (true) {
-  const { data, error } = await supabase
-    .from("chat_messages")
-    .select("contract_id, content, created_at, read, sender_role")
-    .in("contract_id", contractIds)
-    .order("created_at", { ascending: false })
-    .range(from, from + pageSize - 1);
-  if (error || !data?.length) break;
-  allMsgs = allMsgs.concat(data);
-  if (data.length < pageSize) break;
-  from += pageSize;
-}
-```
-
-Zusätzlich: `contractIds` selbst kann ebenfalls > 1000 sein. Die `employment_contracts`-Query oben bekommt denselben `.range()`-Loop, damit auch alle Verträge geladen werden (nicht nur 1000).
-
-Beim `.in("contract_id", contractIds)`-Filter wird `contractIds` bei sehr vielen Verträgen zusätzlich in Chunks à 500 IDs zerlegt, um URL-Längen-Limits zu vermeiden.
-
-## Geänderte Dateien
+### Geänderte Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/admin/AdminLivechat.tsx` | `loadConversations`: Batch-Loop mit `.range()` für `employment_contracts` und `chat_messages`, Chunking der `contractIds` |
+| `package.json` | `react-pdf`, `@tiptap/core`, `html2canvas` ergänzen + TipTap-Versionen vereinheitlichen |
+| `src/main.tsx` | pdf.js Worker konfigurieren |
+| `src/components/admin/KycDocumentPreview.tsx` | **Neu** — Thumbnail + Vorschau-Dialog mit Download |
+| `src/pages/admin/AdminMitarbeiterDetail.tsx` | KYC-Bilder durch `<KycDocumentPreview>` ersetzen |
+| `src/components/admin/MitarbeiterDetailPopup.tsx` | Gleicher Ersatz im Popup |
 
-## Was NICHT geändert wird
-
+### Was NICHT geändert wird
 - Keine DB-Migration
-- Kein Edge-Function-Code
-- Keine UI-Änderung — nur die Datenladelogik wird vollständig
+- Keine Edge-Function
+- Bestehende PDF-Uploads bleiben unverändert nutzbar
 
-## Erwartetes Ergebnis
-
-Nach dem Fix erscheinen wieder **alle Konversationen** im Livechat, unabhängig davon wie alt die letzte Nachricht ist. Die Sortierung (neueste zuerst) bleibt identisch.
+### Erwartetes Ergebnis
+- Martina Zewe: zwei PDF-Thumbnails (echte Seitenvorschau) statt leerer Bilder
+- Klick → großer Dialog mit PDF-Vorschau + **Download-Button**
+- Bilder funktionieren weiterhin wie bisher, bekommen zusätzlich den Download-Button im Dialog
+- Build wieder grün
 
