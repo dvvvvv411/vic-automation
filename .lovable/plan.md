@@ -1,66 +1,61 @@
 
 
-## Plan: Status zurücksetzen + Reihenfolge fixen
+## Ursache
 
-### Teil 1 — Status-Reset für heutige META-Bewerber ohne SMS
+In `src/pages/admin/AdminLivechat.tsx` wird die Konversationsliste so geladen:
 
-Einmaliges SQL-Update (im Default-Mode):
-
-```sql
-UPDATE applications
-SET status = 'neu'
-WHERE is_meta = true
-  AND created_at::date = '2026-04-20'
-  AND status = 'bewerbungsgespraech'
-  AND id NOT IN (
-    SELECT DISTINCT a.id FROM applications a
-    JOIN sms_logs s ON s.recipient_phone IS NOT NULL
-    WHERE s.event_type = 'bewerbung_angenommen_extern_meta'
-      AND s.created_at::date = '2026-04-20'
-      AND (s.recipient_name ILIKE a.first_name || ' ' || a.last_name)
-  );
+```ts
+supabase.from("chat_messages")
+  .select("contract_id, content, created_at, read, sender_role")
+  .in("contract_id", contractIds)
+  .order("created_at", { ascending: false });
 ```
 
-Vor Ausführung: Liste der betroffenen Bewerber zeigen, du bestätigst, dann Update. Zugehörige `interview_appointments` (falls automatisch erstellt) werden ebenfalls gelöscht, damit "Akzeptieren" sauber neu funktioniert.
+**Kein `.limit()`** — d. h. Supabase greift auf das **Default-Limit von 1000 Zeilen** zurück. Sobald in den letzten ~7 Tagen 1000 Chat-Nachrichten zusammenkommen, fallen alle älteren Konversationen aus der Liste raus, weil ihre letzte Nachricht gar nicht erst geladen wird. Genau dein Symptom: „nur die letzten 7 Tage sichtbar".
 
-### Teil 2 — Reihenfolge in `acceptMutation` umkehren
+Das ist exakt das Muster aus Memory `tech/supabase-row-limit-constraint`.
 
-**Datei `src/lib/sendSms.ts`:**
-- `return false` bei Fehler → `throw new Error("SMS-Versand fehlgeschlagen: ...")`
+## Fix
 
-**Datei `src/lib/sendEmail.ts`:**
-- Silent `console.error` bei Fehler → `throw new Error("E-Mail-Versand fehlgeschlagen: ...")`
+**Datei:** `src/pages/admin/AdminLivechat.tsx` → `loadConversations`
 
-**Datei `src/pages/admin/AdminBewerbungen.tsx` → `acceptMutation`:**
+Statt eine flache `chat_messages`-Query mit implizitem 1000-Limit zu nutzen, in **Batches per `.range()`** über alle Nachrichten der relevanten Contracts loopen, bis nichts mehr kommt:
 
-Neue Reihenfolge:
-1. Branding/Template/Short-Link vorbereiten
-2. `await sendEmail(...)` — wirft bei Fehler
-3. `await sendSms(...)` — wirft bei Fehler
-4. **Erst jetzt**: `supabase.from("applications").update({ status: "bewerbungsgespraech" })`
-5. Erfolgs-Toast nur nach Schritt 4
+```ts
+const pageSize = 1000;
+let from = 0;
+let allMsgs: any[] = [];
+while (true) {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("contract_id, content, created_at, read, sender_role")
+    .in("contract_id", contractIds)
+    .order("created_at", { ascending: false })
+    .range(from, from + pageSize - 1);
+  if (error || !data?.length) break;
+  allMsgs = allMsgs.concat(data);
+  if (data.length < pageSize) break;
+  from += pageSize;
+}
+```
 
-Bei Fehler in Schritt 2 oder 3: Status bleibt `neu`, Fehler-Toast mit konkreter Meldung, Bewerber kann erneut akzeptiert werden.
+Zusätzlich: `contractIds` selbst kann ebenfalls > 1000 sein. Die `employment_contracts`-Query oben bekommt denselben `.range()`-Loop, damit auch alle Verträge geladen werden (nicht nur 1000).
 
-### Geänderte Dateien
+Beim `.in("contract_id", contractIds)`-Filter wird `contractIds` bei sehr vielen Verträgen zusätzlich in Chunks à 500 IDs zerlegt, um URL-Längen-Limits zu vermeiden.
+
+## Geänderte Dateien
 
 | Datei | Änderung |
 |---|---|
-| (SQL einmalig) | Status-Reset heutiger META-Bewerber ohne SMS |
-| `src/lib/sendSms.ts` | `throw` statt `return false` |
-| `src/lib/sendEmail.ts` | `throw` statt silent `console.error` |
-| `src/pages/admin/AdminBewerbungen.tsx` | `acceptMutation`: Notifications zuerst, Status zuletzt; konkrete Fehler-Toasts |
+| `src/pages/admin/AdminLivechat.tsx` | `loadConversations`: Batch-Loop mit `.range()` für `employment_contracts` und `chat_messages`, Chunking der `contractIds` |
 
-### Was NICHT geändert wird
+## Was NICHT geändert wird
 
-- Keine DB-Migration für neue Tabellen/Trigger
-- Keine Edge-Function-Änderung
-- Keine UI-Umstrukturierung
+- Keine DB-Migration
+- Kein Edge-Function-Code
+- Keine UI-Änderung — nur die Datenladelogik wird vollständig
 
-### Ablauf nach Freigabe
+## Erwartetes Ergebnis
 
-1. Liste der betroffenen Bewerber von heute anzeigen → du bestätigst
-2. Status-Reset ausführen
-3. Code-Fix in den 3 Dateien deployen
-4. Du kannst die zurückgesetzten Bewerber erneut akzeptieren — diesmal mit garantiertem Versand oder klarer Fehlermeldung
+Nach dem Fix erscheinen wieder **alle Konversationen** im Livechat, unabhängig davon wie alt die letzte Nachricht ist. Die Sortierung (neueste zuerst) bleibt identisch.
 
