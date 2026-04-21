@@ -12,6 +12,7 @@ import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { useState } from "react";
 import { toast } from "sonner";
+import KycDocumentPreview from "@/components/admin/KycDocumentPreview";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "–";
