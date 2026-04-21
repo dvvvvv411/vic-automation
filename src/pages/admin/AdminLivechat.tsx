@@ -87,28 +87,47 @@ export default function AdminLivechat() {
   const loadConversations = useCallback(async () => {
     if (!ready) return;
 
-    // Step 1: Get contract IDs for the active branding
-    let contractQuery = supabase
-      .from("employment_contracts")
-      .select("id, first_name, last_name, user_id, chat_active_at, created_at");
-
-    if (activeBrandingId) {
-      contractQuery = contractQuery.eq("branding_id", activeBrandingId);
+    // Step 1: Get ALL contract IDs for the active branding (batch loop to bypass 1000-row limit)
+    const pageSize = 1000;
+    const contracts: any[] = [];
+    let cFrom = 0;
+    while (true) {
+      let contractQuery = supabase
+        .from("employment_contracts")
+        .select("id, first_name, last_name, user_id, chat_active_at, created_at")
+        .range(cFrom, cFrom + pageSize - 1);
+      if (activeBrandingId) {
+        contractQuery = contractQuery.eq("branding_id", activeBrandingId);
+      }
+      const { data, error } = await contractQuery;
+      if (error || !data?.length) break;
+      contracts.push(...data);
+      if (data.length < pageSize) break;
+      cFrom += pageSize;
     }
-
-    const { data: contracts } = await contractQuery;
-    if (!contracts?.length) { setConversations([]); setOnlineContractIds(new Set()); return; }
+    if (!contracts.length) { setConversations([]); setOnlineContractIds(new Set()); return; }
 
     const contractIds = contracts.map((c) => c.id);
 
-    // Step 2: Load chat messages only for those contracts
-    const { data: msgs } = await supabase
-      .from("chat_messages")
-      .select("contract_id, content, created_at, read, sender_role")
-      .in("contract_id", contractIds)
-      .order("created_at", { ascending: false });
-
-    if (!msgs) return;
+    // Step 2: Load ALL chat messages for those contracts, chunked + paginated
+    const idChunkSize = 500;
+    const msgs: any[] = [];
+    for (let i = 0; i < contractIds.length; i += idChunkSize) {
+      const chunk = contractIds.slice(i, i + idChunkSize);
+      let mFrom = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("chat_messages")
+          .select("contract_id, content, created_at, read, sender_role")
+          .in("contract_id", chunk)
+          .order("created_at", { ascending: false })
+          .range(mFrom, mFrom + pageSize - 1);
+        if (error || !data?.length) break;
+        msgs.push(...data);
+        if (data.length < pageSize) break;
+        mFrom += pageSize;
+      }
+    }
 
     const map = new Map<string, { last_message: string; last_message_at: string; unread_count: number }>();
     for (const m of msgs) {
