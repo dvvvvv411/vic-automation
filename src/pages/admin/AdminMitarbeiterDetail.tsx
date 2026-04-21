@@ -992,18 +992,13 @@ export default function AdminMitarbeiterDetail() {
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {contract.id_front_url && (
-                        <div className="cursor-pointer group" onClick={() => setImagePreview(contract.id_front_url)}>
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                            {(contract as any).id_type === "reisepass" ? "Reisepass" : "Vorderseite"}
-                          </p>
-                          <img src={contract.id_front_url} alt="Ausweis" className="w-full rounded-xl border border-border object-cover group-hover:opacity-80 transition-opacity" />
-                        </div>
+                        <KycDocumentPreview
+                          url={contract.id_front_url}
+                          label={(contract as any).id_type === "reisepass" ? "Reisepass" : "Vorderseite"}
+                        />
                       )}
                       {contract.id_back_url && (contract as any).id_type !== "reisepass" && (
-                        <div className="cursor-pointer group" onClick={() => setImagePreview(contract.id_back_url)}>
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Rückseite</p>
-                          <img src={contract.id_back_url} alt="Ausweis Rückseite" className="w-full rounded-xl border border-border object-cover group-hover:opacity-80 transition-opacity" />
-                        </div>
+                        <KycDocumentPreview url={contract.id_back_url} label="Rückseite" />
                       )}
                     </div>
                   )}
