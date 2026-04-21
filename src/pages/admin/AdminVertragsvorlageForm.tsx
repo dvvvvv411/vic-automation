@@ -49,7 +49,7 @@ const FontSize = Extension.create({
         () =>
         ({ chain }: any) =>
           chain().setMark("textStyle", { fontSize: null }).removeEmptyTextStyle().run(),
-    };
+    } as any;
   },
 });
 

@@ -12,6 +12,7 @@ import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { useState } from "react";
 import { toast } from "sonner";
+import KycDocumentPreview from "@/components/admin/KycDocumentPreview";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "–";
@@ -217,15 +218,13 @@ export default function MitarbeiterDetailPopup({ contractId, open, onOpenChange 
                       <CardContent>
                         <div className="flex gap-4 flex-wrap">
                           {contract.id_front_url && (
-                            <div className="cursor-pointer" onClick={() => setImagePreview(contract.id_front_url)}>
-                              <p className="text-xs text-muted-foreground mb-1">Vorderseite</p>
-                              <img src={contract.id_front_url} alt="Ausweis Vorderseite" className="h-28 rounded-lg border border-border object-cover hover:opacity-80 transition-opacity" />
+                            <div className="w-48">
+                              <KycDocumentPreview url={contract.id_front_url} label="Vorderseite" />
                             </div>
                           )}
                           {contract.id_back_url && (
-                            <div className="cursor-pointer" onClick={() => setImagePreview(contract.id_back_url)}>
-                              <p className="text-xs text-muted-foreground mb-1">Rückseite</p>
-                              <img src={contract.id_back_url} alt="Ausweis Rückseite" className="h-28 rounded-lg border border-border object-cover hover:opacity-80 transition-opacity" />
+                            <div className="w-48">
+                              <KycDocumentPreview url={contract.id_back_url} label="Rückseite" />
                             </div>
                           )}
                         </div>
