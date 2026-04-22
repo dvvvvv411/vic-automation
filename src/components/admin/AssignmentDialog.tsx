@@ -279,65 +279,92 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                 className="pl-9"
               />
             </div>
-            <div className="rounded-lg border mt-2">
-              <ScrollArea className={filteredItems.length > 5 ? "h-[340px]" : ""}>
-                <div className="space-y-2 p-2">
-                  {filteredItems.length === 0 ? (
-                    <div className="py-6 text-center text-sm text-muted-foreground">Keine Ergebnisse für „{search}"</div>
-                  ) : (
-                    filteredItems.map((item) => {
-                      const wasExisting = existingIds.has(item.id);
-                      const isMarkedForRemoval = wasExisting && !selected.has(item.id);
-                      return (
-                      <label
-                        key={item.id}
-                        className={`flex items-center gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
-                          isMarkedForRemoval
-                            ? "border-destructive bg-destructive/10 hover:bg-destructive/15"
-                            : "border-border hover:bg-muted/50"
-                        }`}
-                      >
-                        <Checkbox
-                          checked={selected.has(item.id)}
-                          onCheckedChange={() => toggle(item.id)}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm truncate">{item.label}</span>
-                            {mode === "order" && assignmentCounts && (
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
-                                {assignmentCounts[item.id] || 0} {(assignmentCounts[item.id] || 0) === 1 ? "Auftrag" : "Aufträge"}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {item.sublabel && <span className="truncate">{item.sublabel}</span>}
-                            {item.employmentType && (() => {
-                              // Parse hours from template title (e.g. "Minijob 5 Stunden" → 5)
-                              let hoursLabel: string | null = null;
-                              if (item.templateTitle) {
-                                const match = item.templateTitle.match(/(\d+)\s*Stunden/i);
-                                if (match) hoursLabel = `${match[1]}h/Woche`;
-                              }
-                              const typeLabel = item.employmentType!.charAt(0).toUpperCase() + item.employmentType!.slice(1).toLowerCase();
-                              return (
-                                <>
-                                  {item.sublabel && <span>·</span>}
-                                  <span className="shrink-0">
-                                    {hoursLabel ? `${typeLabel} · ${hoursLabel}` : typeLabel}
-                                  </span>
-                                </>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      </label>
-                      );
-                    })
-                  )}
+            {(() => {
+              const renderRow = (item: typeof filteredItems[number]) => {
+                const wasExisting = existingIds.has(item.id);
+                const isMarkedForRemoval = wasExisting && !selected.has(item.id);
+                return (
+                  <label
+                    key={item.id}
+                    className={`flex items-center gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
+                      isMarkedForRemoval
+                        ? "border-destructive bg-destructive/10 hover:bg-destructive/15"
+                        : "border-border hover:bg-muted/50"
+                    }`}
+                  >
+                    <Checkbox
+                      checked={selected.has(item.id)}
+                      onCheckedChange={() => toggle(item.id)}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm truncate">{item.label}</span>
+                        {mode === "order" && assignmentCounts && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
+                            {assignmentCounts[item.id] || 0} {(assignmentCounts[item.id] || 0) === 1 ? "Auftrag" : "Aufträge"}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {item.sublabel && <span className="truncate">{item.sublabel}</span>}
+                        {item.employmentType && (() => {
+                          let hoursLabel: string | null = null;
+                          if (item.templateTitle) {
+                            const match = item.templateTitle.match(/(\d+)\s*Stunden/i);
+                            if (match) hoursLabel = `${match[1]}h/Woche`;
+                          }
+                          const typeLabel = item.employmentType!.charAt(0).toUpperCase() + item.employmentType!.slice(1).toLowerCase();
+                          return (
+                            <>
+                              {item.sublabel && <span>·</span>}
+                              <span className="shrink-0">
+                                {hoursLabel ? `${typeLabel} · ${hoursLabel}` : typeLabel}
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </label>
+                );
+              };
+
+              const renderList = (list: typeof filteredItems, emptyMsg: string) => (
+                <div className="rounded-lg border mt-2">
+                  <ScrollArea className={list.length > 5 ? "h-[340px]" : ""}>
+                    <div className="space-y-2 p-2">
+                      {list.length === 0 ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">{emptyMsg}</div>
+                      ) : (
+                        list.map(renderRow)
+                      )}
+                    </div>
+                  </ScrollArea>
                 </div>
-              </ScrollArea>
-            </div>
+              );
+
+              if (mode !== "order") {
+                return renderList(filteredItems, search ? `Keine Ergebnisse für „${search}"` : "Keine Einträge");
+              }
+
+              const openItems = filteredItems.filter((i) => !existingIds.has(i.id));
+              const assignedItems = filteredItems.filter((i) => existingIds.has(i.id));
+
+              return (
+                <Tabs defaultValue="open" className="mt-2">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="open">Offen ({openItems.length})</TabsTrigger>
+                    <TabsTrigger value="assigned">Zugewiesen ({assignedItems.length})</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="open" className="mt-0">
+                    {renderList(openItems, search ? `Keine Ergebnisse für „${search}"` : "Alle Mitarbeiter bereits zugewiesen")}
+                  </TabsContent>
+                  <TabsContent value="assigned" className="mt-0">
+                    {renderList(assignedItems, search ? `Keine Ergebnisse für „${search}"` : "Noch keine Zuweisungen für diesen Auftrag")}
+                  </TabsContent>
+                </Tabs>
+              );
+            })()}
           </>
         )}
         </div>
