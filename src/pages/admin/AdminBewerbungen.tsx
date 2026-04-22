@@ -45,6 +45,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { z } from "zod";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const applicationSchema = z.object({
   first_name: z.string().trim().min(1, "Vorname erforderlich").max(100),
@@ -155,6 +156,7 @@ function parseMassImportLine(line: string): ParsedApplicant | string {
 
 export default function AdminBewerbungen() {
   const [open, setOpen] = useState(false);
+  const [statsRange, setStatsRange] = useState<"24h" | "7d" | "all">("all");
   const [detailApp, setDetailApp] = useState<any>(null);
   const [form, setForm] = useState<ApplicationForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -858,10 +860,16 @@ export default function AdminBewerbungen() {
 
       {/* Funnel Stats */}
       {applications && applications.length > 0 && (() => {
-        const selfApps = applications.filter(a => !a.is_external && !a.is_indeed && !(a as any).is_meta);
-        const externalApps = applications.filter(a => a.is_external && !(a as any).is_meta);
-        const metaApps = applications.filter(a => (a as any).is_meta);
-        const indeedApps = applications.filter(a => a.is_indeed);
+        const cutoff = statsRange === "24h" ? Date.now() - 86_400_000
+                     : statsRange === "7d"  ? Date.now() - 7 * 86_400_000
+                     : 0;
+        const inRange = (a: any) => !cutoff || new Date(a.created_at).getTime() >= cutoff;
+        const rangeLabel = statsRange === "24h" ? "letzte 24h" : statsRange === "7d" ? "letzte 7 Tage" : "Gesamt";
+        const base = applications.filter(inRange);
+        const selfApps = base.filter(a => !a.is_external && !a.is_indeed && !(a as any).is_meta);
+        const externalApps = base.filter(a => a.is_external && !(a as any).is_meta);
+        const metaApps = base.filter(a => (a as any).is_meta);
+        const indeedApps = base.filter(a => a.is_indeed);
         const withBooking = (list: typeof applications) => list.filter(a => a.interview_appointments && (Array.isArray(a.interview_appointments) ? a.interview_appointments.length > 0 : true)).length;
         const pct = (booked: number, total: number) => total > 0 ? Math.round((booked / total) * 100) : 0;
 
@@ -873,22 +881,41 @@ export default function AdminBewerbungen() {
         ];
 
         return (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            {stats.map(s => (
-              <Card key={s.label} className={`border-t-4 ${s.color}`}>
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                    <s.icon className="h-4 w-4" />
-                    {s.label}
-                  </div>
-                  <div className="text-3xl font-bold text-foreground">{s.total}</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm text-muted-foreground">{s.booked} mit Termin</span>
-                    <Badge variant="secondary" className="text-xs">{pct(s.booked, s.total)}%</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <span className="text-sm text-muted-foreground">Stand: {rangeLabel}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Zeitraum:</span>
+                <ToggleGroup
+                  type="single"
+                  value={statsRange}
+                  onValueChange={(v) => v && setStatsRange(v as "24h" | "7d" | "all")}
+                  variant="outline"
+                  size="sm"
+                >
+                  <ToggleGroupItem value="24h">24h</ToggleGroupItem>
+                  <ToggleGroupItem value="7d">7 Tage</ToggleGroupItem>
+                  <ToggleGroupItem value="all">Gesamt</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {stats.map(s => (
+                <Card key={s.label} className={`border-t-4 ${s.color}`}>
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+                      <s.icon className="h-4 w-4" />
+                      {s.label}
+                    </div>
+                    <div className="text-3xl font-bold text-foreground">{s.total}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm text-muted-foreground">{s.booked} mit Termin</span>
+                      <Badge variant="secondary" className="text-xs">{pct(s.booked, s.total)}%</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         );
       })()}
