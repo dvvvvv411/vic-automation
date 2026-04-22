@@ -45,7 +45,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { z } from "zod";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const applicationSchema = z.object({
   first_name: z.string().trim().min(1, "Vorname erforderlich").max(100),
