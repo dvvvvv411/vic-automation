@@ -1,55 +1,39 @@
 
 
-## Plan: Tabs „Offen" / „Zugewiesen" im Mitarbeiter-zuweisen-Dialog
+## Plan: Footer-Hinweis „X neue Zuweisungen" im Mitarbeiter-zuweisen-Dialog
 
 ### Ziel
-Im `/admin/auftraege` „Mitarbeiter zuweisen"-Popup zwei Tabs einbauen, die die Mitarbeiterliste nach aktuellem Zuweisungsstatus für den jeweiligen Auftrag splitten — inkl. Live-Counter im Tab-Label.
+Im `/admin/auftraege` „Mitarbeiter zuweisen"-Dialog wird im Footer — analog zum bereits vorhandenen roten „X Zuweisungen werden entzogen" — zusätzlich ein grüner Hinweis angezeigt, wie viele **neue** Mitarbeiter den Auftrag zugewiesen bekommen.
 
 ### Umsetzung
 
 **Datei:** `src/components/admin/AssignmentDialog.tsx`
 
-1. **Tabs einführen** (`@/components/ui/tabs`) zwischen Suchfeld und Liste, nur aktiv wenn `mode === "order"` (für `mode === "contract"` bleibt alles unverändert — single-list).
-2. **Initialer Set `existingIds`** (bereits berechnet aus `existing`) dient als Quelle der Wahrheit für „bereits zugewiesen beim Öffnen".
-3. **Liste in zwei Buckets aufteilen** (auf Basis von `filteredItems` + `existingIds`):
-   - **Offen**: `!existingIds.has(item.id)` → noch nicht zugewiesen, Häkchen setzt Neuzuweisung
-   - **Zugewiesen**: `existingIds.has(item.id)` → bereits zugewiesen, Häkchen-Entfernen markiert für Entzug (rote Hervorhebung wie heute)
-4. **Tab-Trigger mit Count-Badge**:
-   - `Offen (12)` — `openItems.length`
-   - `Zugewiesen (3)` — `assignedItems.length`
-   - Counts basieren auf **gefilterter** Liste (folgt der Suche), wie heute auch das Verhalten ist.
-5. **Default-Tab**: `Offen` (häufigster Anwendungsfall: neu zuweisen).
-6. **Empty-States** je Tab: „Alle Mitarbeiter bereits zugewiesen" / „Noch keine Zuweisungen für diesen Auftrag".
-7. Bestehender Footer mit „X Zuweisungen werden entzogen" + Speichern-Button bleibt unverändert — die `selected`-Set-Logik und `saveMutation` werden nicht angefasst.
-
-### Was NICHT geändert wird
-- Keine DB-Änderung
-- Keine Änderung an `saveMutation`, E-Mail/SMS-Versand, RLS
-- `mode === "contract"`-Flow (Aufträge zuweisen aus Mitarbeitersicht) bleibt unverändert
-- Such-Logik unverändert (filtert vor Tab-Split)
+1. **Neue Berechnung** neben `removedCount`:
+   ```ts
+   const addedCount = Array.from(selected).filter((id) => !existingIds.has(id)).length;
+   ```
+2. **Footer erweitern**: Vor dem bestehenden roten `removedCount`-Hinweis einen grünen Hinweis einfügen:
+   - `1 neue Zuweisung wird vergeben` / `X neue Zuweisungen werden vergeben`
+   - Styling: `text-sm text-emerald-600 dark:text-emerald-400 text-center`
+3. Beide Hinweise können gleichzeitig sichtbar sein (z. B. wenn man jemanden entzieht UND jemand Neues zuweist).
+4. Keine Änderung an `saveMutation`, Selection-Logik, Tabs oder E-Mail/SMS-Versand.
 
 ### Geänderte Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/components/admin/AssignmentDialog.tsx` | Tabs „Offen"/„Zugewiesen" mit Live-Count im Label, Liste pro Tab, Empty-States |
+| `src/components/admin/AssignmentDialog.tsx` | `addedCount` berechnen + grünen Footer-Hinweis ergänzen |
 
 ### Erwartetes Ergebnis
 
 ```text
 ┌─────────────────────────────────────────┐
-│ Mitarbeiter zuweisen                    │
-│ Auftrag XY                              │
+│ …Liste/Tabs…                            │
 ├─────────────────────────────────────────┤
-│ 🔍 Name oder E-Mail suchen...           │
-│ ┌─────────────────┬───────────────────┐ │
-│ │ Offen (12)      │ Zugewiesen (3)    │ │
-│ ├─────────────────┴───────────────────┤ │
-│ │ ☐ Max Mustermann   max@…  Minijob   │ │
-│ │ ☐ Anna Schmidt     anna@… Vollzeit  │ │
-│ │ …                                   │ │
-│ └─────────────────────────────────────┘ │
-│                  [Abbrechen] [Speichern]│
+│   3 neue Zuweisungen werden vergeben    │  ← grün
+│   1 Zuweisung wird entzogen             │  ← rot (bestehend)
+│              [Abbrechen]  [Speichern]   │
 └─────────────────────────────────────────┘
 ```
 
