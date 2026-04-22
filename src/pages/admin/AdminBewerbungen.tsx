@@ -45,7 +45,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { z } from "zod";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 const applicationSchema = z.object({
   first_name: z.string().trim().min(1, "Vorname erforderlich").max(100),
@@ -883,21 +883,23 @@ export default function AdminBewerbungen() {
         return (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-              <span className="text-sm text-muted-foreground">Stand: {rangeLabel}</span>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Zeitraum:</span>
-                <ToggleGroup
-                  type="single"
+                <Select
                   value={statsRange}
-                  onValueChange={(v) => v && setStatsRange(v as "24h" | "7d" | "all")}
-                  variant="outline"
-                  size="sm"
+                  onValueChange={(v) => setStatsRange(v as "24h" | "7d" | "all")}
                 >
-                  <ToggleGroupItem value="24h">24h</ToggleGroupItem>
-                  <ToggleGroupItem value="7d">7 Tage</ToggleGroupItem>
-                  <ToggleGroupItem value="all">Gesamt</ToggleGroupItem>
-                </ToggleGroup>
+                  <SelectTrigger className="w-[180px] h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Gesamt</SelectItem>
+                    <SelectItem value="7d">Letzte 7 Tage</SelectItem>
+                    <SelectItem value="24h">Letzte 24 Stunden</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              <span className="text-sm text-muted-foreground">Stand: {rangeLabel}</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {stats.map(s => (
