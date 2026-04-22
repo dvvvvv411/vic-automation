@@ -43,13 +43,26 @@ export default function AdminAuftraege() {
   });
 
   const { data: assignmentCounts } = useQuery({
-    queryKey: ["order_assignments", "counts_by_order", activeBrandingId],
-    enabled: ready,
+    queryKey: ["order_assignments", "counts_by_order", activeBrandingId, orders?.length ?? 0],
+    enabled: ready && !!orders,
     queryFn: async () => {
-      const { data, error } = await supabase.from("order_assignments").select("order_id");
-      if (error) throw error;
       const counts: Record<string, number> = {};
-      (data ?? []).forEach((a) => { counts[a.order_id] = (counts[a.order_id] || 0) + 1; });
+      const orderIds = (orders ?? []).map((o: any) => o.id);
+      if (!orderIds.length) return counts;
+      const pageSize = 1000;
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("order_assignments")
+          .select("order_id")
+          .in("order_id", orderIds)
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const batch = data ?? [];
+        batch.forEach((a) => { counts[a.order_id] = (counts[a.order_id] || 0) + 1; });
+        if (batch.length < pageSize) break;
+        from += pageSize;
+      }
       return counts;
     },
   });
