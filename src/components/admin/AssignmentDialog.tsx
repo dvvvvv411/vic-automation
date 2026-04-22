@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search } from "lucide-react";
