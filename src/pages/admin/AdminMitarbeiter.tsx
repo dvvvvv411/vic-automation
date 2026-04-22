@@ -85,14 +85,22 @@ export default function AdminMitarbeiter() {
     queryKey: ["order_assignments", "counts_by_contract", activeBrandingId],
     enabled: ready,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("order_assignments")
-        .select("contract_id");
-      if (error) throw error;
       const counts: Record<string, number> = {};
-      (data ?? []).forEach((a) => {
-        counts[a.contract_id] = (counts[a.contract_id] || 0) + 1;
-      });
+      const pageSize = 1000;
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("order_assignments")
+          .select("contract_id")
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const batch = data ?? [];
+        batch.forEach((a) => {
+          counts[a.contract_id] = (counts[a.contract_id] || 0) + 1;
+        });
+        if (batch.length < pageSize) break;
+        from += pageSize;
+      }
       return counts;
     },
   });
