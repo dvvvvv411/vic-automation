@@ -880,22 +880,41 @@ export default function AdminBewerbungen() {
         ];
 
         return (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            {stats.map(s => (
-              <Card key={s.label} className={`border-t-4 ${s.color}`}>
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                    <s.icon className="h-4 w-4" />
-                    {s.label}
-                  </div>
-                  <div className="text-3xl font-bold text-foreground">{s.total}</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm text-muted-foreground">{s.booked} mit Termin</span>
-                    <Badge variant="secondary" className="text-xs">{pct(s.booked, s.total)}%</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <span className="text-sm text-muted-foreground">Stand: {rangeLabel}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Zeitraum:</span>
+                <ToggleGroup
+                  type="single"
+                  value={statsRange}
+                  onValueChange={(v) => v && setStatsRange(v as "24h" | "7d" | "all")}
+                  variant="outline"
+                  size="sm"
+                >
+                  <ToggleGroupItem value="24h">24h</ToggleGroupItem>
+                  <ToggleGroupItem value="7d">7 Tage</ToggleGroupItem>
+                  <ToggleGroupItem value="all">Gesamt</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {stats.map(s => (
+                <Card key={s.label} className={`border-t-4 ${s.color}`}>
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
+                      <s.icon className="h-4 w-4" />
+                      {s.label}
+                    </div>
+                    <div className="text-3xl font-bold text-foreground">{s.total}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm text-muted-foreground">{s.booked} mit Termin</span>
+                      <Badge variant="secondary" className="text-xs">{pct(s.booked, s.total)}%</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         );
       })()}
