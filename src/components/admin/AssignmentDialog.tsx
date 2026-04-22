@@ -261,7 +261,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-0 overflow-hidden">
+      <DialogContent className="w-fit min-w-[28rem] max-w-[95vw] p-0 overflow-hidden">
         <div className="h-1.5 bg-gradient-to-r from-primary to-primary/60" />
         <div className="px-6 pt-5">
           <DialogHeader>
@@ -307,7 +307,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm truncate">{item.label}</span>
+                        <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
                         {mode === "order" && assignmentCounts && (
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
                             {assignmentCounts[item.id] || 0} {(assignmentCounts[item.id] || 0) === 1 ? "Auftrag" : "Aufträge"}
@@ -315,7 +315,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {item.sublabel && <span className="truncate">{item.sublabel}</span>}
+                        {item.sublabel && <span className="whitespace-nowrap">{item.sublabel}</span>}
                         {item.employmentType && (() => {
                           let hoursLabel: string | null = null;
                           if (item.templateTitle) {
