@@ -371,6 +371,11 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
         </div>
 
         <DialogFooter className="px-6 pb-6 flex-col gap-2 sm:flex-col">
+          {addedCount > 0 && (
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 text-center">
+              {addedCount} {addedCount === 1 ? "neue Zuweisung wird vergeben" : "neue Zuweisungen werden vergeben"}
+            </p>
+          )}
           {removedCount > 0 && (
             <p className="text-sm text-destructive text-center">
               {removedCount} {removedCount === 1 ? "Zuweisung wird entzogen" : "Zuweisungen werden entzogen"}
