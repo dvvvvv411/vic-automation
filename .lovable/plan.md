@@ -1,51 +1,32 @@
 
 
-## Plan: Caller-Konten dürfen Bewerbungen annehmen & Resend-Button nutzen
+## Plan: Auftrag-zuweisen-Popup auf /admin/mitarbeiter dynamisch breit
 
-### Problem
-Caller-Konten (z. B. `bewerbung@efficient-flow.to`) bekommen beim „Bewerbung annehmen" und beim Resend-Button (RotateCcw) einen RLS-Fehler. Ursache: Der „Bewerbung angenommen"-Flow ruft `createShortLink()` auf, das in die Tabelle `short_links` schreibt. Die aktuelle INSERT-Policy erlaubt aber nur `admin` und `kunde`:
+### Ziel
+Das „Auftrag zuweisen"-Popup (Komponente `AssignmentDialog` im Modus `contract`) soll sich automatisch an den längsten Text im Inhalt anpassen, statt auf die fixe `max-w-md`-Breite begrenzt zu sein. Lange Auftragstitel/Anbieter-Namen werden so nicht mehr abgeschnitten.
 
-```sql
-WITH CHECK (has_role(auth.uid(), 'admin') OR is_kunde(auth.uid()))
-```
+### Umsetzung
 
-→ Caller bekommen `new row violates row-level security policy`.
+**Datei:** `src/components/admin/AssignmentDialog.tsx`
 
-Alle anderen relevanten Berechtigungen (UPDATE auf `applications`, SELECT auf `sms_templates`, SELECT auf `brandings`, `sms-spoof`, `send-sms`, `send-email`) lassen Caller bereits zu — der einzige Blocker ist `short_links`.
-
-### Lösung
-
-**Migration:** RLS-Policy `short_links` INSERT erweitern, sodass auch `is_caller(auth.uid())` einfügen darf.
-
-```sql
-DROP POLICY "Admins and Kunden can insert short_links" ON public.short_links;
-
-CREATE POLICY "Admins, Kunden and Caller can insert short_links"
-  ON public.short_links FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    has_role(auth.uid(), 'admin'::app_role)
-    OR is_kunde(auth.uid())
-    OR is_caller(auth.uid())
-  );
-```
+1. Im `<DialogContent>` die fixe Breite `max-w-md` ersetzen durch eine **inhaltsbasierte Breite**:
+   - `w-fit` (Breite passt sich dem Inhalt an)
+   - `max-w-[95vw]` (verhindert Overflow auf kleinen Viewports)
+   - `min-w-[28rem]` (sinnvolle Mindestbreite, damit das Popup nicht zu schmal wirkt, wenn nur kurze Einträge existieren)
+2. Bei den Auftragszeilen (`renderRow`) das `truncate` auf `item.label` und `item.sublabel` entfernen bzw. durch `whitespace-nowrap` ersetzen, damit der Text nicht gekürzt wird und die Dialog-Breite tatsächlich vom längsten Eintrag bestimmt wird.
+3. Search-Input und Footer bleiben dadurch automatisch passend breit (sie strecken sich auf 100 % des Containers).
 
 ### Was NICHT geändert wird
-- Kein UI-Code (`AdminBewerbungen.tsx` bleibt identisch — die Buttons sind für Caller bereits sichtbar, sobald Pfad-Permissions stimmen)
-- Keine Edge-Functions
-- Keine anderen RLS-Policies
-- Keine Änderung an `admin_permissions` oder Caller-Onboarding-Logik
+- Keine Änderung an Tabs, Selection-Logik, Mutation, Footer-Texten
+- Mode `order` (auf `/admin/auftraege`) wird durch dieselbe Komponente automatisch mit-aktualisiert — gewünschtes Verhalten, da auch dort lange Mitarbeiter-Namen vorkommen können
+- Keine Änderung an `dialog.tsx` selbst
 
 ### Geänderte Dateien
 
 | Datei | Änderung |
 |---|---|
-| Neue Migration | `short_links` INSERT-Policy um `is_caller()` erweitern |
+| `src/components/admin/AssignmentDialog.tsx` | `DialogContent`-Klassen auf `w-fit min-w-[28rem] max-w-[95vw]`; `truncate` in Zeilen entfernen |
 
 ### Erwartetes Ergebnis
-Caller-Konten (z. B. `bewerbung@efficient-flow.to`) können auf `/admin/bewerbungen`:
-- Bewerbungen akzeptieren (inkl. SMS-Versand mit Kurzlink)
-- Den Resend-Button (RotateCcw) ohne Fehler benutzen
-
-Die bestehende Branding-Isolierung bleibt erhalten (Caller sehen weiterhin nur ihre zugewiesenen Brandings).
+Das Popup ist genau so breit wie der längste Auftrags-/Mitarbeiter-Eintrag — keine abgeschnittenen Titel mehr, aber auch keine unnötig riesige Breite bei kurzen Einträgen.
 
