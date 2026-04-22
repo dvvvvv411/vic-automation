@@ -858,10 +858,16 @@ export default function AdminBewerbungen() {
 
       {/* Funnel Stats */}
       {applications && applications.length > 0 && (() => {
-        const selfApps = applications.filter(a => !a.is_external && !a.is_indeed && !(a as any).is_meta);
-        const externalApps = applications.filter(a => a.is_external && !(a as any).is_meta);
-        const metaApps = applications.filter(a => (a as any).is_meta);
-        const indeedApps = applications.filter(a => a.is_indeed);
+        const cutoff = statsRange === "24h" ? Date.now() - 86_400_000
+                     : statsRange === "7d"  ? Date.now() - 7 * 86_400_000
+                     : 0;
+        const inRange = (a: any) => !cutoff || new Date(a.created_at).getTime() >= cutoff;
+        const rangeLabel = statsRange === "24h" ? "letzte 24h" : statsRange === "7d" ? "letzte 7 Tage" : "Gesamt";
+        const base = applications.filter(inRange);
+        const selfApps = base.filter(a => !a.is_external && !a.is_indeed && !(a as any).is_meta);
+        const externalApps = base.filter(a => a.is_external && !(a as any).is_meta);
+        const metaApps = base.filter(a => (a as any).is_meta);
+        const indeedApps = base.filter(a => a.is_indeed);
         const withBooking = (list: typeof applications) => list.filter(a => a.interview_appointments && (Array.isArray(a.interview_appointments) ? a.interview_appointments.length > 0 : true)).length;
         const pct = (booked: number, total: number) => total > 0 ? Math.round((booked / total) * 100) : 0;
 
