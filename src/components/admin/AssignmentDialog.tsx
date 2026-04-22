@@ -141,6 +141,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
   // Calculate removed count for footer hint
   const existingIds = new Set(existing?.map((a) => (mode === "order" ? a.contract_id : a.order_id)) ?? []);
   const removedCount = Array.from(existingIds).filter((id) => !selected.has(id)).length;
+  const addedCount = Array.from(selected).filter((id) => !existingIds.has(id)).length;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
