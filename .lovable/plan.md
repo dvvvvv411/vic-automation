@@ -1,49 +1,51 @@
 
 
-## Plan: Korrekte Zuweisungs-Zähler überall — `/admin/auftraege`, `/admin/mitarbeiter` & AssignmentDialog
+## Plan: Caller-Konten dürfen Bewerbungen annehmen & Resend-Button nutzen
 
 ### Problem
-Die Aggregations-Queries auf `order_assignments` laufen ohne Pagination und werden bei > 1000 Zeilen von Supabase abgeschnitten. Aktuell existieren bereits **1152 Zuweisungen** in der DB → Zähler-Badges zeigen überall zu kleine Werte.
+Caller-Konten (z. B. `bewerbung@efficient-flow.to`) bekommen beim „Bewerbung annehmen" und beim Resend-Button (RotateCcw) einen RLS-Fehler. Ursache: Der „Bewerbung angenommen"-Flow ruft `createShortLink()` auf, das in die Tabelle `short_links` schreibt. Die aktuelle INSERT-Policy erlaubt aber nur `admin` und `kunde`:
 
-Betroffen:
-1. **`/admin/auftraege`** → Badge „X zugewiesen" pro Auftragskarte
-2. **`/admin/mitarbeiter`** → Badge „X Aufträge" pro Mitarbeiter
-3. **„Mitarbeiter zuweisen"-Popup** (`AssignmentDialog`) → Auftrags-Counter pro Mitarbeiter
+```sql
+WITH CHECK (has_role(auth.uid(), 'admin') OR is_kunde(auth.uid()))
+```
+
+→ Caller bekommen `new row violates row-level security policy`.
+
+Alle anderen relevanten Berechtigungen (UPDATE auf `applications`, SELECT auf `sms_templates`, SELECT auf `brandings`, `sms-spoof`, `send-sms`, `send-email`) lassen Caller bereits zu — der einzige Blocker ist `short_links`.
 
 ### Lösung
-Alle drei `assignmentCounts`-Queries auf die etablierte `.range()`-Batch-Loop-Strategie umstellen (siehe Memory `tech/supabase-row-limit-constraint`).
 
-### Umsetzung
+**Migration:** RLS-Policy `short_links` INSERT erweitern, sodass auch `is_caller(auth.uid())` einfügen darf.
 
-**Datei 1:** `src/pages/admin/AdminAuftraege.tsx`
-- `assignmentCounts`-Query (`["order_assignments", "counts_by_order", activeBrandingId]`) mit Batch-Loop:
-  - `pageSize = 1000`, `from = 0`
-  - Schleife `select("order_id").range(from, from+999)` bis Batch < 1000
-  - Optional: `.in("order_id", orderIds)` nach den `orders` des aktiven Brandings scopen
-- Aggregation zur `Record<string, number>`-Map bleibt identisch
+```sql
+DROP POLICY "Admins and Kunden can insert short_links" ON public.short_links;
 
-**Datei 2:** `src/pages/admin/AdminMitarbeiter.tsx`
-- `assignmentCounts`-Query mit `.range()`-Batch-Loop
-- `select("contract_id")` in 1000er-Batches
-
-**Datei 3:** `src/components/admin/AssignmentDialog.tsx`
-- `assignmentCounts`-Query (`counts_by_contract`) mit `.range()`-Batch-Loop
-- `select("contract_id")` in 1000er-Batches
-- Globaler Scope bleibt (Counter zählt alle Aufträge eines Mitarbeiters)
+CREATE POLICY "Admins, Kunden and Caller can insert short_links"
+  ON public.short_links FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    has_role(auth.uid(), 'admin'::app_role)
+    OR is_kunde(auth.uid())
+    OR is_caller(auth.uid())
+  );
+```
 
 ### Was NICHT geändert wird
-- Keine UI-/Layout-Änderung
-- Keine Mutationen, RLS, Edge-Functions, DB-Schema
-- Keine Änderung an Tabs/Selection-/Footer-Logik des Dialogs
+- Kein UI-Code (`AdminBewerbungen.tsx` bleibt identisch — die Buttons sind für Caller bereits sichtbar, sobald Pfad-Permissions stimmen)
+- Keine Edge-Functions
+- Keine anderen RLS-Policies
+- Keine Änderung an `admin_permissions` oder Caller-Onboarding-Logik
 
 ### Geänderte Dateien
 
 | Datei | Änderung |
 |---|---|
-| `src/pages/admin/AdminAuftraege.tsx` | `assignmentCounts` Batch-Loop + branding-scope |
-| `src/pages/admin/AdminMitarbeiter.tsx` | `assignmentCounts` Batch-Loop |
-| `src/components/admin/AssignmentDialog.tsx` | `assignmentCounts` (counts_by_contract) Batch-Loop |
+| Neue Migration | `short_links` INSERT-Policy um `is_caller()` erweitern |
 
 ### Erwartetes Ergebnis
-Alle Zuweisungs-Zähler (auf Auftragskarten, Mitarbeiterliste und im Zuweisen-Popup) zeigen die **tatsächliche** Anzahl — auch bei > 1000 Zuweisungen projektweit.
+Caller-Konten (z. B. `bewerbung@efficient-flow.to`) können auf `/admin/bewerbungen`:
+- Bewerbungen akzeptieren (inkl. SMS-Versand mit Kurzlink)
+- Den Resend-Button (RotateCcw) ohne Fehler benutzen
+
+Die bestehende Branding-Isolierung bleibt erhalten (Caller sehen weiterhin nur ihre zugewiesenen Brandings).
 
