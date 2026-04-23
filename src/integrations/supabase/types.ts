@@ -237,6 +237,7 @@ export type Database = {
           salary_minijob: number | null
           salary_teilzeit: number | null
           salary_vollzeit: number | null
+          seven_api_key: string | null
           signature_font: string | null
           signature_image_url: string | null
           signer_name: string | null
@@ -292,6 +293,7 @@ export type Database = {
           salary_minijob?: number | null
           salary_teilzeit?: number | null
           salary_vollzeit?: number | null
+          seven_api_key?: string | null
           signature_font?: string | null
           signature_image_url?: string | null
           signer_name?: string | null
@@ -347,6 +349,7 @@ export type Database = {
           salary_minijob?: number | null
           salary_teilzeit?: number | null
           salary_vollzeit?: number | null
+          seven_api_key?: string | null
           signature_font?: string | null
           signature_image_url?: string | null
           signer_name?: string | null

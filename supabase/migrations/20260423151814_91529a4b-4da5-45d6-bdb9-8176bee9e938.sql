@@ -1,0 +1,1 @@
+ALTER TABLE public.brandings ADD COLUMN seven_api_key text;
