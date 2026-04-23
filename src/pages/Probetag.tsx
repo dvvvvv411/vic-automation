@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase as supabase } from "@/integrations/supabase/publicClient";
 import { sendTelegram } from "@/lib/sendTelegram";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
@@ -99,7 +99,7 @@ export default function Probetag() {
     queryKey: ["trial-day-booked-slots", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("booked_slots_for_branding" as any, {
+      const { data, error } = await supabase.rpc("trial_day_booked_slots_for_branding" as any, {
         _branding_id: brandingId!,
       });
       if (error) throw error;
