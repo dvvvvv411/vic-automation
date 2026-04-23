@@ -31,6 +31,7 @@ const brandingSchema = z.object({
   resend_from_name: z.string().max(200).optional(),
   resend_api_key: z.string().max(200).optional(),
   sms_sender_name: z.string().max(11, "Max. 11 Zeichen").optional(),
+  seven_api_key: z.string().max(200).optional(),
   phone: z.string().max(20, "Max. 20 Zeichen").optional(),
   payment_model: z.enum(["per_order", "fixed_salary"]),
   salary_minijob: z.string().optional(),
