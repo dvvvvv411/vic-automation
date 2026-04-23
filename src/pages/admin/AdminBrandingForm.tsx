@@ -31,6 +31,7 @@ const brandingSchema = z.object({
   resend_from_name: z.string().max(200).optional(),
   resend_api_key: z.string().max(200).optional(),
   sms_sender_name: z.string().max(11, "Max. 11 Zeichen").optional(),
+  seven_api_key: z.string().max(200).optional(),
   phone: z.string().max(20, "Max. 20 Zeichen").optional(),
   payment_model: z.enum(["per_order", "fixed_salary"]),
   salary_minijob: z.string().optional(),
@@ -74,6 +75,7 @@ const initialForm: BrandingForm = {
   resend_from_name: "",
   resend_api_key: "",
   sms_sender_name: "",
+  seven_api_key: "",
   phone: "",
   payment_model: "per_order" as const,
   salary_minijob: "",
@@ -145,6 +147,7 @@ export default function AdminBrandingForm() {
         resend_from_name: branding.resend_from_name || "",
         resend_api_key: branding.resend_api_key || "",
         sms_sender_name: branding.sms_sender_name || "",
+        seven_api_key: (branding as any).seven_api_key || "",
         phone: branding.phone || "",
         payment_model: (branding.payment_model === "fixed_salary" ? "fixed_salary" : "per_order") as "per_order" | "fixed_salary",
         salary_minijob: branding.salary_minijob?.toString() || "",
@@ -548,6 +551,19 @@ export default function AdminBrandingForm() {
             />
             <p className="text-xs text-muted-foreground">Max. 11 Zeichen (alphanumerisch). Wird als Absender bei SMS angezeigt.</p>
             {errors.sms_sender_name && <p className="text-xs text-destructive">{errors.sms_sender_name}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label>Seven.io API Key</Label>
+            <Input
+              type="password"
+              value={form.seven_api_key}
+              onChange={(e) => updateField("seven_api_key", e.target.value)}
+              placeholder="••••••••••••••••"
+              maxLength={200}
+              autoComplete="new-password"
+            />
+            <p className="text-xs text-muted-foreground">Wird als Absender-API für SMS dieses Brandings verwendet. Leer = globaler Fallback-Key.</p>
+            {errors.seven_api_key && <p className="text-xs text-destructive">{errors.seven_api_key}</p>}
           </div>
           <div className="space-y-2">
             <Label>Telefonnummer</Label>
