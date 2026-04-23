@@ -35,17 +35,29 @@ Deno.serve(async (req) => {
 
     const normalizedTo = normalizePhone(to);
 
-    const apiKey = Deno.env.get("SEVEN_API_KEY");
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: "SEVEN_API_KEY nicht konfiguriert" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // Resolve API key: per-branding first, then global fallback
+    let apiKey: string | null = null;
+    if (branding_id) {
+      const { data: brand } = await adminClient
+        .from("brandings")
+        .select("seven_api_key")
+        .eq("id", branding_id)
+        .maybeSingle();
+      apiKey = (brand as any)?.seven_api_key?.trim() || null;
+    }
+    if (!apiKey) {
+      apiKey = Deno.env.get("SEVEN_API_KEY") ?? null;
+    }
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ error: "Kein Seven.io API Key (Branding + globaler Secret leer)" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Extract user id from auth header
     let createdBy: string | null = null;
