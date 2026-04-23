@@ -1758,6 +1758,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      interview_booked_slots_for_branding: {
+        Args: { _branding_id: string }
+        Returns: {
+          appointment_date: string
+          appointment_time: string
+        }[]
+      }
       is_caller: { Args: { _user_id: string }; Returns: boolean }
       is_kunde: { Args: { _user_id: string }; Returns: boolean }
       submit_employment_contract:
@@ -1815,6 +1822,13 @@ export type Database = {
             }
             Returns: undefined
           }
+      trial_day_booked_slots_for_branding: {
+        Args: { _branding_id: string }
+        Returns: {
+          appointment_date: string
+          appointment_time: string
+        }[]
+      }
       update_application_phone: {
         Args: { _application_id: string; _phone: string }
         Returns: undefined

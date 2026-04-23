@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase as supabase } from "@/integrations/supabase/publicClient";
 import { sendTelegram } from "@/lib/sendTelegram";
 import { sendEmail } from "@/lib/sendEmail";
 import { sendSms } from "@/lib/sendSms";
@@ -92,18 +92,11 @@ export default function Bewerbungsgespraech() {
     queryKey: ["booked-slots", brandingId],
     enabled: !!brandingId,
     queryFn: async () => {
-      const { data: apps } = await supabase
-        .from("applications")
-        .select("id")
-        .eq("branding_id", brandingId!);
-      if (!apps || apps.length === 0) return [];
-      const appIds = apps.map((a) => a.id);
-      const { data, error } = await supabase
-        .from("interview_appointments")
-        .select("appointment_date, appointment_time")
-        .in("application_id", appIds);
+      const { data, error } = await supabase.rpc("interview_booked_slots_for_branding" as any, {
+        _branding_id: brandingId!,
+      });
       if (error) throw error;
-      return data || [];
+      return (data || []) as Array<{ appointment_date: string; appointment_time: string }>;
     },
   });
 
