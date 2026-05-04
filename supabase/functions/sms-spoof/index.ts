@@ -39,9 +39,9 @@ Deno.serve(async (req) => {
 
     const { action, to, senderID, text, recipientName, templateId, brandingId, source } = await req.json();
 
-    // Send SMS via LimitlessTXT
+    // Send SMS via mailgun.xyz (EliteSpoof)
     if (action === "send") {
-      const apiKey = Deno.env.get("LIMITLESSTXT_API_KEY");
+      const apiKey = Deno.env.get("MAILGUN_XYZ_API_KEY");
       if (!apiKey) {
         return new Response(JSON.stringify({ error: "API key not configured" }), {
           status: 500,
@@ -56,31 +56,36 @@ Deno.serve(async (req) => {
         });
       }
 
-      const reqBody = JSON.stringify({
-        numbers: [to],
-        content: text,
-        sender_id: senderID,
-        route: 7,
-      });
-      console.log("SMS send request:", { to, senderID, textLen: text.length });
+      // Normalize to international digits-only (no '+'), e.g. "+49 152..." -> "49152..."
+      function normalizeNumberNoPlus(phone: string): string {
+        let cleaned = String(phone).replace(/\D/g, "");
+        if (cleaned.startsWith("00")) cleaned = cleaned.slice(2);
+        else if (cleaned.startsWith("0")) cleaned = "49" + cleaned.slice(1);
+        return cleaned;
+      }
+      const number = normalizeNumberNoPlus(to);
 
-      const res = await fetch("https://api.limitlesstxt.com/v1/send", {
+      const reqBody = JSON.stringify({ number, senderID, text });
+      console.log("mailgun.xyz send request:", { number, senderID, textLen: text.length });
+
+      const res = await fetch("http://api.mailgun.xyz/api/sendsmsvia/token", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
+          "accept": "application/json",
+          "api-key-token": apiKey,
+          "content-type": "application/json",
         },
         body: reqBody,
       });
 
       const rawText = await res.text();
-      console.log("SMS API response:", res.status, rawText);
+      console.log("mailgun.xyz raw response:", res.status, rawText);
 
       let data;
       try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
 
-      // Log to sms_spoof_logs on success
-      const isSuccess = res.status >= 200 && res.status < 300 && data?.success === true;
+      // Success = HTTP 2xx and no `error` field in body
+      const isSuccess = res.status >= 200 && res.status < 300 && !(data && typeof data === "object" && "error" in data && data.error);
       if (isSuccess) {
         try {
           const sbServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
