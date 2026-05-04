@@ -1,29 +1,47 @@
-## Plan: Telegram-Notification beim Buchen des 1. Arbeitstags
+## Plan: Spoof-SMS Provider auf mailgun.xyz (EliteSpoof) umstellen
 
 ### Befund
-Im Code wird beim Buchen eines 1.-Arbeitstag-Termins (`src/pages/ErsterArbeitstag.tsx`, Zeile 206) bereits ein Telegram-Event gefeuert:
+- Einzige Stelle, an der die alte LimitlessTXT-API angesprochen wird: `supabase/functions/sms-spoof/index.ts`.
+- Frontend-Aufrufer (`AdminSmsSpoof.tsx`, `AdminBewerbungen.tsx`, `AdminProbetag.tsx`) gehen alle über `supabase.functions.invoke("sms-spoof", { body: { action: "send", to, senderID, text, ... }})` — Schnittstelle bleibt unverändert.
+- Doku (https://mailgun.xyz/developers) bestätigt:
+  - Endpoint: `POST http://api.mailgun.xyz/api/sendsmsvia/token`
+  - Header: `api-key-token: YOUR_API_KEY`, `content-type: application/json`, `accept: application/json`
+  - Body: `{ "number": "491234567890", "senderID": "EliteSpoof", "text": "..." }`
+  - Number ohne `+`, im internationalen Format.
 
-```ts
-sendTelegram("erster_arbeitstag_gebucht", "...", contract?.branding_id)
-```
+### Schritt 1 — neuer Secret
+Neuer Runtime-Secret: **`MAILGUN_XYZ_API_KEY`** (Wert kommt nach Plan-Approval von dir).
 
-Es kommt nur deshalb keine Nachricht an, weil das Event `erster_arbeitstag_gebucht` **nicht** in der Eventliste von `/admin/telegram` (`AdminTelegram.tsx` → Konstante `EVENT_TYPES`) auftaucht. Dadurch kann kein Chat darauf abonniert werden, und in der DB-Spalte `telegram_chats.events` taucht es nie auf → die Edge Function `send-telegram` filtert es weg.
+### Schritt 2 — `supabase/functions/sms-spoof/index.ts` patchen
+Nur der `action === "send"`-Zweig wird geändert:
 
-### Änderung
-
-**Datei:** `src/pages/admin/AdminTelegram.tsx`
-
-In der Konstante `EVENT_TYPES` einen neuen Eintrag ergänzen — direkt nach `auftragstermin_gebucht`:
-
-```ts
-{ key: "erster_arbeitstag_gebucht", label: "Erster Arbeitstag gebucht", desc: "Mitarbeiter bucht den ersten Arbeitstag" },
-```
-
-### Was passiert danach
-1. Im Admin-Panel `/admin/telegram` erscheint das neue Event in der Checkbox-Liste sowohl beim Anlegen eines Chats als auch in der Bearbeitung bestehender Chats und in der „Event-Übersicht"-Tabelle.
-2. Du hakst es bei deinen gewünschten Telegram-Chat-IDs an → ab dann triggert jede 1.-Arbeitstag-Buchung eine Telegram-Nachricht (mit `branding_id`-Filter, wie alle anderen Events).
+1. `apiKey = Deno.env.get("MAILGUN_XYZ_API_KEY")` statt `LIMITLESSTXT_API_KEY`.
+2. Helper `normalizeNumberNoPlus(to)`: alles außer Ziffern entfernen, führende `0` → `49`, führende `00` strippen → reine internationale Nummer ohne `+` (z. B. `+49152…` → `49152…`).
+3. Request:
+   ```ts
+   const res = await fetch("http://api.mailgun.xyz/api/sendsmsvia/token", {
+     method: "POST",
+     headers: {
+       "accept": "application/json",
+       "api-key-token": apiKey,
+       "content-type": "application/json",
+     },
+     body: JSON.stringify({ number, senderID, text }),
+   });
+   ```
+4. Erfolgs-Erkennung: HTTP 2xx UND keine Response-Property `error`. Raw-Response wird immer geloggt (`console.log("mailgun.xyz raw:", rawText)`), damit wir bei Bedarf nachjustieren können.
+5. Bei Erfolg: bestehendes Insert in `sms_spoof_logs` + `decrement_spoof_credits(brandingId)` bleibt 1:1.
+6. Bei Fehler: Raw-Body als `error.details` zurückgeben für den Toast im Frontend.
 
 ### Was NICHT angefasst wird
-- `ErsterArbeitstag.tsx` (Event wird bereits korrekt gefeuert)
-- `send-telegram` Edge Function (funktioniert generisch)
-- DB-Schema, Spoof, SMS, Reminder — unverändert
+- Frontend (`AdminSmsSpoof`, `AdminBewerbungen`, `AdminProbetag`, `AdminSidebar`) — gleiche Schnittstelle.
+- Reguläre seven.io-SMS (`send-sms`) — komplett unverändert.
+- DB-Schema, `sms_spoof_logs`, Spoof-Credits-Logik.
+- HLR-Lookup wird nicht integriert.
+- Alter Secret `LIMITLESSTXT_API_KEY` bleibt im Secret-Store (kein Auto-Delete) — kann bei Bedarf später manuell entfernt werden.
+
+### Schritt 3 — User-Aktion
+Direkt nach Plan-Approval frage ich dich nach dem **mailgun.xyz API Key** und speichere ihn als `MAILGUN_XYZ_API_KEY`. Erst danach geht der Versand live.
+
+### Rollback
+Falls neuer Provider Probleme macht: Endpoint + Header in `sms-spoof/index.ts` zurücktauschen — alter Key liegt noch vor.
