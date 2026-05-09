@@ -140,6 +140,24 @@ export default function AdminCaller() {
     },
   });
 
+  const passwordMutation = useMutation({
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      const { data, error } = await supabase.functions.invoke("reset-caller-password", {
+        body: { user_id: userId, new_password: password },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      toast({ title: "Passwort geändert" });
+      setPwCaller(null);
+      setNewPassword("");
+    },
+    onError: (e: any) => {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    },
+  });
+
   const getInitials = (name: string) => {
     const parts = name.split(" ").filter(Boolean);
     if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
