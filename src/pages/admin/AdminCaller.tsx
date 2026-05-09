@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
-import { UserPlus, Settings, Trash2, Users, Building2, Phone } from "lucide-react";
+import { UserPlus, Settings, Trash2, Users, Building2, Phone, KeyRound } from "lucide-react";
 import { motion } from "framer-motion";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
