@@ -23,6 +23,8 @@ export default function AdminCaller() {
   const [callerType, setCallerType] = useState<"bewerbungsgespraeche" | "probetag">("bewerbungsgespraeche");
   const [selectedBrandings, setSelectedBrandings] = useState<string[]>([]);
   const [expandedCaller, setExpandedCaller] = useState<string | null>(null);
+  const [pwCaller, setPwCaller] = useState<{ id: string; name: string } | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   const { data: callers, isLoading } = useQuery({
     queryKey: ["admin-callers"],
