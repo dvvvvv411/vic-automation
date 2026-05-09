@@ -360,6 +360,33 @@ export default function AdminCaller() {
           </div>
         )}
       </motion.div>
+
+      <Dialog open={!!pwCaller} onOpenChange={(o) => { if (!o) { setPwCaller(null); setNewPassword(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Passwort ändern</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-muted-foreground">Für: <span className="font-medium text-foreground">{pwCaller?.name}</span></p>
+            <div>
+              <Label>Neues Passwort</Label>
+              <Input
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mindestens 6 Zeichen"
+                type="text"
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => pwCaller && passwordMutation.mutate({ userId: pwCaller.id, password: newPassword })}
+              disabled={!newPassword || newPassword.length < 6 || passwordMutation.isPending}
+            >
+              {passwordMutation.isPending ? "Speichere..." : "Passwort speichern"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
