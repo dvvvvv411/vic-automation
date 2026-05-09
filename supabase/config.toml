@@ -51,5 +51,8 @@ verify_jwt = false
 [functions.reset-kunde-password]
 verify_jwt = false
 
+[functions.reset-caller-password]
+verify_jwt = false
+
 [functions.list-kunden]
 verify_jwt = false

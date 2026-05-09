@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
-import { UserPlus, Settings, Trash2, Users, Building2, Phone } from "lucide-react";
+import { UserPlus, Settings, Trash2, Users, Building2, Phone, KeyRound } from "lucide-react";
 import { motion } from "framer-motion";
 import { useBrandingFilter } from "@/hooks/useBrandingFilter";
 
@@ -23,6 +23,8 @@ export default function AdminCaller() {
   const [callerType, setCallerType] = useState<"bewerbungsgespraeche" | "probetag">("bewerbungsgespraeche");
   const [selectedBrandings, setSelectedBrandings] = useState<string[]>([]);
   const [expandedCaller, setExpandedCaller] = useState<string | null>(null);
+  const [pwCaller, setPwCaller] = useState<{ id: string; name: string } | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   const { data: callers, isLoading } = useQuery({
     queryKey: ["admin-callers"],
@@ -132,6 +134,24 @@ export default function AdminCaller() {
     onSuccess: () => {
       toast({ title: "Caller-Zugang entfernt" });
       queryClient.invalidateQueries({ queryKey: ["admin-callers"] });
+    },
+    onError: (e: any) => {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const passwordMutation = useMutation({
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      const { data, error } = await supabase.functions.invoke("reset-caller-password", {
+        body: { user_id: userId, new_password: password },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      toast({ title: "Passwort geändert" });
+      setPwCaller(null);
+      setNewPassword("");
     },
     onError: (e: any) => {
       toast({ title: "Fehler", description: e.message, variant: "destructive" });
@@ -274,6 +294,18 @@ export default function AdminCaller() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => setPwCaller({ id: c.id, name: c.name })}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Passwort ändern</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="text-destructive hover:text-destructive"
                           onClick={() => {
                             if (confirm("Caller-Zugang wirklich entfernen?")) {
@@ -328,6 +360,33 @@ export default function AdminCaller() {
           </div>
         )}
       </motion.div>
+
+      <Dialog open={!!pwCaller} onOpenChange={(o) => { if (!o) { setPwCaller(null); setNewPassword(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Passwort ändern</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-muted-foreground">Für: <span className="font-medium text-foreground">{pwCaller?.name}</span></p>
+            <div>
+              <Label>Neues Passwort</Label>
+              <Input
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mindestens 6 Zeichen"
+                type="text"
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => pwCaller && passwordMutation.mutate({ userId: pwCaller.id, password: newPassword })}
+              disabled={!newPassword || newPassword.length < 6 || passwordMutation.isPending}
+            >
+              {passwordMutation.isPending ? "Speichere..." : "Passwort speichern"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
