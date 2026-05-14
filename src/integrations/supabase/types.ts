@@ -14,16 +14,326 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      applications: {
+        Row: {
+          branding_id: string | null
+          city: string | null
+          created_at: string
+          email: string
+          employment_type: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          status: string
+          street: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          branding_id?: string | null
+          city?: string | null
+          created_at?: string
+          email: string
+          employment_type: string
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string | null
+          status?: string
+          street?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          branding_id?: string | null
+          city?: string | null
+          created_at?: string
+          email?: string
+          employment_type?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          status?: string
+          street?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_branding_id_fkey"
+            columns: ["branding_id"]
+            isOneToOne: false
+            referencedRelation: "brandings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brandings: {
+        Row: {
+          brand_color: string | null
+          city: string | null
+          company_name: string
+          created_at: string
+          domain: string | null
+          email: string | null
+          id: string
+          logo_url: string | null
+          managing_director: string | null
+          register_court: string | null
+          street: string | null
+          trade_register: string | null
+          vat_id: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          brand_color?: string | null
+          city?: string | null
+          company_name: string
+          created_at?: string
+          domain?: string | null
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          managing_director?: string | null
+          register_court?: string | null
+          street?: string | null
+          trade_register?: string | null
+          vat_id?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          brand_color?: string | null
+          city?: string | null
+          company_name?: string
+          created_at?: string
+          domain?: string | null
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          managing_director?: string | null
+          register_court?: string | null
+          street?: string | null
+          trade_register?: string | null
+          vat_id?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      employment_contracts: {
+        Row: {
+          application_id: string
+          bank_name: string | null
+          bic: string | null
+          birth_date: string | null
+          city: string | null
+          created_at: string
+          desired_start_date: string | null
+          email: string | null
+          employment_type: string | null
+          first_name: string | null
+          health_insurance: string | null
+          iban: string | null
+          id: string
+          id_back_url: string | null
+          id_front_url: string | null
+          last_name: string | null
+          marital_status: string | null
+          phone: string | null
+          social_security_number: string | null
+          status: string
+          street: string | null
+          submitted_at: string | null
+          tax_id: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          application_id: string
+          bank_name?: string | null
+          bic?: string | null
+          birth_date?: string | null
+          city?: string | null
+          created_at?: string
+          desired_start_date?: string | null
+          email?: string | null
+          employment_type?: string | null
+          first_name?: string | null
+          health_insurance?: string | null
+          iban?: string | null
+          id?: string
+          id_back_url?: string | null
+          id_front_url?: string | null
+          last_name?: string | null
+          marital_status?: string | null
+          phone?: string | null
+          social_security_number?: string | null
+          status?: string
+          street?: string | null
+          submitted_at?: string | null
+          tax_id?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          application_id?: string
+          bank_name?: string | null
+          bic?: string | null
+          birth_date?: string | null
+          city?: string | null
+          created_at?: string
+          desired_start_date?: string | null
+          email?: string | null
+          employment_type?: string | null
+          first_name?: string | null
+          health_insurance?: string | null
+          iban?: string | null
+          id?: string
+          id_back_url?: string | null
+          id_front_url?: string | null
+          last_name?: string | null
+          marital_status?: string | null
+          phone?: string | null
+          social_security_number?: string | null
+          status?: string
+          street?: string | null
+          submitted_at?: string | null
+          tax_id?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employment_contracts_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interview_appointments: {
+        Row: {
+          application_id: string
+          appointment_date: string
+          appointment_time: string
+          created_at: string
+          id: string
+          status: string
+        }
+        Insert: {
+          application_id: string
+          appointment_date: string
+          appointment_time: string
+          created_at?: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          application_id?: string
+          appointment_date?: string
+          appointment_time?: string
+          created_at?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_appointments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      approve_employment_contract: {
+        Args: { _contract_id: string }
+        Returns: undefined
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      submit_employment_contract: {
+        Args: {
+          _bank_name: string
+          _bic: string
+          _birth_date: string
+          _city: string
+          _contract_id: string
+          _desired_start_date: string
+          _email: string
+          _employment_type: string
+          _first_name: string
+          _health_insurance: string
+          _iban: string
+          _id_back_url: string
+          _id_front_url: string
+          _last_name: string
+          _marital_status: string
+          _phone: string
+          _social_security_number: string
+          _street: string
+          _tax_id: string
+          _zip_code: string
+        }
+        Returns: undefined
+      }
+      update_application_phone: {
+        Args: { _application_id: string; _phone: string }
+        Returns: undefined
+      }
+      update_application_status: {
+        Args: { _application_id: string; _status: string }
+        Returns: undefined
+      }
+      update_interview_status: {
+        Args: { _appointment_id: string; _status: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +460,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
