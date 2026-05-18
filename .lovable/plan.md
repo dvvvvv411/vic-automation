@@ -1,29 +1,22 @@
-# Fix: Public Pages laden unendlich
+# Fix: Branding-Favicon wird nicht geladen
 
 ## Problem
+Der Inline-Script in `index.html` (der beim ersten Seitenaufruf das Favicon anhand der Domain aus Supabase lädt) zeigt noch auf das **alte, gelöschte** Supabase-Projekt:
 
-Alle öffentlichen Seiten (`/erster-arbeitstag/:id`, `/probetag/:id`, `/arbeitsvertrag/:id`, `/bewerbungsgespraech/:id`, `/bewerbungsgespraech/buchen`, `/r/:code`) hängen im Ladezustand – egal ob eingeloggt oder anonym.
-
-## Ursache
-
-`src/integrations/supabase/publicClient.ts` zeigt noch auf das **alte, gelöschte Supabase-Projekt**:
-
-- Falsch (publicClient): `https://luorlnagxpsibarcygjm.supabase.co`
-- Richtig (client):     `https://laozvnaupdecerpvwzmh.supabase.co`
-
-Alle Anfragen der öffentlichen Seiten gehen damit ins Leere und timeouten still – React Query bleibt in `loading`.
-
-## Fix
-
-`publicClient.ts` auf die aktuelle Supabase-URL + Anon-Key updaten (gleiche Werte wie `client.ts`, nur ohne Session-Persistenz).
-
-```ts
-const SUPABASE_URL = "https://laozvnaupdecerpvwzmh.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "<aktueller anon key aus client.ts>";
+```
+SB_URL = "https://luorlnagxpsibarcygjm.supabase.co"
+SB_KEY = "...luorlnagxpsibarcygjm..."
 ```
 
-Keine weiteren Code-Änderungen nötig – Logik der Seiten bleibt unverändert.
+Dadurch schlägt jeder Favicon-Request still fehl → es wird immer nur `/favicon.png` angezeigt, nie das im Branding hinterlegte Favicon.
 
-## Verifikation
+## Fix
+In `index.html` die Werte für `SB_URL` und `SB_KEY` auf das aktuelle Projekt umstellen — identisch zu `src/integrations/supabase/client.ts`:
 
-Nach dem Fix `/erster-arbeitstag/9b35c4a1-...` öffnen → Daten laden, Kalender erscheint.
+- `SB_URL` → `https://laozvnaupdecerpvwzmh.supabase.co`
+- `SB_KEY` → aktueller anon key (`eyJhbGciOiJIUzI1NiIs...laozvnaupdecerpvwzmh...`)
+
+Keine weitere Logik-Änderung nötig. Der Rest des Scripts (Domain-Parsing, Fetch auf `brandings?domain=eq.…&select=favicon_url`, Setzen des `<link id="app-favicon">`) bleibt unverändert.
+
+## Ergebnis
+Beim Aufruf einer Branding-Domain (z. B. `web.frik-maxeiner.de`) wird das im Branding gespeicherte `favicon_url` direkt im Browser-Tab angezeigt — sowohl auf öffentlichen Seiten als auch im eingeloggten Bereich (bis `BrandingContext` ggf. überschreibt).
