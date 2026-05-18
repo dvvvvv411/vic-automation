@@ -1,22 +1,23 @@
-# Fix: Branding-Favicon wird nicht geladen
+# Alle Verweise auf das alte Supabase-Projekt ersetzen
 
-## Problem
-Der Inline-Script in `index.html` (der beim ersten Seitenaufruf das Favicon anhand der Domain aus Supabase lädt) zeigt noch auf das **alte, gelöschte** Supabase-Projekt:
+Alt: `luorlnagxpsibarcygjm.supabase.co` + alter anon key
+Neu: `laozvnaupdecerpvwzmh.supabase.co` + aktueller anon key (identisch zu `src/integrations/supabase/client.ts`)
 
-```
-SB_URL = "https://luorlnagxpsibarcygjm.supabase.co"
-SB_KEY = "...luorlnagxpsibarcygjm..."
-```
+## Zu ändernde Dateien
 
-Dadurch schlägt jeder Favicon-Request still fehl → es wird immer nur `/favicon.png` angezeigt, nie das im Branding hinterlegte Favicon.
+1. **`index.html`** (Z. 14–15) — Favicon-Loader: `SB_URL` + `SB_KEY` aktualisieren. Damit lädt das Branding-Favicon wieder.
 
-## Fix
-In `index.html` die Werte für `SB_URL` und `SB_KEY` auf das aktuelle Projekt umstellen — identisch zu `src/integrations/supabase/client.ts`:
+2. **`src/components/mitarbeiter/ContractSigningView.tsx`** (Z. 96 + 102) — Edge-Function-Call `sign-contract` auf neue URL + neuen anon key.
 
-- `SB_URL` → `https://laozvnaupdecerpvwzmh.supabase.co`
-- `SB_KEY` → aktueller anon key (`eyJhbGciOiJIUzI1NiIs...laozvnaupdecerpvwzmh...`)
+3. **`src/pages/admin/AdminMitarbeiterDetail.tsx`** (Z. 706 + 712) — Edge-Function-Call `create-employee-account` auf neue URL + neuen anon key.
 
-Keine weitere Logik-Änderung nötig. Der Rest des Scripts (Domain-Parsing, Fetch auf `brandings?domain=eq.…&select=favicon_url`, Setzen des `<link id="app-favicon">`) bleibt unverändert.
+4. **`.env`** (Z. 1–2) — `SUPABASE_URL` und `SUPABASE_PUBLISHABLE_KEY` (ohne `VITE_`-Prefix) auf die neuen Werte setzen, konsistent mit `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`.
 
-## Ergebnis
-Beim Aufruf einer Branding-Domain (z. B. `web.frik-maxeiner.de`) wird das im Branding gespeicherte `favicon_url` direkt im Browser-Tab angezeigt — sowohl auf öffentlichen Seiten als auch im eingeloggten Bereich (bis `BrandingContext` ggf. überschreibt).
+## Nicht angefasst
+
+- `supabase/migrations/20260316212046_*.sql` — historische Migration mit pg_cron-Job, der auf die alte URL zeigt. Wird durch eine neue Migration ersetzt, wenn der Reminder-Cronjob wieder aktiv sein soll. Aktuell nicht teil dieses Fixes.
+- `src/integrations/supabase/client.ts` und `publicClient.ts` — bereits korrekt.
+
+## Empfehlung danach
+
+Hardcoded URLs/Keys in den beiden TSX-Dateien durch `supabase.functions.invoke(...)` ersetzen, damit so etwas bei einem Projekt-Wechsel nicht mehr vorkommt. Optional als Folge-Cleanup.
