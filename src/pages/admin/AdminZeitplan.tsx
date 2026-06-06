@@ -100,7 +100,7 @@ export default function AdminZeitplan() {
 
   // Save branding-specific settings
   const saveSettingsMutation = useMutation({
-    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null }) => {
+    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number }) => {
       const upsertData: any = {
         branding_id: activeBrandingId!,
         start_time: params.start_time + ":00",
@@ -114,6 +114,9 @@ export default function AdminZeitplan() {
       }
       if (params.weekend_end_time !== undefined) {
         upsertData.weekend_end_time = params.weekend_end_time ? params.weekend_end_time + ":00" : null;
+      }
+      if (params.interview_slots_per_time !== undefined) {
+        upsertData.interview_slots_per_time = params.interview_slots_per_time;
       }
       const { error } = await supabase
         .from("branding_schedule_settings")
