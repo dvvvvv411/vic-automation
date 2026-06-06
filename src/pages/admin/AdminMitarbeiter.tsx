@@ -284,9 +284,11 @@ export default function AdminMitarbeiter() {
                     <TableHead>E-Mail</TableHead>
                     <TableHead>Passwort</TableHead>
                     <TableHead>Branding</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Vertragsdaten</TableHead>
                     <TableHead>Startdatum</TableHead>
+                    <TableHead>Starterjobs</TableHead>
                     <TableHead>Aufträge</TableHead>
+
                     <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
