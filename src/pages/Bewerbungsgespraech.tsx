@@ -156,17 +156,26 @@ export default function Bewerbungsgespraech() {
     });
   }, [selectedDate, TIME_SLOTS]);
 
+  const slotsPerTime = Math.max(1, (scheduleSettings as any)?.interview_slots_per_time ?? 1);
+
   const bookedTimesForDate = useMemo(() => {
     if (!selectedDate) return new Set<string>();
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    const booked = (bookedSlots || [])
+    const counts = new Map<string, number>();
+    (bookedSlots || [])
       .filter((s: any) => s.appointment_date === dateStr)
-      .map((s: any) => s.appointment_time?.slice(0, 5));
+      .forEach((s: any) => {
+        const t = s.appointment_time?.slice(0, 5);
+        if (t) counts.set(t, (counts.get(t) || 0) + 1);
+      });
+    const fullyBooked = Array.from(counts.entries())
+      .filter(([, count]) => count >= slotsPerTime)
+      .map(([t]) => t);
     const blocked = (blockedSlotsData || [])
       .filter((s: any) => s.blocked_date === dateStr)
       .map((s: any) => s.blocked_time?.slice(0, 5));
-    return new Set([...booked, ...blocked]);
-  }, [selectedDate, bookedSlots, blockedSlotsData]);
+    return new Set([...fullyBooked, ...blocked]);
+  }, [selectedDate, bookedSlots, blockedSlotsData, slotsPerTime]);
 
   const bookMutation = useMutation({
     mutationFn: async () => {

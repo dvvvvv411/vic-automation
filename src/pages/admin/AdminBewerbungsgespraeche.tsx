@@ -73,17 +73,20 @@ export default function AdminBewerbungsgespraeche() {
         query = query
           .or(`appointment_date.lt.${today},and(appointment_date.eq.${today},appointment_time.lt.${cutoffTime})`)
           .order("appointment_date", { ascending: false })
-          .order("appointment_time", { ascending: false });
+          .order("appointment_time", { ascending: false })
+          .order("created_at", { ascending: true });
       } else if (viewMode === "future") {
         query = query
           .gt("appointment_date", tomorrow)
           .order("appointment_date", { ascending: true })
-          .order("appointment_time", { ascending: true });
+          .order("appointment_time", { ascending: true })
+          .order("created_at", { ascending: true });
       } else {
         query = query
           .or(`and(appointment_date.eq.${today},appointment_time.gte.${cutoffTime}),appointment_date.eq.${tomorrow}`)
           .order("appointment_date", { ascending: true })
-          .order("appointment_time", { ascending: true });
+          .order("appointment_time", { ascending: true })
+          .order("created_at", { ascending: true });
       }
 
       const { data, error, count } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -104,7 +107,45 @@ export default function AdminBewerbungsgespraeche() {
         }
       }
 
-      return { items: (data || []).map((item: any) => ({ ...item, _trialDay: trialDayMap[item.application_id] || null })), total: count || 0 };
+      // Compute slot index per (date,time) group across ALL bookings for this branding
+      // so labels are stable independent of pagination.
+      const { data: allForBranding } = await supabase
+        .from("interview_appointments")
+        .select("id, appointment_date, appointment_time, created_at, applications!inner(branding_id)")
+        .eq("applications.branding_id", activeBrandingId!)
+        .order("created_at", { ascending: true });
+      const slotIndexMap: Record<string, number> = {};
+      const slotTotalMap: Record<string, number> = {};
+      const groups: Record<string, any[]> = {};
+      (allForBranding || []).forEach((row: any) => {
+        const key = `${row.appointment_date}|${row.appointment_time}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(row);
+      });
+      Object.entries(groups).forEach(([key, rows]) => {
+        rows.forEach((r, i) => {
+          slotIndexMap[r.id] = i + 1;
+        });
+        rows.forEach((r) => {
+          slotTotalMap[r.id] = rows.length;
+        });
+      });
+
+      const items = (data || []).map((item: any) => ({
+        ...item,
+        _trialDay: trialDayMap[item.application_id] || null,
+        _slotIndex: slotIndexMap[item.id] || 1,
+        _slotTotal: slotTotalMap[item.id] || 1,
+      }));
+
+      // Secondary sort by slot index so within the same (date,time) Slot 1, 2, 3 ascending
+      items.sort((a: any, b: any) => {
+        if (a.appointment_date !== b.appointment_date) return 0;
+        if (a.appointment_time !== b.appointment_time) return 0;
+        return a._slotIndex - b._slotIndex;
+      });
+
+      return { items, total: count || 0 };
     },
   });
 
@@ -396,7 +437,14 @@ export default function AdminBewerbungsgespraeche() {
                         })}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{item.appointment_time?.slice(0, 5)} Uhr</Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline">{item.appointment_time?.slice(0, 5)} Uhr</Badge>
+                          {item._slotTotal > 1 && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                              {item._slotIndex}. Slot
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="font-medium">
                         {item.applications?.first_name} {item.applications?.last_name}

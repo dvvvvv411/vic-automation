@@ -100,7 +100,7 @@ export default function AdminZeitplan() {
 
   // Save branding-specific settings
   const saveSettingsMutation = useMutation({
-    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null }) => {
+    mutationFn: async (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; schedule_type: string; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number }) => {
       const upsertData: any = {
         branding_id: activeBrandingId!,
         start_time: params.start_time + ":00",
@@ -114,6 +114,9 @@ export default function AdminZeitplan() {
       }
       if (params.weekend_end_time !== undefined) {
         upsertData.weekend_end_time = params.weekend_end_time ? params.weekend_end_time + ":00" : null;
+      }
+      if (params.interview_slots_per_time !== undefined) {
+        upsertData.interview_slots_per_time = params.interview_slots_per_time;
       }
       const { error } = await supabase
         .from("branding_schedule_settings")
@@ -218,9 +221,11 @@ export default function AdminZeitplan() {
             </CardHeader>
             <CardContent>
               <BrandingScheduleForm
+                key={interviewSetting?.id || "interview-new"}
                 existing={interviewSetting ?? undefined}
                 onSave={(params) => saveSettingsMutation.mutate({ ...params, schedule_type: "interview" })}
                 isSaving={saveSettingsMutation.isPending}
+                showSlotsPerTime
               />
             </CardContent>
           </Card>
@@ -317,10 +322,12 @@ function BrandingScheduleForm({
   existing,
   onSave,
   isSaving,
+  showSlotsPerTime = false,
 }: {
-  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null };
-  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null }) => void;
+  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number };
+  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number }) => void;
   isSaving: boolean;
+  showSlotsPerTime?: boolean;
 }) {
   const [st, setSt] = useState(existing?.start_time?.slice(0, 5) || DEFAULT_START);
   const [et, setEt] = useState(existing?.end_time?.slice(0, 5) || DEFAULT_END);
@@ -328,6 +335,7 @@ function BrandingScheduleForm({
   const [ds, setDs] = useState<number[]>(existing?.available_days || DEFAULT_DAYS);
   const [wst, setWst] = useState(existing?.weekend_start_time?.slice(0, 5) || "");
   const [wet, setWet] = useState(existing?.weekend_end_time?.slice(0, 5) || "");
+  const [slotsPerTime, setSlotsPerTime] = useState<number>(existing?.interview_slots_per_time ?? 1);
 
   const hasWeekend = ds.includes(6) || ds.includes(7);
 
@@ -408,10 +416,27 @@ function BrandingScheduleForm({
           </div>
         </div>
       )}
+      {showSlotsPerTime && (
+        <div className="space-y-2 rounded-lg border border-border p-4">
+          <Label className="text-sm font-medium">Slots pro Uhrzeit</Label>
+          <p className="text-xs text-muted-foreground">
+            Wie viele Bewerber dürfen denselben Zeitslot buchen? Standard: 1. Bei z.B. 3 ist jeder Termin (z.B. 10:30 Uhr) 3x buchbar.
+          </p>
+          <Input
+            type="number"
+            min={1}
+            max={10}
+            value={slotsPerTime}
+            onChange={(e) => setSlotsPerTime(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+            className="w-32 mt-2"
+          />
+        </div>
+      )}
       <Button onClick={() => onSave({
         start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds,
         weekend_start_time: wst && wst !== "reset" ? wst : null,
         weekend_end_time: wet && wet !== "reset" ? wet : null,
+        ...(showSlotsPerTime ? { interview_slots_per_time: slotsPerTime } : {}),
       })} disabled={isSaving}>
         {isSaving ? "Speichern..." : "Einstellungen speichern"}
       </Button>
