@@ -51,17 +51,21 @@ export default function AdminBrandings() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="flex items-center justify-between mb-8"
+        className="mb-8"
       >
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Brandings</h2>
-          <p className="text-muted-foreground mt-1">Verwalten Sie alle Ihre Landingpage-Brandings.</p>
+        <img src="/fortellogo.png" alt="for.tel" className="h-10 mb-4" />
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground">Brandings</h2>
+            <p className="text-muted-foreground mt-1">Verwalten Sie alle Ihre Landingpage-Brandings.</p>
+          </div>
+          <Button onClick={() => navigate("/admin/brandings/neu")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Branding hinzufügen
+          </Button>
         </div>
-        <Button onClick={() => navigate("/admin/brandings/neu")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Branding hinzufügen
-        </Button>
       </motion.div>
+
 
       <motion.div
         initial={{ opacity: 0 }}
