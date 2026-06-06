@@ -190,7 +190,7 @@ const templates: TemplateDefinition[] = [
       "Um richtig loszulegen, können Sie jetzt in unserem Portal Ihre Vertragsdaten einreichen. Anschließend erhalten Sie die Möglichkeit, einen Termin für Ihren 1. Arbeitstag zu buchen.",
     ],
     buttonText: "Vertragsdaten einreichen",
-    buttonUrl: "https://example.com/arbeitsvertrag/abc123",
+    buttonUrl: "https://example.com",
   },
   {
     eventType: "konto_erstellt",
