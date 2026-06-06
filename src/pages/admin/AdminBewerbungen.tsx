@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/sendEmail";
@@ -570,7 +570,7 @@ export default function AdminBewerbungen() {
   });
 
   const massImportMutation = useMutation({
-    mutationFn: async (applicants: ParsedApplicant[]) => {
+    mutationFn: async ({ applicants, skipped }: { applicants: ParsedApplicant[]; skipped: number }) => {
       const rows = applicants.map((a) => ({
         first_name: a.first_name,
         last_name: a.last_name,
@@ -583,9 +583,9 @@ export default function AdminBewerbungen() {
       }));
       const { error } = await supabase.from("applications").insert(rows as any);
       if (error) throw error;
-      return rows.length;
+      return { count: rows.length, skipped };
     },
-    onSuccess: (count) => {
+    onSuccess: ({ count, skipped }) => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       setOpen(false);
       setForm(initialForm);
@@ -595,8 +595,10 @@ export default function AdminBewerbungen() {
       setIsMeta(false);
       setIsMassImport(false);
       setMassImportText("");
-      toast.success(`${count} Bewerbungen importiert`);
+      toast.success(skipped > 0 ? `${count} importiert, ${skipped} Duplikate übersprungen` : `${count} Bewerbungen importiert`);
     },
+
+
     onError: () => toast.error("Fehler beim Importieren"),
   });
 
@@ -648,13 +650,45 @@ export default function AdminBewerbungen() {
     }
   };
 
+  const massImportAnalysis = useMemo(() => {
+    if (!isMassImport) return { parsed: [], duplicates: [], uniqueToImport: [], parseErrors: [] as string[] };
+    const lines = massImportText.split("\n").filter((l) => l.trim());
+    const parsed: ParsedApplicant[] = [];
+    const parseErrors: string[] = [];
+    lines.forEach((line, i) => {
+      const result = parseMassImportLine(line);
+      if (typeof result === "string") {
+        parseErrors.push(`Zeile ${i + 1}: ${result}`);
+      } else {
+        parsed.push(result);
+      }
+    });
+    const existingEmails = new Set(
+      (applications || [])
+        .map((a: any) => (a.email || "").toLowerCase().trim())
+        .filter(Boolean)
+    );
+    const seen = new Set<string>();
+    const duplicates: ParsedApplicant[] = [];
+    const uniqueToImport: ParsedApplicant[] = [];
+    parsed.forEach((p) => {
+      const key = p.email.toLowerCase().trim();
+      if (existingEmails.has(key) || seen.has(key)) {
+        duplicates.push(p);
+      } else {
+        seen.add(key);
+        uniqueToImport.push(p);
+      }
+    });
+    return { parsed, duplicates, uniqueToImport, parseErrors };
+  }, [isMassImport, massImportText, applications]);
+
   const handleSubmit = () => {
     const isSimplified = isIndeed || isExternal || isMeta;
 
     if (isSimplified && isMassImport) {
-      // Mass import
-      const lines = massImportText.split("\n").filter((l) => l.trim());
-      if (!lines.length) {
+      const { parseErrors, uniqueToImport, duplicates } = massImportAnalysis;
+      if (!massImportText.split("\n").filter((l) => l.trim()).length) {
         setMassImportErrors(["Keine Einträge eingegeben"]);
         return;
       }
@@ -662,24 +696,20 @@ export default function AdminBewerbungen() {
         setErrors({ branding_id: "Branding erforderlich" });
         return;
       }
-      const parsed: ParsedApplicant[] = [];
-      const errs: string[] = [];
-      lines.forEach((line, i) => {
-        const result = parseMassImportLine(line);
-        if (typeof result === "string") {
-          errs.push(`Zeile ${i + 1}: ${result}`);
-        } else {
-          parsed.push(result);
-        }
-      });
-      if (errs.length) {
-        setMassImportErrors(errs);
+      if (parseErrors.length) {
+        setMassImportErrors(parseErrors);
+        return;
+      }
+      if (uniqueToImport.length === 0) {
+        setMassImportErrors([]);
+        toast.error(`Keine neuen Bewerbungen – alle ${duplicates.length} Einträge sind Duplikate`);
         return;
       }
       setMassImportErrors([]);
-      massImportMutation.mutate(parsed);
+      massImportMutation.mutate({ applicants: uniqueToImport, skipped: duplicates.length });
       return;
     }
+
 
     if (isSimplified) {
       const result = indeedSchema.safeParse({
@@ -977,6 +1007,24 @@ export default function AdminBewerbungen() {
                       ))}
                     </div>
                   )}
+                  {(massImportAnalysis.uniqueToImport.length > 0 || massImportAnalysis.duplicates.length > 0) && (
+                    <div className="text-xs text-muted-foreground">
+                      {massImportAnalysis.uniqueToImport.length} neue Bewerbungen
+                      {massImportAnalysis.duplicates.length > 0 && ` · ${massImportAnalysis.duplicates.length} Duplikate übersprungen`}
+                    </div>
+                  )}
+                  {massImportAnalysis.duplicates.length > 0 && (
+                    <div className="p-3 rounded-lg border border-yellow-500 bg-yellow-50 space-y-1">
+                      <p className="text-xs font-medium text-yellow-800">
+                        {massImportAnalysis.duplicates.length} Duplikate erkannt (werden beim Import übersprungen)
+                      </p>
+                      <ul className="text-xs text-yellow-900 space-y-0.5 max-h-32 overflow-y-auto">
+                        {massImportAnalysis.duplicates.map((d, i) => (
+                          <li key={i}>{d.first_name} {d.last_name} – {d.email}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
@@ -1056,7 +1104,7 @@ export default function AdminBewerbungen() {
                 {(isIndeed || isExternal || isMeta) && isMassImport
                   ? massImportMutation.isPending
                     ? "Wird importiert..."
-                    : `${massImportText.split("\n").filter((l) => l.trim()).length} Bewerbungen importieren`
+                    : `${massImportAnalysis.uniqueToImport.length} Bewerbungen importieren`
                   : createMutation.isPending
                     ? "Wird hinzugefügt..."
                     : "Bewerbung hinzufügen"}
