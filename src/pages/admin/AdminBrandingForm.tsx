@@ -24,6 +24,8 @@ const brandingSchema = z.object({
   vat_id: z.string().max(50).optional(),
   domain: z.string().max(200).optional(),
   subdomain_prefix: z.string().max(50).optional(),
+  custom_email_link_enabled: z.boolean(),
+  custom_email_link: z.string().max(200).optional(),
   email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
   main_job_title: z.string().max(300).optional(),
   brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Ungültiger Hex-Farbcode"),
@@ -68,6 +70,8 @@ const initialForm: BrandingForm = {
   vat_id: "",
   domain: "",
   subdomain_prefix: "",
+  custom_email_link_enabled: false,
+  custom_email_link: "",
   email: "",
   main_job_title: "",
   brand_color: "#3B82F6",
@@ -140,6 +144,8 @@ export default function AdminBrandingForm() {
         vat_id: branding.vat_id || "",
         domain: branding.domain || "",
         subdomain_prefix: branding.subdomain_prefix || "",
+        custom_email_link_enabled: (branding as any).custom_email_link_enabled ?? false,
+        custom_email_link: (branding as any).custom_email_link || "",
         email: branding.email || "",
         main_job_title: (branding as any).main_job_title || "",
         brand_color: branding.brand_color || "#3B82F6",
@@ -431,6 +437,30 @@ export default function AdminBrandingForm() {
               <Input value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="info@example.com" />
               {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
             </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label className="text-sm font-semibold">Custom Email Links</Label>
+                <p className="text-xs text-muted-foreground">Wird in allen E-Mail-Button-Links anstelle von <span className="font-mono">{form.subdomain_prefix || "web"}.{form.domain || "domain"}</span> verwendet.</p>
+              </div>
+              <Switch
+                checked={form.custom_email_link_enabled}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, custom_email_link_enabled: checked }))}
+              />
+            </div>
+            {form.custom_email_link_enabled && (
+              <div className="space-y-2">
+                <Label>Custom Email Link</Label>
+                <Input
+                  value={form.custom_email_link}
+                  onChange={(e) => updateField("custom_email_link", e.target.value)}
+                  placeholder="for-tel.com"
+                />
+                <p className="text-xs text-muted-foreground">Nur die Domain ohne <span className="font-mono">https://</span> und ohne Pfad eingeben.</p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

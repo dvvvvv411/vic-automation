@@ -166,7 +166,7 @@ export default function AdminBewerbungsgespraeche() {
     // Send email on success — links to contract data submission
     if (newStatus === "erfolgreich" && item.applications?.email) {
       const app = item.applications;
-      const vertragsLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
+      const vertragsLink = await buildBrandingUrl(app.brandings?.id, "");
 
       await sendEmail({
         to: app.email,
@@ -299,7 +299,7 @@ export default function AdminBewerbungsgespraeche() {
       return;
     }
     try {
-      const vertragsLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
+      const vertragsLink = await buildBrandingUrl(app.brandings?.id, "");
       await sendEmail({
         to: app.email,
         recipient_name: `${app.first_name} ${app.last_name}`,
@@ -516,7 +516,7 @@ export default function AdminBewerbungsgespraeche() {
                               className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
                               onClick={async (e) => {
                                 e.stopPropagation();
-                                const link = await buildBrandingUrl(item.applications?.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
+                                const link = await buildBrandingUrl(item.applications?.brandings?.id, "");
                                 if (link) {
                                   navigator.clipboard.writeText(link);
                                   toast.success("Vertragsdaten-Link kopiert!");

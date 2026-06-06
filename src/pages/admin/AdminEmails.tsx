@@ -190,7 +190,7 @@ const templates: TemplateDefinition[] = [
       "Um richtig loszulegen, können Sie jetzt in unserem Portal Ihre Vertragsdaten einreichen. Anschließend erhalten Sie die Möglichkeit, einen Termin für Ihren 1. Arbeitstag zu buchen.",
     ],
     buttonText: "Vertragsdaten einreichen",
-    buttonUrl: "https://example.com/arbeitsvertrag/abc123",
+    buttonUrl: "https://example.com",
   },
   {
     eventType: "konto_erstellt",
@@ -353,7 +353,7 @@ export default function AdminEmails() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brandings")
-        .select("id, company_name, brand_color, logo_url, street, zip_code, city, managing_director, phone, register_court, trade_register, vat_id, email_logo_enabled, email_logo_url, main_job_title")
+        .select("id, company_name, brand_color, logo_url, street, zip_code, city, managing_director, phone, register_court, trade_register, vat_id, email_logo_enabled, email_logo_url, main_job_title, domain, subdomain_prefix, custom_email_link_enabled, custom_email_link")
         .order("company_name");
       if (error) throw error;
       return data;
@@ -377,6 +377,23 @@ export default function AdminEmails() {
     vatId: branding.vat_id || undefined,
   } : undefined;
 
+  // For the "gespraech_erfolgreich" template, override the button URL with the
+  // branding's actual base URL (custom email link if enabled, otherwise prefix.domain).
+  const dynamicButtonUrl = useMemo(() => {
+    if (tpl.eventType !== "gespraech_erfolgreich" || !branding) return tpl.buttonUrl;
+    const b = branding as any;
+    if (b.custom_email_link_enabled && b.custom_email_link) {
+      const link = String(b.custom_email_link).replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
+      return `https://${link}`;
+    }
+    if (b.domain) {
+      const domain = String(b.domain).replace(/^https?:\/\//, "").replace(/\/$/, "");
+      const prefix = b.subdomain_prefix || "web";
+      return `https://${prefix}.${domain}`;
+    }
+    return tpl.buttonUrl;
+  }, [tpl, branding]);
+
   const html = useMemo(
     () =>
       buildEmailHtml({
@@ -385,14 +402,14 @@ export default function AdminEmails() {
         bodyTitle: tpl.bodyTitle,
         bodyLines: tpl.bodyLines(companyName, mainJobTitle),
         buttonText: tpl.buttonText,
-        buttonUrl: tpl.buttonUrl,
+        buttonUrl: dynamicButtonUrl,
         footerLines: tpl.footerLines,
         footerAddress,
         footerDetails,
         emailLogoEnabled: (branding as any)?.email_logo_enabled || false,
         emailLogoUrl: (branding as any)?.email_logo_url || undefined,
       }),
-    [companyName, brandColor, tpl, footerAddress, branding],
+    [companyName, brandColor, tpl, dynamicButtonUrl, footerAddress, branding],
   );
 
   return (
