@@ -271,6 +271,12 @@ export default function AdminBrandingForm() {
 
     saveMutation.mutate({
       ...result.data,
+      resend_from_email: result.data.resend_from_email || null,
+      resend_from_name: result.data.resend_from_name || null,
+      resend_api_key: result.data.resend_api_key || null,
+      sms_sender_name: result.data.sms_sender_name || null,
+      seven_api_key: result.data.seven_api_key || null,
+      phone: result.data.phone || null,
       ...(logo_url ? { logo_url } : {}),
       ...(favicon_url ? { favicon_url } : {}),
       ...(pm_image_url ? { project_manager_image_url: pm_image_url } : {}),
@@ -509,7 +515,7 @@ export default function AdminBrandingForm() {
       {/* Resend E-Mail-Konfiguration */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Resend E-Mail-Konfiguration</CardTitle>
+          <CardTitle className="text-base">Resend E-Mail-Konfiguration <span className="text-muted-foreground font-normal">(optional)</span></CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -538,7 +544,7 @@ export default function AdminBrandingForm() {
       {/* SMS-Konfiguration */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">SMS-Konfiguration</CardTitle>
+          <CardTitle className="text-base">SMS-Konfiguration <span className="text-muted-foreground font-normal">(optional)</span></CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
