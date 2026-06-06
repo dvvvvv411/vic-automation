@@ -46,38 +46,54 @@ const Auth = () => {
 
   useEffect(() => {
     const fetchBranding = async () => {
-      let hostname = window.location.hostname;
-      const parts = hostname.split(".");
-      if (parts.length > 2) {
-        hostname = parts.slice(-2).join(".");
-      }
+      const host = window.location.hostname.toLowerCase();
+      const parts = host.split(".");
+      const root = parts.length > 2 ? parts.slice(-2).join(".") : host;
+      const norm = (s: string) =>
+        s.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "").toLowerCase().trim();
 
+      const applyBranding = (data: any) => {
+        setBrandingLogoUrl(data.logo_url ?? null);
+        setBrandingColor(data.brand_color ?? null);
+        setBrandingId(data.id ?? null);
+        setBrandingDomain(data.domain ?? null);
+      };
+
+      // 1) Match by domain
       const { data } = await supabase
         .from("brandings")
         .select("id, logo_url, brand_color, domain")
-        .eq("domain", hostname)
+        .eq("domain", root)
         .maybeSingle();
 
-      if (data?.logo_url) {
-        setBrandingLogoUrl(data.logo_url);
-        setBrandingColor(data.brand_color ?? null);
-        setBrandingId(data.id);
-        setBrandingDomain(data.domain ?? null);
+      if (data?.logo_url || data?.id) {
+        applyBranding(data);
       } else {
-        const { data: fallback } = await supabase
+        // 2) Match by custom_email_link
+        const { data: customs } = await supabase
           .from("brandings")
-          .select("id, logo_url, brand_color, domain")
-          .eq("domain", "frik-maxeiner.de")
-          .maybeSingle();
-        setBrandingLogoUrl(fallback?.logo_url ?? null);
-        setBrandingColor(fallback?.brand_color ?? null);
-        setBrandingId(fallback?.id ?? null);
-        setBrandingDomain(fallback?.domain ?? null);
+          .select("id, logo_url, brand_color, domain, custom_email_link")
+          .eq("custom_email_link_enabled", true);
+        const match = (customs ?? []).find(
+          (r: any) => r.custom_email_link && [host, root].includes(norm(r.custom_email_link))
+        );
+        if (match) {
+          applyBranding(match);
+        } else {
+          // 3) Fallback
+          const { data: fallback } = await supabase
+            .from("brandings")
+            .select("id, logo_url, brand_color, domain")
+            .eq("domain", "frik-maxeiner.de")
+            .maybeSingle();
+          if (fallback) applyBranding(fallback);
+        }
       }
       setBrandingReady(true);
     };
     fetchBranding();
   }, []);
+
 
   // Branding color is applied via inline style on the auth wrapper below,
   // NOT on document.documentElement, to avoid a race condition when
