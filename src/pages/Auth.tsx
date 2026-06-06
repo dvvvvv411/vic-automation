@@ -196,7 +196,7 @@ const Auth = () => {
           className="relative z-10 flex flex-col items-center"
         >
           {brandingLogoUrl ? (
-            <img src={brandingLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain" />
+            <img src={brandingLogoUrl} alt="Logo" className={`max-h-16 w-auto object-contain ${brandingDomain === "for-tel.solutions" ? "[filter:brightness(0)_invert(1)]" : ""}`} />
           ) : (
             <h1 className="text-4xl font-bold tracking-tight mb-2">Mitarbeiterportal</h1>
           )}
