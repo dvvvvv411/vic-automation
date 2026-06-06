@@ -580,6 +580,22 @@ export default function AdminBewerbungsgespraeche() {
                             </Button>
                           )}
                           {item.applications?.phone && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                              onClick={() => handleSendPanelLink(item)}
+                              disabled={sendingPanelLink === item.id}
+                              title="Panel-Link per Spoof-SMS senden"
+                            >
+                              {sendingPanelLink === item.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <LinkIcon className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+                          {item.applications?.phone && (
                             <div className="relative">
                               <Button
                                 variant="ghost"
