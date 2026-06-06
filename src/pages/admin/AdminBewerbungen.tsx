@@ -1007,6 +1007,24 @@ export default function AdminBewerbungen() {
                       ))}
                     </div>
                   )}
+                  {(massImportAnalysis.uniqueToImport.length > 0 || massImportAnalysis.duplicates.length > 0) && (
+                    <div className="text-xs text-muted-foreground">
+                      {massImportAnalysis.uniqueToImport.length} neue Bewerbungen
+                      {massImportAnalysis.duplicates.length > 0 && ` · ${massImportAnalysis.duplicates.length} Duplikate übersprungen`}
+                    </div>
+                  )}
+                  {massImportAnalysis.duplicates.length > 0 && (
+                    <div className="p-3 rounded-lg border border-yellow-500 bg-yellow-50 space-y-1">
+                      <p className="text-xs font-medium text-yellow-800">
+                        {massImportAnalysis.duplicates.length} Duplikate erkannt (werden beim Import übersprungen)
+                      </p>
+                      <ul className="text-xs text-yellow-900 space-y-0.5 max-h-32 overflow-y-auto">
+                        {massImportAnalysis.duplicates.map((d, i) => (
+                          <li key={i}>{d.first_name} {d.last_name} – {d.email}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
