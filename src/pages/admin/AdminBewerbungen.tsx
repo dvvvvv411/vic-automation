@@ -706,7 +706,7 @@ export default function AdminBewerbungen() {
         return;
       }
       setMassImportErrors([]);
-      massImportMutation.mutate(uniqueToImport);
+      massImportMutation.mutate({ applicants: uniqueToImport, skipped: duplicates.length });
       return;
     }
 
