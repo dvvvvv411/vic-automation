@@ -105,6 +105,79 @@ export default function AdminMitarbeiter() {
     },
   });
 
+  const { data: starterJobStats } = useQuery({
+    queryKey: ["starter_job_stats", activeBrandingId],
+    enabled: ready && !!activeBrandingId,
+    queryFn: async () => {
+      // 1) Starter-Orders für aktives Branding (oder global)
+      const { data: starterOrders, error: ordersErr } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("is_starter_job", true)
+        .or(`branding_id.eq.${activeBrandingId},branding_id.is.null`);
+      if (ordersErr) throw ordersErr;
+      const starterOrderIds = (starterOrders ?? []).map((o: any) => o.id);
+      if (starterOrderIds.length === 0) return {} as Record<string, { done: number; total: number; latestDate: string | null }>;
+
+      // 2) Assignments für diese Orders
+      const assignments: { contract_id: string; order_id: string; status: string; assigned_at: string }[] = [];
+      const pageSize = 1000;
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("order_assignments")
+          .select("contract_id, order_id, status, assigned_at")
+          .in("order_id", starterOrderIds)
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const batch = data ?? [];
+        assignments.push(...(batch as any));
+        if (batch.length < pageSize) break;
+        from += pageSize;
+      }
+
+      // 3) Appointments für erledigte Starter-Assignments
+      const doneAssignments = assignments.filter((a) => a.status === "erfolgreich");
+      const doneContractIds = Array.from(new Set(doneAssignments.map((a) => a.contract_id)));
+      const appointments: { contract_id: string; order_id: string; appointment_date: string }[] = [];
+      if (doneContractIds.length > 0) {
+        let aFrom = 0;
+        while (true) {
+          const { data, error } = await supabase
+            .from("order_appointments")
+            .select("contract_id, order_id, appointment_date")
+            .in("contract_id", doneContractIds)
+            .in("order_id", starterOrderIds)
+            .range(aFrom, aFrom + pageSize - 1);
+          if (error) throw error;
+          const batch = data ?? [];
+          appointments.push(...(batch as any));
+          if (batch.length < pageSize) break;
+          aFrom += pageSize;
+        }
+      }
+
+      // 4) Aggregation
+      const stats: Record<string, { done: number; total: number; latestDate: string | null }> = {};
+      assignments.forEach((a) => {
+        const s = stats[a.contract_id] || { done: 0, total: 0, latestDate: null };
+        s.total += 1;
+        if (a.status === "erfolgreich") {
+          s.done += 1;
+          if (!s.latestDate || a.assigned_at > s.latestDate) s.latestDate = a.assigned_at;
+        }
+        stats[a.contract_id] = s;
+      });
+      appointments.forEach((ap) => {
+        const s = stats[ap.contract_id];
+        if (!s) return;
+        if (!s.latestDate || ap.appointment_date > s.latestDate) s.latestDate = ap.appointment_date;
+      });
+      return stats;
+    },
+  });
+
+
   const handleToggleSuspend = async () => {
     if (!suspendTarget) return;
     const newValue = !suspendTarget.isSuspended;
@@ -211,9 +284,11 @@ export default function AdminMitarbeiter() {
                     <TableHead>E-Mail</TableHead>
                     <TableHead>Passwort</TableHead>
                     <TableHead>Branding</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Vertragsdaten</TableHead>
                     <TableHead>Startdatum</TableHead>
+                    <TableHead>Starterjobs</TableHead>
                     <TableHead>Aufträge</TableHead>
+
                     <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -260,13 +335,9 @@ export default function AdminMitarbeiter() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">
-                            {item.status === "genehmigt" ? (
+                            {item.status === "genehmigt" || item.status === "unterzeichnet" ? (
                               <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
-                                Genehmigt
-                              </Badge>
-                            ) : item.status === "unterzeichnet" ? (
-                              <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
-                                Unterzeichnet
+                                AV Angenommen
                               </Badge>
                             ) : item.status === "eingereicht" ? (
                               <Badge variant="outline" className="text-blue-600 border-blue-300 bg-blue-50">
@@ -274,7 +345,7 @@ export default function AdminMitarbeiter() {
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50">
-                                Offen
+                                Nicht eingereicht
                               </Badge>
                             )}
                             {item.is_suspended && (
@@ -286,6 +357,19 @@ export default function AdminMitarbeiter() {
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatDate(item.desired_start_date)}
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const s = starterJobStats?.[item.id];
+                            if (!s || s.total === 0) return <span className="text-muted-foreground">–</span>;
+                            const complete = s.done === s.total;
+                            return (
+                              <span className={complete ? "text-green-600 font-medium" : "text-muted-foreground"}>
+                                {s.done}/{s.total}
+                                {s.latestDate ? ` - ${formatDate(s.latestDate)}` : ""}
+                              </span>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -300,6 +384,7 @@ export default function AdminMitarbeiter() {
                             {count > 0 ? `${count} Aufträge` : "Zuweisen"}
                           </Button>
                         </TableCell>
+
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Tooltip>
