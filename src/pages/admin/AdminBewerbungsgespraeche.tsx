@@ -516,15 +516,15 @@ export default function AdminBewerbungsgespraeche() {
                               className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
                               onClick={async (e) => {
                                 e.stopPropagation();
-                                const link = await buildBrandingUrl(item.applications?.brandings?.id, `/probetag/${item.application_id}`);
+                                const link = await buildBrandingUrl(item.applications?.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
                                 if (link) {
                                   navigator.clipboard.writeText(link);
-                                  toast.success("Probetag-Link kopiert!");
+                                  toast.success("Vertragsdaten-Link kopiert!");
                                 } else {
                                   toast.error("Link konnte nicht erstellt werden");
                                 }
                               }}
-                              title="Probetag-Link kopieren"
+                              title="Vertragsdaten-Link kopieren"
                             >
                               <Copy className="h-4 w-4" />
                             </Button>
