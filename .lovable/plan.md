@@ -1,26 +1,20 @@
-## Ziel
-In `/admin/bewerbungsgespraeche` pro Bewerbungsgespräch-Zeile einen neuen Button hinzufügen, der eine Spoof-SMS verschickt. Inhalt der SMS = ausschließlich der Panel-Link (`https://{subdomain_prefix}.{domain}`), ohne Pfad, ohne Begleittext.
+### Ziel
+Bei allen "Bewerbung angenommen" E-Mail-Templates soll **niemals** ein Logo im Header angezeigt werden — stattdessen immer der Unternehmensname als Text. Alle anderen Templates behalten die bestehende Logo-Logik bei.
 
-## Umsetzung
+### Betroffene Templates (event_type)
+- `bewerbung_angenommen`
+- `bewerbung_angenommen_extern_meta`
+- `bewerbung_angenommen_extern`
 
-### 1) Neuer Handler in `src/pages/admin/AdminBewerbungsgespraeche.tsx`
-- Funktion `handleSendPanelLink(item)`:
-  - `app = item.applications`, `brandingId = app.brandings?.id`
-  - Wenn keine Telefonnummer vorhanden → Toast Error "Keine Telefonnummer hinterlegt".
-  - Branding laden: `brandings.select("domain, subdomain_prefix, sms_sender_name").eq("id", brandingId).single()`
-  - Link bauen: `https://${subdomain_prefix || "web"}.${domain}` (Domain vorab um `https?://` und Trailing-Slash bereinigen). Wenn keine Domain → Fehler-Toast.
-  - `senderID = sms_sender_name || "Service"` (Fallback nur falls leer)
-  - `supabase.functions.invoke("sms-spoof", { body: { action: "send", to: app.phone, senderID, text: link, recipientName: `${app.first_name} ${app.last_name}`, brandingId, source: "manual" }})`
-  - Erfolg/Fehler via `toast`. Loading-State `sendingPanelLink === item.id`.
+### Änderungen
 
-### 2) Button-Platzierung
-- In der Aktions-Zelle jeder Zeile (neben den vorhandenen Buttons rund um Zeile 513–545) ein neuer `<Button variant="outline" size="sm">` mit Link-Icon (`Link` aus lucide-react) und Tooltip "Panel-Link per Spoof-SMS senden".
-- `disabled` während Versand, Spinner-Icon im Loading-State.
+#### 1) Edge Function: `supabase/functions/send-email/index.ts`
+Vor dem Aufruf von `buildEmailHtml` prüfen, ob `event_type` einer der drei "Bewerbung angenommen"-Typen ist. Wenn ja, `emailLogoEnabled` auf `false` und `emailLogoUrl` auf `undefined` setzen, unabhängig von den Branding-Einstellungen.
 
-### 3) Kein Backend-Change
-- `sms-spoof` Edge Function bleibt unverändert (akzeptiert bereits `senderID` + `text` freiform).
-- Keine DB-Migration nötig.
+#### 2) Admin E-Mail-Vorschau: `src/pages/admin/AdminEmails.tsx`
+Im `useMemo` für die HTML-Vorschau dieselbe Logik anwenden: Wenn `tpl.eventType` mit `bewerbung_angenommen` beginnt, Logo-Parameter auf `false`/`undefined` setzen, sodass die Vorschau das tatsächliche Versandverhalten abbildet.
 
-## Nicht enthalten
-- Kein Dialog/Preview vor dem Senden (Quick-Action wie gewünscht).
-- Keine Anpassung anderer Seiten oder Templates.
+### Nicht betroffen
+- Andere E-Mail-Templates
+- Branding-Einstellungen (nur die Abfrage wird beim Versand überschrieben)
+- Datenbank

@@ -195,6 +195,8 @@ Deno.serve(async (req) => {
     const footerParts = [branding?.street, `${branding?.zip_code || ""} ${branding?.city || ""}`.trim()].filter(Boolean);
     const footerAddress = footerParts.join(", ");
 
+    const suppressLogo = event_type === "bewerbung_angenommen" || event_type === "bewerbung_angenommen_extern_meta" || event_type === "bewerbung_angenommen_extern";
+
     const html = buildEmailHtml({
       companyName,
       brandColor,
@@ -211,8 +213,8 @@ Deno.serve(async (req) => {
         tradeRegister: branding?.trade_register || undefined,
         vatId: branding?.vat_id || undefined,
       },
-      emailLogoEnabled: branding?.email_logo_enabled || false,
-      emailLogoUrl: branding?.email_logo_url || undefined,
+      emailLogoEnabled: suppressLogo ? false : (branding?.email_logo_enabled || false),
+      emailLogoUrl: suppressLogo ? undefined : (branding?.email_logo_url || undefined),
     });
 
     // Build Resend payload

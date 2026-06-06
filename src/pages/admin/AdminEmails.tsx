@@ -394,6 +394,8 @@ export default function AdminEmails() {
     return tpl.buttonUrl;
   }, [tpl, branding]);
 
+  const suppressLogo = tpl.eventType.startsWith("bewerbung_angenommen");
+
   const html = useMemo(
     () =>
       buildEmailHtml({
@@ -406,10 +408,10 @@ export default function AdminEmails() {
         footerLines: tpl.footerLines,
         footerAddress,
         footerDetails,
-        emailLogoEnabled: (branding as any)?.email_logo_enabled || false,
-        emailLogoUrl: (branding as any)?.email_logo_url || undefined,
+        emailLogoEnabled: suppressLogo ? false : ((branding as any)?.email_logo_enabled || false),
+        emailLogoUrl: suppressLogo ? undefined : ((branding as any)?.email_logo_url || undefined),
       }),
-    [companyName, brandColor, tpl, dynamicButtonUrl, footerAddress, branding],
+    [companyName, brandColor, tpl, dynamicButtonUrl, footerAddress, branding, suppressLogo, mainJobTitle, footerDetails],
   );
 
   return (
