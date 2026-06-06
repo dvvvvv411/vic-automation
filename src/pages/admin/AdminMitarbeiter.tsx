@@ -335,13 +335,9 @@ export default function AdminMitarbeiter() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">
-                            {item.status === "genehmigt" ? (
+                            {item.status === "genehmigt" || item.status === "unterzeichnet" ? (
                               <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
-                                Genehmigt
-                              </Badge>
-                            ) : item.status === "unterzeichnet" ? (
-                              <Badge variant="outline" className="text-green-600 border-green-300 bg-green-50">
-                                Unterzeichnet
+                                AV Angenommen
                               </Badge>
                             ) : item.status === "eingereicht" ? (
                               <Badge variant="outline" className="text-blue-600 border-blue-300 bg-blue-50">
@@ -349,7 +345,7 @@ export default function AdminMitarbeiter() {
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50">
-                                Offen
+                                Nicht eingereicht
                               </Badge>
                             )}
                             {item.is_suspended && (
@@ -361,6 +357,19 @@ export default function AdminMitarbeiter() {
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatDate(item.desired_start_date)}
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const s = starterJobStats?.[item.id];
+                            if (!s || s.total === 0) return <span className="text-muted-foreground">–</span>;
+                            const complete = s.done === s.total;
+                            return (
+                              <span className={complete ? "text-green-600 font-medium" : "text-muted-foreground"}>
+                                {s.done}/{s.total}
+                                {s.latestDate ? ` - ${formatDate(s.latestDate)}` : ""}
+                              </span>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -375,6 +384,7 @@ export default function AdminMitarbeiter() {
                             {count > 0 ? `${count} Aufträge` : "Zuweisen"}
                           </Button>
                         </TableCell>
+
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Tooltip>
