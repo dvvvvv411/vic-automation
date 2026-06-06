@@ -221,9 +221,11 @@ export default function AdminZeitplan() {
             </CardHeader>
             <CardContent>
               <BrandingScheduleForm
+                key={interviewSetting?.id || "interview-new"}
                 existing={interviewSetting ?? undefined}
                 onSave={(params) => saveSettingsMutation.mutate({ ...params, schedule_type: "interview" })}
                 isSaving={saveSettingsMutation.isPending}
+                showSlotsPerTime
               />
             </CardContent>
           </Card>
