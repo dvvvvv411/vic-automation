@@ -439,6 +439,30 @@ export default function AdminBrandingForm() {
             </div>
           </div>
 
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label className="text-sm font-semibold">Custom Email Links</Label>
+                <p className="text-xs text-muted-foreground">Wird in allen E-Mail-Button-Links anstelle von <span className="font-mono">{form.subdomain_prefix || "web"}.{form.domain || "domain"}</span> verwendet.</p>
+              </div>
+              <Switch
+                checked={form.custom_email_link_enabled}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, custom_email_link_enabled: checked }))}
+              />
+            </div>
+            {form.custom_email_link_enabled && (
+              <div className="space-y-2">
+                <Label>Custom Email Link</Label>
+                <Input
+                  value={form.custom_email_link}
+                  onChange={(e) => updateField("custom_email_link", e.target.value)}
+                  placeholder="for-tel.com"
+                />
+                <p className="text-xs text-muted-foreground">Nur die Domain ohne <span className="font-mono">https://</span> und ohne Pfad eingeben.</p>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label>Spoof Credits</Label>
             <Input
