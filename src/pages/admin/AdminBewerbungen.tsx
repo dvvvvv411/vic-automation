@@ -586,6 +586,7 @@ export default function AdminBewerbungen() {
       return rows.length;
     },
     onSuccess: (count) => {
+      const skipped = massImportAnalysisRef.current?.duplicates.length || 0;
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       setOpen(false);
       setForm(initialForm);
@@ -595,8 +596,9 @@ export default function AdminBewerbungen() {
       setIsMeta(false);
       setIsMassImport(false);
       setMassImportText("");
-      toast.success(`${count} Bewerbungen importiert`);
+      toast.success(skipped > 0 ? `${count} importiert, ${skipped} Duplikate übersprungen` : `${count} Bewerbungen importiert`);
     },
+
     onError: () => toast.error("Fehler beim Importieren"),
   });
 
