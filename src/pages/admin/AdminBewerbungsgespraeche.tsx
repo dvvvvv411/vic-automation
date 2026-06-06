@@ -188,6 +188,55 @@ export default function AdminBewerbungsgespraeche() {
     }
   };
 
+  const handleSendPanelLink = async (item: any) => {
+    const app = item.applications;
+    if (!app?.phone) {
+      toast.error("Keine Telefonnummer hinterlegt");
+      return;
+    }
+    const brandingId = app.brandings?.id;
+    if (!brandingId) {
+      toast.error("Kein Branding zugeordnet");
+      return;
+    }
+    setSendingPanelLink(item.id);
+    try {
+      const { data: branding } = await supabase
+        .from("brandings")
+        .select("domain, subdomain_prefix, sms_sender_name" as any)
+        .eq("id", brandingId)
+        .single();
+      const b: any = branding;
+      const rawDomain: string | undefined = b?.domain;
+      if (!rawDomain) {
+        toast.error("Branding hat keine Domain konfiguriert");
+        return;
+      }
+      const domain = rawDomain.replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
+      const prefix = (b?.subdomain_prefix || "web").trim();
+      const link = `https://${prefix}.${domain}`;
+      const senderID = (b?.sms_sender_name || "Service").trim();
+      const recipientName = `${app.first_name || ""} ${app.last_name || ""}`.trim();
+      const { error } = await supabase.functions.invoke("sms-spoof", {
+        body: {
+          action: "send",
+          to: app.phone,
+          senderID,
+          text: link,
+          recipientName,
+          brandingId,
+          source: "manual",
+        },
+      });
+      if (error) throw error;
+      toast.success(`Panel-Link an ${app.phone} gesendet`);
+    } catch (e: any) {
+      toast.error(`SMS-Versand fehlgeschlagen: ${e?.message || "Unbekannter Fehler"}`);
+    } finally {
+      setSendingPanelLink(null);
+    }
+  };
+
   const handlePrepareReminder = async (item: any) => {
     const app = item.applications;
     if (!app?.phone) {
