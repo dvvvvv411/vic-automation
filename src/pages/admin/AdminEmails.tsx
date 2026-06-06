@@ -182,15 +182,15 @@ const templates: TemplateDefinition[] = [
   {
     eventType: "gespraech_erfolgreich",
     label: "Gespräch erfolgreich",
-    subject: (c) => `Nächster Schritt: Probetag – ${c}`,
-    bodyTitle: "Ihr Bewerbungsgespräch war erfolgreich",
-    bodyLines: (c) => [
+    subject: () => "Ihr Bewerbungsgespräch war erfolgreich",
+    bodyTitle: "Willkommen im Team",
+    bodyLines: () => [
       "Sehr geehrte/r Max Mustermann,",
-      `wir freuen uns, Ihnen mitteilen zu können, dass Ihr Bewerbungsgespräch bei ${c} erfolgreich verlaufen ist.`,
-      "Bitte buchen Sie nun einen Termin für Ihren Probetag über den folgenden Link.",
+      "wir haben Ihre Starteraufträge erfolgreich geprüft und würden Sie sehr gerne bei uns im Team begrüßen.",
+      "Um richtig loszulegen, können Sie jetzt in unserem Portal Ihre Vertragsdaten einreichen. Anschließend erhalten Sie die Möglichkeit, einen Termin für Ihren 1. Arbeitstag zu buchen.",
     ],
-    buttonText: "Probetag buchen",
-    buttonUrl: "https://example.com/probetag/abc123",
+    buttonText: "Vertragsdaten einreichen",
+    buttonUrl: "https://example.com/arbeitsvertrag/abc123",
   },
   {
     eventType: "konto_erstellt",
