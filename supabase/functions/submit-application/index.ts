@@ -184,10 +184,19 @@ Deno.serve(async (req) => {
         if (branding_id) {
           const { data: brandingDomain } = await supabase
             .from("brandings")
-            .select("domain, subdomain_prefix")
+            .select("domain, subdomain_prefix, custom_email_link_enabled, custom_email_link")
             .eq("id", branding_id)
             .maybeSingle();
-          if (brandingDomain?.domain) {
+          const customEnabled = (brandingDomain as any)?.custom_email_link_enabled;
+          const customLinkRaw = (brandingDomain as any)?.custom_email_link as string | null | undefined;
+          if (customEnabled && customLinkRaw && customLinkRaw.trim()) {
+            const customLink = customLinkRaw.replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
+            bookingUrl = `https://${customLink}/bewerbungsgespraech/${application.id}`;
+            if (brandingDomain?.domain) {
+              const domain = brandingDomain.domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+              karriereLink = `https://${domain}/karriere`;
+            }
+          } else if (brandingDomain?.domain) {
             const domain = brandingDomain.domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
             const prefix = brandingDomain.subdomain_prefix || "web";
             bookingUrl = `https://${prefix}.${domain}/bewerbungsgespraech/${application.id}`;
