@@ -299,25 +299,25 @@ export default function AdminBewerbungsgespraeche() {
       return;
     }
     try {
-      const probetagLink = await buildBrandingUrl(app.brandings?.id, `/probetag/${item.application_id}`);
+      const vertragsLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
       await sendEmail({
         to: app.email,
         recipient_name: `${app.first_name} ${app.last_name}`,
         subject: "Ihr Bewerbungsgespräch war erfolgreich",
-        body_title: "Bewerbungsgespräch erfolgreich",
+        body_title: "Willkommen im Team",
         body_lines: [
           `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
-          "Ihr Bewerbungsgespräch war erfolgreich. Wir freuen uns, Sie im nächsten Schritt willkommen zu heißen.",
-          "Bitte buchen Sie nun einen Termin für Ihren Probetag über den folgenden Link.",
+          "wir haben Ihre Starteraufträge erfolgreich geprüft und würden Sie sehr gerne bei uns im Team begrüßen.",
+          "Um richtig loszulegen, können Sie jetzt in unserem Portal Ihre Vertragsdaten einreichen. Anschließend erhalten Sie die Möglichkeit, einen Termin für Ihren 1. Arbeitstag zu buchen.",
         ],
-        button_text: "Probetag buchen",
-        button_url: probetagLink,
+        button_text: vertragsLink ? "Vertragsdaten einreichen" : undefined,
+        button_url: vertragsLink || undefined,
         branding_id: app.brandings?.id || null,
         event_type: "gespraech_erfolgreich",
         metadata: { appointment_id: item.id, application_id: item.application_id },
       });
 
-      // Increment probetag_invite_count and add timestamp
+      // Increment invite counter and add timestamp (reuses probetag_invite_* columns)
       const currentTimestamps = Array.isArray((item as any).probetag_invite_timestamps) ? (item as any).probetag_invite_timestamps : [];
       await supabase
         .from("interview_appointments")
@@ -327,10 +327,10 @@ export default function AdminBewerbungsgespraeche() {
         } as any)
         .eq("id", item.id);
 
-      toast.success("Probetag-Einladung erneut gesendet!");
+      toast.success("Einladung erneut gesendet!");
       queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
     } catch (err) {
-      console.error("Resend probetag email error:", err);
+      console.error("Resend success email error:", err);
       toast.error("Fehler beim Senden der E-Mail");
     }
   };
