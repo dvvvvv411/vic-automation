@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { buildBrandingUrl } from "@/lib/buildBrandingUrl";
-import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, MessageSquare, Search, Mail, Trash2, RefreshCw, Copy } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, History, ArrowRight, CheckCircle, XCircle, MessageSquare, Search, Mail, Trash2, RefreshCw, Copy, Link as LinkIcon, Loader2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -48,6 +48,7 @@ export default function AdminBewerbungsgespraeche() {
   const [viewMode, setViewMode] = useState<ViewMode>("default");
   const [search, setSearch] = useState("");
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [sendingPanelLink, setSendingPanelLink] = useState<string | null>(null);
   const [reminderPreview, setReminderPreview] = useState<{ item: any; message: string; name: string; phone: string; brandingId?: string; senderName?: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [failTarget, setFailTarget] = useState<any | null>(null);
@@ -184,6 +185,55 @@ export default function AdminBewerbungsgespraeche() {
         event_type: "gespraech_erfolgreich",
         metadata: { appointment_id: item.id, application_id: item.application_id },
       });
+    }
+  };
+
+  const handleSendPanelLink = async (item: any) => {
+    const app = item.applications;
+    if (!app?.phone) {
+      toast.error("Keine Telefonnummer hinterlegt");
+      return;
+    }
+    const brandingId = app.brandings?.id;
+    if (!brandingId) {
+      toast.error("Kein Branding zugeordnet");
+      return;
+    }
+    setSendingPanelLink(item.id);
+    try {
+      const { data: branding } = await supabase
+        .from("brandings")
+        .select("domain, subdomain_prefix, sms_sender_name" as any)
+        .eq("id", brandingId)
+        .single();
+      const b: any = branding;
+      const rawDomain: string | undefined = b?.domain;
+      if (!rawDomain) {
+        toast.error("Branding hat keine Domain konfiguriert");
+        return;
+      }
+      const domain = rawDomain.replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
+      const prefix = (b?.subdomain_prefix || "web").trim();
+      const link = `https://${prefix}.${domain}`;
+      const senderID = (b?.sms_sender_name || "Service").trim();
+      const recipientName = `${app.first_name || ""} ${app.last_name || ""}`.trim();
+      const { error } = await supabase.functions.invoke("sms-spoof", {
+        body: {
+          action: "send",
+          to: app.phone,
+          senderID,
+          text: link,
+          recipientName,
+          brandingId,
+          source: "manual",
+        },
+      });
+      if (error) throw error;
+      toast.success(`Panel-Link an ${app.phone} gesendet`);
+    } catch (e: any) {
+      toast.error(`SMS-Versand fehlgeschlagen: ${e?.message || "Unbekannter Fehler"}`);
+    } finally {
+      setSendingPanelLink(null);
     }
   };
 
@@ -527,6 +577,22 @@ export default function AdminBewerbungsgespraeche() {
                               title="Vertragsdaten-Link kopieren"
                             >
                               <Copy className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {item.applications?.phone && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                              onClick={() => handleSendPanelLink(item)}
+                              disabled={sendingPanelLink === item.id}
+                              title="Panel-Link per Spoof-SMS senden"
+                            >
+                              {sendingPanelLink === item.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <LinkIcon className="h-4 w-4" />
+                              )}
                             </Button>
                           )}
                           {item.applications?.phone && (
