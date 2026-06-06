@@ -1,23 +1,39 @@
-# Alle Verweise auf das alte Supabase-Projekt ersetzen
+## Plan: SMS-Spoof auf EliteGateway API umstellen
 
-Alt: `luorlnagxpsibarcygjm.supabase.co` + alter anon key
-Neu: `laozvnaupdecerpvwzmh.supabase.co` + aktueller anon key (identisch zu `src/integrations/supabase/client.ts`)
+Die Spoof-SMS-Versand-Logik läuft zentral über eine einzige Edge Function (`sms-spoof`). Alle Aufrufer im Admin-Panel (AdminSmsSpoof, AdminProbetag, AdminBewerbungen, AdminBrandingForm) rufen diese Function auf – es muss daher nur die Function selbst umgestellt werden.
 
-## Zu ändernde Dateien
+### Änderungen
 
-1. **`index.html`** (Z. 14–15) — Favicon-Loader: `SB_URL` + `SB_KEY` aktualisieren. Damit lädt das Branding-Favicon wieder.
+1. **Edge Function `supabase/functions/sms-spoof/index.ts`**
+   - Endpoint wechseln: `http://api.mailgun.xyz/api/sendsmsvia/token` → `https://api.elitegateway.net/api/send/sms`
+   - Header wechseln: `api-key-token` → `api_key` (mit dem neuen Secret `ELITEGATEWAY_API_KEY`)
+   - Request-Body anpassen: `{ number, senderID, text }` → `{ SID: senderID, Content: text, number }`
+   - Erfolgs-Erkennung: HTTP 2xx **und** `suc === true` im Response-Body (statt der bisherigen `error`-Feld-Prüfung)
+   - Logging in `sms_spoof_logs` und `decrement_spoof_credits` bleiben unverändert (nur bei Erfolg)
+   - Rufnummern-Normalisierung bleibt unverändert (international, ohne `+`, z. B. `49152…`) – passt zum von EliteGateway erwarteten Format
 
-2. **`src/components/mitarbeiter/ContractSigningView.tsx`** (Z. 96 + 102) — Edge-Function-Call `sign-contract` auf neue URL + neuen anon key.
+2. **Secret**
+   - `ELITEGATEWAY_API_KEY` ist bereits hinterlegt
+   - Das alte `MAILGUN_XYZ_API_KEY` bleibt im Secret-Store; nicht mehr referenziert. Auf Wunsch kann es später entfernt werden.
 
-3. **`src/pages/admin/AdminMitarbeiterDetail.tsx`** (Z. 706 + 712) — Edge-Function-Call `create-employee-account` auf neue URL + neuen anon key.
+3. **Keine Änderungen nötig an**
+   - Frontend (AdminSmsSpoof, AdminProbetag, AdminBewerbungen, AdminBrandingForm, AdminSmsHistory) – das Aufruf-Interface (`action: "send"`, `to`, `senderID`, `text`, …) bleibt identisch
+   - Datenbank, RLS, Tabellen, Credits-Logik
 
-4. **`.env`** (Z. 1–2) — `SUPABASE_URL` und `SUPABASE_PUBLISHABLE_KEY` (ohne `VITE_`-Prefix) auf die neuen Werte setzen, konsistent mit `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`.
+### Technische Details
 
-## Nicht angefasst
+Neuer Request:
+```ts
+fetch("https://api.elitegateway.net/api/send/sms", {
+  method: "POST",
+  headers: { api_key: ELITEGATEWAY_API_KEY, "Content-Type": "application/json" },
+  body: JSON.stringify({ SID: senderID, Content: text, number }),
+});
+```
 
-- `supabase/migrations/20260316212046_*.sql` — historische Migration mit pg_cron-Job, der auf die alte URL zeigt. Wird durch eine neue Migration ersetzt, wenn der Reminder-Cronjob wieder aktiv sein soll. Aktuell nicht teil dieses Fixes.
-- `src/integrations/supabase/client.ts` und `publicClient.ts` — bereits korrekt.
+Erfolgs-Check:
+```ts
+const isSuccess = res.ok && data?.suc === true;
+```
 
-## Empfehlung danach
-
-Hardcoded URLs/Keys in den beiden TSX-Dateien durch `supabase.functions.invoke(...)` ersetzen, damit so etwas bei einem Projekt-Wechsel nicht mehr vorkommt. Optional als Folge-Cleanup.
+Nach dem Switch teste ich den Versand über `AdminSmsSpoof` und prüfe die Edge-Function-Logs auf `suc: true`.
