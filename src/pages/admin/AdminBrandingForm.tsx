@@ -24,6 +24,8 @@ const brandingSchema = z.object({
   vat_id: z.string().max(50).optional(),
   domain: z.string().max(200).optional(),
   subdomain_prefix: z.string().max(50).optional(),
+  custom_email_link_enabled: z.boolean(),
+  custom_email_link: z.string().max(200).optional(),
   email: z.string().email("Ungültige E-Mail").max(255).or(z.literal("")).optional(),
   main_job_title: z.string().max(300).optional(),
   brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Ungültiger Hex-Farbcode"),
