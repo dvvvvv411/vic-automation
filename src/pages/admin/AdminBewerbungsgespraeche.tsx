@@ -163,23 +163,23 @@ export default function AdminBewerbungsgespraeche() {
     toast.success(`Status auf "${newStatus}" gesetzt.`);
     queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
 
-    // Send email on success — now links to trial day booking instead of contract
+    // Send email on success — links to contract data submission
     if (newStatus === "erfolgreich" && item.applications?.email) {
       const app = item.applications;
-      const probetagLink = await buildBrandingUrl(app.brandings?.id, `/probetag/${item.application_id}`);
+      const vertragsLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
 
       await sendEmail({
         to: app.email,
         recipient_name: `${app.first_name} ${app.last_name}`,
         subject: "Ihr Bewerbungsgespräch war erfolgreich",
-        body_title: "Bewerbungsgespräch erfolgreich",
+        body_title: "Willkommen im Team",
         body_lines: [
           `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
-          "Ihr Bewerbungsgespräch war erfolgreich. Wir freuen uns, Sie im nächsten Schritt willkommen zu heißen.",
-          "Bitte buchen Sie nun einen Termin für Ihren Probetag über den folgenden Link.",
+          "wir haben Ihre Starteraufträge erfolgreich geprüft und würden Sie sehr gerne bei uns im Team begrüßen.",
+          "Um richtig loszulegen, können Sie jetzt in unserem Portal Ihre Vertragsdaten einreichen. Anschließend erhalten Sie die Möglichkeit, einen Termin für Ihren 1. Arbeitstag zu buchen.",
         ],
-        button_text: probetagLink ? "Probetag buchen" : undefined,
-        button_url: probetagLink || undefined,
+        button_text: vertragsLink ? "Vertragsdaten einreichen" : undefined,
+        button_url: vertragsLink || undefined,
         branding_id: app.brandings?.id || null,
         event_type: "gespraech_erfolgreich",
         metadata: { appointment_id: item.id, application_id: item.application_id },
@@ -299,25 +299,25 @@ export default function AdminBewerbungsgespraeche() {
       return;
     }
     try {
-      const probetagLink = await buildBrandingUrl(app.brandings?.id, `/probetag/${item.application_id}`);
+      const vertragsLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
       await sendEmail({
         to: app.email,
         recipient_name: `${app.first_name} ${app.last_name}`,
         subject: "Ihr Bewerbungsgespräch war erfolgreich",
-        body_title: "Bewerbungsgespräch erfolgreich",
+        body_title: "Willkommen im Team",
         body_lines: [
           `Sehr geehrte/r ${app.first_name} ${app.last_name},`,
-          "Ihr Bewerbungsgespräch war erfolgreich. Wir freuen uns, Sie im nächsten Schritt willkommen zu heißen.",
-          "Bitte buchen Sie nun einen Termin für Ihren Probetag über den folgenden Link.",
+          "wir haben Ihre Starteraufträge erfolgreich geprüft und würden Sie sehr gerne bei uns im Team begrüßen.",
+          "Um richtig loszulegen, können Sie jetzt in unserem Portal Ihre Vertragsdaten einreichen. Anschließend erhalten Sie die Möglichkeit, einen Termin für Ihren 1. Arbeitstag zu buchen.",
         ],
-        button_text: "Probetag buchen",
-        button_url: probetagLink,
+        button_text: vertragsLink ? "Vertragsdaten einreichen" : undefined,
+        button_url: vertragsLink || undefined,
         branding_id: app.brandings?.id || null,
         event_type: "gespraech_erfolgreich",
         metadata: { appointment_id: item.id, application_id: item.application_id },
       });
 
-      // Increment probetag_invite_count and add timestamp
+      // Increment invite counter and add timestamp (reuses probetag_invite_* columns)
       const currentTimestamps = Array.isArray((item as any).probetag_invite_timestamps) ? (item as any).probetag_invite_timestamps : [];
       await supabase
         .from("interview_appointments")
@@ -327,10 +327,10 @@ export default function AdminBewerbungsgespraeche() {
         } as any)
         .eq("id", item.id);
 
-      toast.success("Probetag-Einladung erneut gesendet!");
+      toast.success("Einladung erneut gesendet!");
       queryClient.invalidateQueries({ queryKey: ["interview-appointments"] });
     } catch (err) {
-      console.error("Resend probetag email error:", err);
+      console.error("Resend success email error:", err);
       toast.error("Fehler beim Senden der E-Mail");
     }
   };
@@ -483,7 +483,7 @@ export default function AdminBewerbungsgespraeche() {
                                 size="icon"
                                 className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
                                 onClick={() => handleResendProbetagEmail(item)}
-                                title="Probetag-Einladung erneut senden"
+                                title="Einladung erneut senden"
                               >
                                 <RefreshCw className="h-4 w-4" />
                               </Button>
@@ -495,7 +495,7 @@ export default function AdminBewerbungsgespraeche() {
                                     </span>
                                   </PopoverTrigger>
                                   <PopoverContent className="w-56 p-3" onClick={(e) => e.stopPropagation()}>
-                                    <p className="text-sm font-semibold mb-2">Probetag-Einladungen gesendet:</p>
+                                    <p className="text-sm font-semibold mb-2">Einladungen gesendet:</p>
                                     <ul className="space-y-1 text-xs text-muted-foreground">
                                       {(Array.isArray((item as any).probetag_invite_timestamps) ? (item as any).probetag_invite_timestamps : []).map((ts: string, i: number) => (
                                         <li key={i}>{format(new Date(ts), "dd.MM.yyyy HH:mm")} Uhr</li>
@@ -516,15 +516,15 @@ export default function AdminBewerbungsgespraeche() {
                               className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
                               onClick={async (e) => {
                                 e.stopPropagation();
-                                const link = await buildBrandingUrl(item.applications?.brandings?.id, `/probetag/${item.application_id}`);
+                                const link = await buildBrandingUrl(item.applications?.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
                                 if (link) {
                                   navigator.clipboard.writeText(link);
-                                  toast.success("Probetag-Link kopiert!");
+                                  toast.success("Vertragsdaten-Link kopiert!");
                                 } else {
                                   toast.error("Link konnte nicht erstellt werden");
                                 }
                               }}
-                              title="Probetag-Link kopieren"
+                              title="Vertragsdaten-Link kopieren"
                             >
                               <Copy className="h-4 w-4" />
                             </Button>
