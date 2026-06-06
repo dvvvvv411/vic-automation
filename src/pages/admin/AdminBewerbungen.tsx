@@ -570,7 +570,7 @@ export default function AdminBewerbungen() {
   });
 
   const massImportMutation = useMutation({
-    mutationFn: async (applicants: ParsedApplicant[]) => {
+    mutationFn: async ({ applicants, skipped }: { applicants: ParsedApplicant[]; skipped: number }) => {
       const rows = applicants.map((a) => ({
         first_name: a.first_name,
         last_name: a.last_name,
@@ -583,10 +583,9 @@ export default function AdminBewerbungen() {
       }));
       const { error } = await supabase.from("applications").insert(rows as any);
       if (error) throw error;
-      return rows.length;
+      return { count: rows.length, skipped };
     },
-    onSuccess: (count) => {
-      const skipped = massImportAnalysisRef.current?.duplicates.length || 0;
+    onSuccess: ({ count, skipped }) => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       setOpen(false);
       setForm(initialForm);
@@ -598,6 +597,7 @@ export default function AdminBewerbungen() {
       setMassImportText("");
       toast.success(skipped > 0 ? `${count} importiert, ${skipped} Duplikate übersprungen` : `${count} Bewerbungen importiert`);
     },
+
 
     onError: () => toast.error("Fehler beim Importieren"),
   });
