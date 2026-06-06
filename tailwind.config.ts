@@ -63,33 +63,27 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
-      fontFamily: {
-        serif: ['"Instrument Serif"', 'ui-serif', 'Georgia', 'serif'],
-        sans: ['"Work Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-      },
       keyframes: {
         "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
+          from: {
+            height: "0",
+          },
+          to: {
+            height: "var(--radix-accordion-content-height)",
+          },
         },
         "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
-        "mesh-drift": {
-          "0%, 100%": { backgroundPosition: "0% 0%, 100% 100%, 50% 50%" },
-          "50%": { backgroundPosition: "100% 50%, 0% 50%, 60% 40%" },
-        },
-        "shimmer": {
-          "0%": { transform: "translateX(-100%)" },
-          "100%": { transform: "translateX(100%)" },
+          from: {
+            height: "var(--radix-accordion-content-height)",
+          },
+          to: {
+            height: "0",
+          },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "mesh-drift": "mesh-drift 14s ease-in-out infinite",
-        "shimmer": "shimmer 2.5s ease-in-out infinite",
       },
     },
   },

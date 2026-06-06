@@ -72,18 +72,9 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Work Sans', 'Inter', sans-serif;
+    font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-  }
-
-  /* Premium auth utilities */
-  .auth-noise {
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/></svg>");
-  }
-  .auth-dot-pattern {
-    background-image: radial-gradient(hsl(var(--foreground) / 0.06) 1px, transparent 1px);
-    background-size: 22px 22px;
   }
 
   /* Premium card styling */

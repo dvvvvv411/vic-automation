@@ -1,53 +1,23 @@
-# /auth Redesign — Premium Split-Screen
+# Alle Verweise auf das alte Supabase-Projekt ersetzen
 
-Layout-Struktur bleibt identisch (links Branding-Panel, rechts Formular). Die visuelle Qualität wird auf ein modernes, premium SaaS-Niveau gehoben. Branding-Primärfarbe (`brandingColor`) bleibt die tragende Akzentfarbe pro Domain.
+Alt: `luorlnagxpsibarcygjm.supabase.co` + alter anon key
+Neu: `laozvnaupdecerpvwzmh.supabase.co` + aktueller anon key (identisch zu `src/integrations/supabase/client.ts`)
 
-## Designrichtung (auto gewählt)
+## Zu ändernde Dateien
 
-- **Stil**: Dark Premium links, Light Clean rechts. Kein flacher Gradient mehr — stattdessen animiertes Mesh-Gradient + dezente Particles/Beams + Glassmorphism-Karten.
-- **Typografie**: Headlines `Instrument Serif` (editorial, premium), Body `Work Sans`. Wird via `@fontsource` installiert.
-- **Branding-Wahrung**: Linke Panel-Basisfarbe basiert weiterhin auf `--primary` (Domain-Branding), aber als tiefer Dark-Tone (`hsl(var(--primary)) ` über mehrlagige Gradient-Layer) mit `radial-gradient` Mesh statt linearem Verlauf.
+1. **`index.html`** (Z. 14–15) — Favicon-Loader: `SB_URL` + `SB_KEY` aktualisieren. Damit lädt das Branding-Favicon wieder.
 
-## Linkes Panel (Branding)
+2. **`src/components/mitarbeiter/ContractSigningView.tsx`** (Z. 96 + 102) — Edge-Function-Call `sign-contract` auf neue URL + neuen anon key.
 
-- Hintergrund: Mehrschichtiges Mesh — `radial-gradient` Spots in Primary/Primary-Glow + sehr dunklem Base + animierter `bg-[length:200%_200%]` Drift (8s Loop)
-- Subtiler Noise-Overlay (CSS SVG, ~3% Opacity) für „Filmkorn"-Premium-Feel
-- Animated Beam / Light Ray diagonal über das Panel (CSS pseudo-element + blur)
-- Logo: in einer dezent leuchtenden Glas-Plakette (`bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl px-8 py-6`), darunter Eyebrow-Label „MITARBEITERPORTAL" mit `tracking-[0.3em] text-xs uppercase`
-- Headline „Willkommen zurück." in Serif, groß, mit `bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent`
-- Trust-Points als Bento-Style Karten: 3 Karten, alternierende Größen, mit Icon im quadratischen Gradient-Tile, Border-Glow on hover, gestaffelte framer-motion Entry
-- Footer-Zeile unten: kleines „Made with care · DSGVO" mit Status-Dot (pulsing green)
+3. **`src/pages/admin/AdminMitarbeiterDetail.tsx`** (Z. 706 + 712) — Edge-Function-Call `create-employee-account` auf neue URL + neuen anon key.
 
-## Rechtes Panel (Formular)
+4. **`.env`** (Z. 1–2) — `SUPABASE_URL` und `SUPABASE_PUBLISHABLE_KEY` (ohne `VITE_`-Prefix) auf die neuen Werte setzen, konsistent mit `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`.
 
-- Statt purem `bg-background`: subtiler vertikaler Verlauf + dezenter Dot-Pattern Hintergrund (sehr leise)
-- Form-Container: max-w-md, leicht erhobene Karte (`bg-card/60 backdrop-blur-sm border border-border/50 shadow-[0_8px_40px_-12px_hsl(var(--primary)/0.15)] rounded-3xl p-10`)
-- Tab-Switcher: Pill-Style (segmented control) statt Underline — `bg-muted rounded-full p-1`, aktiver Tab `bg-background shadow-sm`
-- Inputs: höher (`h-12`), `rounded-xl`, Icon links (Mail, Lock, User, Phone), Focus-Ring in Primary mit `ring-offset-2`, sanfter Hover-Shadow
-- Passwort-Felder: Show/Hide Toggle (Eye-Icon rechts)
-- Bei Register: 2-Spalten Grid für Vorname/Nachname bleibt, Passwort-Stärke-Indikator (kleine 3-Segment Bar unter Passwort)
-- Button: `h-12 rounded-xl bg-primary` mit dezentem Gradient-Sheen on hover (gradient overlay `from-primary to-primary/80`), Lade-Spinner statt nur Text
-- Footer-Hint unter Form: „Probleme beim Anmelden? Support kontaktieren" als ghost link
-- Mobile: linkes Panel verschwindet, Logo + Headline kompakt oben, Form-Karte zentriert
+## Nicht angefasst
 
-## Motion
+- `supabase/migrations/20260316212046_*.sql` — historische Migration mit pg_cron-Job, der auf die alte URL zeigt. Wird durch eine neue Migration ersetzt, wenn der Reminder-Cronjob wieder aktiv sein soll. Aktuell nicht teil dieses Fixes.
+- `src/integrations/supabase/client.ts` und `publicClient.ts` — bereits korrekt.
 
-- framer-motion: gestaffeltes Fade-Up für Trust-Cards (`delay: 0.15 * i`)
-- Mesh-Gradient: CSS `@keyframes` Drift (background-position Animation)
-- Hover auf Trust-Cards: `whileHover={{ y: -4 }}`
-- Tab-Wechsel: `AnimatePresence` mode="wait" für Form-Inhalt mit `opacity` + `x` Slide
+## Empfehlung danach
 
-## Dateien
-
-- `src/pages/Auth.tsx` — komplette Neugestaltung (Logik 1:1 erhalten: handleLogin, handleRegister, branding fetch, navigation, sendEmail/sendTelegram). Nur JSX + Styles ändern sich.
-- `src/main.tsx` — `@fontsource/instrument-serif` + `@fontsource/work-sans` Imports
-- `tailwind.config.ts` — fontFamily `serif: ['Instrument Serif', ...]`, ggf. neue keyframes für Mesh-Drift
-- `src/index.css` — `@keyframes mesh-drift`, evtl. Utility-Class für Noise-Overlay
-- `package.json` — `bun add @fontsource/instrument-serif @fontsource/work-sans`
-
-## Was nicht angefasst wird
-
-- AuthContext, useUserRole, sendEmail/sendTelegram Logik
-- Branding-Resolution (Domain → Logo/Color/ID)
-- Registrierungs-Flow (Profile-Update, Contract-Insert, Notifications)
-- Routen und Redirects
+Hardcoded URLs/Keys in den beiden TSX-Dateien durch `supabase.functions.invoke(...)` ersetzen, damit so etwas bei einem Projekt-Wechsel nicht mehr vorkommt. Optional als Folge-Cleanup.
