@@ -516,7 +516,7 @@ export default function AdminBewerbungsgespraeche() {
                               className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
                               onClick={async (e) => {
                                 e.stopPropagation();
-                                const link = await buildBrandingUrl(item.applications?.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
+                                const link = await buildBrandingUrl(item.applications?.brandings?.id, "");
                                 if (link) {
                                   navigator.clipboard.writeText(link);
                                   toast.success("Vertragsdaten-Link kopiert!");
