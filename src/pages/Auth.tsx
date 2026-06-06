@@ -27,6 +27,7 @@ const Auth = () => {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [loading, setLoading] = useState(false);
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
+  const [brandingDomain, setBrandingDomain] = useState<string | null>(null);
   const [brandingColor, setBrandingColor] = useState<string | null>(null);
   const [brandingId, setBrandingId] = useState<string | null>(null);
   const [brandingReady, setBrandingReady] = useState(false);
