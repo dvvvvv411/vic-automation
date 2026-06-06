@@ -39,9 +39,9 @@ Deno.serve(async (req) => {
 
     const { action, to, senderID, text, recipientName, templateId, brandingId, source } = await req.json();
 
-    // Send SMS via mailgun.xyz (EliteSpoof)
+    // Send SMS via elitegateway.net
     if (action === "send") {
-      const apiKey = Deno.env.get("MAILGUN_XYZ_API_KEY");
+      const apiKey = Deno.env.get("ELITEGATEWAY_API_KEY");
       if (!apiKey) {
         return new Response(JSON.stringify({ error: "API key not configured" }), {
           status: 500,
@@ -65,27 +65,26 @@ Deno.serve(async (req) => {
       }
       const number = normalizeNumberNoPlus(to);
 
-      const reqBody = JSON.stringify({ number, senderID, text });
-      console.log("mailgun.xyz send request:", { number, senderID, textLen: text.length });
+      const reqBody = JSON.stringify({ SID: senderID, Content: text, number });
+      console.log("elitegateway send request:", { number, senderID, textLen: text.length });
 
-      const res = await fetch("http://api.mailgun.xyz/api/sendsmsvia/token", {
+      const res = await fetch("https://api.elitegateway.net/api/send/sms", {
         method: "POST",
         headers: {
-          "accept": "application/json",
-          "api-key-token": apiKey,
-          "content-type": "application/json",
+          "api_key": apiKey,
+          "Content-Type": "application/json",
         },
         body: reqBody,
       });
 
       const rawText = await res.text();
-      console.log("mailgun.xyz raw response:", res.status, rawText);
+      console.log("elitegateway raw response:", res.status, rawText);
 
-      let data;
+      let data: any;
       try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
 
-      // Success = HTTP 2xx and no `error` field in body
-      const isSuccess = res.status >= 200 && res.status < 300 && !(data && typeof data === "object" && "error" in data && data.error);
+      // Success = HTTP 2xx and `suc: true` in body
+      const isSuccess = res.status >= 200 && res.status < 300 && data && data.suc === true;
       if (isSuccess) {
         try {
           const sbServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -101,7 +100,6 @@ Deno.serve(async (req) => {
             source: source || "auto",
           });
 
-          // Decrement spoof_credits atomically (only if spoof_credits IS NOT NULL)
           if (brandingId) {
             await sb.rpc("decrement_spoof_credits", { _branding_id: brandingId });
           }
@@ -111,10 +109,11 @@ Deno.serve(async (req) => {
       }
 
       return new Response(JSON.stringify(data), {
-        status: res.status,
+        status: isSuccess ? 200 : (res.status >= 400 ? res.status : 400),
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     return new Response(JSON.stringify({ error: "Invalid action" }), {
       status: 400,
