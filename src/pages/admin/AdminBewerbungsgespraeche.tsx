@@ -495,7 +495,7 @@ export default function AdminBewerbungsgespraeche() {
                                     </span>
                                   </PopoverTrigger>
                                   <PopoverContent className="w-56 p-3" onClick={(e) => e.stopPropagation()}>
-                                    <p className="text-sm font-semibold mb-2">Probetag-Einladungen gesendet:</p>
+                                    <p className="text-sm font-semibold mb-2">Einladungen gesendet:</p>
                                     <ul className="space-y-1 text-xs text-muted-foreground">
                                       {(Array.isArray((item as any).probetag_invite_timestamps) ? (item as any).probetag_invite_timestamps : []).map((ts: string, i: number) => (
                                         <li key={i}>{format(new Date(ts), "dd.MM.yyyy HH:mm")} Uhr</li>
