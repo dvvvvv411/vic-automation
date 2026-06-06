@@ -70,6 +70,8 @@ const initialForm: BrandingForm = {
   vat_id: "",
   domain: "",
   subdomain_prefix: "",
+  custom_email_link_enabled: false,
+  custom_email_link: "",
   email: "",
   main_job_title: "",
   brand_color: "#3B82F6",
