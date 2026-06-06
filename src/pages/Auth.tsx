@@ -27,6 +27,7 @@ const Auth = () => {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [loading, setLoading] = useState(false);
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
+  const [brandingDomain, setBrandingDomain] = useState<string | null>(null);
   const [brandingColor, setBrandingColor] = useState<string | null>(null);
   const [brandingId, setBrandingId] = useState<string | null>(null);
   const [brandingReady, setBrandingReady] = useState(false);
@@ -53,7 +54,7 @@ const Auth = () => {
 
       const { data } = await supabase
         .from("brandings")
-        .select("id, logo_url, brand_color")
+        .select("id, logo_url, brand_color, domain")
         .eq("domain", hostname)
         .maybeSingle();
 
@@ -61,15 +62,17 @@ const Auth = () => {
         setBrandingLogoUrl(data.logo_url);
         setBrandingColor(data.brand_color ?? null);
         setBrandingId(data.id);
+        setBrandingDomain(data.domain ?? null);
       } else {
         const { data: fallback } = await supabase
           .from("brandings")
-          .select("id, logo_url, brand_color")
+          .select("id, logo_url, brand_color, domain")
           .eq("domain", "frik-maxeiner.de")
           .maybeSingle();
         setBrandingLogoUrl(fallback?.logo_url ?? null);
         setBrandingColor(fallback?.brand_color ?? null);
         setBrandingId(fallback?.id ?? null);
+        setBrandingDomain(fallback?.domain ?? null);
       }
       setBrandingReady(true);
     };
@@ -193,7 +196,7 @@ const Auth = () => {
           className="relative z-10 flex flex-col items-center"
         >
           {brandingLogoUrl ? (
-            <img src={brandingLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain" />
+            <img src={brandingLogoUrl} alt="Logo" className={`max-h-16 w-auto object-contain ${brandingDomain === "for-tel.solutions" ? "[filter:brightness(0)_invert(1)]" : ""}`} />
           ) : (
             <h1 className="text-4xl font-bold tracking-tight mb-2">Mitarbeiterportal</h1>
           )}
