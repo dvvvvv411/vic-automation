@@ -166,7 +166,7 @@ export default function AdminBewerbungsgespraeche() {
     // Send email on success — links to contract data submission
     if (newStatus === "erfolgreich" && item.applications?.email) {
       const app = item.applications;
-      const vertragsLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
+      const vertragsLink = await buildBrandingUrl(app.brandings?.id, "");
 
       await sendEmail({
         to: app.email,
