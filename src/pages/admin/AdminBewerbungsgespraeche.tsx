@@ -437,7 +437,14 @@ export default function AdminBewerbungsgespraeche() {
                         })}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{item.appointment_time?.slice(0, 5)} Uhr</Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline">{item.appointment_time?.slice(0, 5)} Uhr</Badge>
+                          {item._slotTotal > 1 && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                              {item._slotIndex}. Slot
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="font-medium">
                         {item.applications?.first_name} {item.applications?.last_name}
