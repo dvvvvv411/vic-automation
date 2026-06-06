@@ -648,13 +648,45 @@ export default function AdminBewerbungen() {
     }
   };
 
+  const massImportAnalysis = useMemo(() => {
+    if (!isMassImport) return { parsed: [], duplicates: [], uniqueToImport: [], parseErrors: [] as string[] };
+    const lines = massImportText.split("\n").filter((l) => l.trim());
+    const parsed: ParsedApplicant[] = [];
+    const parseErrors: string[] = [];
+    lines.forEach((line, i) => {
+      const result = parseMassImportLine(line);
+      if (typeof result === "string") {
+        parseErrors.push(`Zeile ${i + 1}: ${result}`);
+      } else {
+        parsed.push(result);
+      }
+    });
+    const existingEmails = new Set(
+      (applications || [])
+        .map((a: any) => (a.email || "").toLowerCase().trim())
+        .filter(Boolean)
+    );
+    const seen = new Set<string>();
+    const duplicates: ParsedApplicant[] = [];
+    const uniqueToImport: ParsedApplicant[] = [];
+    parsed.forEach((p) => {
+      const key = p.email.toLowerCase().trim();
+      if (existingEmails.has(key) || seen.has(key)) {
+        duplicates.push(p);
+      } else {
+        seen.add(key);
+        uniqueToImport.push(p);
+      }
+    });
+    return { parsed, duplicates, uniqueToImport, parseErrors };
+  }, [isMassImport, massImportText, applications]);
+
   const handleSubmit = () => {
     const isSimplified = isIndeed || isExternal || isMeta;
 
     if (isSimplified && isMassImport) {
-      // Mass import
-      const lines = massImportText.split("\n").filter((l) => l.trim());
-      if (!lines.length) {
+      const { parseErrors, uniqueToImport, duplicates } = massImportAnalysis;
+      if (!massImportText.split("\n").filter((l) => l.trim()).length) {
         setMassImportErrors(["Keine Einträge eingegeben"]);
         return;
       }
@@ -662,24 +694,20 @@ export default function AdminBewerbungen() {
         setErrors({ branding_id: "Branding erforderlich" });
         return;
       }
-      const parsed: ParsedApplicant[] = [];
-      const errs: string[] = [];
-      lines.forEach((line, i) => {
-        const result = parseMassImportLine(line);
-        if (typeof result === "string") {
-          errs.push(`Zeile ${i + 1}: ${result}`);
-        } else {
-          parsed.push(result);
-        }
-      });
-      if (errs.length) {
-        setMassImportErrors(errs);
+      if (parseErrors.length) {
+        setMassImportErrors(parseErrors);
+        return;
+      }
+      if (uniqueToImport.length === 0) {
+        setMassImportErrors([]);
+        toast.error(`Keine neuen Bewerbungen – alle ${duplicates.length} Einträge sind Duplikate`);
         return;
       }
       setMassImportErrors([]);
-      massImportMutation.mutate(parsed);
+      massImportMutation.mutate(uniqueToImport);
       return;
     }
+
 
     if (isSimplified) {
       const result = indeedSchema.safeParse({
