@@ -144,6 +144,8 @@ export default function AdminBrandingForm() {
         vat_id: branding.vat_id || "",
         domain: branding.domain || "",
         subdomain_prefix: branding.subdomain_prefix || "",
+        custom_email_link_enabled: (branding as any).custom_email_link_enabled ?? false,
+        custom_email_link: (branding as any).custom_email_link || "",
         email: branding.email || "",
         main_job_title: (branding as any).main_job_title || "",
         brand_color: branding.brand_color || "#3B82F6",
