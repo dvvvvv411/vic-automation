@@ -414,10 +414,27 @@ function BrandingScheduleForm({
           </div>
         </div>
       )}
+      {showSlotsPerTime && (
+        <div className="space-y-2 rounded-lg border border-border p-4">
+          <Label className="text-sm font-medium">Slots pro Uhrzeit</Label>
+          <p className="text-xs text-muted-foreground">
+            Wie viele Bewerber dürfen denselben Zeitslot buchen? Standard: 1. Bei z.B. 3 ist jeder Termin (z.B. 10:30 Uhr) 3x buchbar.
+          </p>
+          <Input
+            type="number"
+            min={1}
+            max={10}
+            value={slotsPerTime}
+            onChange={(e) => setSlotsPerTime(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+            className="w-32 mt-2"
+          />
+        </div>
+      )}
       <Button onClick={() => onSave({
         start_time: st, end_time: et, slot_interval_minutes: iv, available_days: ds,
         weekend_start_time: wst && wst !== "reset" ? wst : null,
         weekend_end_time: wet && wet !== "reset" ? wet : null,
+        ...(showSlotsPerTime ? { interview_slots_per_time: slotsPerTime } : {}),
       })} disabled={isSaving}>
         {isSaving ? "Speichern..." : "Einstellungen speichern"}
       </Button>
