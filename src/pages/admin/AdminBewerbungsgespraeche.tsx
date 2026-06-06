@@ -299,7 +299,7 @@ export default function AdminBewerbungsgespraeche() {
       return;
     }
     try {
-      const vertragsLink = await buildBrandingUrl(app.brandings?.id, `/arbeitsvertrag/${item.application_id}`);
+      const vertragsLink = await buildBrandingUrl(app.brandings?.id, "");
       await sendEmail({
         to: app.email,
         recipient_name: `${app.first_name} ${app.last_name}`,
