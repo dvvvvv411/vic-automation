@@ -33,32 +33,45 @@ export default function BewerbungsgespraechPublic() {
 
   useEffect(() => {
     const fetchBranding = async () => {
-      let hostname = window.location.hostname;
-      const parts = hostname.split(".");
-      if (parts.length > 2) {
-        hostname = parts.slice(-2).join(".");
-      }
+      const host = window.location.hostname.toLowerCase();
+      const parts = host.split(".");
+      const root = parts.length > 2 ? parts.slice(-2).join(".") : host;
+      const norm = (s: string) =>
+        s.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "").toLowerCase().trim();
+      const cols = "id, company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url";
 
       const { data } = await supabase
         .from("brandings")
-        .select("id, company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url")
-        .eq("domain", hostname)
+        .select(cols)
+        .eq("domain", root)
         .maybeSingle();
 
       if (data) {
         setBranding(data as BrandingData);
       } else {
-        const { data: fallback } = await supabase
+        const { data: customs } = await supabase
           .from("brandings")
-          .select("id, company_name, logo_url, brand_color, favicon_url, recruiter_name, recruiter_title, recruiter_image_url")
-          .eq("domain", "frik-maxeiner.de")
-          .maybeSingle();
-        if (fallback) setBranding(fallback as BrandingData);
+          .select(`${cols}, custom_email_link`)
+          .eq("custom_email_link_enabled", true);
+        const match = (customs ?? []).find(
+          (r: any) => r.custom_email_link && [host, root].includes(norm(r.custom_email_link))
+        );
+        if (match) {
+          setBranding(match as BrandingData);
+        } else {
+          const { data: fallback } = await supabase
+            .from("brandings")
+            .select(cols)
+            .eq("domain", "frik-maxeiner.de")
+            .maybeSingle();
+          if (fallback) setBranding(fallback as BrandingData);
+        }
       }
       setBrandingReady(true);
     };
     fetchBranding();
   }, []);
+
 
   useEffect(() => {
     const el = document.getElementById("app-favicon") as HTMLLinkElement | null;
