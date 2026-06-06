@@ -1104,7 +1104,7 @@ export default function AdminBewerbungen() {
                 {(isIndeed || isExternal || isMeta) && isMassImport
                   ? massImportMutation.isPending
                     ? "Wird importiert..."
-                    : `${massImportText.split("\n").filter((l) => l.trim()).length} Bewerbungen importieren`
+                    : `${massImportAnalysis.uniqueToImport.length} Bewerbungen importieren`
                   : createMutation.isPending
                     ? "Wird hinzugefügt..."
                     : "Bewerbung hinzufügen"}
