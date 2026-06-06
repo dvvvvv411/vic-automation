@@ -377,6 +377,23 @@ export default function AdminEmails() {
     vatId: branding.vat_id || undefined,
   } : undefined;
 
+  // For the "gespraech_erfolgreich" template, override the button URL with the
+  // branding's actual base URL (custom email link if enabled, otherwise prefix.domain).
+  const dynamicButtonUrl = useMemo(() => {
+    if (tpl.eventType !== "gespraech_erfolgreich" || !branding) return tpl.buttonUrl;
+    const b = branding as any;
+    if (b.custom_email_link_enabled && b.custom_email_link) {
+      const link = String(b.custom_email_link).replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
+      return `https://${link}`;
+    }
+    if (b.domain) {
+      const domain = String(b.domain).replace(/^https?:\/\//, "").replace(/\/$/, "");
+      const prefix = b.subdomain_prefix || "web";
+      return `https://${prefix}.${domain}`;
+    }
+    return tpl.buttonUrl;
+  }, [tpl, branding]);
+
   const html = useMemo(
     () =>
       buildEmailHtml({
@@ -385,14 +402,14 @@ export default function AdminEmails() {
         bodyTitle: tpl.bodyTitle,
         bodyLines: tpl.bodyLines(companyName, mainJobTitle),
         buttonText: tpl.buttonText,
-        buttonUrl: tpl.buttonUrl,
+        buttonUrl: dynamicButtonUrl,
         footerLines: tpl.footerLines,
         footerAddress,
         footerDetails,
         emailLogoEnabled: (branding as any)?.email_logo_enabled || false,
         emailLogoUrl: (branding as any)?.email_logo_url || undefined,
       }),
-    [companyName, brandColor, tpl, footerAddress, branding],
+    [companyName, brandColor, tpl, dynamicButtonUrl, footerAddress, branding],
   );
 
   return (
