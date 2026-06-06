@@ -320,10 +320,12 @@ function BrandingScheduleForm({
   existing,
   onSave,
   isSaving,
+  showSlotsPerTime = false,
 }: {
-  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null };
-  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null }) => void;
+  existing?: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number };
+  onSave: (params: { start_time: string; end_time: string; slot_interval_minutes: number; available_days: number[]; weekend_start_time?: string | null; weekend_end_time?: string | null; interview_slots_per_time?: number }) => void;
   isSaving: boolean;
+  showSlotsPerTime?: boolean;
 }) {
   const [st, setSt] = useState(existing?.start_time?.slice(0, 5) || DEFAULT_START);
   const [et, setEt] = useState(existing?.end_time?.slice(0, 5) || DEFAULT_END);
@@ -331,6 +333,7 @@ function BrandingScheduleForm({
   const [ds, setDs] = useState<number[]>(existing?.available_days || DEFAULT_DAYS);
   const [wst, setWst] = useState(existing?.weekend_start_time?.slice(0, 5) || "");
   const [wet, setWet] = useState(existing?.weekend_end_time?.slice(0, 5) || "");
+  const [slotsPerTime, setSlotsPerTime] = useState<number>(existing?.interview_slots_per_time ?? 1);
 
   const hasWeekend = ds.includes(6) || ds.includes(7);
 
