@@ -1,33 +1,26 @@
 ## Ziel
-In `/admin/mitarbeiter`-Tabelle zwei zusätzliche Infos auf einen Blick:
-1. **Starterjobs**: `erledigt/gesamt - DD.MM.YYYY` (z. B. `1/2 - 06.06.2026`)
-2. **Vertragsdaten**: `Nicht eingereicht` / `Eingereicht` / `AV Angenommen`
+In `/admin/bewerbungsgespraeche` pro Bewerbungsgespräch-Zeile einen neuen Button hinzufügen, der eine Spoof-SMS verschickt. Inhalt der SMS = ausschließlich der Panel-Link (`https://{subdomain_prefix}.{domain}`), ohne Pfad, ohne Begleittext.
 
-## Änderungen in `src/pages/admin/AdminMitarbeiter.tsx`
+## Umsetzung
 
-### 1) Status-Spalte umbenennen (aktuell „Status")
-- Mapping anpassen (statt 4 Werte nur 3):
-  - `offen` → Badge **Nicht eingereicht** (orange)
-  - `eingereicht` → Badge **Eingereicht** (blau)
-  - `genehmigt` oder `unterzeichnet` → Badge **AV Angenommen** (grün)
-- `is_suspended`-Badge bleibt unverändert daneben.
+### 1) Neuer Handler in `src/pages/admin/AdminBewerbungsgespraeche.tsx`
+- Funktion `handleSendPanelLink(item)`:
+  - `app = item.applications`, `brandingId = app.brandings?.id`
+  - Wenn keine Telefonnummer vorhanden → Toast Error "Keine Telefonnummer hinterlegt".
+  - Branding laden: `brandings.select("domain, subdomain_prefix, sms_sender_name").eq("id", brandingId).single()`
+  - Link bauen: `https://${subdomain_prefix || "web"}.${domain}` (Domain vorab um `https?://` und Trailing-Slash bereinigen). Wenn keine Domain → Fehler-Toast.
+  - `senderID = sms_sender_name || "Service"` (Fallback nur falls leer)
+  - `supabase.functions.invoke("sms-spoof", { body: { action: "send", to: app.phone, senderID, text: link, recipientName: `${app.first_name} ${app.last_name}`, brandingId, source: "manual" }})`
+  - Erfolg/Fehler via `toast`. Loading-State `sendingPanelLink === item.id`.
 
-### 2) Neue Spalte „Starterjobs" (vor „Aufträge")
-- Neuer Query `starterJobStats`:
-  - Hole alle `orders.id` mit `is_starter_job = true` und `branding_id = activeBrandingId` (oder `branding_id IS NULL`, analog zum DB-Trigger `assign_starter_jobs`).
-  - Hole zugehörige `order_assignments` (`order_id IN (...starterOrderIds)`) batched mit `.range()`-Loop.
-  - Optional: hole `order_appointments` für diese (contract_id, order_id)-Paare, um das Datum zu bestimmen.
-- Aggregation pro `contract_id`:
-  - `total` = Anzahl Assignments mit Starter-Order
-  - `done` = Anzahl davon mit `status = 'erfolgreich'`
-  - `latestDate` = letztes `appointment_date` aus `order_appointments` der erledigten Starter-Assignments; Fallback `assigned_at` des jüngsten erledigten Starter-Assignments.
-- Anzeige in neuer `TableCell`:
-  - Wenn `total === 0`: „–"
-  - Sonst: `done/total` + (wenn `latestDate` vorhanden) ` - DD.MM.YYYY` (via vorhandenes `formatDate`).
-  - Farbe: grün wenn `done === total && total > 0`, sonst muted/orange.
+### 2) Button-Platzierung
+- In der Aktions-Zelle jeder Zeile (neben den vorhandenen Buttons rund um Zeile 513–545) ein neuer `<Button variant="outline" size="sm">` mit Link-Icon (`Link` aus lucide-react) und Tooltip "Panel-Link per Spoof-SMS senden".
+- `disabled` während Versand, Spinner-Icon im Loading-State.
 
-### 3) Header
-- `<TableHead>Starterjobs</TableHead>` neu zwischen „Startdatum" und „Aufträge".
+### 3) Kein Backend-Change
+- `sms-spoof` Edge Function bleibt unverändert (akzeptiert bereits `senderID` + `text` freiform).
+- Keine DB-Migration nötig.
 
-## Nicht betroffen
-- DB-Schema, RLS, andere Seiten, Detailansicht.
+## Nicht enthalten
+- Kein Dialog/Preview vor dem Senden (Quick-Action wie gewünscht).
+- Keine Anpassung anderer Seiten oder Templates.
