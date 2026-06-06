@@ -152,6 +152,7 @@ export type Database = {
           created_by: string | null
           end_time: string
           id: string
+          interview_slots_per_time: number
           schedule_type: string
           slot_interval_minutes: number
           start_time: string
@@ -165,6 +166,7 @@ export type Database = {
           created_by?: string | null
           end_time?: string
           id?: string
+          interview_slots_per_time?: number
           schedule_type?: string
           slot_interval_minutes?: number
           start_time?: string
@@ -178,6 +180,7 @@ export type Database = {
           created_by?: string | null
           end_time?: string
           id?: string
+          interview_slots_per_time?: number
           schedule_type?: string
           slot_interval_minutes?: number
           start_time?: string

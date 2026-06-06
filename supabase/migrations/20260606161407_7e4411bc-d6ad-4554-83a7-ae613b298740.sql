@@ -1,0 +1,1 @@
+ALTER TABLE public.branding_schedule_settings ADD COLUMN IF NOT EXISTS interview_slots_per_time integer NOT NULL DEFAULT 1;
