@@ -5,34 +5,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { computeNextPayout } from "@/lib/computeNextPayout";
 
 interface Props {
   balance: number;
   isFixedSalary?: boolean;
   startDate?: string | null;
+  firstWorkdayDate?: string | null;
+  desiredStartDate?: string | null;
 }
 
-function computeNextPayout(startDateStr?: string | null): Date {
-  const today = new Date();
-  if (!startDateStr) {
-    const d15 = new Date(today.getFullYear(), today.getMonth(), 15);
-    return today.getDate() < 15 ? d15 : new Date(today.getFullYear(), today.getMonth() + 1, 15);
-  }
-  const start = new Date(startDateStr);
-  if (isNaN(start.getTime())) {
-    const d15 = new Date(today.getFullYear(), today.getMonth(), 15);
-    return today.getDate() < 15 ? d15 : new Date(today.getFullYear(), today.getMonth() + 1, 15);
-  }
-  let next = new Date(start);
-  while (next <= today) {
-    next = new Date(next.getTime() + 30 * 24 * 60 * 60 * 1000);
-  }
-  return next;
-}
-
-const DashboardPayoutSummary = ({ balance, isFixedSalary, startDate }: Props) => {
+const DashboardPayoutSummary = ({ balance, isFixedSalary, startDate, firstWorkdayDate, desiredStartDate }: Props) => {
   const navigate = useNavigate();
-  const nextPayout = computeNextPayout(startDate);
+  const nextPayout = computeNextPayout({
+    firstWorkdayDate,
+    desiredStartDate,
+    submittedAt: startDate,
+  });
+
 
   return (
     <motion.div
