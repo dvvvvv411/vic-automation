@@ -1,0 +1,1 @@
+ALTER TABLE public.interview_appointments DROP CONSTRAINT IF EXISTS unique_timeslot;
