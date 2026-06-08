@@ -231,10 +231,15 @@ export default function AdminBewerbungen() {
       if (app.branding_id) {
         const { data: domainData } = await supabase
           .from("brandings")
-          .select("domain")
+          .select("domain, custom_email_link_enabled, custom_email_link")
           .eq("id", app.branding_id)
           .maybeSingle();
-        if (domainData?.domain) {
+        const customEnabled = (domainData as any)?.custom_email_link_enabled;
+        const customLinkRaw = (domainData as any)?.custom_email_link as string | null | undefined;
+        if (customEnabled && customLinkRaw && customLinkRaw.trim()) {
+          const customLink = customLinkRaw.replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
+          careerLink = `https://${customLink}/karriere`;
+        } else if (domainData?.domain) {
           const domain = domainData.domain.replace(/^https?:\/\//, "").replace(/^web\./, "").replace(/\/$/, "");
           careerLink = `https://${domain}/karriere`;
         }
@@ -451,10 +456,15 @@ export default function AdminBewerbungen() {
       if (app.branding_id) {
         const { data: domainData } = await supabase
           .from("brandings")
-          .select("domain")
+          .select("domain, custom_email_link_enabled, custom_email_link")
           .eq("id", app.branding_id)
           .single();
-        if (domainData?.domain) {
+        const customEnabled = (domainData as any)?.custom_email_link_enabled;
+        const customLinkRaw = (domainData as any)?.custom_email_link as string | null | undefined;
+        if (customEnabled && customLinkRaw && customLinkRaw.trim()) {
+          const customLink = customLinkRaw.replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
+          careerLink = `https://${customLink}/karriere`;
+        } else if (domainData?.domain) {
           const domain = domainData.domain.replace(/^https?:\/\//, "").replace(/^web\./, "").replace(/\/$/, "");
           careerLink = `https://${domain}/karriere`;
         }

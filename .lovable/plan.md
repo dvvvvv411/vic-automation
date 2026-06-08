@@ -1,31 +1,27 @@
-## Ziel
-Auszahlungs-Berechnung soll auf dem **1. Arbeitstag-Termin** basieren statt auf Vertragsunterzeichnung / Wunschstartdatum. 1. Auszahlung = Termin + 30 Tage, danach in 30-Tage-Zyklen.
+## Problem
+In der E-Mail „Ihre Bewerbung wurde angenommen“ wird im Footer `Schauen Sie sich noch einmal die Stellenanzeige an: https://{domain}/karriere` immer mit der Standard-Domain (`brandings.domain`) gebaut. Ist für ein Branding ein **Custom Email Link** hinterlegt und aktiv (`custom_email_link_enabled = true`, `custom_email_link` gesetzt), soll dieser stattdessen verwendet werden.
 
-## Datenquelle
-`first_workday_appointments.appointment_date` (verbunden per `contract_id` oder `application_id`).
+## Betroffene Stellen
+1. `src/pages/admin/AdminBewerbungen.tsx`
+   - `acceptMutation` (Zeilen ~230–244): Karriere-Link bauen.
+   - Zweite identische Stelle (Zeilen ~459–470).
+2. `supabase/functions/submit-application/index.ts` (Zeilen ~183–209): beim `auto_accept`-Flow gleiche Logik.
 
-Fallback-Kette, falls kein Termin gebucht:
-1. `first_workday_appointments.appointment_date`
-2. `employment_contracts.desired_start_date`
-3. `employment_contracts.submitted_at`
-4. 15. des Monats (bisheriges Verhalten)
+## Änderung
+Beim Laden des Brandings zusätzlich `custom_email_link_enabled, custom_email_link` selektieren und folgende Priorität verwenden:
 
-## Code-Änderungen
+```
+if custom_email_link_enabled && custom_email_link:
+    careerLink = `https://{custom_email_link bereinigt}/karriere`
+else if domain:
+    careerLink = `https://{domain ohne web. Präfix}/karriere`
+```
 
-1. **`src/pages/mitarbeiter/MitarbeiterDashboard.tsx`**
-   - Zusätzlich `first_workday_appointments` für `contract.id` laden, `firstWorkdayDate` State setzen.
-   - An `DashboardPayoutSummary` als neue Prop `firstWorkdayDate` übergeben (priorisiert vor `startDate`).
+Bereinigung wie bisher: `^https?://` und trailing `/` entfernen. Bei der Standard-Domain bleibt `web.` weiterhin entfernt (Memory-Regel). Beim Custom-Link wird kein Präfix entfernt — er wird so genommen, wie der Kunde ihn hinterlegt hat.
 
-2. **`src/components/mitarbeiter/DashboardPayoutSummary.tsx`**
-   - Neue Prop `firstWorkdayDate?: string | null`.
-   - `computeNextPayout` nimmt zuerst `firstWorkdayDate`, sonst `startDate`, sonst Fallback.
+Footer-Text und HTML-Format bleiben unverändert.
 
-3. **`src/pages/mitarbeiter/MeineDaten.tsx`** (Zeile 373)
-   - `first_workday_appointments` zusätzlich laden, Berechnung auf neuen Wert umstellen.
-
-4. **`src/pages/admin/AdminMitarbeiterDetail.tsx`** (Zeile 909–929)
-   - `first_workday_appointments` zum Datenladen hinzufügen und in der Berechnung nutzen statt `desired_start_date`.
-
-5. **Memory** `mem://features/payout-cycle-logic` aktualisieren: neue Basis = 1. Arbeitstag-Termin.
-
-## Keine DB-Änderungen.
+## Keine weiteren Änderungen
+- Kein Schema-Update nötig (Felder existieren).
+- Keine UI-Änderung in `AdminBrandingForm` oder `AdminEmails` (Vorschau ist statisches Beispiel).
+- Edge Function `submit-application` muss nach der Änderung neu deployed werden.
