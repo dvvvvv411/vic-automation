@@ -435,6 +435,23 @@ export default function AdminMitarbeiterDetail() {
     enabled: !!id,
   });
 
+  // Fetch first workday appointment for payout calculation
+  const { data: firstWorkday } = useQuery({
+    queryKey: ["admin-contract-first-workday", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("first_workday_appointments")
+        .select("appointment_date")
+        .eq("contract_id", id!)
+        .order("appointment_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!id,
+  });
+
+
   // Fetch assignments
   const { data: assignments } = useQuery({
     queryKey: ["admin-contract-assignments", id, activeBrandingId],
