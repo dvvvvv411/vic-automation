@@ -612,7 +612,7 @@ const MitarbeiterDashboard = () => {
       {/* Summary Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <DashboardReviewsSummary recentReviews={recentReviews} />
-        <DashboardPayoutSummary balance={isHourlyRate ? getEstimatedMonthlySalary() : isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary && !isHourlyRate} startDate={contractSubmittedAt} />
+        <DashboardPayoutSummary balance={isHourlyRate ? getEstimatedMonthlySalary() : isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary && !isHourlyRate} startDate={contractSubmittedAt} firstWorkdayDate={firstWorkdayDate} desiredStartDate={desiredStartDate} />
       </div>
     </div>
   );
