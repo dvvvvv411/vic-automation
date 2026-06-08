@@ -53,10 +53,10 @@ const MeineDaten = () => {
       const now = new Date();
       const monthStart = startOfDay(startOfMonth(now));
 
-      const [contractRes, reviewsRes, assignmentsRes] = await Promise.all([
+      const [contractRes, reviewsRes, assignmentsRes, fwaRes] = await Promise.all([
         supabase
           .from("employment_contracts")
-          .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name, employment_type, submitted_at")
+          .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name, employment_type, submitted_at, desired_start_date")
           .eq("id", contract.id)
           .maybeSingle(),
         supabase
@@ -68,12 +68,25 @@ const MeineDaten = () => {
           .select("order_id, assigned_at, orders(title, reward, estimated_hours)")
           .eq("contract_id", contract.id)
           .eq("status", "erfolgreich"),
+        supabase
+          .from("first_workday_appointments")
+          .select("appointment_date")
+          .eq("contract_id", contract.id)
+          .order("appointment_date", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       if (contractRes.data) {
         setContractDetails(contractRes.data);
-        setContractExtra(prev => ({ ...prev, submitted_at: contractRes.data.submitted_at ?? undefined }));
+        setContractExtra(prev => ({
+          ...prev,
+          submitted_at: contractRes.data.submitted_at ?? undefined,
+          desired_start_date: (contractRes.data as any).desired_start_date ?? undefined,
+          first_workday_date: (fwaRes.data as any)?.appointment_date ?? undefined,
+        }));
       }
+
 
       if (reviewsRes.data && reviewsRes.data.length > 0) {
         const uniqueOrders = new Set(reviewsRes.data.map((r) => r.order_id));
