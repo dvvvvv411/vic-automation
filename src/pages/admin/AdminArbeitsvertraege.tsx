@@ -170,7 +170,7 @@ export default function AdminArbeitsvertraege() {
               ? `Ab Ihrem Startdatum (${startDateDisplay}) werden Ihnen Aufträge zugewiesen.`
               : "Sie werden in Kürze Ihre ersten Aufträge erhalten.",
             "Bitte vereinbaren Sie mit uns einen Termin für Ihren ersten Arbeitstag.",
-            "Michael Fischer wird Sie anschließend telefonisch kontaktieren, um mit Ihnen die ersten Aufträge durchzugehen.",
+            "Michael Schreiber wird Sie anschließend telefonisch kontaktieren, um mit Ihnen die ersten Aufträge durchzugehen.",
             "Wir freuen uns auf die Zusammenarbeit!",
           ],
           button_text: "Termin für 1. Arbeitstag buchen",
