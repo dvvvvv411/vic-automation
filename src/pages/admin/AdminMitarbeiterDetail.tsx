@@ -3,6 +3,8 @@ import { Switch } from "@/components/ui/switch";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { computeNextPayout } from "@/lib/computeNextPayout";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -432,6 +434,23 @@ export default function AdminMitarbeiterDetail() {
     },
     enabled: !!id,
   });
+
+  // Fetch first workday appointment for payout calculation
+  const { data: firstWorkday } = useQuery({
+    queryKey: ["admin-contract-first-workday", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("first_workday_appointments")
+        .select("appointment_date")
+        .eq("contract_id", id!)
+        .order("appointment_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!id,
+  });
+
 
   // Fetch assignments
   const { data: assignments } = useQuery({
@@ -907,14 +926,15 @@ export default function AdminMitarbeiterDetail() {
                   onSave={saveFields}
                 />
                 {(() => {
-                  const startDateStr = contract?.desired_start_date;
-                  if (!startDateStr) return null;
-                  const today = new Date();
-                  const start = new Date(startDateStr + "T00:00:00");
-                  let next = new Date(start);
-                  while (next <= today) {
-                    next = new Date(next.getTime() + 30 * 24 * 60 * 60 * 1000);
-                  }
+                  const fwd = (firstWorkday as any)?.appointment_date as string | undefined;
+                  const dsd = contract?.desired_start_date as string | undefined;
+                  const sub = contract?.submitted_at as string | undefined;
+                  if (!fwd && !dsd && !sub) return null;
+                  const next = computeNextPayout({
+                    firstWorkdayDate: fwd,
+                    desiredStartDate: dsd,
+                    submittedAt: sub,
+                  });
                   return (
                     <div className="flex justify-between items-center py-2.5 px-4 bg-muted/30 rounded-lg border border-border/40">
                       <span className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
@@ -927,6 +947,7 @@ export default function AdminMitarbeiterDetail() {
                     </div>
                   );
                 })()}
+
               </div>
 
               {/* Right 1/3 */}

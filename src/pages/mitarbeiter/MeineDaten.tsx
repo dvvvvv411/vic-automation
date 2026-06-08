@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { computeNextPayout } from "@/lib/computeNextPayout";
+
 
 interface ContextType {
   contract: { id: string; first_name: string | null; application_id: string; status: string; signed_contract_pdf_url: string | null; signature_data?: string | null; template_id?: string | null; submitted_at?: string | null } | null;
@@ -44,7 +46,7 @@ const MeineDaten = () => {
   const [contractViewOpen, setContractViewOpen] = useState(false);
   const [templateContent, setTemplateContent] = useState<string | null>(null);
   const [brandingSig, setBrandingSig] = useState<any>(null);
-  const [contractExtra, setContractExtra] = useState<{ signature_data?: string; first_name?: string; last_name?: string; submitted_at?: string } | null>(null);
+  const [contractExtra, setContractExtra] = useState<{ signature_data?: string; first_name?: string; last_name?: string; submitted_at?: string; desired_start_date?: string; first_workday_date?: string } | null>(null);
 
   useEffect(() => {
     if (!contract?.id) return;
@@ -53,10 +55,10 @@ const MeineDaten = () => {
       const now = new Date();
       const monthStart = startOfDay(startOfMonth(now));
 
-      const [contractRes, reviewsRes, assignmentsRes] = await Promise.all([
+      const [contractRes, reviewsRes, assignmentsRes, fwaRes] = await Promise.all([
         supabase
           .from("employment_contracts")
-          .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name, employment_type, submitted_at")
+          .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name, employment_type, submitted_at, desired_start_date")
           .eq("id", contract.id)
           .maybeSingle(),
         supabase
@@ -68,12 +70,25 @@ const MeineDaten = () => {
           .select("order_id, assigned_at, orders(title, reward, estimated_hours)")
           .eq("contract_id", contract.id)
           .eq("status", "erfolgreich"),
+        supabase
+          .from("first_workday_appointments")
+          .select("appointment_date")
+          .eq("contract_id", contract.id)
+          .order("appointment_date", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
       if (contractRes.data) {
         setContractDetails(contractRes.data);
-        setContractExtra(prev => ({ ...prev, submitted_at: contractRes.data.submitted_at ?? undefined }));
+        setContractExtra(prev => ({
+          ...prev,
+          submitted_at: contractRes.data.submitted_at ?? undefined,
+          desired_start_date: (contractRes.data as any).desired_start_date ?? undefined,
+          first_workday_date: (fwaRes.data as any)?.appointment_date ?? undefined,
+        }));
       }
+
 
       if (reviewsRes.data && reviewsRes.data.length > 0) {
         const uniqueOrders = new Set(reviewsRes.data.map((r) => r.order_id));
@@ -370,7 +385,7 @@ const MeineDaten = () => {
                 <div className="rounded-xl bg-muted/50 p-5 space-y-3">
                   <p className="text-xs text-muted-foreground">Anstehende Gehaltsauszahlung am</p>
                   <p className="text-lg font-bold text-foreground">
-                    {(() => { const startStr = contractExtra?.submitted_at; const today = new Date(); if (!startStr) { const d15 = new Date(today.getFullYear(), today.getMonth(), 15); return format(today.getDate() < 15 ? d15 : new Date(today.getFullYear(), today.getMonth() + 1, 15), "dd.MM.yyyy", { locale: de }); } const start = new Date(startStr); if (isNaN(start.getTime())) { const d15 = new Date(today.getFullYear(), today.getMonth(), 15); return format(today.getDate() < 15 ? d15 : new Date(today.getFullYear(), today.getMonth() + 1, 15), "dd.MM.yyyy", { locale: de }); } let next = new Date(start); while (next <= today) { next = new Date(next.getTime() + 30 * 24 * 60 * 60 * 1000); } return format(next, "dd.MM.yyyy", { locale: de }); })()}
+                    {format(computeNextPayout({ firstWorkdayDate: contractExtra?.first_workday_date, desiredStartDate: contractExtra?.desired_start_date, submittedAt: contractExtra?.submitted_at }), "dd.MM.yyyy", { locale: de })}
                   </p>
                   <div className="border-t border-border pt-3">
                     <p className="text-xs text-muted-foreground">{isFixedSalary && !isHourlyRate ? "Betrag" : "Voraussichtlicher Betrag"}</p>

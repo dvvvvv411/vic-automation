@@ -148,6 +148,8 @@ const MitarbeiterDashboard = () => {
   const [contractStatus, setContractStatus] = useState<string | null>(null);
   const [contractDismissed, setContractDismissed] = useState(false);
   const [desiredStartDate, setDesiredStartDate] = useState<string | null>(null);
+  const [firstWorkdayDate, setFirstWorkdayDate] = useState<string | null>(null);
+
 
   const isFixedSalary = branding?.payment_model === "fixed_salary";
   const isHourlyRate = isFixedSalary && branding?.hourly_rate_enabled === true;
@@ -200,6 +202,18 @@ const MitarbeiterDashboard = () => {
         setContractDismissed((contractDetails as any).contract_dismissed || false);
         setDesiredStartDate((contractDetails as any).desired_start_date || null);
       }
+
+      // Fetch first workday appointment for payout base date
+      const { data: fwa } = await supabase
+        .from("first_workday_appointments")
+        .select("appointment_date")
+        .eq("contract_id", contract.id)
+        .order("appointment_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setFirstWorkdayDate((fwa as any)?.appointment_date ?? null);
+
+
 
       // Fetch assignments
       const { data: assignments } = await supabase
@@ -598,7 +612,7 @@ const MitarbeiterDashboard = () => {
       {/* Summary Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <DashboardReviewsSummary recentReviews={recentReviews} />
-        <DashboardPayoutSummary balance={isHourlyRate ? getEstimatedMonthlySalary() : isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary && !isHourlyRate} startDate={contractSubmittedAt} />
+        <DashboardPayoutSummary balance={isHourlyRate ? getEstimatedMonthlySalary() : isFixedSalary ? fixedSalary : balance} isFixedSalary={isFixedSalary && !isHourlyRate} startDate={contractSubmittedAt} firstWorkdayDate={firstWorkdayDate} desiredStartDate={desiredStartDate} />
       </div>
     </div>
   );
