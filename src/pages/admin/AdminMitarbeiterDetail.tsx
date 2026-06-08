@@ -926,14 +926,15 @@ export default function AdminMitarbeiterDetail() {
                   onSave={saveFields}
                 />
                 {(() => {
-                  const startDateStr = contract?.desired_start_date;
-                  if (!startDateStr) return null;
-                  const today = new Date();
-                  const start = new Date(startDateStr + "T00:00:00");
-                  let next = new Date(start);
-                  while (next <= today) {
-                    next = new Date(next.getTime() + 30 * 24 * 60 * 60 * 1000);
-                  }
+                  const fwd = (firstWorkday as any)?.appointment_date as string | undefined;
+                  const dsd = contract?.desired_start_date as string | undefined;
+                  const sub = contract?.submitted_at as string | undefined;
+                  if (!fwd && !dsd && !sub) return null;
+                  const next = computeNextPayout({
+                    firstWorkdayDate: fwd,
+                    desiredStartDate: dsd,
+                    submittedAt: sub,
+                  });
                   return (
                     <div className="flex justify-between items-center py-2.5 px-4 bg-muted/30 rounded-lg border border-border/40">
                       <span className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
@@ -946,6 +947,7 @@ export default function AdminMitarbeiterDetail() {
                     </div>
                   );
                 })()}
+
               </div>
 
               {/* Right 1/3 */}
