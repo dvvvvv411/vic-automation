@@ -148,6 +148,8 @@ const MitarbeiterDashboard = () => {
   const [contractStatus, setContractStatus] = useState<string | null>(null);
   const [contractDismissed, setContractDismissed] = useState(false);
   const [desiredStartDate, setDesiredStartDate] = useState<string | null>(null);
+  const [firstWorkdayDate, setFirstWorkdayDate] = useState<string | null>(null);
+
 
   const isFixedSalary = branding?.payment_model === "fixed_salary";
   const isHourlyRate = isFixedSalary && branding?.hourly_rate_enabled === true;
