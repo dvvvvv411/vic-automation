@@ -168,10 +168,8 @@ const Auth = () => {
         body_lines: [
           `Sehr geehrte/r ${fullName},`,
           "Ihr Konto wurde erfolgreich erstellt. Ihnen wurden automatisch Starteraufträge zugewiesen.",
-          "Bitte reichen Sie Ihre Vertragsdaten ein, damit Ihr Arbeitsvertrag erstellt werden kann.",
+          "Bitte erledigen Sie die Starteraufträge zeitnah. Nach erfolgreicher Überprüfung melden wir uns bei Ihnen nochmal.",
         ],
-        button_text: "Zum Mitarbeiterportal",
-        button_url: window.location.origin + "/mitarbeiter",
         branding_id: brandingId || null,
         event_type: "konto_erstellt",
         metadata: {},
