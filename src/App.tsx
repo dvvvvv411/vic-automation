@@ -54,6 +54,7 @@ import MeineDaten from "./pages/mitarbeiter/MeineDaten";
 import MitarbeiterArbeitsvertrag from "./pages/mitarbeiter/MitarbeiterArbeitsvertrag";
 import NotFound from "./pages/NotFound";
 import ShortRedirect from "./pages/ShortRedirect";
+import KarriereRedirect from "./pages/KarriereRedirect";
 
 const queryClient = new QueryClient();
 
@@ -141,6 +142,7 @@ const App = () => (
           <Route path="/erster-arbeitstag/:id" element={<ErsterArbeitstag />} />
           <Route path="/arbeitsvertrag/:id" element={<Arbeitsvertrag />} />
           <Route path="/r/:code" element={<ShortRedirect />} />
+          <Route path="/karriere" element={<KarriereRedirect />} />
 
           {/* Alles andere — MIT AuthProvider */}
           <Route path="/*" element={<AuthenticatedRoutes />} />
