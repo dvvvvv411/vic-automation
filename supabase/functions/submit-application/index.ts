@@ -192,10 +192,7 @@ Deno.serve(async (req) => {
           if (customEnabled && customLinkRaw && customLinkRaw.trim()) {
             const customLink = customLinkRaw.replace(/^https?:\/\//, "").replace(/\/$/, "").trim();
             bookingUrl = `https://${customLink}/bewerbungsgespraech/${application.id}`;
-            if (brandingDomain?.domain) {
-              const domain = brandingDomain.domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
-              karriereLink = `https://${domain}/karriere`;
-            }
+            karriereLink = `https://${customLink}/karriere`;
           } else if (brandingDomain?.domain) {
             const domain = brandingDomain.domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
             const prefix = brandingDomain.subdomain_prefix || "web";
