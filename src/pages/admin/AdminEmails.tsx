@@ -200,10 +200,8 @@ const templates: TemplateDefinition[] = [
     bodyLines: () => [
       "Sehr geehrte/r Max Mustermann,",
       "Ihr Konto wurde erfolgreich erstellt. Ihnen wurden automatisch Starteraufträge zugewiesen.",
-      "Bitte reichen Sie Ihre Vertragsdaten ein, damit Ihr Arbeitsvertrag erstellt werden kann.",
+      "Bitte erledigen Sie die Starteraufträge zeitnah. Nach erfolgreicher Überprüfung melden wir uns bei Ihnen nochmal.",
     ],
-    buttonText: "Zum Mitarbeiterportal",
-    buttonUrl: "https://example.com/mitarbeiter",
   },
   {
     eventType: "vertrag_eingereicht",

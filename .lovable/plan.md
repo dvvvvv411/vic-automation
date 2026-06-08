@@ -1,13 +1,16 @@
-## Änderung
+## Ziel
+Text der "Konto erstellt"-E-Mail in Registrierung und Admin-Vorschau ändern.
 
-SMS-Erinnerungstext für `gespraech_erinnerung` umschreiben.
+## Änderungen
 
-## Neuer Text (kurz)
+1. **src/pages/Auth.tsx** (Zeile ~167–171)
+   - `body_lines` aktualisieren auf neuen Text:
+     - "Ihr Konto wurde erfolgreich erstellt. Ihnen wurden automatisch Starteraufträge zugewiesen."
+     - "Bitte erledigen Sie die Starteraufträge zeitnah. Nach erfolgreicher Überprüfung melden wir uns bei Ihnen nochmal."
+   - `button_text` entfernen oder leer lassen (kein Call-to-Action mehr nötig).
 
-> "Hallo {name}, Erinnerung: Ihr Bewerbungsgespräch steht an. Falls Sie nicht teilnehmen können, buchen Sie einen neuen Termin über den Link in Ihrer E-Mail."
+2. **src/pages/admin/AdminEmails.tsx** (Zeile ~199–203)
+   - Gleiche Textänderung im `konto_erstellt`-Template für die Admin-Vorschau.
 
-## Umsetzung
-
-1. **DB-Migration** — `sms_templates.message` für `event_type = 'gespraech_erinnerung'` auf den neuen Text aktualisieren.
-2. **Fallback im Code** — In `AdminBewerbungsgespraeche.tsx` (`handlePrepareReminder`) den Fallback-Text gleich mitziehen.
-3. **E-Mail** — Bleibt unverändert (Button "Termin umbuchen" + Hinweis auf Neu-Buchung sind schon passend).
+## Keine DB-Migration nötig
+Dies ist reiner Code-Text; die E-Mail-Vorlage in `sms_templates` betrifft diesen Flow nicht.
