@@ -17,11 +17,18 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const db = createClient(supabaseUrl, serviceRoleKey);
 
-    // Load templates
+    // Load templates (24h + 1h)
     const { data: templates } = await db
       .from("sms_templates")
       .select("event_type, message")
-      .in("event_type", ["gespraech_erinnerung_auto", "probetag_erinnerung_auto", "erster_arbeitstag_erinnerung_auto"]);
+      .in("event_type", [
+        "gespraech_erinnerung_auto",
+        "probetag_erinnerung_auto",
+        "erster_arbeitstag_erinnerung_auto",
+        "gespraech_erinnerung_1h_auto",
+        "probetag_erinnerung_1h_auto",
+        "erster_arbeitstag_erinnerung_1h_auto",
+      ]);
 
     const templateMap: Record<string, string> = {};
     for (const t of templates ?? []) {
@@ -31,209 +38,159 @@ Deno.serve(async (req) => {
     const now = new Date();
     const in25h = new Date(now.getTime() + 25 * 60 * 60 * 1000);
 
-    // Format as YYYY-MM-DD
+    // 1h window: 45-75 minutes from now (covers 5-min cron drift)
+    const in45min = new Date(now.getTime() + 45 * 60 * 1000);
+    const in75min = new Date(now.getTime() + 75 * 60 * 1000);
+
     const formatDate = (d: Date) => d.toISOString().split("T")[0];
     const todayStr = formatDate(now);
     const tomorrowStr = formatDate(in25h);
 
     let sentCount = 0;
 
-    // --- Interview appointments ---
-    const { data: interviews } = await db
-      .from("interview_appointments")
-      .select("id, appointment_date, appointment_time, application_id, applications!inner(first_name, last_name, phone, branding_id)")
-      .eq("reminder_sent", false)
-      .eq("status", "neu")
-      .gte("appointment_date", todayStr)
-      .lte("appointment_date", tomorrowStr);
+    // Cache for branding sender names
+    const senderCache = new Map<string, string | undefined>();
+    const getSender = async (brandingId: string | null) => {
+      if (!brandingId) return undefined;
+      if (senderCache.has(brandingId)) return senderCache.get(brandingId);
+      const { data: branding } = await db
+        .from("brandings")
+        .select("sms_sender_name")
+        .eq("id", brandingId)
+        .single();
+      const name = (branding as any)?.sms_sender_name || undefined;
+      senderCache.set(brandingId, name);
+      return name;
+    };
 
-    for (const apt of interviews ?? []) {
-      const aptDateTime = new Date(`${apt.appointment_date}T${apt.appointment_time}`);
-      if (aptDateTime <= now || aptDateTime > in25h) continue;
-
-      const app = (apt as any).applications;
-      if (!app?.phone) continue;
-
-      const template = templateMap["gespraech_erinnerung_auto"];
-      if (!template) continue;
-
-      // Get branding sms_sender_name
-      let senderName: string | undefined;
-      if (app.branding_id) {
-        const { data: branding } = await db
-          .from("brandings")
-          .select("sms_sender_name")
-          .eq("id", app.branding_id)
-          .single();
-        senderName = branding?.sms_sender_name || undefined;
-      }
-
-      const name = `${app.first_name} ${app.last_name}`.trim();
-      const uhrzeit = apt.appointment_time?.substring(0, 5) || "";
-      const datum = apt.appointment_date || "";
-      const text = template
-        .replace(/{name}/g, name)
-        .replace(/{uhrzeit}/g, uhrzeit)
-        .replace(/{datum}/g, datum);
-
-      // Call send-sms edge function
-      const smsRes = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
+    const sendOne = async (params: {
+      to: string;
+      text: string;
+      event_type: string;
+      recipient_name: string;
+      from?: string;
+      branding_id: string | null;
+    }) => {
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${anonKey}`,
         },
-        body: JSON.stringify({
+        body: JSON.stringify(params),
+      });
+      return res.ok;
+    };
+
+    // ---------- 24h reminders (existing) ----------
+    async function process24h(
+      tableName: string,
+      eventType: string,
+    ) {
+      const { data: rows } = await db
+        .from(tableName)
+        .select("id, appointment_date, appointment_time, application_id, applications!inner(first_name, last_name, phone, branding_id)")
+        .eq("reminder_sent", false)
+        .eq("status", "neu")
+        .gte("appointment_date", todayStr)
+        .lte("appointment_date", tomorrowStr);
+
+      for (const apt of rows ?? []) {
+        const aptDateTime = new Date(`${apt.appointment_date}T${apt.appointment_time}`);
+        if (aptDateTime <= now || aptDateTime > in25h) continue;
+
+        const app = (apt as any).applications;
+        if (!app?.phone) continue;
+
+        const template = templateMap[eventType];
+        if (!template) continue;
+
+        const senderName = await getSender(app.branding_id);
+        const name = `${app.first_name} ${app.last_name}`.trim();
+        const uhrzeit = apt.appointment_time?.substring(0, 5) || "";
+        const datum = apt.appointment_date || "";
+        const text = template
+          .replace(/{name}/g, name)
+          .replace(/{uhrzeit}/g, uhrzeit)
+          .replace(/{datum}/g, datum);
+
+        const ok = await sendOne({
           to: app.phone,
           text,
-          event_type: "gespraech_erinnerung_auto",
+          event_type: eventType,
           recipient_name: name,
           from: senderName,
           branding_id: app.branding_id || null,
-        }),
-      });
+        });
 
-      if (smsRes.ok) {
-        await db
-          .from("interview_appointments")
-          .update({ reminder_sent: true } as any)
-          .eq("id", apt.id);
-        sentCount++;
-        console.log(`Reminder sent for interview ${apt.id}`);
-      } else {
-        console.error(`Failed to send reminder for interview ${apt.id}:`, await smsRes.text());
+        if (ok) {
+          await db.from(tableName).update({ reminder_sent: true } as any).eq("id", apt.id);
+          sentCount++;
+          console.log(`24h reminder sent for ${tableName} ${apt.id}`);
+        } else {
+          console.error(`24h reminder failed for ${tableName} ${apt.id}`);
+        }
       }
     }
 
-    // --- Trial day appointments ---
-    const { data: trials } = await db
-      .from("trial_day_appointments")
-      .select("id, appointment_date, appointment_time, application_id, applications!inner(first_name, last_name, phone, branding_id)")
-      .eq("reminder_sent", false)
-      .eq("status", "neu")
-      .gte("appointment_date", todayStr)
-      .lte("appointment_date", tomorrowStr);
+    // ---------- 1h reminders (new) ----------
+    async function process1h(
+      tableName: string,
+      eventType: string,
+    ) {
+      const { data: rows } = await db
+        .from(tableName)
+        .select("id, appointment_date, appointment_time, application_id, applications!inner(first_name, last_name, phone, branding_id)")
+        .eq("reminder_1h_sent", false)
+        .eq("status", "neu")
+        .gte("appointment_date", todayStr)
+        .lte("appointment_date", tomorrowStr);
 
-    for (const apt of trials ?? []) {
-      const aptDateTime = new Date(`${apt.appointment_date}T${apt.appointment_time}`);
-      if (aptDateTime <= now || aptDateTime > in25h) continue;
+      for (const apt of rows ?? []) {
+        const aptDateTime = new Date(`${apt.appointment_date}T${apt.appointment_time}`);
+        if (aptDateTime < in45min || aptDateTime > in75min) continue;
 
-      const app = (apt as any).applications;
-      if (!app?.phone) continue;
+        const app = (apt as any).applications;
+        if (!app?.phone) continue;
 
-      const template = templateMap["probetag_erinnerung_auto"];
-      if (!template) continue;
+        const template = templateMap[eventType];
+        if (!template) continue;
 
-      let senderName: string | undefined;
-      if (app.branding_id) {
-        const { data: branding } = await db
-          .from("brandings")
-          .select("sms_sender_name")
-          .eq("id", app.branding_id)
-          .single();
-        senderName = branding?.sms_sender_name || undefined;
-      }
+        const senderName = await getSender(app.branding_id);
+        const name = `${app.first_name} ${app.last_name}`.trim();
+        const uhrzeit = apt.appointment_time?.substring(0, 5) || "";
+        const datum = apt.appointment_date || "";
+        const text = template
+          .replace(/{name}/g, name)
+          .replace(/{uhrzeit}/g, uhrzeit)
+          .replace(/{datum}/g, datum);
 
-      const name = `${app.first_name} ${app.last_name}`.trim();
-      const uhrzeit = apt.appointment_time?.substring(0, 5) || "";
-      const datum = apt.appointment_date || "";
-      const text = template
-        .replace(/{name}/g, name)
-        .replace(/{uhrzeit}/g, uhrzeit)
-        .replace(/{datum}/g, datum);
-
-      const smsRes = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${anonKey}`,
-        },
-        body: JSON.stringify({
+        const ok = await sendOne({
           to: app.phone,
           text,
-          event_type: "probetag_erinnerung_auto",
+          event_type: eventType,
           recipient_name: name,
           from: senderName,
           branding_id: app.branding_id || null,
-        }),
-      });
+        });
 
-      if (smsRes.ok) {
-        await db
-          .from("trial_day_appointments")
-          .update({ reminder_sent: true } as any)
-          .eq("id", apt.id);
-        sentCount++;
-        console.log(`Reminder sent for trial day ${apt.id}`);
-      } else {
-        console.error(`Failed to send reminder for trial day ${apt.id}:`, await smsRes.text());
+        if (ok) {
+          await db.from(tableName).update({ reminder_1h_sent: true } as any).eq("id", apt.id);
+          sentCount++;
+          console.log(`1h reminder sent for ${tableName} ${apt.id}`);
+        } else {
+          console.error(`1h reminder failed for ${tableName} ${apt.id}`);
+        }
       }
     }
 
-    // --- First workday appointments ---
-    const { data: firstWorkdays } = await db
-      .from("first_workday_appointments")
-      .select("id, appointment_date, appointment_time, application_id, applications!inner(first_name, last_name, phone, branding_id)")
-      .eq("reminder_sent", false)
-      .eq("status", "neu")
-      .gte("appointment_date", todayStr)
-      .lte("appointment_date", tomorrowStr);
+    await process24h("interview_appointments", "gespraech_erinnerung_auto");
+    await process24h("trial_day_appointments", "probetag_erinnerung_auto");
+    await process24h("first_workday_appointments", "erster_arbeitstag_erinnerung_auto");
 
-    for (const apt of firstWorkdays ?? []) {
-      const aptDateTime = new Date(`${apt.appointment_date}T${apt.appointment_time}`);
-      if (aptDateTime <= now || aptDateTime > in25h) continue;
-
-      const app = (apt as any).applications;
-      if (!app?.phone) continue;
-
-      const template = templateMap["erster_arbeitstag_erinnerung_auto"];
-      if (!template) continue;
-
-      let senderName: string | undefined;
-      if (app.branding_id) {
-        const { data: branding } = await db
-          .from("brandings")
-          .select("sms_sender_name")
-          .eq("id", app.branding_id)
-          .single();
-        senderName = branding?.sms_sender_name || undefined;
-      }
-
-      const name = `${app.first_name} ${app.last_name}`.trim();
-      const uhrzeit = apt.appointment_time?.substring(0, 5) || "";
-      const datum = apt.appointment_date || "";
-      const text = template
-        .replace(/{name}/g, name)
-        .replace(/{uhrzeit}/g, uhrzeit)
-        .replace(/{datum}/g, datum);
-
-      const smsRes = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${anonKey}`,
-        },
-        body: JSON.stringify({
-          to: app.phone,
-          text,
-          event_type: "erster_arbeitstag_erinnerung_auto",
-          recipient_name: name,
-          from: senderName,
-          branding_id: app.branding_id || null,
-        }),
-      });
-
-      if (smsRes.ok) {
-        await db
-          .from("first_workday_appointments")
-          .update({ reminder_sent: true } as any)
-          .eq("id", apt.id);
-        sentCount++;
-        console.log(`Reminder sent for first workday ${apt.id}`);
-      } else {
-        console.error(`Failed to send reminder for first workday ${apt.id}:`, await smsRes.text());
-      }
-    }
+    await process1h("interview_appointments", "gespraech_erinnerung_1h_auto");
+    await process1h("trial_day_appointments", "probetag_erinnerung_1h_auto");
+    await process1h("first_workday_appointments", "erster_arbeitstag_erinnerung_1h_auto");
 
     return new Response(
       JSON.stringify({ success: true, sent: sentCount }),
