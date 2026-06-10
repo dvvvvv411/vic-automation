@@ -782,6 +782,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          reminder_1h_sent: boolean
           reminder_sent: boolean
           status: string
         }
@@ -793,6 +794,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_1h_sent?: boolean
           reminder_sent?: boolean
           status?: string
         }
@@ -804,6 +806,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_1h_sent?: boolean
           reminder_sent?: boolean
           status?: string
         }
@@ -952,6 +955,7 @@ export type Database = {
           id: string
           probetag_invite_count: number
           probetag_invite_timestamps: Json
+          reminder_1h_sent: boolean
           reminder_count: number
           reminder_sent: boolean
           reminder_timestamps: Json
@@ -966,6 +970,7 @@ export type Database = {
           id?: string
           probetag_invite_count?: number
           probetag_invite_timestamps?: Json
+          reminder_1h_sent?: boolean
           reminder_count?: number
           reminder_sent?: boolean
           reminder_timestamps?: Json
@@ -980,6 +985,7 @@ export type Database = {
           id?: string
           probetag_invite_count?: number
           probetag_invite_timestamps?: Json
+          reminder_1h_sent?: boolean
           reminder_count?: number
           reminder_sent?: boolean
           reminder_timestamps?: Json
@@ -1694,6 +1700,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          reminder_1h_sent: boolean
           reminder_count: number
           reminder_sent: boolean
           reminder_timestamps: Json
@@ -1708,6 +1715,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_1h_sent?: boolean
           reminder_count?: number
           reminder_sent?: boolean
           reminder_timestamps?: Json
@@ -1722,6 +1730,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          reminder_1h_sent?: boolean
           reminder_count?: number
           reminder_sent?: boolean
           reminder_timestamps?: Json
