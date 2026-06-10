@@ -1,6 +1,19 @@
-## Plan
+## Änderung
 
-- Die 1h-Erinnerungslogik in `send-appointment-reminders` wird von `45–75 Minuten` auf **exakt 60 Minuten vorher** geändert.
-- Da der Cron alle 5 Minuten läuft, wird technisch nur der aktuelle 5-Minuten-Lauf betrachtet und Termine werden nur dann getroffen, wenn sie genau in den Slot `jetzt + 60 Minuten` fallen.
-- Die Markierung `reminder_1h_sent = true` bleibt bestehen, damit keine Doppel-SMS verschickt wird.
-- Keine weiteren Änderungen an SMS-Texten, Tabellen oder 24h-Erinnerungen.
+Alle `bewerbung_angenommen*` SMS-Templates (außer `indeed_bewerbung_angenommen`) auf folgenden Text setzen:
+
+> Hallo {name}, Ihre Bewerbung als Prozesstester/in wurde angenommen! Buchen Sie jetzt ein kurzes Kennenlerngespräch: {link}
+
+### Betroffene Templates (DB-Update auf `sms_templates`)
+
+1. `bewerbung_angenommen` — neuer Text (vorher ohne "als Prozesstester/in")
+2. `bewerbung_angenommen_extern_meta` — neuer Text (vorher Instagram/Facebook-Variante ohne Link)
+
+`indeed_bewerbung_angenommen` bleibt unverändert.
+
+### Code-Update
+
+In `src/pages/admin/AdminSmsTemplates.tsx`:
+- `bewerbung_angenommen_extern_meta` Platzhalter-Info erweitern: `["{name}"]` → `["{name}", "{link}"]`
+
+Keine weiteren Code-Änderungen nötig — `{link}` wird in `AdminBewerbungen.tsx` bereits durch Shortlink ersetzt.
