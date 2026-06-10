@@ -71,6 +71,7 @@ Deno.serve(async (req) => {
       const res = await fetch("https://api.elitegateway.net/api/send/sms", {
         method: "POST",
         headers: {
+          "api-key": apiKey,
           "api_key": apiKey,
           "Content-Type": "application/json",
         },
