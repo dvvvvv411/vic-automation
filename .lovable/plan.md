@@ -1,32 +1,42 @@
 ## Ziel
-SMS Spoof soll wieder funktionieren, indem die Edge Function exakt die neue EliteGateway API-Doku nutzt.
+Folgende E-Mails sollen NICHT mehr versendet werden (SMS bleibt unverändert):
 
-## Befund
-Die Funktion sendet aktuell den Header als `api_key`. Laut Fehler kommt beim Anbieter aber an: `missing header api-key`.
+1. **Termin-Erinnerungen** (Bewerbungsgespräch, Probetag) → nur noch SMS
+2. **Auftrag zugewiesen** → nur noch SMS
+3. **Auftrag erfolgreich / abgelehnt** (Bewertung genehmigt/abgelehnt) → nur noch SMS
 
-Die Doku zeigt zwar im Text `api_key`, die konkrete Fehlermeldung verlangt aber eindeutig `api-key`. Daher sollte die Anfrage beide Header mitschicken, damit beide Varianten abgedeckt sind.
+Erfolgs-/Bestätigungs-Mails für Termine (z. B. „Bewerbungsgespräch erfolgreich", „Probetag erfolgreich") sowie Buchungsbestätigungen bleiben **erhalten**, da sie keine Erinnerungen sind.
 
-## Änderungen
-1. **`supabase/functions/sms-spoof/index.ts` anpassen**
-   - Bei `fetch("https://api.elitegateway.net/api/send/sms")` zusätzlich zum bestehenden Header auch setzen:
-     - `api-key: <ELITEGATEWAY_API_KEY>`
-     - `api_key: <ELITEGATEWAY_API_KEY>`
-   - Payload unverändert passend zur Doku lassen:
-     - `SID`
-     - `Content`
-     - `number`
+## Änderungen im Detail
 
-2. **Fehlerausgabe verbessern**
-   - Wenn EliteGateway `suc: false` zurückgibt, die konkrete `message` sauber an den Client zurückgeben.
-   - Logging ohne Secret-Ausgabe beibehalten.
+### 1. Erinnerungen
+- `src/pages/admin/AdminBewerbungsgespraeche.tsx` (≈ Zeile 298)
+  → `sendEmail({ … event_type: "gespraech_erinnerung" })` entfernen.
+  → Toast-Texte anpassen („Erinnerung per SMS gesendet").
+- `src/pages/admin/AdminProbetag.tsx` (≈ Zeile 155)
+  → `sendEmail({ … event_type: "probetag_erinnerung" })` entfernen.
+  → Toast-Texte anpassen.
+- `1. Arbeitstag-Erinnerung`: aktuell keine Email-Trigger im Frontend; Cron `send-appointment-reminders` verschickt bereits nur SMS → keine Änderung nötig.
 
-3. **Deploy**
-   - `sms-spoof` Edge Function neu deployen.
+### 2. Auftrag zugewiesen
+- `src/components/admin/AssignmentDialog.tsx` (≈ Zeile 205)
+  → `sendEmail({ … event_type: "auftrag_zugewiesen" })` entfernen.
+  → SMS-Versand bleibt.
 
-## Nicht ändern
-- Keine DB-Änderungen.
-- Keine UI-Änderungen.
-- Keine Secrets neu abfragen, `ELITEGATEWAY_API_KEY` existiert bereits.
+### 3. Auftrag erfolgreich / abgelehnt (Bewertung)
+- `src/pages/admin/AdminBewertungen.tsx`
+  - Zeile ≈ 254: `sendEmail` für `bewertung_genehmigt` (= Auftrag erfolgreich) entfernen.
+  - Zeile ≈ 322: `sendEmail` für `bewertung_abgelehnt` entfernen.
+- `src/pages/admin/AdminMitarbeiterDetail.tsx`
+  - Zeile ≈ 606: `sendEmail` für `bewertung_genehmigt` entfernen.
+  - Zeile ≈ 664: `sendEmail` für `bewertung_abgelehnt` entfernen.
 
-## Erwartetes Ergebnis
-Der Anbieter erhält den erwarteten `api-key` Header und SMS-Versand läuft wieder über `/api/send/sms`.
+In allen vier Fällen Toast-Meldungen anpassen, sodass nur noch von SMS gesprochen wird; SMS-Logik unverändert lassen.
+
+## Was unverändert bleibt
+- Bestätigungs-/Buchungs-Mails für Termine, „Bewerbungsgespräch erfolgreich", „Probetag erfolgreich", „Vertrag genehmigt", Account-/Bewerbungs-Mails etc.
+- Alle SMS-Aufrufe.
+- DB / Edge Functions (außer evtl. nicht benötigte `event_type`-Templates, die nicht entfernt werden, da sie im Admin-Template-Editor weiter sichtbar bleiben sollen).
+
+## Test
+Nach den Änderungen für jeden der drei Anwendungsfälle einmal auslösen und prüfen, dass nur eine SMS verschickt und keine Email in `email_send_log` für die betreffenden `event_type`s erzeugt wird.

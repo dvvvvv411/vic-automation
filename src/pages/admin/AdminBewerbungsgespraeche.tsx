@@ -293,24 +293,7 @@ export default function AdminBewerbungsgespraeche() {
         branding_id: brandingId || null,
       });
 
-      const rebookingUrl = await buildBrandingUrl(brandingId || null, `/bewerbungsgespraech/${item.application_id}`);
-
-      await sendEmail({
-        to: app.email,
-        recipient_name: name,
-        subject: "Erinnerung an Ihr Bewerbungsgespräch",
-        body_title: "Erinnerung an Ihr Bewerbungsgespräch",
-        body_lines: [
-          `Sehr geehrte/r ${name},`,
-          message,
-          "Falls Sie den Termin nicht wahrnehmen können, haben Sie die Möglichkeit, einen neuen Termin zu buchen.",
-        ],
-        button_text: "Termin umbuchen",
-        button_url: rebookingUrl,
-        branding_id: brandingId || null,
-        event_type: "gespraech_erinnerung",
-        metadata: { appointment_id: item.id, application_id: item.application_id },
-      });
+      // E-Mail-Erinnerung deaktiviert — nur SMS
 
       // Increment reminder_count and add timestamp
       const currentTimestamps = Array.isArray((item as any).reminder_timestamps) ? (item as any).reminder_timestamps : [];
@@ -323,9 +306,9 @@ export default function AdminBewerbungsgespraeche() {
         .eq("id", item.id);
 
       if (smsOk) {
-        toast.success("Erinnerung (SMS + E-Mail) gesendet!");
+        toast.success("Erinnerung per SMS gesendet!");
       } else {
-        toast.warning("E-Mail gesendet, SMS fehlgeschlagen");
+        toast.error("SMS-Versand fehlgeschlagen");
       }
       queryClient.invalidateQueries({ queryKey: ["admin-bewerbungsgespraeche"] });
     } catch (err) {

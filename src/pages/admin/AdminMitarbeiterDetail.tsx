@@ -589,31 +589,7 @@ export default function AdminMitarbeiterDetail() {
 
       const orderTitle = assignment.orders?.title ?? "Auftrag";
 
-      if (contract!.email) {
-        const bodyLines = isPerOrder
-          ? [
-              `Sehr geehrte/r ${fullName},`,
-              `Ihr Auftrag "${orderTitle}" wurde erfolgreich abgeschlossen.`,
-              `Die Prämie von ${assignment.orders?.reward ?? "0€"} wurde Ihrem Konto gutgeschrieben.`,
-              "Vielen Dank für Ihre Mitarbeit.",
-            ]
-          : [
-              `Sehr geehrte/r ${fullName},`,
-              `Ihr Auftrag "${orderTitle}" wurde erfolgreich abgeschlossen.`,
-              "Vielen Dank für Ihre Mitarbeit.",
-            ];
-
-        await sendEmail({
-          to: contract!.email,
-          recipient_name: fullName,
-          subject: "Auftrag erfolgreich abgeschlossen",
-          body_title: "Auftrag erfolgreich",
-          body_lines: bodyLines,
-          branding_id: brandingId || null,
-          event_type: "auftrag_erfolgreich",
-          metadata: { order_id: orderId, contract_id: contract!.id },
-        });
-      }
+      // E-Mail-Versand für "auftrag_erfolgreich" deaktiviert — nur SMS
 
       if (contract!.phone) {
         const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewertung_genehmigt").single();
@@ -660,22 +636,7 @@ export default function AdminMitarbeiterDetail() {
       smsSender = (branding as any)?.sms_sender_name || undefined;
     }
 
-    if (contract!.email) {
-      await sendEmail({
-        to: contract!.email,
-        recipient_name: fullName,
-        subject: "Ihre Bewertung wurde abgelehnt",
-        body_title: "Bewertung abgelehnt",
-        body_lines: [
-          `Sehr geehrte/r ${fullName},`,
-          `Ihre Bewertung für den Auftrag "${orderTitle}" konnte leider nicht akzeptiert werden.`,
-          "Bitte führen Sie die Bewertung erneut durch und achten Sie auf die Vorgaben.",
-        ],
-        branding_id: brandingId || null,
-        event_type: "bewertung_abgelehnt",
-        metadata: { order_id: orderId, contract_id: contract!.id },
-      });
-    }
+    // E-Mail-Versand für "bewertung_abgelehnt" deaktiviert — nur SMS
 
     if (contract!.phone) {
       const { data: tpl } = await supabase.from("sms_templates" as any).select("message").eq("event_type", "bewertung_abgelehnt").single();

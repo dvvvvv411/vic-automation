@@ -237,31 +237,7 @@ const AdminBewertungen = () => {
         smsSender = (branding as any)?.sms_sender_name || undefined;
       }
 
-      if (contract?.email) {
-        const bodyLines = isPerOrder && reward > 0
-          ? [
-              `Sehr geehrte/r ${contract.first_name || ""} ${contract.last_name || ""},`,
-              `Ihr Auftrag "${g.order_title}" wurde erfolgreich abgeschlossen.`,
-              `Die Prämie von ${g.order_reward} wurde Ihrem Konto gutgeschrieben.`,
-              "Vielen Dank für Ihre Mitarbeit.",
-            ]
-          : [
-              `Sehr geehrte/r ${contract.first_name || ""} ${contract.last_name || ""},`,
-              `Ihr Auftrag "${g.order_title}" wurde erfolgreich abgeschlossen.`,
-              "Vielen Dank für Ihre Mitarbeit.",
-            ];
-
-        await sendEmail({
-          to: contract.email,
-          recipient_name: `${contract.first_name || ""} ${contract.last_name || ""}`.trim(),
-          subject: "Auftrag erfolgreich abgeschlossen",
-          body_title: "Auftrag erfolgreich",
-          body_lines: bodyLines,
-          branding_id: brandingId || null,
-          event_type: "auftrag_erfolgreich",
-          metadata: { order_id: g.order_id, contract_id: g.contract_id },
-        });
-      }
+      // E-Mail-Versand für "auftrag_erfolgreich" deaktiviert — nur SMS
 
       if (contract?.phone) {
         const name = `${contract.first_name || ""} ${contract.last_name || ""}`.trim();
@@ -318,22 +294,7 @@ const AdminBewertungen = () => {
       smsSender = (branding as any)?.sms_sender_name || undefined;
     }
 
-    if (contract?.email) {
-      await sendEmail({
-        to: contract.email,
-        recipient_name: `${contract.first_name || ""} ${contract.last_name || ""}`.trim(),
-        subject: "Ihre Bewertung wurde abgelehnt",
-        body_title: "Bewertung abgelehnt",
-        body_lines: [
-          `Sehr geehrte/r ${contract.first_name || ""} ${contract.last_name || ""},`,
-          `Ihre Bewertung für den Auftrag "${g.order_title}" konnte leider nicht akzeptiert werden.`,
-          "Bitte führen Sie die Bewertung erneut durch und achten Sie auf die Vorgaben.",
-        ],
-        branding_id: brandingId || null,
-        event_type: "bewertung_abgelehnt",
-        metadata: { order_id: g.order_id, contract_id: g.contract_id },
-      });
-    }
+    // E-Mail-Versand für "bewertung_abgelehnt" deaktiviert — nur SMS
 
     if (contract?.phone) {
       const name = `${contract.first_name || ""} ${contract.last_name || ""}`.trim();
