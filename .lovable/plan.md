@@ -1,19 +1,37 @@
-## Ziel
-Beim Annehmen einer **Extern (Allgemein)** Bewerbung soll die SMS — analog zu Normal & META — den **Buchungslink (Short-Link)** enthalten.
+# Falsche Projekt-URL korrigieren
 
-## Aktuell
-`src/pages/admin/AdminBewerbungen.tsx`, Zweig `app.is_external` (Z. 328–372 Einzelpfad, Z. 507–526 Bulk-Pfad):
-- Kein `createShortLink` Call
-- Template `bewerbung_angenommen_extern` ersetzt nur `{name}` und `{jobtitel}` — kein `{link}`
-- Fallback-Text: „… buchen Sie Ihren Termin über den Link in der Email…"
+## Befund
+Suche nach `luorlnagxpsibarcygjm` ergab:
+- **Code (alle Dateien inkl. `.env`, edge functions, configs):** keine Treffer ✅
+- **`cron.job`:** 1 Treffer → Job `appointment-reminders-hourly` (jobid 1) ruft stündlich die `send-appointment-reminders`-Function im **falschen Projekt** auf und nutzt dessen Anon-Key.
 
-## Änderung
-Beide Stellen (Einzel + Bulk) im `is_external`-Zweig:
-1. `const shortLink = await createShortLink(interviewLink, app.branding_id);` vor dem SMS-Block
-2. Template-Replace um `.replace(/{link}/g, shortLink)` ergänzen
-3. Fallback-Text: `Hallo ${app.first_name}, Ihre Bewerbung${mainJobTitle ? \` als ${mainJobTitle}\` : ""} wurde angenommen! Termin buchen: ${shortLink}`
+Konsequenz: SMS-Terminerinnerungen werden in diesem Projekt nie angetriggert.
 
-E-Mail, Event-Type (`bewerbung_angenommen_extern`) und Sender bleiben unverändert.
+## Fix
+Cron-Job neu registrieren mit korrekter URL (`laozvnaupdecerpvwzmh`) und dem Anon-Key dieses Projekts:
+
+```sql
+SELECT cron.unschedule('appointment-reminders-hourly');
+
+SELECT cron.schedule(
+  'appointment-reminders-hourly',
+  '0 * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://laozvnaupdecerpvwzmh.supabase.co/functions/v1/send-appointment-reminders',
+    headers := '{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxhb3p2bmF1cGRlY2VycHZ3em1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NzEwNjUsImV4cCI6MjA5NDM0NzA2NX0.uXLnpeKILEDBoC8yCcX1ZL-hdlhFPUl-bVYcoxHKu2Y"}'::jsonb,
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
+
+Wird via `supabase--insert` ausgeführt (kein Migration-Tool, weil projekt-spezifische URL + Key).
+
+## Verifikation
+1. `SELECT jobname, schedule, active FROM cron.job;` → `appointment-reminders-hourly` zeigt jetzt auf `laozvnaupdecerpvwzmh`.
+2. Direkter Testaufruf der Edge Function via `supabase--curl_edge_functions` → Response `{ success: true, sent: N }`.
+3. Nach nächster vollen Stunde: `cron.job_run_details` Status `succeeded` + neue Einträge in `sms_logs` mit `event_type` der drei Reminder-Templates.
 
 ## Hinweis
-Damit unterstützt die DB-Vorlage `bewerbung_angenommen_extern` ab sofort die Platzhalter `{name}`, `{jobtitel}` **und** `{link}` — Vorlage ggf. in der Admin-SMS-Vorlagen-Verwaltung anpassen.
+Andere Cron-Jobs (`process-email-queue-*`) nutzen bereits die korrekte URL `laozvnaupdecerpvwzmh` — kein Handlungsbedarf.
