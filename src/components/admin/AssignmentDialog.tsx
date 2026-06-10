@@ -201,25 +201,7 @@ export default function AssignmentDialog({ open, onOpenChange, mode, sourceId, s
         for (const c of contracts ?? []) {
           const effectiveBrandingId = brandingMap[c.id] ?? null;
 
-          if (c.email) {
-            await sendEmail({
-              to: c.email,
-              recipient_name: `${c.first_name || ""} ${c.last_name || ""}`.trim(),
-              subject: "Neuer Auftrag zugewiesen",
-              body_title: "Sie haben einen neuen Auftrag erhalten",
-              body_lines: [
-                `Sehr geehrte/r ${c.first_name || ""} ${c.last_name || ""},`,
-                `Ihnen wurde der Auftrag "${order?.title || ""}" (Nr. ${order?.order_number || ""}) zugewiesen.`,
-                `Prämie: ${order?.reward || ""}`,
-                "Bitte loggen Sie sich in Ihr Mitarbeiterkonto ein, um die Details einzusehen.",
-              ],
-              button_text: "Zum Mitarbeiterportal",
-              button_url: await buildBrandingUrl(effectiveBrandingId, "/mitarbeiter/auftraege"),
-              branding_id: effectiveBrandingId,
-              event_type: "auftrag_zugewiesen",
-              metadata: { order_id: sourceId, contract_id: c.id },
-            });
-          }
+          // E-Mail-Versand für "auftrag_zugewiesen" deaktiviert — nur SMS
           if (c.phone) {
             const name = `${c.first_name || ""} ${c.last_name || ""}`.trim();
             const smsText = (tpl as any)?.message
