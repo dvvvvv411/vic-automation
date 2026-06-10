@@ -309,14 +309,15 @@ export default function AdminBewerbungen() {
           metadata: { application_id: app.id },
         });
         if (app.phone) {
+          const shortLink = await createShortLink(interviewLink, app.branding_id);
           const { data: tpl } = await supabase
             .from("sms_templates" as any)
             .select("message")
             .eq("event_type", "bewerbung_angenommen_extern_meta")
             .maybeSingle();
           const smsText = (tpl as any)?.message
-            ? (tpl as any).message.replace(/{name}/g, fullName)
-            : `Hallo ${fullName}, deine Bewerbung über Instagram/Facebook wurde angenommen! Bitte buche deinen Termin über den Link in der E-Mail.`;
+            ? (tpl as any).message.replace(/{name}/g, fullName).replace(/{link}/g, shortLink)
+            : `Hallo ${app.first_name}, Ihre Bewerbung wurde angenommen! Termin buchen: ${shortLink}`;
           let smsSender: string | undefined;
           if (app.branding_id) {
             const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).maybeSingle();
