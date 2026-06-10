@@ -1,0 +1,1 @@
+UPDATE public.sms_templates SET message = 'Wir konnten Sie zum vereinbarten Gesprächstermin telefonisch leider nicht erreichen. Bitte buchen Sie über den Link einen neuen Gesprächstermin.' WHERE event_type = 'gespraech_erinnerung';
