@@ -550,6 +550,72 @@ export type Database = {
           },
         ]
       }
+      email_queue: {
+        Row: {
+          attempts: number
+          body_lines: Json
+          body_title: string
+          branding_id: string | null
+          button_text: string | null
+          button_url: string | null
+          created_at: string
+          event_type: string
+          footer_lines: Json | null
+          id: string
+          last_error: string | null
+          metadata: Json
+          next_attempt_at: string
+          recipient_email: string
+          recipient_name: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          body_lines?: Json
+          body_title: string
+          branding_id?: string | null
+          button_text?: string | null
+          button_url?: string | null
+          created_at?: string
+          event_type: string
+          footer_lines?: Json | null
+          id?: string
+          last_error?: string | null
+          metadata?: Json
+          next_attempt_at?: string
+          recipient_email: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          body_lines?: Json
+          body_title?: string
+          branding_id?: string | null
+          button_text?: string | null
+          button_url?: string | null
+          created_at?: string
+          event_type?: string
+          footer_lines?: Json | null
+          id?: string
+          last_error?: string | null
+          metadata?: Json
+          next_attempt_at?: string
+          recipient_email?: string
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employment_contracts: {
         Row: {
           admin_notes: string | null
@@ -1755,6 +1821,36 @@ export type Database = {
           appointment_time: string
         }[]
       }
+      claim_email_batch: {
+        Args: { _limit?: number }
+        Returns: {
+          attempts: number
+          body_lines: Json
+          body_title: string
+          branding_id: string | null
+          button_text: string | null
+          button_url: string | null
+          created_at: string
+          event_type: string
+          footer_lines: Json | null
+          id: string
+          last_error: string | null
+          metadata: Json
+          next_attempt_at: string
+          recipient_email: string
+          recipient_name: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "email_queue"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       contracts_for_branding_ids: {
         Args: { _user_id: string }
         Returns: string[]
@@ -1762,6 +1858,22 @@ export type Database = {
       decrement_spoof_credits: {
         Args: { _branding_id: string }
         Returns: undefined
+      }
+      enqueue_email: {
+        Args: {
+          _body_lines: Json
+          _body_title: string
+          _branding_id: string
+          _button_text: string
+          _button_url: string
+          _event_type: string
+          _footer_lines: Json
+          _metadata: Json
+          _recipient_name: string
+          _subject: string
+          _to: string
+        }
+        Returns: string
       }
       has_role: {
         Args: {
