@@ -84,8 +84,12 @@ Deno.serve(async (req) => {
       let data: any;
       try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
 
-      // Success = HTTP 2xx and `suc: true` in body
-      const isSuccess = res.status >= 200 && res.status < 300 && data && data.suc === true;
+      // Success = HTTP 2xx AND (suc: true OR Success: "100" OR success: "100")
+      const isSuccess = res.status >= 200 && res.status < 300 && data && (
+        data.suc === true ||
+        String(data.Success) === "100" ||
+        String(data.success) === "100"
+      );
       if (isSuccess) {
         try {
           const sbServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
