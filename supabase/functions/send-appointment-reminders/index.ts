@@ -38,9 +38,9 @@ Deno.serve(async (req) => {
     const now = new Date();
     const in25h = new Date(now.getTime() + 25 * 60 * 60 * 1000);
 
-    // 1h window: 45-75 minutes from now (covers 5-min cron drift)
-    const in45min = new Date(now.getTime() + 45 * 60 * 1000);
-    const in75min = new Date(now.getTime() + 75 * 60 * 1000);
+    // 1h reminder: exakt 60 Minuten vorher (mit 5-Min Cron-Toleranz: [60, 65) min)
+    const in60min = new Date(now.getTime() + 60 * 60 * 1000);
+    const in65min = new Date(now.getTime() + 65 * 60 * 1000);
 
     const formatDate = (d: Date) => d.toISOString().split("T")[0];
     const todayStr = formatDate(now);
