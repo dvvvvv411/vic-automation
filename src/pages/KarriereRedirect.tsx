@@ -1,12 +1,19 @@
-import { useEffect } from "react";
-
 const TARGET = "https://for-tel.solutions/karriere/onlineprozess-tests";
 
 const KarriereRedirect = () => {
-  useEffect(() => {
-    window.location.replace(TARGET);
-  }, []);
-  return null;
+  return (
+    <iframe
+      src={TARGET}
+      title="Karriere"
+      style={{
+        position: "fixed",
+        inset: 0,
+        width: "100vw",
+        height: "100vh",
+        border: "none",
+      }}
+    />
+  );
 };
 
 export default KarriereRedirect;
