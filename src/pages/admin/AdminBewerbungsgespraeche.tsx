@@ -265,7 +265,7 @@ export default function AdminBewerbungsgespraeche() {
         .maybeSingle();
 
       const name = `${app.first_name} ${app.last_name}`;
-      const smsText = ((template as any)?.message || "Hallo {name}, Erinnerung: Ihr Bewerbungsgespräch steht an. Falls Sie nicht teilnehmen können, buchen Sie einen neuen Termin über den Link in Ihrer E-Mail.")
+      const smsText = ((template as any)?.message || "Wir konnten Sie zum vereinbarten Gesprächstermin telefonisch leider nicht erreichen. Bitte buchen Sie über den Link einen neuen Gesprächstermin.")
         .replace(/\{name\}/g, name)
         .replace(/\{telefon\}/g, brandingPhone);
 
