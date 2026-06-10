@@ -1,32 +1,19 @@
 ## Ziel
-META-Bewerber (Instagram/Facebook) sollen beim Annehmen dieselbe Annahme-SMS bekommen wie normale Bewerber — mit dem Bewerbungsgespräch-Buchungslink, versendet über Seven.io (Standard `sendSms`).
+Beim Annehmen einer **Extern (Allgemein)** Bewerbung soll die SMS — analog zu Normal & META — den **Buchungslink (Short-Link)** enthalten.
 
-## Problem
-In `src/pages/admin/AdminBewerbungen.tsx` nutzt der META-Zweig (Zeilen 292–326 sowie der zweite Pfad ab 491–505):
-- Template `bewerbung_angenommen_extern_meta` (ersetzt nur `{name}`, kein `{link}`)
-- Fallback-Text ohne Link ("…Bitte buche deinen Termin über den Link in der E-Mail.")
-- Es wird kein Short-Link erzeugt
+## Aktuell
+`src/pages/admin/AdminBewerbungen.tsx`, Zweig `app.is_external` (Z. 328–372 Einzelpfad, Z. 507–526 Bulk-Pfad):
+- Kein `createShortLink` Call
+- Template `bewerbung_angenommen_extern` ersetzt nur `{name}` und `{jobtitel}` — kein `{link}`
+- Fallback-Text: „… buchen Sie Ihren Termin über den Link in der Email…"
 
-## Lösung
-Im META-Zweig analog zum Normal-Zweig:
-1. `shortLink = await createShortLink(interviewLink, app.branding_id)` erzeugen
-2. Template-Replace um `{link}` ergänzen
-3. Fallback-Text auf `"Hallo {name}, Ihre Bewerbung wurde angenommen! Termin buchen: {shortLink}"` ändern
-4. `sendSms` bleibt unverändert (geht bereits über Seven.io)
+## Änderung
+Beide Stellen (Einzel + Bulk) im `is_external`-Zweig:
+1. `const shortLink = await createShortLink(interviewLink, app.branding_id);` vor dem SMS-Block
+2. Template-Replace um `.replace(/{link}/g, shortLink)` ergänzen
+3. Fallback-Text: `Hallo ${app.first_name}, Ihre Bewerbung${mainJobTitle ? \` als ${mainJobTitle}\` : ""} wurde angenommen! Termin buchen: ${shortLink}`
 
-Beides an zwei Stellen anpassen:
-- Einzel-Annahme-Mutation (~Z. 311–326)
-- Bulk/zweite Annahme-Funktion (~Z. 491–505)
+E-Mail, Event-Type (`bewerbung_angenommen_extern`) und Sender bleiben unverändert.
 
-E-Mail bleibt unverändert (enthält bereits Button mit Link).
-
-## Optional / Rückfrage
-Soll der **Event-Type** `bewerbung_angenommen_extern_meta` bleiben (für separates Tracking & eigenes Template in der Admin-SMS-Vorlagen-Verwaltung), oder lieber komplett auf `bewerbung_angenommen` umstellen?
-
-Empfehlung: Event-Type beibehalten, nur Inhalt um Link erweitern — so bleibt die Trennung in den SMS-Logs erhalten.
-
-## Keine Änderungen an
-- DB-Schema
-- `send-sms` Edge Function
-- Indeed-Spoof-Logik
-- Extern (Allgemein) — falls dort dasselbe Problem besteht, separate Entscheidung nötig (aktuell auch ohne `{link}`)
+## Hinweis
+Damit unterstützt die DB-Vorlage `bewerbung_angenommen_extern` ab sofort die Platzhalter `{name}`, `{jobtitel}` **und** `{link}` — Vorlage ggf. in der Admin-SMS-Vorlagen-Verwaltung anpassen.

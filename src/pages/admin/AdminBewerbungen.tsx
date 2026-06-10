@@ -355,14 +355,15 @@ export default function AdminBewerbungen() {
           metadata: { application_id: app.id },
         });
         if (app.phone) {
+          const shortLink = await createShortLink(interviewLink, app.branding_id);
           const { data: tpl } = await supabase
             .from("sms_templates" as any)
             .select("message")
             .eq("event_type", "bewerbung_angenommen_extern")
             .maybeSingle();
           const smsText = (tpl as any)?.message
-            ? (tpl as any).message.replace(/{name}/g, fullName).replace(/{jobtitel}/g, mainJobTitle || "")
-            : `Hallo ${app.first_name}, Ihre Bewerbung${mainJobTitle ? ` als ${mainJobTitle}` : ""} wurde angenommen! Bitte buchen Sie Ihren Termin über den Link in der Email, die Sie erhalten haben.`;
+            ? (tpl as any).message.replace(/{name}/g, fullName).replace(/{jobtitel}/g, mainJobTitle || "").replace(/{link}/g, shortLink)
+            : `Hallo ${app.first_name}, Ihre Bewerbung${mainJobTitle ? ` als ${mainJobTitle}` : ""} wurde angenommen! Termin buchen: ${shortLink}`;
           let smsSender: string | undefined;
           if (app.branding_id) {
             const { data: branding } = await supabase.from("brandings").select("sms_sender_name" as any).eq("id", app.branding_id).maybeSingle();
@@ -370,6 +371,7 @@ export default function AdminBewerbungen() {
           }
           await sendSms({ to: app.phone, text: smsText, event_type: "bewerbung_angenommen_extern", recipient_name: fullName, from: smsSender, branding_id: app.branding_id || null });
         }
+
       } else {
         // Normal: Email + SMS with short link
         const shortLink = await createShortLink(interviewLink, app.branding_id);
