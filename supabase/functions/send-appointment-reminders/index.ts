@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
 
       for (const apt of rows ?? []) {
         const aptDateTime = new Date(`${apt.appointment_date}T${apt.appointment_time}`);
-        if (aptDateTime < in45min || aptDateTime > in75min) continue;
+        if (aptDateTime < in60min || aptDateTime >= in65min) continue;
 
         const app = (apt as any).applications;
         if (!app?.phone) continue;
