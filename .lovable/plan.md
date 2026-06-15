@@ -1,19 +1,20 @@
-## Änderung
+# Fix: "Verdienst 0h und 0€" auf Auftragscards ausblenden
 
-Alle `bewerbung_angenommen*` SMS-Templates (außer `indeed_bewerbung_angenommen`) auf folgenden Text setzen:
+## Problem
+Auf den Auftragscards (Dashboard & Aufträge-Seite) erscheint bei erfolgreichen Aufträgen eine Zeile "Verdienst (0.0 Std.) 0.00 €", obwohl das Branding auf Vertragsbasis (festes Gehalt) eingestellt ist und keine Stundenvergütung relevant ist. Ursache: Das Flag `hourly_rate_enabled` ist am Branding aktiviert (oder `estimated_hours` ist 0), wodurch der Block trotzdem gerendert wird.
 
-> Hallo {name}, Ihre Bewerbung als Prozesstester/in wurde angenommen! Buchen Sie jetzt ein kurzes Kennenlerngespräch: {link}
+## Lösung
+Den Verdienst-Block nur anzeigen, wenn:
+- `isHourlyRate === true` **und**
+- `estimated_hours > 0` **und**
+- berechneter Verdienst `> 0`
 
-### Betroffene Templates (DB-Update auf `sms_templates`)
+Andernfalls den gesamten Block (inkl. Label "Verdienst") komplett ausblenden — kein 0-Wert-Anzeige.
 
-1. `bewerbung_angenommen` — neuer Text (vorher ohne "als Prozesstester/in")
-2. `bewerbung_angenommen_extern_meta` — neuer Text (vorher Instagram/Facebook-Variante ohne Link)
+## Betroffene Datei
+- `src/pages/mitarbeiter/MitarbeiterAuftraege.tsx` (Zeilen ~360–377): Bedingung der `if (isHourlyRate && a.status === "erfolgreich")` Branch erweitern, sodass bei `hours <= 0` oder `earnings <= 0` nichts gerendert wird (return `null`), statt "0.0 Std. / 0.00 €".
 
-`indeed_bewerbung_angenommen` bleibt unverändert.
-
-### Code-Update
-
-In `src/pages/admin/AdminSmsTemplates.tsx`:
-- `bewerbung_angenommen_extern_meta` Platzhalter-Info erweitern: `["{name}"]` → `["{name}", "{link}"]`
-
-Keine weiteren Code-Änderungen nötig — `{link}` wird in `AdminBewerbungen.tsx` bereits durch Shortlink ersetzt.
+## Keine weiteren Änderungen
+- Dashboard (`MitarbeiterDashboard.tsx`) zeigt bereits korrekt nichts bei `isFixedSalary`.
+- Logik für reguläre Prämie (Nicht-Fixed-Salary) bleibt unverändert.
+- Keine DB-Änderungen.
