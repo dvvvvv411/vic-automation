@@ -363,14 +363,17 @@ const MitarbeiterAuftraege = () => {
                     {(() => {
                       if (isHourlyRate && a.status === "erfolgreich") {
                         const hours = parseFloat(a.estimated_hours || "0");
-                        const earnings = isNaN(hours) ? 0 : hours * getHourlyRate();
+                        if (isNaN(hours) || hours <= 0) return null;
+                        const earnings = hours * getHourlyRate();
+                        if (earnings <= 0) return null;
                         return (
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Verdienst ({isNaN(hours) ? "—" : hours.toFixed(1)} Std.)</span>
+                            <span className="text-muted-foreground">Verdienst ({hours.toFixed(1)} Std.)</span>
                             <span className="font-semibold text-primary">{earnings.toFixed(2)} €</span>
                           </div>
                         );
                       }
+                      if (isFixedSalary) return null;
                       if (a.reward && !["0", "0€", "0 €"].includes(a.reward.trim())) {
                         return (
                           <div className="flex items-center justify-between text-sm">
