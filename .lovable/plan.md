@@ -1,14 +1,18 @@
-## Auth-Seite: Logo entfernen + Branding-Name im Badge
+## Fix: Kunde-Rolle ("normaler Admin") kann keine Chat-Anhänge hochladen
 
-### Änderungen
+### Ursache
+- `chat_messages` INSERT/UPDATE-Policy erlaubt bereits `is_kunde(auth.uid())` → Nachrichten senden geht.
+- Storage-Bucket `chat-attachments` hat aber nur Policies für `has_role(admin)` (Superadmin) und für Mitarbeiter (eigener `contract_id`-Ordner). Die `kunde`-Rolle fehlt komplett → Upload bricht ab, daher kein Anhang versendbar.
 
-1. **Logo oben links entfernen**
-   - In `src/pages/Auth.tsx` den Branding-Header im Hero-Panel (linke Hälfte oben) entfernen.
-   - Der Bereich mit Logo + Trennstrich + Unternehmensname wird komplett gestrichen.
+### Änderung
+Migration: zwei neue RLS-Policies auf `storage.objects` für Bucket `chat-attachments`:
 
-2. **Badge-Text anpassen**
-   - Der Badge "Enterprise Security Platform" im Hero-Content wird durch den dynamischen `brandingCompany`-Namen ersetzt.
-   - Das Shield-Icon bleibt erhalten.
+1. **INSERT** "Kunde can upload chat attachments"
+   - Bedingung: `bucket_id = 'chat-attachments'` AND `is_kunde(auth.uid())` AND (kein zugewiesenes Branding ODER `contract_id`-Ordner gehört zu einem Vertrag eines zugewiesenen Brandings via `contracts_for_branding_ids(auth.uid())`).
+2. **SELECT** "Kunde can read chat attachments"
+   - Gleiche Bedingung für Lesezugriff, damit hochgeladene Anhänge auch angezeigt werden.
 
-### Betroffene Datei
-- `src/pages/Auth.tsx` (Zeilen ~205–221 und ~230)
+Scope folgt exakt der bestehenden `chat_messages`-Policy für `kunde`, sodass keine Tenant-Grenzen umgangen werden.
+
+### Keine Code-Änderungen
+`uploadChatAttachment.ts` und UI bleiben unverändert — Bug liegt rein in den Storage-RLS-Policies.
