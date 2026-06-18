@@ -183,8 +183,8 @@ const Auth = () => {
   ];
 
   return (
-    <div className="min-h-screen flex bg-slate-50" style={authStyle}>
-      <div className="w-full min-h-screen flex flex-col md:flex-row overflow-hidden bg-white">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50" style={authStyle}>
+      <div className="w-full min-h-screen md:min-h-[800px] flex flex-col md:flex-row overflow-hidden bg-white">
         {/* Left Hero Panel */}
         <div className="hidden md:flex flex-col justify-between w-1/2 bg-primary p-12 text-primary-foreground relative overflow-hidden">
           {/* Grid tile pattern */}
