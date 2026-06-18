@@ -1,18 +1,18 @@
-## Fix: Kunde-Rolle ("normaler Admin") kann keine Chat-Anhänge hochladen
+## Problem
 
-### Ursache
-- `chat_messages` INSERT/UPDATE-Policy erlaubt bereits `is_kunde(auth.uid())` → Nachrichten senden geht.
-- Storage-Bucket `chat-attachments` hat aber nur Policies für `has_role(admin)` (Superadmin) und für Mitarbeiter (eigener `contract_id`-Ordner). Die `kunde`-Rolle fehlt komplett → Upload bricht ab, daher kein Anhang versendbar.
+Nach dem Revert scheint der GitHub-Sync nicht den aktuellen Stand übertragen zu haben. Die Preview zeigt die korrekte Auth-Seite (Card mit abgerundeten Ecken), aber der deployed Server über GitHub nicht.
+
+## Lösung
+
+Eine minimale, nicht-visuelle Code-Änderung in `src/pages/Auth.tsx` vornehmen, um einen neuen Commit zu erzwingen und den GitHub-Sync auszulösen.
 
 ### Änderung
-Migration: zwei neue RLS-Policies auf `storage.objects` für Bucket `chat-attachments`:
 
-1. **INSERT** "Kunde can upload chat attachments"
-   - Bedingung: `bucket_id = 'chat-attachments'` AND `is_kunde(auth.uid())` AND (kein zugewiesenes Branding ODER `contract_id`-Ordner gehört zu einem Vertrag eines zugewiesenen Brandings via `contracts_for_branding_ids(auth.uid())`).
-2. **SELECT** "Kunde can read chat attachments"
-   - Gleiche Bedingung für Lesezugriff, damit hochgeladene Anhänge auch angezeigt werden.
+Zeile 20: Leeren JSDoc-Kommentar oberhalb der `Auth`-Komponente hinzufügen.
 
-Scope folgt exakt der bestehenden `chat_messages`-Policy für `kunde`, sodass keine Tenant-Grenzen umgangen werden.
+```tsx
+/** Auth page – login & registration with dynamic domain branding */
+const Auth = () => {
+```
 
-### Keine Code-Änderungen
-`uploadChatAttachment.ts` und UI bleiben unverändert — Bug liegt rein in den Storage-RLS-Policies.
+Dadurch entsteht ein neuer Commit, der über Lovable's bidirektionale GitHub-Sync zu GitHub gepusht wird. Keine sichtbare UI-Änderung.

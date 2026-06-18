@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { hexToHSL } from "@/lib/hexToHSL";
 
+/** Auth page – login & registration with dynamic domain branding */
 const Auth = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
