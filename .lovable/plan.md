@@ -1,26 +1,18 @@
-# Auth-Seite: Content wieder zentrieren
+## Fix: Kunde-Rolle ("normaler Admin") kann keine Chat-Anhänge hochladen
 
-Das letzte Update hat die /auth-Seite zwar fullscreen ohne Rahmen gemacht, aber durch das Entfernen von `items-center justify-center` auf dem outer wrapper sitzt der Inhalt jetzt oben links statt mittig im Viewport.
+### Ursache
+- `chat_messages` INSERT/UPDATE-Policy erlaubt bereits `is_kunde(auth.uid())` → Nachrichten senden geht.
+- Storage-Bucket `chat-attachments` hat aber nur Policies für `has_role(admin)` (Superadmin) und für Mitarbeiter (eigener `contract_id`-Ordner). Die `kunde`-Rolle fehlt komplett → Upload bricht ab, daher kein Anhang versendbar.
 
-## Änderungen
+### Änderung
+Migration: zwei neue RLS-Policies auf `storage.objects` für Bucket `chat-attachments`:
 
-### `src/pages/Auth.tsx`
+1. **INSERT** "Kunde can upload chat attachments"
+   - Bedingung: `bucket_id = 'chat-attachments'` AND `is_kunde(auth.uid())` AND (kein zugewiesenes Branding ODER `contract_id`-Ordner gehört zu einem Vertrag eines zugewiesenen Brandings via `contracts_for_branding_ids(auth.uid())`).
+2. **SELECT** "Kunde can read chat attachments"
+   - Gleiche Bedingung für Lesezugriff, damit hochgeladene Anhänge auch angezeigt werden.
 
-1. **Outer wrapper (Zeile ~186)** – Zentrierung wiederherstellen:
-   ```
-   Von: className="min-h-screen flex bg-slate-50"
-   Zu:   className="min-h-screen flex items-center justify-center bg-slate-50"
-   ```
+Scope folgt exakt der bestehenden `chat_messages`-Policy für `kunde`, sodass keine Tenant-Grenzen umgangen werden.
 
-2. **Inner container (Zeile ~187)** – Höhe einschränken, damit Zentrierung auf Desktop sichtbar wirkt:
-   ```
-   Von: className="w-full min-h-screen flex flex-col md:flex-row overflow-hidden bg-white"
-   Zu:   className="w-full min-h-screen md:min-h-[800px] flex flex-col md:flex-row overflow-hidden bg-white"
-   ```
-   - Mobile bleibt `min-h-screen` (volle Höhe sinnvoll auf kleinen Screens)
-   - Desktop maximiert nicht mehr die Höhe, sondern erlaubt vertikale Zentrierung
-
-## Ergebnis
-- Die Auth-Karte bleibt vollflächig (`w-full`, keine `max-w`, keine abgerundeten Ecken, kein Schatten)
-- Der Inhalt wird aber wieder vertikal und horizontal im Viewport zentriert dargestellt
-- Auf großen Monitoren schwebt das Formular elegant in der Mitte statt am oberen Rand zu kleben
+### Keine Code-Änderungen
+`uploadChatAttachment.ts` und UI bleiben unverändert — Bug liegt rein in den Storage-RLS-Policies.
