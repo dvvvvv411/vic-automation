@@ -1,16 +1,26 @@
-## Auth-Seite fullscreen (randlos)
+# Auth-Seite: Content wieder zentrieren
 
-**Ziel:** Die `/auth`-Seite füllt komplett den Viewport aus – keine äußeren Abstände, keine abgerundete Karte, kein max-width.
+Das letzte Update hat die /auth-Seite zwar fullscreen ohne Rahmen gemacht, aber durch das Entfernen von `items-center justify-center` auf dem outer wrapper sitzt der Inhalt jetzt oben links statt mittig im Viewport.
 
-**Änderungen in `src/pages/Auth.tsx`:**
+## Änderungen
 
-1. **Äußerer Wrapper**  
-   Entferne `items-center justify-center p-4 md:p-8` und ersetze durch reines `min-h-screen flex bg-slate-50`.
+### `src/pages/Auth.tsx`
 
-2. **Innerer Container**  
-   Entferne `max-w-6xl shadow-2xl rounded-3xl min-h-[800px]` und setze stattdessen `w-full min-h-screen`.
+1. **Outer wrapper (Zeile ~186)** – Zentrierung wiederherstellen:
+   ```
+   Von: className="min-h-screen flex bg-slate-50"
+   Zu:   className="min-h-screen flex items-center justify-center bg-slate-50"
+   ```
 
-3. **Rechtes Panel (Formular)**  
-   Behält sein Padding bei, damit Inhalte nicht am Bildschirmrand kleben.
+2. **Inner container (Zeile ~187)** – Höhe einschränken, damit Zentrierung auf Desktop sichtbar wirkt:
+   ```
+   Von: className="w-full min-h-screen flex flex-col md:flex-row overflow-hidden bg-white"
+   Zu:   className="w-full min-h-screen md:min-h-[800px] flex flex-col md:flex-row overflow-hidden bg-white"
+   ```
+   - Mobile bleibt `min-h-screen` (volle Höhe sinnvoll auf kleinen Screens)
+   - Desktop maximiert nicht mehr die Höhe, sondern erlaubt vertikale Zentrierung
 
-**Ergebnis:** Der Split-Screen (bzw. auf Mobile das Formularpanel) erstreckt sich von Rand zu Rand über die volle Höhe.
+## Ergebnis
+- Die Auth-Karte bleibt vollflächig (`w-full`, keine `max-w`, keine abgerundeten Ecken, kein Schatten)
+- Der Inhalt wird aber wieder vertikal und horizontal im Viewport zentriert dargestellt
+- Auf großen Monitoren schwebt das Formular elegant in der Mitte statt am oberen Rand zu kleben
