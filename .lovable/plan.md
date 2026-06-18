@@ -1,57 +1,49 @@
-# Auth-Seite: Testimonial durch Branding-Homepage-Link ersetzen
-
 ## Ziel
-Das Sterne-/Zitat-Testimonial am unteren Rand des linken Hero-Panels wird entfernt und durch ein interaktives Element ersetzt, das den Nutzer zur öffentlichen Branding-Startseite führt.
+Kleinere UI-Bereinigungen im rechten Panel der `/auth`-Seite (Login-/Registrierungsbereich).
 
-## Visualisierung
+## Änderungen
 
-````text
-┌────────────────────────────────────────────┐
-│  Linke Spalte (bg-primary) – unterer Teil  │
-│                                            │
-│  ┌────────────────────────────────────┐    │
-│  │  [   BRANDING LOGO   ]             │    │
-│  │        (max-h-14)                  │    │
-│  │                                    │    │
-│  │  Du möchtest mehr erfahren?        │    │
-│  │                                    │    │
-│  │  ┌────────────────────────────┐    │    │
-│  │  │  www.for-tel.solutions   → │    │    │
-│  │  └────────────────────────────┘    │    │
-│  │         (glass-button)             │    │
-│  └────────────────────────────────────┘    │
-│                                            │
-│  © 2026 For-Tel Solutions. Alle Rechte ... │
-└────────────────────────────────────────────┘
-````
+### 1. Footer-Links entfernen
+**Ort:** Zeilen 549–552 in `src/pages/Auth.tsx`
+**Aktion:** Den gesamten Footer-Block mit den Links „Impressum“ und „Datenschutz" löschen.
+```tsx
+// ZU ENTFERNEN:
+<div className="flex justify-center gap-6 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-12">
+  <a href="#" className="hover:text-primary transition-colors">Impressum</a>
+  <a href="#" className="hover:text-primary transition-colors">Datenschutz</a>
+</div>
+```
 
-## Design-Details des neuen Elements
+### 2. „Angemeldet bleiben" + „Passwort vergessen?" entfernen
+**Ort:** Zeilen 372–378 in `src/pages/Auth.tsx`
+**Aktion:** Die Zeile mit Checkbox und Passwort-vergessen-Link komplett entfernen.
+```tsx
+// ZU ENTFERNEN:
+<div className="flex items-center justify-between text-sm">
+  <label className="flex items-center gap-2.5 cursor-pointer">
+    <input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" />
+    <span className="text-muted-foreground font-medium">Angemeldet bleiben</span>
+  </label>
+  <a href="#" className="text-primary font-bold hover:opacity-80 transition-opacity">Passwort vergessen?</a>
+</div>
+```
 
-**Container:**
-- `mb-8 p-6 bg-white/5 rounded-2xl border border-white/5`
-- Gleiche Basis-Styling wie das alte Testimonial, damit es visuell harmoniert
+### 3. „Nutzungsbedingungen" unlinked und ohne Unterstrich
+**Ort:** Zwei Stellen in `src/pages/Auth.tsx`
+- Login-Modus: Zeilen 406–408
+- Registrierungs-Modus: Zeilen 541–543
 
-**Inhalt (top → bottom):**
-1. **Branding-Logo** – `brandingLogoUrl` mit `max-h-14 w-auto object-contain` und `logoInvertClass` (für dunkle Logos auf hellem Hintergrund). Falls kein Logo vorhanden: `brandingCompany` als Headline.
-2. **Hinweistext** – `"Du möchtest mehr erfahren?"` in `text-sm opacity-90 font-medium`
-3. **CTA-Button/Link** – Ein klickbarer Button/Pill im Glassmorphism-Stil:
-   - `bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl px-4 py-2.5`
-   - Text: Domain-Hostname (z.B. `www.for-tel.solutions`)
-   - Rechts ein `ArrowRight` Icon
-   - Öffnet `https://{brandingDomain}` in neuem Tab (`target="_blank" rel="noopener noreferrer"`)
-   - Falls `brandingDomain` leer: Button wird nicht gerendert, stattdessen neutraler Hinweis.
+**Aktion:** In beiden Textzeilen den `<a>`-Tag entfernen und „Nutzungsbedingungen" als reinen Text ohne Unterstreichung darstellen.
 
-## Technische Details
+Vorher:
+```tsx
+Durch die Registrierung stimmst du unseren <a href="#" className="underline">Nutzungsbedingungen</a> zu.
+```
 
-**Datei:** `src/pages/Auth.tsx`  
-**Zeilen:** 266–279 (Testimonial-Block)
+Nachher:
+```tsx
+Durch die Registrierung stimmst du unseren Nutzungsbedingungen zu.
+```
 
-**Benötigte Daten (bereits vorhanden):**
-- `brandingLogoUrl` – Logo-URL
-- `brandingDomain` – Root-Domain (ohne Subdomain, z.B. `for-tel.solutions`)
-- `brandingCompany` – Firmenname
-- `logoInvertClass` – Filter-Klasse für dunkle Logos
-
-**Imports:** `ArrowUpRight` (oder `ArrowRight` bereits vorhanden) aus `lucide-react` hinzufügen.
-
-**Keine Änderungen an:** Rechte Spalte, Auth-Logik, Branding-Fetch, Farb-System.
+## Dateien
+- `src/pages/Auth.tsx`

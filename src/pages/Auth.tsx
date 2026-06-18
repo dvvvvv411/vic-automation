@@ -369,13 +369,6 @@ const Auth = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm">
-                    <label className="flex items-center gap-2.5 cursor-pointer">
-                      <input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" />
-                      <span className="text-muted-foreground font-medium">Angemeldet bleiben</span>
-                    </label>
-                    <a href="#" className="text-primary font-bold hover:opacity-80 transition-opacity">Passwort vergessen?</a>
-                  </div>
 
                   <Button
                     type="submit"
@@ -404,7 +397,7 @@ const Auth = () => {
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </Button>
                   <p className="mt-6 text-[10px] text-muted-foreground leading-relaxed">
-                    Durch die Registrierung stimmst du unseren <a href="#" className="underline">Nutzungsbedingungen</a> zu.
+                    Durch die Registrierung stimmst du unseren Nutzungsbedingungen zu.
                   </p>
                 </div>
               </>
@@ -539,17 +532,13 @@ const Auth = () => {
                     Zurück zur Anmeldung
                   </Button>
                   <p className="mt-6 text-[10px] text-muted-foreground leading-relaxed">
-                    Durch die Registrierung stimmst du unseren <a href="#" className="underline">Nutzungsbedingungen</a> zu.
+                    Durch die Registrierung stimmst du unseren Nutzungsbedingungen zu.
                   </p>
                 </div>
               </>
             )}
           </motion.div>
 
-          <div className="flex justify-center gap-6 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-12">
-            <a href="#" className="hover:text-primary transition-colors">Impressum</a>
-            <a href="#" className="hover:text-primary transition-colors">Datenschutz</a>
-          </div>
         </div>
       </div>
     </div>
