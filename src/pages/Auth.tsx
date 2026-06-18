@@ -202,23 +202,6 @@ const Auth = () => {
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full -ml-32 -mb-32 blur-3xl" />
 
           <div className="relative z-10">
-            {/* Branding Header */}
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="flex items-center gap-4 mb-16"
-            >
-              {brandingLogoUrl ? (
-                <>
-                  <img src={brandingLogoUrl} alt={brandingCompany} className={`max-h-10 w-auto object-contain ${logoInvertClass}`} />
-                  <div className="h-6 w-px bg-white/20" />
-                  <span className="text-xs font-semibold tracking-[0.2em] uppercase opacity-80">{brandingCompany}</span>
-                </>
-              ) : (
-                <span className="text-xl font-bold tracking-tight">{brandingCompany}</span>
-              )}
-            </motion.div>
 
             {/* Hero Content */}
             <motion.div
@@ -229,7 +212,7 @@ const Auth = () => {
             >
               <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">
                 <Shield className="w-3 h-3" />
-                Enterprise Security Platform
+                {brandingCompany}
               </div>
               <h1 className="text-4xl xl:text-[2.75rem] font-bold leading-[1.1] tracking-tight">
                 Mitarbeiterportal für moderne{" "}
