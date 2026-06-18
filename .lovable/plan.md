@@ -1,18 +1,16 @@
-## Fix: Kunde-Rolle ("normaler Admin") kann keine Chat-Anhänge hochladen
+## Auth-Seite fullscreen (randlos)
 
-### Ursache
-- `chat_messages` INSERT/UPDATE-Policy erlaubt bereits `is_kunde(auth.uid())` → Nachrichten senden geht.
-- Storage-Bucket `chat-attachments` hat aber nur Policies für `has_role(admin)` (Superadmin) und für Mitarbeiter (eigener `contract_id`-Ordner). Die `kunde`-Rolle fehlt komplett → Upload bricht ab, daher kein Anhang versendbar.
+**Ziel:** Die `/auth`-Seite füllt komplett den Viewport aus – keine äußeren Abstände, keine abgerundete Karte, kein max-width.
 
-### Änderung
-Migration: zwei neue RLS-Policies auf `storage.objects` für Bucket `chat-attachments`:
+**Änderungen in `src/pages/Auth.tsx`:**
 
-1. **INSERT** "Kunde can upload chat attachments"
-   - Bedingung: `bucket_id = 'chat-attachments'` AND `is_kunde(auth.uid())` AND (kein zugewiesenes Branding ODER `contract_id`-Ordner gehört zu einem Vertrag eines zugewiesenen Brandings via `contracts_for_branding_ids(auth.uid())`).
-2. **SELECT** "Kunde can read chat attachments"
-   - Gleiche Bedingung für Lesezugriff, damit hochgeladene Anhänge auch angezeigt werden.
+1. **Äußerer Wrapper**  
+   Entferne `items-center justify-center p-4 md:p-8` und ersetze durch reines `min-h-screen flex bg-slate-50`.
 
-Scope folgt exakt der bestehenden `chat_messages`-Policy für `kunde`, sodass keine Tenant-Grenzen umgangen werden.
+2. **Innerer Container**  
+   Entferne `max-w-6xl shadow-2xl rounded-3xl min-h-[800px]` und setze stattdessen `w-full min-h-screen`.
 
-### Keine Code-Änderungen
-`uploadChatAttachment.ts` und UI bleiben unverändert — Bug liegt rein in den Storage-RLS-Policies.
+3. **Rechtes Panel (Formular)**  
+   Behält sein Padding bei, damit Inhalte nicht am Bildschirmrand kleben.
+
+**Ergebnis:** Der Split-Screen (bzw. auf Mobile das Formularpanel) erstreckt sich von Rand zu Rand über die volle Höhe.
