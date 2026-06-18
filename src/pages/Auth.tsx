@@ -177,9 +177,9 @@ const Auth = () => {
   const currentYear = new Date().getFullYear();
 
   const features = [
-    { icon: Smartphone, title: "App-Tests", desc: "iOS & Android" },
-    { icon: ClipboardList, title: "Aufträge", desc: "Zentral gesteuert" },
-    { icon: FileText, title: "Reports", desc: "Schnell erstellt" },
+    { icon: Smartphone, title: "App-Tests", desc: "iOS & Android prüfen" },
+    { icon: ClipboardList, title: "Test-Aufträge", desc: "Zentral zugewiesen & getrackt" },
+    { icon: FileText, title: "Befund-Reports", desc: "Schnell dokumentieren & einreichen" },
   ];
 
   return (
@@ -187,6 +187,17 @@ const Auth = () => {
       <div className="max-w-6xl w-full flex flex-col md:flex-row shadow-2xl rounded-3xl overflow-hidden bg-white min-h-[800px]">
         {/* Left Hero Panel */}
         <div className="hidden md:flex flex-col justify-between w-1/2 bg-primary p-12 text-primary-foreground relative overflow-hidden">
+          {/* Grid tile pattern */}
+          <div
+            className="absolute inset-0 opacity-[0.14] pointer-events-none"
+            style={{
+              backgroundImage:
+                "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
+              backgroundSize: "44px 44px",
+            }}
+          />
+          {/* Vignette overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/20 pointer-events-none" />
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full -ml-32 -mb-32 blur-3xl" />
 
@@ -218,13 +229,16 @@ const Auth = () => {
             >
               <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">
                 <Shield className="w-3 h-3" />
-                Sicherer Mitarbeiterzugang
+                Enterprise Security Platform
               </div>
-              <h1 className="text-5xl font-bold leading-[1.15]">
-                Ihr Mitarbeiterportal für moderne Zusammenarbeit.
+              <h1 className="text-4xl xl:text-[2.75rem] font-bold leading-[1.1] tracking-tight">
+                Mitarbeiterportal für moderne{" "}
+                <span className="inline-block border-b-4 border-amber-400 pb-1">
+                  App-Sicherheit.
+                </span>
               </h1>
-              <p className="text-lg max-w-md font-medium leading-relaxed opacity-90">
-                Verwalte Aufträge, prüfe Reports und arbeite zentral an einer modernen Plattform.
+              <p className="text-base max-w-md font-medium leading-relaxed opacity-90">
+                Verwalte App-Tests, prüfe Reports und arbeite zentral an einer modernen Plattform für App-Sicherheit.
               </p>
             </motion.div>
 
