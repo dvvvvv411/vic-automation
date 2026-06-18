@@ -1,41 +1,57 @@
+# Auth-Seite: Testimonial durch Branding-Homepage-Link ersetzen
+
 ## Ziel
-Die linke Hero-Spalte der `/auth` Seite optisch näher an den Referenz-Screenshot bringen.
+Das Sterne-/Zitat-Testimonial am unteren Rand des linken Hero-Panels wird entfernt und durch ein interaktives Element ersetzt, das den Nutzer zur öffentlichen Branding-Startseite führt.
 
-## Änderungen in `src/pages/Auth.tsx` (linke Spalte)
+## Visualisierung
 
-### 1. Headline-Text + Effekt
-- Text ändern auf den Original-Wortlaut:  
-  **"Mitarbeiterportal für moderne App-Sicherheit."**
-- Schriftgröße reduzieren von `text-5xl` → `text-4xl xl:text-[2.75rem]` mit `leading-[1.1]`, damit der Text sauber dreizeilig in die Spalte passt und nicht abgeschnitten wirkt.
-- Letztes Wort **"App-Sicherheit."** als `<span>` mit goldener Unterstreichung im Stil des Screenshots:
-  - `decoration-amber-400 decoration-4 underline underline-offset-[6px]`
-  - Alternativ als `border-b-4 border-amber-400` Span für sauberen Stop am Punkt.
-- Subline-Text anpassen:  
-  "Verwalte App-Tests, prüfe Reports und arbeite zentral an einer modernen Plattform für App-Sicherheit."
+````text
+┌────────────────────────────────────────────┐
+│  Linke Spalte (bg-primary) – unterer Teil  │
+│                                            │
+│  ┌────────────────────────────────────┐    │
+│  │  [   BRANDING LOGO   ]             │    │
+│  │        (max-h-14)                  │    │
+│  │                                    │    │
+│  │  Du möchtest mehr erfahren?        │    │
+│  │                                    │    │
+│  │  ┌────────────────────────────┐    │    │
+│  │  │  www.for-tel.solutions   → │    │    │
+│  │  └────────────────────────────┘    │    │
+│  │         (glass-button)             │    │
+│  └────────────────────────────────────┘    │
+│                                            │
+│  © 2026 For-Tel Solutions. Alle Rechte ... │
+└────────────────────────────────────────────┘
+````
 
-### 2. Kachel-Hintergrund (Grid-Pattern)
-- Auf dem `bg-primary` Container ein zusätzliches absolutes Overlay mit feinem Grid-Muster wie im Screenshot legen:
-  ```tsx
-  <div
-    className="absolute inset-0 opacity-[0.12] pointer-events-none"
-    style={{
-      backgroundImage:
-        "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
-      backgroundSize: "44px 44px",
-    }}
-  />
-  ```
-- Layer-Reihenfolge: Primary-Fläche → Grid-Overlay → bestehende Blur-Blobs → `relative z-10` Content (bleibt unverändert).
-- Leichten Vignette-/Verlauf hinzufügen (`bg-gradient-to-br from-white/5 via-transparent to-black/10`) für mehr Tiefe wie im Screenshot.
+## Design-Details des neuen Elements
 
-### 3. Feature-Kacheln (App-Tests / Test-Aufträge / Befund-Reports)
-- Titel/Untertitel angleichen an Screenshot:
-  - App-Tests · "iOS & Android prüfen"
-  - Test-Aufträge · "Zentral zugewiesen & getrackt"
-  - Befund-Reports · "Schnell dokumentieren & einreichen"
+**Container:**
+- `mb-8 p-6 bg-white/5 rounded-2xl border border-white/5`
+- Gleiche Basis-Styling wie das alte Testimonial, damit es visuell harmoniert
 
-## Nicht geändert
-- Rechte Form-Spalte, Auth-Logik, Branding-Fetch, Farben aus `--primary`, Logo-Handling.
+**Inhalt (top → bottom):**
+1. **Branding-Logo** – `brandingLogoUrl` mit `max-h-14 w-auto object-contain` und `logoInvertClass` (für dunkle Logos auf hellem Hintergrund). Falls kein Logo vorhanden: `brandingCompany` als Headline.
+2. **Hinweistext** – `"Du möchtest mehr erfahren?"` in `text-sm opacity-90 font-medium`
+3. **CTA-Button/Link** – Ein klickbarer Button/Pill im Glassmorphism-Stil:
+   - `bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl px-4 py-2.5`
+   - Text: Domain-Hostname (z.B. `www.for-tel.solutions`)
+   - Rechts ein `ArrowRight` Icon
+   - Öffnet `https://{brandingDomain}` in neuem Tab (`target="_blank" rel="noopener noreferrer"`)
+   - Falls `brandingDomain` leer: Button wird nicht gerendert, stattdessen neutraler Hinweis.
 
-## Betroffene Datei
-- `src/pages/Auth.tsx` (nur JSX/Strings in der linken Spalte + Headline-Block).
+## Technische Details
+
+**Datei:** `src/pages/Auth.tsx`  
+**Zeilen:** 266–279 (Testimonial-Block)
+
+**Benötigte Daten (bereits vorhanden):**
+- `brandingLogoUrl` – Logo-URL
+- `brandingDomain` – Root-Domain (ohne Subdomain, z.B. `for-tel.solutions`)
+- `brandingCompany` – Firmenname
+- `logoInvertClass` – Filter-Klasse für dunkle Logos
+
+**Imports:** `ArrowUpRight` (oder `ArrowRight` bereits vorhanden) aus `lucide-react` hinzufügen.
+
+**Keine Änderungen an:** Rechte Spalte, Auth-Logik, Branding-Fetch, Farb-System.

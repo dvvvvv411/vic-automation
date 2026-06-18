@@ -263,19 +263,31 @@ const Auth = () => {
           </div>
 
           <div className="relative z-10">
-            {/* Testimonial */}
+            {/* Branding Homepage Link */}
             <div className="mb-8 p-6 bg-white/5 rounded-2xl border border-white/5">
-              <div className="flex gap-1 mb-3 text-yellow-400">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-current" />
-                ))}
-              </div>
-              <p className="italic text-sm opacity-90 leading-relaxed font-light">
-                „Eine der besten Plattformen, die wir je für die interne Zusammenarbeit eingesetzt haben."
+              {brandingLogoUrl ? (
+                <img
+                  src={brandingLogoUrl}
+                  alt={brandingCompany}
+                  className={`max-h-14 w-auto object-contain mb-4 ${logoInvertClass}`}
+                />
+              ) : (
+                <p className="text-lg font-bold mb-4">{brandingCompany}</p>
+              )}
+              <p className="text-sm opacity-90 font-medium mb-4">
+                Du möchtest mehr erfahren?
               </p>
-              <p className="text-[11px] mt-2 opacity-60 font-semibold uppercase tracking-wider">
-                Lead Operations Manager
-              </p>
+              {brandingDomain && (
+                <a
+                  href={`https://${brandingDomain}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors group"
+                >
+                  <span>www.{brandingDomain}</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              )}
             </div>
 
             <p className="text-[10px] opacity-40 font-mono">
