@@ -10,14 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Shield, CheckCircle, Building2 } from "lucide-react";
+import {
+  Mail, Lock, Eye, EyeOff, User, Phone, Shield,
+  Smartphone, ClipboardList, FileText, Star,
+  ArrowRight, ArrowLeft, LogIn,
+} from "lucide-react";
 import { hexToHSL } from "@/lib/hexToHSL";
-
-const trustPoints = [
-  { icon: Shield, title: "Sicherer Zugang", desc: "Geschützter Mitarbeiterbereich" },
-  { icon: CheckCircle, title: "DSGVO-konform", desc: "Vollständig datenschutzkonform" },
-  { icon: Building2, title: "Einfach & Schnell", desc: "Alle Infos an einem Ort" },
-];
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -26,10 +24,13 @@ const Auth = () => {
 
   const [mode, setMode] = useState<"login" | "register">("login");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(null);
   const [brandingDomain, setBrandingDomain] = useState<string | null>(null);
   const [brandingColor, setBrandingColor] = useState<string | null>(null);
   const [brandingId, setBrandingId] = useState<string | null>(null);
+  const [brandingCompany, setBrandingCompany] = useState<string>("Mitarbeiterportal");
   const [brandingReady, setBrandingReady] = useState(false);
 
   // Login state
@@ -57,22 +58,21 @@ const Auth = () => {
         setBrandingColor(data.brand_color ?? null);
         setBrandingId(data.id ?? null);
         setBrandingDomain(data.domain ?? null);
+        if (data.company_name) setBrandingCompany(data.company_name);
       };
 
-      // 1) Match by domain
       const { data } = await supabase
         .from("brandings")
-        .select("id, logo_url, brand_color, domain")
+        .select("id, logo_url, brand_color, domain, company_name")
         .eq("domain", root)
         .maybeSingle();
 
       if (data?.logo_url || data?.id) {
         applyBranding(data);
       } else {
-        // 2) Match by custom_email_link
         const { data: customs } = await supabase
           .from("brandings")
-          .select("id, logo_url, brand_color, domain, custom_email_link")
+          .select("id, logo_url, brand_color, domain, company_name, custom_email_link")
           .eq("custom_email_link_enabled", true);
         const match = (customs ?? []).find(
           (r: any) => r.custom_email_link && [host, root].includes(norm(r.custom_email_link))
@@ -80,10 +80,9 @@ const Auth = () => {
         if (match) {
           applyBranding(match);
         } else {
-          // 3) Fallback
           const { data: fallback } = await supabase
             .from("brandings")
-            .select("id, logo_url, brand_color, domain")
+            .select("id, logo_url, brand_color, domain, company_name")
             .eq("domain", "frik-maxeiner.de")
             .maybeSingle();
           if (fallback) applyBranding(fallback);
@@ -93,11 +92,6 @@ const Auth = () => {
     };
     fetchBranding();
   }, []);
-
-
-  // Branding color is applied via inline style on the auth wrapper below,
-  // NOT on document.documentElement, to avoid a race condition when
-  // navigating from /auth to /mitarbeiter (which would briefly reset --primary).
 
   useEffect(() => {
     if (user && role) {
@@ -113,11 +107,8 @@ const Auth = () => {
       password: loginPassword,
     });
     setLoading(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Erfolgreich angemeldet!");
-    }
+    if (error) toast.error(error.message);
+    else toast.success("Erfolgreich angemeldet!");
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -142,13 +133,7 @@ const Auth = () => {
       },
     });
     if (!error && data.user && brandingId) {
-      // Save branding to profile
-      await supabase
-        .from("profiles")
-        .update({ branding_id: brandingId })
-        .eq("id", data.user.id);
-
-      // Create employment contract (triggers auto-assignment of starter jobs)
+      await supabase.from("profiles").update({ branding_id: brandingId }).eq("id", data.user.id);
       await supabase.from("employment_contracts").insert({
         user_id: data.user.id,
         branding_id: brandingId,
@@ -158,7 +143,6 @@ const Auth = () => {
         phone: phone.trim() || null,
         status: "offen",
       });
-      // Send konto_erstellt email & telegram
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
       await sendEmail({
         to: regEmail,
@@ -177,233 +161,370 @@ const Auth = () => {
       await sendTelegram("konto_erstellt", `👤 Neuer Mitarbeiter registriert\n\nName: ${fullName}\nE-Mail: ${regEmail}`);
     }
     setLoading(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Registrierung erfolgreich!");
-    }
+    if (error) toast.error(error.message);
+    else toast.success("Registrierung erfolgreich!");
   };
 
   if (!brandingReady) {
     return <div className="min-h-screen bg-background" />;
   }
 
-  // Scope branding color to this page only via inline CSS variable
   const authStyle: React.CSSProperties = brandingColor
     ? { '--primary': hexToHSL(brandingColor) || undefined } as React.CSSProperties
     : {};
 
+  const logoInvertClass = brandingDomain === "for-tel.solutions" ? "[filter:brightness(0)_invert(1)]" : "";
+  const currentYear = new Date().getFullYear();
+
+  const features = [
+    { icon: Smartphone, title: "App-Tests", desc: "iOS & Android" },
+    { icon: ClipboardList, title: "Aufträge", desc: "Zentral gesteuert" },
+    { icon: FileText, title: "Reports", desc: "Schnell erstellt" },
+  ];
+
   return (
-    <div className="flex min-h-screen" style={authStyle}>
-      {/* Left branding panel */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground flex-col justify-center items-center px-16 overflow-hidden text-center">
-        <div className="absolute -top-10 -right-10 w-80 h-80 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute bottom-20 -left-16 w-72 h-72 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute top-1/3 right-1/4 w-48 h-48 rounded-full bg-white/5 blur-2xl" />
-        <div className="absolute bottom-1/4 right-10 w-32 h-32 rounded-full bg-white/10 blur-xl" />
-        <div className="absolute top-2/3 left-1/3 w-24 h-24 rounded-full bg-white/5 blur-lg" />
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 md:p-8" style={authStyle}>
+      <div className="max-w-6xl w-full flex flex-col md:flex-row shadow-2xl rounded-3xl overflow-hidden bg-white min-h-[800px]">
+        {/* Left Hero Panel */}
+        <div className="hidden md:flex flex-col justify-between w-1/2 bg-primary p-12 text-primary-foreground relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full -ml-32 -mb-32 blur-3xl" />
 
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6 }}
-          className="relative z-10 flex flex-col items-center"
-        >
-          {brandingLogoUrl ? (
-            <img src={brandingLogoUrl} alt="Logo" className={`max-h-16 w-auto object-contain ${brandingDomain === "for-tel.solutions" ? "[filter:brightness(0)_invert(1)]" : ""}`} />
-          ) : (
-            <h1 className="text-4xl font-bold tracking-tight mb-2">Mitarbeiterportal</h1>
-          )}
-          <p className="text-lg text-white/70 mb-12 mt-2">Ihr Mitarbeiterportal</p>
+          <div className="relative z-10">
+            {/* Branding Header */}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="flex items-center gap-4 mb-16"
+            >
+              {brandingLogoUrl ? (
+                <>
+                  <img src={brandingLogoUrl} alt={brandingCompany} className={`max-h-10 w-auto object-contain ${logoInvertClass}`} />
+                  <div className="h-6 w-px bg-white/20" />
+                  <span className="text-xs font-semibold tracking-[0.2em] uppercase opacity-80">{brandingCompany}</span>
+                </>
+              ) : (
+                <span className="text-xl font-bold tracking-tight">{brandingCompany}</span>
+              )}
+            </motion.div>
 
-          <div className="grid grid-cols-1 gap-4 w-full max-w-sm">
-            {trustPoints.map((point, i) => (
-              <motion.div
-                key={point.title}
-                initial={{ opacity: 0, y: 15, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.4, delay: 0.3 + i * 0.15 }}
-                className="flex items-center gap-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-5 hover:bg-white/15 hover:-translate-y-1 transition-all duration-300 cursor-default"
-              >
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-white/25 to-white/5">
-                  <point.icon className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">{point.title}</p>
-                  <p className="text-sm text-white/60">{point.desc}</p>
-                </div>
-              </motion.div>
-            ))}
+            {/* Hero Content */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="space-y-6"
+            >
+              <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">
+                <Shield className="w-3 h-3" />
+                Sicherer Mitarbeiterzugang
+              </div>
+              <h1 className="text-5xl font-bold leading-[1.15]">
+                Ihr Mitarbeiterportal für moderne Zusammenarbeit.
+              </h1>
+              <p className="text-lg max-w-md font-medium leading-relaxed opacity-90">
+                Verwalte Aufträge, prüfe Reports und arbeite zentral an einer modernen Plattform.
+              </p>
+            </motion.div>
+
+            {/* Feature Tiles */}
+            <div className="grid grid-cols-3 gap-4 mt-12">
+              {features.map((f, i) => (
+                <motion.div
+                  key={f.title}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.25 + i * 0.1 }}
+                  className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 hover:bg-white/15 transition-colors"
+                >
+                  <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center mb-3">
+                    <f.icon className="w-5 h-5" />
+                  </div>
+                  <p className="text-[11px] font-bold">{f.title}</p>
+                  <p className="text-[10px] opacity-70 mt-0.5">{f.desc}</p>
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </motion.div>
-      </div>
 
-      {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center bg-background px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
-        >
-          {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-10">
-            {brandingLogoUrl ? (
-              <img src={brandingLogoUrl} alt="Logo" className="max-h-12 w-auto object-contain mx-auto" />
+          <div className="relative z-10">
+            {/* Testimonial */}
+            <div className="mb-8 p-6 bg-white/5 rounded-2xl border border-white/5">
+              <div className="flex gap-1 mb-3 text-yellow-400">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-4 h-4 fill-current" />
+                ))}
+              </div>
+              <p className="italic text-sm opacity-90 leading-relaxed font-light">
+                „Eine der besten Plattformen, die wir je für die interne Zusammenarbeit eingesetzt haben."
+              </p>
+              <p className="text-[11px] mt-2 opacity-60 font-semibold uppercase tracking-wider">
+                Lead Operations Manager
+              </p>
+            </div>
+
+            <p className="text-[10px] opacity-40 font-mono">
+              © {currentYear} {brandingCompany}. Alle Rechte vorbehalten.
+            </p>
+          </div>
+        </div>
+
+        {/* Right Form Panel */}
+        <div className="w-full md:w-1/2 p-8 sm:p-12 md:p-20 flex flex-col justify-between bg-background">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-md mx-auto w-full"
+          >
+            {/* Brand Anchor */}
+            <div className="mb-12 flex flex-col items-center md:items-start">
+              {brandingLogoUrl ? (
+                <img
+                  src={brandingLogoUrl}
+                  alt={brandingCompany}
+                  className="max-h-12 w-auto object-contain"
+                />
+              ) : (
+                <h2 className="text-2xl font-bold text-foreground">{brandingCompany}</h2>
+              )}
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-[0.3em] mt-3">
+                {brandingCompany}
+              </span>
+            </div>
+
+            {mode === "login" ? (
+              <>
+                <div className="space-y-1">
+                  <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Anmelden</h2>
+                  <p className="text-muted-foreground text-sm">Willkommen zurück. Melde dich mit deinem Konto an.</p>
+                </div>
+
+                <form onSubmit={handleLogin} className="mt-10 space-y-5">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wide">E-Mail-Adresse</Label>
+                    <div className="relative group">
+                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none">
+                        <Mail className="w-5 h-5" />
+                      </span>
+                      <Input
+                        type="email"
+                        placeholder="name@unternehmen.de"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        required
+                        className="w-full pl-12 pr-4 h-12 rounded-2xl border-border bg-muted/40 focus-visible:bg-background focus-visible:ring-4 focus-visible:ring-primary/10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wide">Passwort</Label>
+                    <div className="relative group">
+                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none">
+                        <Lock className="w-5 h-5" />
+                      </span>
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        required
+                        className="w-full pl-12 pr-12 h-12 rounded-2xl border-border bg-muted/40 focus-visible:bg-background focus-visible:ring-4 focus-visible:ring-primary/10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" />
+                      <span className="text-muted-foreground font-medium">Angemeldet bleiben</span>
+                    </label>
+                    <a href="#" className="text-primary font-bold hover:opacity-80 transition-opacity">Passwort vergessen?</a>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-14 rounded-2xl text-base font-bold shadow-xl shadow-primary/20 gap-2.5"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    {loading ? "Wird angemeldet..." : "Anmelden"}
+                  </Button>
+                </form>
+
+                <div className="mt-12 text-center">
+                  <div className="relative flex items-center mb-8">
+                    <div className="flex-grow border-t border-border" />
+                    <span className="flex-shrink mx-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">Oder</span>
+                    <div className="flex-grow border-t border-border" />
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">Noch kein Mitarbeiterzugang?</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setMode("register")}
+                    className="w-full h-12 rounded-2xl border-2 font-bold gap-2 group"
+                  >
+                    Jetzt registrieren
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                  <p className="mt-6 text-[10px] text-muted-foreground leading-relaxed">
+                    Durch die Registrierung stimmst du unseren <a href="#" className="underline">Nutzungsbedingungen</a> zu.
+                  </p>
+                </div>
+              </>
             ) : (
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">Mitarbeiterportal</h1>
+              <>
+                <div className="space-y-1">
+                  <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Konto erstellen</h2>
+                  <p className="text-muted-foreground text-sm">Registrieren Sie sich für das Portal.</p>
+                </div>
+
+                <form onSubmit={handleRegister} className="mt-10 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wide">Vorname</Label>
+                      <div className="relative group">
+                        <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-muted-foreground pointer-events-none">
+                          <User className="w-4 h-4" />
+                        </span>
+                        <Input
+                          placeholder="Max"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          required
+                          className="w-full pl-11 h-12 rounded-2xl border-border bg-muted/40"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wide">Nachname</Label>
+                      <Input
+                        placeholder="Mustermann"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                        className="w-full h-12 rounded-2xl border-border bg-muted/40 px-4"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wide">E-Mail-Adresse</Label>
+                    <div className="relative group">
+                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-muted-foreground pointer-events-none">
+                        <Mail className="w-5 h-5" />
+                      </span>
+                      <Input
+                        type="email"
+                        placeholder="name@unternehmen.de"
+                        value={regEmail}
+                        onChange={(e) => setRegEmail(e.target.value)}
+                        required
+                        className="w-full pl-12 h-12 rounded-2xl border-border bg-muted/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wide">Handynummer</Label>
+                    <div className="relative group">
+                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-muted-foreground pointer-events-none">
+                        <Phone className="w-5 h-5" />
+                      </span>
+                      <Input
+                        type="tel"
+                        placeholder="+49 170 1234567"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        required
+                        className="w-full pl-12 h-12 rounded-2xl border-border bg-muted/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wide">Passwort</Label>
+                    <div className="relative group">
+                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-muted-foreground pointer-events-none">
+                        <Lock className="w-5 h-5" />
+                      </span>
+                      <Input
+                        type={showRegPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={regPassword}
+                        onChange={(e) => setRegPassword(e.target.value)}
+                        required
+                        className="w-full pl-12 pr-12 h-12 rounded-2xl border-border bg-muted/40"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRegPassword((v) => !v)}
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted-foreground hover:text-foreground"
+                      >
+                        {showRegPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wide">Passwort bestätigen</Label>
+                    <div className="relative group">
+                      <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-muted-foreground pointer-events-none">
+                        <Lock className="w-5 h-5" />
+                      </span>
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        value={regPasswordConfirm}
+                        onChange={(e) => setRegPasswordConfirm(e.target.value)}
+                        required
+                        className="w-full pl-12 h-12 rounded-2xl border-border bg-muted/40"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-14 rounded-2xl text-base font-bold shadow-xl shadow-primary/20 mt-2"
+                  >
+                    {loading ? "Wird registriert..." : "Konto erstellen"}
+                  </Button>
+                </form>
+
+                <div className="mt-8 text-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setMode("login")}
+                    className="w-full h-12 rounded-2xl border-2 font-bold gap-2 group"
+                  >
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                    Zurück zur Anmeldung
+                  </Button>
+                  <p className="mt-6 text-[10px] text-muted-foreground leading-relaxed">
+                    Durch die Registrierung stimmst du unseren <a href="#" className="underline">Nutzungsbedingungen</a> zu.
+                  </p>
+                </div>
+              </>
             )}
-            <p className="text-muted-foreground text-sm mt-1">Mitarbeiterportal</p>
-          </div>
+          </motion.div>
 
-          {/* Tab switcher */}
-          <div className="flex mb-8 border-b border-border">
-            <button
-              type="button"
-              onClick={() => setMode("login")}
-              className={`pb-3 px-4 text-sm font-medium transition-colors border-b-2 ${
-                mode === "login"
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Anmelden
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("register")}
-              className={`pb-3 px-4 text-sm font-medium transition-colors border-b-2 ${
-                mode === "register"
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Registrieren
-            </button>
+          <div className="flex justify-center gap-6 text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-12">
+            <a href="#" className="hover:text-primary transition-colors">Impressum</a>
+            <a href="#" className="hover:text-primary transition-colors">Datenschutz</a>
           </div>
-
-          {mode === "login" ? (
-            <>
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">Willkommen</h2>
-                <p className="text-muted-foreground mt-1">Melden Sie sich an.</p>
-              </div>
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">E-Mail</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="ihre@email.de"
-                    className="h-12 rounded-lg"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Passwort</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="h-12 rounded-lg"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full h-12 rounded-lg text-base font-semibold" disabled={loading}>
-                  {loading ? "Wird angemeldet..." : "Anmelden"}
-                </Button>
-              </form>
-            </>
-          ) : (
-            <>
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">Konto erstellen</h2>
-                <p className="text-muted-foreground mt-1">Registrieren Sie sich für das Portal.</p>
-              </div>
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="reg-firstname">Vorname</Label>
-                    <Input
-                      id="reg-firstname"
-                      placeholder="Max"
-                      className="h-12 rounded-lg"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="reg-lastname">Nachname</Label>
-                    <Input
-                      id="reg-lastname"
-                      placeholder="Mustermann"
-                      className="h-12 rounded-lg"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-email">E-Mail</Label>
-                  <Input
-                    id="reg-email"
-                    type="email"
-                    placeholder="ihre@email.de"
-                    className="h-12 rounded-lg"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-phone">Handynummer</Label>
-                  <Input
-                    id="reg-phone"
-                    type="tel"
-                    placeholder="+49 170 1234567"
-                    className="h-12 rounded-lg"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-password">Passwort</Label>
-                  <Input
-                    id="reg-password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="h-12 rounded-lg"
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-password-confirm">Passwort bestätigen</Label>
-                  <Input
-                    id="reg-password-confirm"
-                    type="password"
-                    placeholder="••••••••"
-                    className="h-12 rounded-lg"
-                    value={regPasswordConfirm}
-                    onChange={(e) => setRegPasswordConfirm(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full h-12 rounded-lg text-base font-semibold" disabled={loading}>
-                  {loading ? "Wird registriert..." : "Registrieren"}
-                </Button>
-              </form>
-            </>
-          )}
-        </motion.div>
+        </div>
       </div>
     </div>
   );
