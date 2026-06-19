@@ -1,18 +1,15 @@
-## Problem
+## Export Mass-Import-kompatibel
 
-Nach dem Revert scheint der GitHub-Sync nicht den aktuellen Stand übertragen zu haben. Die Preview zeigt die korrekte Auth-Seite (Card mit abgerundeten Ecken), aber der deployed Server über GitHub nicht.
-
-## Lösung
-
-Eine minimale, nicht-visuelle Code-Änderung in `src/pages/Auth.tsx` vornehmen, um einen neuen Commit zu erzwingen und den GitHub-Sync auszulösen.
-
-### Änderung
-
-Zeile 20: Leeren JSDoc-Kommentar oberhalb der `Auth`-Komponente hinzufügen.
-
-```tsx
-/** Auth page – login & registration with dynamic domain branding */
-const Auth = () => {
+Format (wie `parseMassImportLine`):
 ```
+Vorname Nachname email telefon
+```
+eine Zeile pro Bewerber, leerzeichengetrennt.
 
-Dadurch entsteht ein neuer Commit, der über Lovable's bidirektionale GitHub-Sync zu GitHub gepusht wird. Keine sichtbare UI-Änderung.
+## Vorgehen
+
+1. 519 for.tel-Bewerber ohne Interview-Termin frisch ziehen.
+2. Datei `/mnt/documents/fortel_bewerber_ohne_gespraech.txt` schreiben — nur die Datenzeilen, kein Header, kein Footer.
+3. Als Download-Artefakt im Chat bereitstellen.
+
+Keine Code-Änderungen.
