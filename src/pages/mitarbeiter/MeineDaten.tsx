@@ -90,7 +90,21 @@ const MeineDaten = () => {
           desired_start_date: (contractRes.data as any).desired_start_date ?? undefined,
           first_workday_date: (fwaRes.data as any)?.appointment_date ?? undefined,
         }));
+
+        const tplId = (contractRes.data as any).template_id;
+        if (tplId) {
+          const { data: tpl } = await supabase
+            .from("contract_templates" as any)
+            .select("salary")
+            .eq("id", tplId)
+            .maybeSingle();
+          const tplSal = Number((tpl as any)?.salary);
+          setTemplateSalary(!isNaN(tplSal) && tplSal > 0 ? tplSal : null);
+        } else {
+          setTemplateSalary(null);
+        }
       }
+
 
 
       if (reviewsRes.data && reviewsRes.data.length > 0) {
