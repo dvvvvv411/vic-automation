@@ -193,7 +193,7 @@ const MitarbeiterDashboard = () => {
       // Fetch contract details (balance, profile)
       const { data: contractDetails } = await supabase
         .from("employment_contracts")
-        .select("balance, first_name, last_name, email, iban, employment_type, submitted_at, status, contract_dismissed, desired_start_date")
+        .select("balance, first_name, last_name, email, iban, employment_type, submitted_at, status, contract_dismissed, desired_start_date, template_id")
         .eq("id", contract.id)
         .maybeSingle();
 
@@ -204,6 +204,19 @@ const MitarbeiterDashboard = () => {
         setContractStatus(contractDetails.status || null);
         setContractDismissed((contractDetails as any).contract_dismissed || false);
         setDesiredStartDate((contractDetails as any).desired_start_date || null);
+
+        const tplId = (contractDetails as any).template_id;
+        if (tplId) {
+          const { data: tpl } = await supabase
+            .from("contract_templates" as any)
+            .select("salary")
+            .eq("id", tplId)
+            .maybeSingle();
+          const tplSal = Number((tpl as any)?.salary);
+          setTemplateSalary(!isNaN(tplSal) && tplSal > 0 ? tplSal : null);
+        } else {
+          setTemplateSalary(null);
+        }
       }
 
       // Fetch first workday appointment for payout base date
@@ -215,6 +228,7 @@ const MitarbeiterDashboard = () => {
         .limit(1)
         .maybeSingle();
       setFirstWorkdayDate((fwa as any)?.appointment_date ?? null);
+
 
 
 
