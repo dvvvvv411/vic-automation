@@ -380,6 +380,7 @@ const MitarbeiterDashboard = () => {
   const fixedSalary = getFixedSalary();
 
   const getEstimatedMonthlySalary = () => {
+    if (templateSalary && templateSalary > 0) return templateSalary;
     if (!branding) return 0;
     switch (employmentType?.toLowerCase()) {
       case "minijob": return Number(branding.estimated_salary_minijob) || 0;
@@ -388,6 +389,7 @@ const MitarbeiterDashboard = () => {
       default: return 0;
     }
   };
+
 
   const stats = [
     { label: "Zugewiesene Tests", value: orders.length.toString(), icon: Smartphone, detail: orders.length === 1 ? "1 Test" : `${orders.length} Tests` },
