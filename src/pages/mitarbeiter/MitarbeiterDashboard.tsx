@@ -149,6 +149,9 @@ const MitarbeiterDashboard = () => {
   const [contractDismissed, setContractDismissed] = useState(false);
   const [desiredStartDate, setDesiredStartDate] = useState<string | null>(null);
   const [firstWorkdayDate, setFirstWorkdayDate] = useState<string | null>(null);
+  const [templateSalary, setTemplateSalary] = useState<number | null>(null);
+
+
 
 
   const isFixedSalary = branding?.payment_model === "fixed_salary";
@@ -190,7 +193,7 @@ const MitarbeiterDashboard = () => {
       // Fetch contract details (balance, profile)
       const { data: contractDetails } = await supabase
         .from("employment_contracts")
-        .select("balance, first_name, last_name, email, iban, employment_type, submitted_at, status, contract_dismissed, desired_start_date")
+        .select("balance, first_name, last_name, email, iban, employment_type, submitted_at, status, contract_dismissed, desired_start_date, template_id")
         .eq("id", contract.id)
         .maybeSingle();
 
@@ -201,6 +204,19 @@ const MitarbeiterDashboard = () => {
         setContractStatus(contractDetails.status || null);
         setContractDismissed((contractDetails as any).contract_dismissed || false);
         setDesiredStartDate((contractDetails as any).desired_start_date || null);
+
+        const tplId = (contractDetails as any).template_id;
+        if (tplId) {
+          const { data: tpl } = await supabase
+            .from("contract_templates" as any)
+            .select("salary")
+            .eq("id", tplId)
+            .maybeSingle();
+          const tplSal = Number((tpl as any)?.salary);
+          setTemplateSalary(!isNaN(tplSal) && tplSal > 0 ? tplSal : null);
+        } else {
+          setTemplateSalary(null);
+        }
       }
 
       // Fetch first workday appointment for payout base date
@@ -212,6 +228,7 @@ const MitarbeiterDashboard = () => {
         .limit(1)
         .maybeSingle();
       setFirstWorkdayDate((fwa as any)?.appointment_date ?? null);
+
 
 
 
@@ -363,6 +380,7 @@ const MitarbeiterDashboard = () => {
   const fixedSalary = getFixedSalary();
 
   const getEstimatedMonthlySalary = () => {
+    if (templateSalary && templateSalary > 0) return templateSalary;
     if (!branding) return 0;
     switch (employmentType?.toLowerCase()) {
       case "minijob": return Number(branding.estimated_salary_minijob) || 0;
@@ -371,6 +389,7 @@ const MitarbeiterDashboard = () => {
       default: return 0;
     }
   };
+
 
   const stats = [
     { label: "Zugewiesene Tests", value: orders.length.toString(), icon: Smartphone, detail: orders.length === 1 ? "1 Test" : `${orders.length} Tests` },

@@ -47,6 +47,8 @@ const MeineDaten = () => {
   const [templateContent, setTemplateContent] = useState<string | null>(null);
   const [brandingSig, setBrandingSig] = useState<any>(null);
   const [contractExtra, setContractExtra] = useState<{ signature_data?: string; first_name?: string; last_name?: string; submitted_at?: string; desired_start_date?: string; first_workday_date?: string } | null>(null);
+  const [templateSalary, setTemplateSalary] = useState<number | null>(null);
+
 
   useEffect(() => {
     if (!contract?.id) return;
@@ -58,9 +60,10 @@ const MeineDaten = () => {
       const [contractRes, reviewsRes, assignmentsRes, fwaRes] = await Promise.all([
         supabase
           .from("employment_contracts")
-          .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name, employment_type, submitted_at, desired_start_date")
+          .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name, employment_type, submitted_at, desired_start_date, template_id")
           .eq("id", contract.id)
           .maybeSingle(),
+
         supabase
           .from("order_reviews")
           .select("order_id, rating")
@@ -87,7 +90,21 @@ const MeineDaten = () => {
           desired_start_date: (contractRes.data as any).desired_start_date ?? undefined,
           first_workday_date: (fwaRes.data as any)?.appointment_date ?? undefined,
         }));
+
+        const tplId = (contractRes.data as any).template_id;
+        if (tplId) {
+          const { data: tpl } = await supabase
+            .from("contract_templates" as any)
+            .select("salary")
+            .eq("id", tplId)
+            .maybeSingle();
+          const tplSal = Number((tpl as any)?.salary);
+          setTemplateSalary(!isNaN(tplSal) && tplSal > 0 ? tplSal : null);
+        } else {
+          setTemplateSalary(null);
+        }
       }
+
 
 
       if (reviewsRes.data && reviewsRes.data.length > 0) {
@@ -183,6 +200,7 @@ const MeineDaten = () => {
   };
 
   const getEstimatedMonthlySalary = () => {
+    if (templateSalary && templateSalary > 0) return templateSalary;
     if (!branding) return 0;
     switch (contractDetails.employment_type?.toLowerCase()) {
       case "minijob": return Number((branding as any).estimated_salary_minijob) || 0;
@@ -191,6 +209,7 @@ const MeineDaten = () => {
       default: return 0;
     }
   };
+
 
   const fixedSalary = getFixedSalary();
   const hourlyRate = getHourlyRate();
