@@ -200,6 +200,7 @@ const MeineDaten = () => {
   };
 
   const getEstimatedMonthlySalary = () => {
+    if (templateSalary && templateSalary > 0) return templateSalary;
     if (!branding) return 0;
     switch (contractDetails.employment_type?.toLowerCase()) {
       case "minijob": return Number((branding as any).estimated_salary_minijob) || 0;
@@ -208,6 +209,7 @@ const MeineDaten = () => {
       default: return 0;
     }
   };
+
 
   const fixedSalary = getFixedSalary();
   const hourlyRate = getHourlyRate();
