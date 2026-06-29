@@ -60,9 +60,10 @@ const MeineDaten = () => {
       const [contractRes, reviewsRes, assignmentsRes, fwaRes] = await Promise.all([
         supabase
           .from("employment_contracts")
-          .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name, employment_type, submitted_at, desired_start_date")
+          .select("first_name, last_name, email, phone, street, zip_code, city, balance, iban, bic, bank_name, employment_type, submitted_at, desired_start_date, template_id")
           .eq("id", contract.id)
           .maybeSingle(),
+
         supabase
           .from("order_reviews")
           .select("order_id, rating")
