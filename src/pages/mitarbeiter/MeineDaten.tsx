@@ -47,6 +47,8 @@ const MeineDaten = () => {
   const [templateContent, setTemplateContent] = useState<string | null>(null);
   const [brandingSig, setBrandingSig] = useState<any>(null);
   const [contractExtra, setContractExtra] = useState<{ signature_data?: string; first_name?: string; last_name?: string; submitted_at?: string; desired_start_date?: string; first_workday_date?: string } | null>(null);
+  const [templateSalary, setTemplateSalary] = useState<number | null>(null);
+
 
   useEffect(() => {
     if (!contract?.id) return;
