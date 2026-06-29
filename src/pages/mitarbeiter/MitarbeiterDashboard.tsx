@@ -149,6 +149,9 @@ const MitarbeiterDashboard = () => {
   const [contractDismissed, setContractDismissed] = useState(false);
   const [desiredStartDate, setDesiredStartDate] = useState<string | null>(null);
   const [firstWorkdayDate, setFirstWorkdayDate] = useState<string | null>(null);
+  const [templateSalary, setTemplateSalary] = useState<number | null>(null);
+
+
 
 
   const isFixedSalary = branding?.payment_model === "fixed_salary";
