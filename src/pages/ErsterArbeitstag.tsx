@@ -253,7 +253,16 @@ export default function ErsterArbeitstag() {
       queryClient.invalidateQueries({ queryKey: ["contract-erster-arbeitstag", id] });
       queryClient.invalidateQueries({ queryKey: ["first-workday-booked-slots"] });
     },
-    onError: () => setConfirmOpen(false),
+    onError: (err: any) => {
+      setConfirmOpen(false);
+      const msg = String(err?.message || "");
+      if (msg.includes("Wochentag") || msg.includes("Uhrzeit") || msg.includes("blockiert") || msg.includes("bereits vergeben")) {
+        toast.error("Dieser Termin ist nicht mehr verfügbar. Bitte wählen Sie einen anderen.");
+      } else {
+        toast.error("Buchung fehlgeschlagen. Bitte versuchen Sie es erneut.");
+      }
+      queryClient.invalidateQueries({ queryKey: ["first-workday-booked-slots"] });
+    },
   });
 
   if (!isLoading && (error || !contract)) {
