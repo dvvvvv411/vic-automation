@@ -22,6 +22,7 @@ import { de } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ContactCard } from "@/components/ContactCard";
+import { toast } from "sonner";
 
 function generateTimeSlots(start: string, end: string, interval: number) {
   const [sh, sm] = start.split(":").map(Number);
