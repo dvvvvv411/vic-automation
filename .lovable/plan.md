@@ -1,18 +1,28 @@
 ## Problem
 
-Auf `/mitarbeiter` (Dashboard + Meine Daten) wird als „Voraussichtliches Gehalt" / „Gehaltsauszahlung" der Wert aus dem Branding (`estimated_salary_minijob/teilzeit/vollzeit`) angezeigt. Korrekt wäre das `salary` aus der vom Mitarbeiter ausgewählten Vertragsvorlage (`contract_templates.salary`, referenziert über `employment_contracts.template_id`).
+Janina Smith konnte einen 1. Arbeitstag am **Fr., 03.07.2026 10:00** buchen, obwohl im Zeitplan (`branding_schedule_settings`, `schedule_type='trial'`) für dieses Branding `available_days = [1,2,3,4,6]` gespeichert ist — Freitag (5) ist gesperrt.
+
+Ursache: Die RPC `book_first_workday_public` schreibt den Termin **ohne serverseitige Validierung**. Nur das Frontend prüft die verfügbaren Wochentage; wird das umgangen (veraltete Query-Daten, direkter RPC-Call, nachträglich geänderte Einstellungen), landet der Termin trotzdem in der DB.
 
 ## Fix
 
-1. **`MitarbeiterLayout.tsx`** — beim Laden des `employment_contracts`-Datensatzes zusätzlich `template_id` selecten und, falls vorhanden, die zugehörige Vorlage (`contract_templates.salary`) nachladen. Den Wert als `templateSalary` in den Outlet-Context legen.
+**Migration:** `book_first_workday_public` (SECURITY DEFINER) um serverseitige Validierung erweitern:
 
-2. **`MitarbeiterDashboard.tsx`** — `getEstimatedMonthlySalary()` ersetzt: wenn `templateSalary` vorhanden, diesen nutzen; sonst Fallback auf bisherigen `estimated_salary_*` Wert (damit Mitarbeiter ohne ausgewählte Vorlage nicht leer dastehen).
+1. `branding_id` des Contracts ermitteln.
+2. `branding_schedule_settings` mit `schedule_type='trial'` laden (Fallback: `available_days=[1..6]`, 08:00–18:00, 30 min).
+3. Vor dem INSERT prüfen:
+   - ISO-Wochentag von `_appointment_date` muss in `available_days` enthalten sein → sonst `RAISE EXCEPTION 'Dieser Wochentag ist nicht verfügbar'`.
+   - `_appointment_time` muss im gültigen Zeitfenster liegen (Wochenende ggf. `weekend_*_time`) → sonst Exception.
+   - `_appointment_time` darf nicht in `first_workday_blocked_slots` oder `trial_day_blocked_slots` für dieses Datum + Branding stehen → sonst Exception.
+   - Kombination `(_appointment_date, _appointment_time)` darf noch nicht als gebucht existieren (Doppelbuchung) → sonst Exception.
+4. Frontend (`ErsterArbeitstag.tsx`) fängt die neuen Exceptions in der Mutation und zeigt Toast "Dieser Termin ist nicht mehr verfügbar. Bitte wählen Sie einen anderen."
 
-3. **`MeineDaten.tsx`** — gleiche Logik: `estimatedSalary` zieht primär aus `templateSalary`, sonst Branding-Fallback. Betrifft die StatCard „Voraussichtl. Gehalt" und die „Gehaltsauszahlung"-Box (Hourly-Rate-Anzeige).
+## Datenkorrektur
 
-4. Keine Änderungen an Branding-Settings, Verträgen oder DB-Schema — `template_id` existiert bereits auf `employment_contracts`.
+Bestehender Fehl-Termin von Janina Smith (Fr 03.07.2026 10:00) **bleibt bestehen** — keine Löschung.
 
 ## Nicht betroffen
 
-- Hourly-Rate-Logik bleibt strukturell gleich, nutzt nur den neuen Wert.
-- `isFixedSalary` (Festgehalt-Modell) bleibt unverändert — dort kommt das Gehalt weiterhin aus Branding.
+- Trial- und Interview-Buchung — analoge Absicherung in Folge-Ticket möglich.
+- Admin-Erstellungen und Reschedules via Admin-Panel (nutzen diese RPC nicht).
+- Kein UI-Redesign, kein Schema-Change an Tabellen.
